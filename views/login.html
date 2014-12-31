@@ -1,0 +1,92 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li>
+      <a href="/">Home</a>
+    </li>
+  </ol>
+
+  <div class="page-header" style="border-color: #000">
+    <h3>Login</h3>
+  </div>
+
+  <div class="row">
+    <div class="col-sm-6 col-sm-offset-3">
+      <form action="/sessions" method="post" class="form-horizontal">
+        <div class="panel panel-default no-select"
+             style="border-color: #000">
+          <!--
+              PANEL BODY
+              -->
+          <div class="panel-body">
+
+            <div class="form-group">
+              <label for="uname-input"
+                     class="col-sm-3 control-label">
+                Username/Email:
+              </label>
+              <div class="col-sm-9">
+                <input id="uname-input"
+                       type="text"
+                       name="uname"
+                       class="form-control"
+                       {% if ctx.flash.params %}
+                         value="{{ ctx.flash.params.uname }}"
+                       {% endif %}
+                       >
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="password1-input"
+                     class="col-sm-3 control-label">
+                Password:
+              </label>
+              <div class="col-sm-9">
+                <input id="password1-input"
+                       type="password"
+                       name="password"
+                       class="form-control">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div class="col-sm-offset-3 col-sm-9">
+                <div class="checkbox">
+                  <label>
+                    <input id="remember-me-input"
+                           name="remember-me"
+                           type="checkbox">
+                    Remember me
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div> <!-- /.panel-body -->
+          <!--
+              PANEL FOOTER
+              -->
+          <div class="panel-footer" style="border-color: #000">
+            <div class="text-right">
+              <a href="/forgot" class="pull-left" style="margin-top: 7px;">
+                Forgot Password?
+              </a>
+              <input id="login-submit"
+                     type="submit"
+                     value="Submit"
+                     class="btn btn-primary">
+            </div>
+          </div> <!-- /.panel-footer -->
+        </div> <!-- /.panel -->
+      </form>
+    </div> <!-- /col -->
+  </div> <!-- /.row -->
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  $('#uname-input').focus();
+</script>
+{% endblock %}

@@ -24,6 +24,17 @@ a {
     max-width: 100%;
 }
 
+/* Prevent text/cursor selection on elements where it doesn't make sense */
+.no-select {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+
 /* =========================================================== */
 /* Undocumented overrides I ported over from the clojure Guild */
 /* TODO: Review and prune/document these to explain purpose    */
@@ -32,10 +43,15 @@ a {
 .panel-default {
     background-color: #3d3a3a;
 }
+
+/* Mute the link colors in panel headers, darken the bgs */
+.panel-default>.panel-heading a,
+.panel-default>.panel-heading {
+    color: #ccc;
+}
 .panel-default>.panel-heading {
     background-color: #262626;
     border-color: #2e2c2c;
-    color: #fff;
 }
 .panel-default {
     border-color: #3d3a3a;

@@ -7,3 +7,8 @@
 body {
   padding-top: 20px;
 }
+
+/* Bootstrap-theme adds this specificity light color. Nuke it back to black */
+.panel-default>.panel-heading {
+    background-image: none;
+}

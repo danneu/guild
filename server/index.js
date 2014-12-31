@@ -18,6 +18,23 @@ var assert = require('better-assert');
 var db = require('./db');
 var config = require('./config');
 var pre = require('./presenters');
+var belt = require('./belt');
+var middleware = require('./middleware');
+var valid = require('./validation');
+
+// Since app.proxy === true (we trust X-Proxy-* headers), we want to
+// reject all requests that hit origin. app.proxy should only be turned on
+// when app is behind trusted proxy like Cloudflare.
+app.use(function*(next) {
+  // Example:
+  // if (this.request.headers.host === 'dev-guild.herokuapp.com') {
+  //   this.body = 'Please do not connect directly to the origin server.';
+  //   return;
+  // }
+  yield next;
+});
+app.use(middleware.currUser());
+app.use(middleware.flash('flash'));
 
 // Configure templating system to use `swig`
 // and to find view files in `view` directory
@@ -27,26 +44,147 @@ app.use(views('../views', {
   map: { html: 'swig' }
 }));
 
-// === currUser middleware ===
-// Note: Assocs `ipAddress` property. It trusts X-Proxy-* headers since the
-// production site will be behind Cloudflare. (app.proxy === true)
-// However, since these headers can be spoofed, ensure that the app rejects
-// requests that go straight to origin (bypassing Cloudflare)
-app.use(function*(next) {
-  // if (this.request.headers.host === 'dev-guild.herokuapp.com') {
-  //   this.body = 'Please do not connect directly to the origin server.';
-  //   return;
-  // }
-  yield next;
-});
-app.use(function*(next) {
-  // TODO: Implement sessions
-  this.currUser = { id: 1, uname: 'foo' };
-  this.currUser.ipAddress = this.request.ip;
-  yield next;
-});
 
 ////////////////////////////////////////////////////////////
+
+//
+// Logout
+//
+app.use(route.post('/me/logout', function *() {
+  if (this.currUser)
+    yield db.logoutSession(this.currUser.id, this.cookies.get('sessionId'));
+  this.flash = { message: ['success', 'Session terminated'] };
+  this.redirect('/');
+}));
+
+//
+// Login form
+//
+app.use(route.get('/login', function*() {
+  yield this.render('login', {
+    ctx: this
+  });
+}));
+
+//
+// Register new user form
+//
+app.use(route.get('/register', function*() {
+  assert(config.RECAPTCHA_SITEKEY);
+  assert(config.RECAPTCHA_SITESECRET);
+  yield this.render('register', {
+    ctx: this,
+    recaptchaSitekey: config.RECAPTCHA_SITEKEY
+  });
+}));
+
+//
+// Create new user
+// - uname
+// - password1
+// - password2
+// - email (Optional)
+// - g-recaptcha-response
+app.use(route.post('/users', function*() {
+  var unvalidatedParams = valid.fixNewUser(_.pick(this.request.body, [
+    'uname',
+    'email',
+    'password1',
+    'password2'
+  ]));
+
+  var validatedParams;
+
+  // Validate the user-input
+  try {
+    validatedParams = yield valid.validateNewUser(unvalidatedParams);
+  } catch(ex) {
+    // Upon validation failure, redirect back to /register, but preserve
+    // user input in flash so the form can be filled back in for user to
+    // make changes
+    if (_.isString(ex)) {
+      this.flash = {
+        message: ['danger', ex],
+        params: unvalidatedParams
+      };
+      return this.response.redirect('/register');
+    }
+
+    throw ex;
+  }
+
+  // Expect the recaptcha form param
+  if (! this.request.body['g-recaptcha-response']) {
+    debug('Missing param: g-recaptcha-response');
+    this.flash = {
+      message: ['danger', 'You must attempt the human test'],
+      params: unvalidatedParams
+    };
+    return this.response.redirect('/register');
+  }
+
+  // Check recaptcha against google
+  var passedRecaptcha = yield belt.makeRecaptchaRequest({
+    userResponse: this.request.body['g-recaptcha-response'],
+    userIp: this.request.ip
+  });
+  if (! passedRecaptcha) {
+    debug('Google rejected recaptcha');
+    this.flash = {
+      message: ['danger', 'You failed the recaptcha challenge'],
+      params: unvalidatedParams
+    };
+    return this.response.redirect('/register');
+  }
+
+  // User params validated, so create a user and log them in
+  debug(validatedParams);
+  var result = yield db.createUserWithSession({
+    uname: validatedParams.uname,
+    email: validatedParams.email,
+    password: validatedParams.password1,
+    ipAddress: this.request.ip
+  });
+  var user = result['user'];
+  var session = result['session'];
+  this.cookies.set('sessionId', session.id);
+  this.flash = { message: ['success', 'Registered successfully'] };
+  return this.response.redirect('/');
+}));
+
+//
+// Create session
+//
+app.use(route.post('/sessions', function*() {
+  // TODO: Validation
+  var uname = this.request.body.uname;
+  var password = this.request.body.password;
+  var rememberMe = !!this.request.body['remember-me'];
+
+  // Check if user with this uname exists
+  var user = yield db.findUserByUname(uname);
+  if (!user) {
+    this.flash = { message: ['danger', 'Invalid creds'] };
+    return this.response.redirect('/login');
+  }
+
+  // Check if provided password matches digest
+  if (! (yield belt.checkPassword(password, user.digest))) {
+    this.flash = { message: ['danger', 'Invalid creds'] };
+    return this.response.redirect('/login');
+  }
+
+  // User authenticated
+  var session = yield db.createSession({
+    userId: user.id,
+    ipAddress: this.request.ip,
+    interval: (rememberMe ? '1 day' : '1 year')
+  });
+
+  this.cookies.set('sessionId', session.id);
+  this.flash = { message: ['success', 'Logged in successfully'] };
+  this.response.redirect('/');
+}));
 
 //
 // Users listview
@@ -119,7 +257,7 @@ app.use(route.post('/forums/:forumId/topics/:topicId/posts', function*(forumId, 
   var text = this.request.body.text;
   assert(text);
   // TODO: Validation
-  var post = yield db.createPost(this.currUser.id, this.currUser.ipAddress, topicId, text);
+  var post = yield db.createPost(this.currUser.id, this.request.ip, topicId, text);
   post = pre.presentPost(post);
   this.response.redirect(post.url);
 }));
@@ -137,7 +275,7 @@ app.use(route.post('/forums/:forumId/topics', function*(forumId) {
   var topic = yield db.createTopic({
     userId: this.currUser.id,
     forumId: forumId,
-    ipAddress: this.currUser.ipAddress,
+    ipAddress: this.request.ip,
     title: title,
     text: text
   });

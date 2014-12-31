@@ -1,5 +1,6 @@
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS sessions CASCADE;
+DROP VIEW IF EXISTS active_sessions;
 DROP TABLE IF EXISTS categories CASCADE;
 DROP TABLE IF EXISTS forums CASCADE;
 DROP TABLE IF EXISTS topics CASCADE;
@@ -23,6 +24,12 @@ CREATE TABLE sessions (
                                       DEFAULT NOW() + INTERVAL '15 minutes',
   created_at timestamp with time zone NOT NULL  DEFAULT NOW()
 );
+
+CREATE VIEW active_sessions AS
+  SELECT *
+  FROM sessions
+  WHERE expired_at >= NOW()
+;
 
 CREATE TABLE categories (
   id          serial PRIMARY KEY,

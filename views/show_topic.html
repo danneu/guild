@@ -34,8 +34,11 @@
             {{ post.formattedCreatedAt }}
           </abbr>
         </span>
-        <div class="pull-right">
-          <a href="/">View Raw</a> - <a href="{{ post.url }}">Permalink</a>
+        <div class="pull-right post-header">
+          <a href="/">View Raw</a> -
+          <a href="{{ post.url }}">
+            <span class="glyphicon glyphicon-link"></span>
+          </a>
         </div>
       </div> <!-- /.panel-heading -->
 

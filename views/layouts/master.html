@@ -8,6 +8,7 @@
 
   <!-- Bootstrap CSS -->
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap-theme.min.css">
   <!-- Other 3rd party CSS -->
   <link rel="stylesheet" href="/vendor/bootstrap-markdown/css/bootstrap-markdown.min.css">
   <!-- RPGuild CSS -->
@@ -23,8 +24,8 @@
   </div>
 
     <!-- Static navbar -->
-    <nav class="navbar navbar-default" role="navigation"
-         style="background-color: transparent; border: 0;">
+    <nav class="navbar navbar-inverse" role="navigation"
+         style="">
       <div class="container-fluid">
         <div class="navbar-header">
           <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
@@ -61,10 +62,10 @@
           <!-- If user is not logged in, show login/register controls -->
           {% if !ctx.currUser %}
             <div class="navbar-right">
-              <a class="btn btn-default" href="/login" id="login-btn">
+              <a class="btn btn-default navbar-btn" href="/login" id="login-btn">
                 Login
               </a>
-              <a class="btn btn-primary" href="/register" id="register-btn">
+              <a class="btn btn-primary navbar-btn" href="/register" id="register-btn">
                 Register
               </a>
             </div>

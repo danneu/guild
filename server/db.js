@@ -1,13 +1,16 @@
 // Node deps
 var path = require('path');
 var fs = require('co-fs');
+var util = require('util');
 // 3rd party
 var pg = require('co-pg')(require('pg'));
 var m = require('multiline');
 var _ = require('lodash');
 var assert = require('better-assert');
+var debug = require('debug')('app:db');
 // 1st party
 var config = require('./config');
+var belt = require('./belt');
 
 // parse int8 as an integer
 // TODO: Handle numbers past parseInt range
@@ -56,6 +59,50 @@ WHERE t.id = $1
 //   var result = yield query(sql, [topicId]);
 //   return result.rows[0];
 // };
+
+// Note: Case-insensitive
+exports.findUserByUname = findUserByUname;
+function *findUserByUname(uname) {
+  debug('[findUserByUname] uname: ' + uname);
+  var sql = m(function() {/*
+SELECT *
+FROM users u
+WHERE lower(u.uname) = lower($1);
+  */});
+  var result = yield query(sql, [uname]);
+  return result.rows[0];
+}
+exports.findUserBySessionId = findUserBySessionId;
+function *findUserBySessionId(sessionId) {
+  assert(belt.isValidUuid(sessionId));
+  var sql = m(function() {/*
+SELECT *
+FROM users u
+WHERE u.id = (
+  SELECT s.user_id
+  FROM active_sessions s
+  WHERE s.id = $1
+)
+  */});
+  return (yield query(sql, [sessionId])).rows[0];
+}
+
+exports.createSession = createSession;
+function *createSession(props) {
+  debug('[createSession] props: ' + util.inspect(props));
+  assert(_.isNumber(props.userId));
+  assert(_.isString(props.ipAddress));
+  assert(_.isString(props.interval));
+  var uuid = belt.generateUuid();
+  var sql = m(function () {/*
+INSERT INTO sessions (user_id, id, ip_address, expired_at)
+VALUES ($1, $2, $3::inet, NOW() + $4::interval)
+RETURNING *
+  */});
+  return (yield query(sql, [
+    props.userId, uuid, props.ipAddress, props.interval
+  ])).rows[0];
+};
 
 exports.findTopicsByForumId = function*(forumId) {
   var sql = m(function() {/*
@@ -230,6 +277,43 @@ ORDER BY c.pos
   var result = yield query(sql);
   return result.rows;
 }
+
+// Creates a user and a session (logs them in).
+// - Returns {:user <User>, :session <Session>}
+// - Use `createUser` if you only want to create a user.
+exports.createUserWithSession = createUserWithSession;
+function *createUserWithSession(props) {
+  debug('[createUserWithSession] props: ' + util.inspect(props));
+  assert(_.isString(props.uname));
+  assert(_.isString(props.ipAddress));
+  assert(_.isString(props.password));
+  assert(_.isString(props.email));
+
+  var digest = yield belt.hashPassword(props.password);
+  var sql = m(function () {/*
+INSERT INTO users (uname, digest, email)
+VALUES ($1, $2, $3)
+RETURNING *;
+   */});
+  var user = (yield query(sql, [props.uname, digest, props.email])).rows[0];
+  var session = yield createSession({
+    userId: user.id,
+    ipAddress: props.ipAddress,
+    interval: '1 year'  // TODO: Decide how long to log user in upon registration
+  });
+  return { user: user, session: session };
+};
+
+exports.logoutSession = logoutSession;
+function *logoutSession(userId, sessionId) {
+  assert(_.isNumber(userId));
+  assert(_.isString(sessionId) && belt.isValidUuid(sessionId));
+  var sql = m(function() {/*
+DELETE FROM sessions
+WHERE user_id = $1 AND id = $2
+  */});
+  return yield query(sql, [userId, sessionId]);
+};
 
 exports.findForums = findForums;
 function* findForums(categoryIds) {
