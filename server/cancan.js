@@ -10,6 +10,9 @@ function can(user, action, target) {
   // Admin can do all
   if (user && user.role === 'admin') return true;
   switch(action) {
+    case 'UPDATE_POST':
+      if (user.id === target.user_id) return true;
+      return false;
     case 'CREATE_CONVO':
       if (!user) return false;
       if (user.role === 'member') return true;
@@ -27,16 +30,4 @@ function can(user, action, target) {
 
 exports.cannot = function(user, action, target) {
   return !can(user, action, target);
-};
-
-// TODO: Perhaps provide a way to pass in redirect path? Don't always want to
-//       redirect to homepage.
-exports.ensure = function*(user, action, target) {
-  if (can(user, action, target))
-    return true;
-  else {
-    this.flash = { message: ['danger', 'Unauthorized'] };
-    this.response.redirect('/');
-    return;
-  }
 };

@@ -21,6 +21,7 @@ var pre = require('./presenters');
 var belt = require('./belt');
 var middleware = require('./middleware');
 var valid = require('./validation');
+var cancan = require('./cancan');
 
 // Since app.proxy === true (we trust X-Proxy-* headers), we want to
 // reject all requests that hit origin. app.proxy should only be turned on
@@ -35,6 +36,16 @@ app.use(function*(next) {
 });
 app.use(middleware.currUser());
 app.use(middleware.flash('flash'));
+
+app.use(function*(next) {
+  var ctx = this;
+  this.assertAuthorized = function(user, action, target) {
+    var canResult = cancan.can(user, action, target);
+    debug('[' + action + ' canResult]: ' + canResult);
+    ctx.assert(canResult, 403);
+  };
+  yield next;
+});
 
 // Configure templating system to use `swig`
 // and to find view files in `view` directory
@@ -301,7 +312,7 @@ app.use(route.get('/users/:userId', function*(userId) {
 //
 app.use(route.post('/convos', function*() {
   var ctx = this;
-  yield cancan.ensure.apply(this, [this.currUser, 'CREATE_CONVO']);
+  this.assertAuthorized(this.currUser, 'CREATE_CONVO');
   // TODO: Validation, Error msgs, preserve params
   // TODO: Sponge this up into a fixer+validater
   var unames = this.request.body.to && this.request.body.to.split(',');
@@ -355,7 +366,7 @@ app.use(route.post('/convos', function*() {
 //
 // TODO: Implement typeahead
 app.use(route.get('/convos/new', function*() {
-  yield cancan.ensure.apply(this, [this.currUser, 'CREATE_CONVO']);
+  this.assertAuthorized(this.currUser, 'CREATE_CONVO');
   // TODO: Validation, Error msgs, preserve params
   yield this.render('new_convo', {
     ctx: this,
@@ -382,12 +393,11 @@ app.use(route.post('/convos/:convoId/pms', function*(convoId) {
 //
 // View convo
 //
-var cancan = require('./cancan');
 app.use(route.get('/convos/:convoId', function*(convoId) {
   // TODO: Authz
   var convo = yield db.findConvo(convoId);
   if (!convo) return;
-  yield cancan.ensure.apply(this, [this.currUser, 'READ_CONVO', convo]);
+  this.assertAuthorized(this.currUser, 'READ_CONVO', convo);
   var pms = yield db.findPmsByConvoId(convoId);
   convo.pms = pms;
   convo = pre.presentConvo(convo);
@@ -440,10 +450,13 @@ app.use(route.get('/pms/:pmId/raw', function*(pmId) {
 // Update post text
 //
 // Keep /api/posts/:postId and /api/pms/:pmId in sync
-app.use(route.put('/api/posts/:postId', function*(postId) {
+app.use(route.put('/api/posts/:postId', function*(id) {
+  var post = yield db.findPost(id);
+  if (!post) return;
+  this.assertAuthorized(this.currUser, 'UPDATE_POST', post)
   // TODO: Authz, validation
   var text = this.request.body.text;
-  var updatedPost = yield db.updatePost(this.currUser.id, postId, text);
+  var updatedPost = yield db.updatePost(this.currUser.id, id, text);
   updatedPost = pre.presentPost(updatedPost);
   this.body = JSON.stringify(updatedPost);
 }));
