@@ -152,14 +152,13 @@ function *createSession(props) {
   assert(_.isNumber(props.userId));
   assert(_.isString(props.ipAddress));
   assert(_.isString(props.interval));
-  var uuid = belt.generateUuid();
   var sql = m(function () {/*
 INSERT INTO sessions (user_id, id, ip_address, expired_at)
-VALUES ($1, $2, $3::inet, NOW() + $4::interval)
+VALUES ($1, uuid_generate_v4(), $2::inet, NOW() + $3::interval)
 RETURNING *
   */});
   return (yield query(sql, [
-    props.userId, uuid, props.ipAddress, props.interval
+    props.userId, props.ipAddress, props.interval
   ])).rows[0];
 };
 

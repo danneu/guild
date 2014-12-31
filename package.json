@@ -27,7 +27,6 @@
     "koa-views": "^2.1.2",
     "lodash": "^2.4.1",
     "multiline": "^1.0.1",
-    "node-uuid": "^1.4.2",
     "pg": "^4.1.1",
     "promissory": "^1.0.1",
     "swig": "^1.4.2"

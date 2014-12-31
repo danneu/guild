@@ -13,6 +13,7 @@ DROP TYPE IF EXISTS post_type;
 DROP TABLE IF EXISTS topic_subscriptions CASCADE;
 
 CREATE EXTENSION IF NOT EXISTS plv8;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TYPE role_type AS ENUM ('admin', 'smod', 'mod', 'member', 'banned');
 

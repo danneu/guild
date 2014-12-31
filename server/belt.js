@@ -5,7 +5,6 @@ var url = require('url');
 var promissory = require('promissory');
 var assert = require('better-assert');
 var _bcrypt = require('bcryptjs');
-var uuid = require('node-uuid');
 var request = require('co-request');
 var debug = require('debug')('app:belt');
 var _ = require('lodash');
@@ -42,11 +41,6 @@ function* checkPassword(password, digest) {
 exports.isValidUuid = function(uuid) {
   var regexp = /^[a-f0-9]{8}\-[a-f0-9]{4}\-[a-f0-9]{4}\-[a-f0-9]{4}\-[a-f0-9]{12}$/;
   return regexp.test(uuid);
-};
-
-// -> String
-exports.generateUuid = function() {
-  return uuid.v4();
 };
 
 // reCaptcha ///////////////////////////////////////////////
