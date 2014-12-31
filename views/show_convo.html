@@ -23,22 +23,24 @@
 
   <!-- Pms list -->
 
-  {% for pm in convo.pms %}
-    <a name="pm-{{ pm.id }}"></a>
+  <!-- set `post` for now so that I can easily share logic with
+       show_topic.html until I decide whether to unify or diverge posts/pms-->
+  {% for post in convo.pms %}
+    <a name="post-{{ post.id }}"></a>
     <div class="panel panel-default post"
-         id="pm-{{ pm.id }}"
+         id="post-{{ post.id }}"
          style="border: 1px solid #111;">
       <div class="panel-heading clearfix"
            style="background-color: #1D1D1D; border-color: #111; border-radius: 0">
         <span class="pull-left">
           Posted
-          <abbr class="timeago" title="{{ pm.created_at.toISOString() }}">
-            {{ pm.formattedCreatedAt }}
+          <abbr class="timeago" title="{{ post.created_at.toISOString() }}">
+            {{ post.formattedCreatedAt }}
           </abbr>
         </span>
         <div class="pull-right post-header">
           <a href="/">View Raw</a> -
-          <a href="{{ pm.url }}">
+          <a href="{{ post.url }}">
             <span class="glyphicon glyphicon-link"></span>
           </a>
         </div>
@@ -49,12 +51,12 @@
            style="background-color: #2E2C2C">
         <!-- Author metadata -->
         <div class="col-sm-2 clearfix">
-          <a href="{{ pm.user.url }}">{{ pm.user.uname }}</a>
-          <br>{{ pm.user.role }}
+          <a href="{{ post.user.url }}">{{ post.user.uname }}</a>
+          <br>{{ post.user.role }}
         </div> <!-- /.col-sm-2 post-meta -->
         <!-- Post text -->
         <div class="col-sm-10">
-          <div class="post-body">{{ pm.text }}</div>
+          <div class="post-body">{{ post.text }}</div>
         </div>
       </div> <!-- /.panel-body -->
 
@@ -64,7 +66,7 @@
         <!-- IP address -->
         <div class="pull-left"
              style="margin-left: 5px; color: #6E6B6B">
-          {{ pm.ip_address }}
+          {{ post.ip_address }}
         </div>
         <!-- Reply button -->
         <a href=""
@@ -172,11 +174,6 @@ $(function() {
     $post_edit_btn = $(this);
     $post_edit_btn.addClass('disabled');
     var post_id = $(this).attr('post-id');
-    // $('#post-' + post_id + ' .post-editor').markdown({
-    //   savabe: true
-    // });
-    // $('#post-' + post_id + ' .post-body').html('<p>lol</p>');
-    //-prev- var post_url = '/api/posts/' + post_id;
     var $post_body = $('#post-' + post_id + ' .post-body');
     var prev_body = $post_body.html();
     var $spinner = $('<span><img src="/img/spinner.gif"> Loading edit form...</span>');
@@ -184,7 +181,7 @@ $(function() {
     $cancel_btn = $('<button style="margin-left: 5px;" class="btn btn-default post-edit-cancel-btn">Cancel</button>');
 
     $.ajax({
-      url: '/posts/' + post_id + '/raw',
+      url: '/pms/' + post_id + '/raw',
       dataType: 'html',
       success: function(post_text) {
         console.log(post_text);
@@ -203,7 +200,7 @@ $(function() {
 
             var text_to_save = e.getContent();
             $.ajax({
-              url: '/api/posts/' + post_id,
+              url: '/api/pms/' + post_id,
               dataType: 'json',
               type: 'POST',
               headers: { 'X-HTTP-Method-Override': 'PUT' },

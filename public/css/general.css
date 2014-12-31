@@ -34,6 +34,11 @@ a {
     user-select: none;
 }
 
+/* Darken page-header bottom border that's light by default */
+.page-header {
+    border-color: #000;
+}
+
 /* Invert the well to make it dark. Remove background-image added by
    Bootstrap-theme */
 .well {

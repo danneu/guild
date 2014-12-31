@@ -54,6 +54,83 @@ WHERE lower(u.uname) = lower($1);
   var result = yield query(sql, [uname]);
   return result.rows[0];
 }
+
+exports.findRecentPostsForUserId = findRecentPostsForUserId;
+function* findRecentPostsForUserId(userId) {
+  var sql = m(function() {/*
+SELECT
+  p.*,
+  to_json(t.*) "topic"
+FROM posts p
+JOIN topics t ON p.topic_id = t.id
+WHERE p.user_id = $1
+LIMIT 25
+  */});
+  var result = yield query(sql, [userId]);
+  return result.rows;
+}
+
+exports.findUser = findUser;
+function *findUser(userId) {
+  debug('[findUser] userId: ' + userId);
+  var sql = m(function() {/*
+SELECT *
+FROM users
+WHERE id = $1
+  */});
+  var result = yield query(sql, [userId]);
+  return result.rows[0];
+}
+
+exports.findUsersByUnames = function*(unames) {
+  assert(_.isArray(unames));
+  assert(_.every(unames, _.isString));
+  var sql = m(function() {/*
+SELECT u.*
+FROM users u
+WHERE u.uname = ANY ($1::text[])
+  */});
+  var result = yield query(sql, [unames]);
+  return result.rows;
+};
+
+// If toUsrIds is not given, then it's a self-convo
+// TODO: Wrap in transaction, Document the args of this fn
+exports.createConvo = function*(args) {
+  debug('[createConvo] args: ' + util.inspect(args));
+  assert(_.isNumber(args.userId));
+  assert(_.isUndefined(args.toUserIds) || _.isArray(args.toUserIds));
+  assert(_.isString(args.title));
+  assert(_.isString(args.text));
+  var convoSql = m(function() {/*
+INSERT INTO convos (user_id, title)
+VALUES ($1, $2)
+RETURNING *
+  */});
+  var pmSql = m(function() {/*
+INSERT INTO pms (user_id, convo_id, text, ip_address)
+VALUES ($1, $2, $3, $4)
+RETURNING *
+*/});
+  var participantSql = m(function() {/*
+INSERT INTO convos_participants (user_id, convo_id)
+VALUES ($1, $2)
+*/});
+  var convo = (yield query(convoSql, [args.userId, args.title])).rows[0];
+
+  debug(convo);
+  // Run these in parallel
+  yield args.toUserIds.map(function(toUserId) {
+    return query(participantSql, [toUserId, convo.id]);
+  }).concat([
+    query(participantSql, [args.userId, convo.id]),
+    query(pmSql, [args.userId, convo.id, args.text, args.ipAddress])
+  ]);
+
+  convo.pms_count++;  // This is a stale copy so we need to manually inc
+  return convo;
+};
+
 exports.findUserBySessionId = findUserBySessionId;
 function *findUserBySessionId(sessionId) {
   assert(belt.isValidUuid(sessionId));
@@ -104,19 +181,33 @@ ORDER BY t.latest_post_id DESC
   return result.rows;
 };
 
+// Keep updatePost and UpdatePm in sync
 exports.updatePost = function*(userId, postId, text) {
   assert(_.isNumber(userId));
   assert(_.isString(text));
   var sql = m(function() {/*
 UPDATE posts
-SET text = $3
+SET text = $3, updated_at = NOW()
 WHERE user_id = $1 AND id = $2
 RETURNING *
   */});
   var result = yield query(sql, [userId, postId, text]);
   return result.rows[0];
 };
+exports.updatePm = function*(userId, id, text) {
+  assert(_.isNumber(userId));
+  assert(_.isString(text));
+  var sql = m(function() {/*
+UPDATE pms
+SET text = $3, updated_at = NOW()
+WHERE user_id = $1 AND id = $2
+RETURNING *
+  */});
+  var result = yield query(sql, [userId, id, text]);
+  return result.rows[0];
+};
 
+// Keep findPost and findPm in sync
 exports.findPost = function*(postId) {
   var sql = m(function() {/*
 SELECT *
@@ -124,6 +215,15 @@ FROM posts
 WHERE id = $1
   */});
   var result = yield query(sql, [postId]);
+  return result.rows[0];
+};
+exports.findPm = function*(id) {
+  var sql = m(function() {/*
+SELECT *
+FROM pms
+WHERE id = $1
+  */});
+  var result = yield query(sql, [id]);
   return result.rows[0];
 };
 
@@ -219,6 +319,7 @@ GROUP BY f.id
   return forum;
 };
 
+// Keep findPostWithTopic and findPmWithConvo in sync
 exports.findPostWithTopic = function*(postId) {
   var sql = m(function() {/*
 SELECT
@@ -230,6 +331,21 @@ WHERE p.id = $1
 GROUP BY p.id, t.id
   */});
   var result = yield query(sql, [postId]);
+  return result.rows[0];
+};
+
+// Keep findPostWithTopic and findPmWithConvo in sync
+exports.findPmWithConvo = function*(pmId) {
+  var sql = m(function() {/*
+SELECT
+  pms.*,
+  to_json(c.*) "convo"
+FROM pms
+JOIN convos c ON pms.convo_id = c.id
+WHERE pms.id = $1
+GROUP BY pms.id, c.id
+  */});
+  var result = yield query(sql, [pmId]);
   return result.rows[0];
 };
 

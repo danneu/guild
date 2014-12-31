@@ -1,0 +1,87 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/convos">Private Convos</a></li>
+  </ol>
+
+  <div class="page-header" style="border-color: #000">
+    <h3>New Private Convo</h3>
+    <p>
+      A conversation is a private thread that only the participants can see and reply to. You are always a participant. If you leave 'Participants' blank, it's just a convo with yourself. Good for note-taking. In other words, instead of sending PMs to people, you start a convo with them.
+    </p>
+  </div>
+
+  <div class="row">
+    <div class="col-sm-10 col-sm-offset-1">
+      <form action="/convos" method="post">
+        <div class="panel panel-default no-select"
+             style="border-color: #000">
+          <!--
+              PANEL BODY
+              -->
+          <div class="panel-body">
+
+            <!-- To -->
+            <div class="form-group">
+              <label class="control-label" for="to-input">Participants:</label>
+              <input id="to-input"
+                     type="text"
+                     name="to"
+                     class="form-control"
+                     placeholder="User Name 1, User Name 2, User Name 3 (The other people that will be part of this convo)"
+                     {% if (ctx.flash.params || to) %}
+                     value="{{ ctx.flash.params.to || to }}"
+                     {% endif %}
+                     >
+            </div>
+
+            <div class="form-group">
+              <label class="control-label" for="title-input">Subject:</label>
+              <input id="title-input"
+                     type="text"
+                     name="title"
+                     class="form-control"
+                     {% if ctx.flash.params %}
+                     value="{{ ctx.flash.params.title }}"
+                     {% endif %}
+                     >
+            </div>
+
+            <div class="form-group">
+                <label class="control-label" for="text-input">Message:</label>
+                <textarea id="text-input"
+                          rows="10"
+                          placeholder="Click here and begin writing"
+                          name="text"
+                          class="form-control"></textarea>
+            </div>
+
+          </div> <!-- /.panel-body -->
+          <!--
+              PANEL FOOTER
+              -->
+          <div class="panel-footer" style="border-color: #000">
+            <div class="text-right">
+              <input id="login-submit"
+                     type="submit"
+                     value="Submit"
+                     class="btn btn-primary">
+            </div>
+          </div> <!-- /.panel-footer -->
+        </div> <!-- /.panel -->
+      </form>
+    </div> <!-- /col -->
+  </div> <!-- /.row -->
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  $('#to-input').focus();
+  $('#text-input').markdown({
+    resize: 'vertical'
+  });
+</script>
+{% endblock %}

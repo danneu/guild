@@ -82,6 +82,7 @@ CREATE TABLE posts (
   topic_id   int NOT NULL  REFERENCES topics(id),
   user_id    int NOT NULL  REFERENCES users(id),
   created_at timestamp with time zone NOT NULL  DEFAULT NOW(),
+  updated_at timestamp with time zone NULL,
   ip_address inet NULL,
   is_hidden  boolean NOT NULL  DEFAULT false
 );
@@ -107,7 +108,8 @@ CREATE TABLE pms (
   convo_id   int    NOT NULL  REFERENCES convos(id) ON DELETE CASCADE,
   user_id    int    NOT NULL  REFERENCES users(id),
   ip_address inet   NULL,
-  created_at timestamp with time zone NOT NULL  DEFAULT NOW()
+  created_at timestamp with time zone NOT NULL  DEFAULT NOW(),
+  updated_at timestamp with time zone NULL
 );
 
 CREATE TABLE convos_participants (

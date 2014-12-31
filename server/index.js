@@ -276,6 +276,94 @@ app.use(route.get('/me/convos', function*() {
 }));
 
 //
+// Show user
+//
+app.use(route.get('/users/:userId', function*(userId) {
+  var user = yield db.findUser(userId);
+  // Ensure user exists
+  if (!user) return;
+  user = pre.presentUser(user);
+  // OPTIMIZE: Merge into single query?
+  var recentPosts = yield db.findRecentPostsForUserId(user.id);
+  recentPosts = recentPosts.map(pre.presentPost);
+
+  yield this.render('show_user', {
+    ctx: this,
+    user: user,
+    recentPosts: recentPosts
+  });
+}));
+
+//
+// Create convo
+// Params:
+// - 'to': Comma-delimited string of unames user wants to send to
+//
+app.use(route.post('/convos', function*() {
+  var ctx = this;
+  yield cancan.ensure.apply(this, [this.currUser, 'CREATE_CONVO']);
+  // TODO: Validation, Error msgs, preserve params
+  // TODO: Sponge this up into a fixer+validater
+  var unames = this.request.body.to && this.request.body.to.split(',');
+  var title = this.request.body.title;
+  var text = this.request.body.text;
+  // Remove empty
+  unames = _.compact(unames.map(function(uname) {
+    return uname.trim().toLowerCase();
+  }));
+  // Ensure no more than 5 unames specified
+  if (unames.length > 5) return;
+  // Ensure user didn't specify themself
+  unames = _.reject(unames, function(uname) {
+    return uname === ctx.currUser.uname.toLowerCase();
+  });
+  // Remove duplicates
+  unames = _.uniq(unames);
+  // Ensure they are all real users
+  var users = yield db.findUsersByUnames(unames);
+
+  // If not all unames resolved into users, then we return user to form
+  // to fix it.
+  if (users.length !== unames.length) {
+    var rejectedUnames = _.difference(unames, users.map(function(user) {
+      return user.uname.toLowerCase();
+    }));
+    this.flash = {
+      message: [
+        'danger',
+        'No users were found with these names: ' + rejectedUnames.join(', ')
+      ]
+    };
+    this.response.redirect('/convos/new?to=' + unames.join(','));
+    return;
+  }
+
+  // If all unames are valid, then we can create a convo
+  var convo = yield db.createConvo({
+    userId: this.currUser.id,
+    toUserIds: _.pluck(users, 'id'),
+    title: title,
+    text: text,
+    ipAddress: this.request.ip
+  });
+  convo = pre.presentConvo(convo);
+  this.response.redirect(convo.url);
+}));
+
+//
+// New Convo
+//
+// TODO: Implement typeahead
+app.use(route.get('/convos/new', function*() {
+  yield cancan.ensure.apply(this, [this.currUser, 'CREATE_CONVO']);
+  // TODO: Validation, Error msgs, preserve params
+  yield this.render('new_convo', {
+    ctx: this,
+    to: this.request.query.to
+  });
+}));
+
+//
 // Create PM
 //
 app.use(route.post('/convos/:convoId/pms', function*(convoId) {
@@ -298,6 +386,7 @@ var cancan = require('./cancan');
 app.use(route.get('/convos/:convoId', function*(convoId) {
   // TODO: Authz
   var convo = yield db.findConvo(convoId);
+  if (!convo) return;
   yield cancan.ensure.apply(this, [this.currUser, 'READ_CONVO', convo]);
   var pms = yield db.findPmsByConvoId(convoId);
   convo.pms = pms;
@@ -340,16 +429,30 @@ app.use(route.get('/posts/:postId/raw', function*(postId) {
   if (!post) return;
   this.body = post.text;
 }));
+app.use(route.get('/pms/:pmId/raw', function*(pmId) {
+  // TODO: Authz
+  var pm = yield db.findPm(pmId);
+  if (!pm) return;
+  this.body = pm.text;
+}));
 
 //
 // Update post text
 //
+// Keep /api/posts/:postId and /api/pms/:pmId in sync
 app.use(route.put('/api/posts/:postId', function*(postId) {
   // TODO: Authz, validation
   var text = this.request.body.text;
   var updatedPost = yield db.updatePost(this.currUser.id, postId, text);
   updatedPost = pre.presentPost(updatedPost);
   this.body = JSON.stringify(updatedPost);
+}));
+app.use(route.put('/api/pms/:id', function*(id) {
+  // TODO: Authz, validation
+  var text = this.request.body.text;
+  var pm = yield db.updatePm(this.currUser.id, id, text);
+  pm = pre.presentPm(pm);
+  this.body = JSON.stringify(pm);
 }));
 
 //
@@ -359,6 +462,7 @@ app.use(route.put('/api/posts/:postId', function*(postId) {
 // canonical topic page since the page a post falls on depends on
 // currUser. For example, members can't see most hidden posts while
 // mods can.
+// - Keep this in sync with /pms/:pmId
 //
 app.use(route.get('/posts/:postId', function*(postId) {
   // TODO: Authz
@@ -366,6 +470,15 @@ app.use(route.get('/posts/:postId', function*(postId) {
   if (!post) return;
   post = pre.presentPost(post);
   this.response.redirect(post.topic.url + '#post-' + post.id);
+}));
+// PM permalink
+// Keep this in sync with /posts/:postId
+app.use(route.get('/pms/:id', function*(id) {
+  // TODO: Authz
+  var pm = yield db.findPmWithConvo(id);
+  if (!pm) return;
+  pm = pre.presentPm(pm);
+  this.response.redirect(pm.convo.url + '#pm-' + pm.id);
 }));
 
 //

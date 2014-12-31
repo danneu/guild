@@ -1,0 +1,68 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li>{{ user.uname }}</li>
+  </ol>
+
+  <div class="page-header">
+    <h1>
+      <a href="/users/{{ user.id }}">{{ user.uname }}</a>
+      <small>{{ user.role|capitalize}}</small>
+    </h1>
+  </div>
+
+  <div class="row">
+    <div class="col-xs-6">
+
+      <!-- Stats list -->
+      <ul>
+        {% if user.oldguild_uname %}
+          <li>{{ user.oldguild_uname }}</li>
+        {% endif %}
+        <li>
+          Joined:
+          <abbr class="timeago" title="{{ user.created_at.toISOString() }}">
+            {{ user.formattedCreatedAt }}
+          </abbr>
+        </li>
+      </ul>
+
+      <!-- Most recent posts -->
+      <h3>Most Recent Posts</h3>
+      <ul>
+        {% for post in recentPosts %}
+          <li>
+            In <a href="{{ post.topic.url }}">{{ post.topic.title }}</a>
+            <abbr class="timeago" title="{{ post.topic.created_at.toISOString() }}">
+              {{ post.topic.formattedCreatedAt }}
+            </abbr>
+          </li>
+        {% endfor %}
+      </ul>
+
+    </div> <!-- /.col-6 -->
+
+    <!-- Right side -->
+
+    <div class="col-xs-6">
+      {% if ctx.currUser %}
+        <a class="btn btn-primary btn-block pull-right"
+           href="/convos/new?to={{ encodeURI(user.uname) }}">
+          <span class="glyphicon glyphicon-envelope"></span>
+          {% if ctx.currUser.id === user.id %}
+            Start Private Convo with yourself
+          {% else %}
+            Start Private Convo with {{ user.uname }}
+          {% endif %}
+        </a>
+      {% endif %}
+    </div> <!-- /.col-6 -->
+
+  </div> <!-- /.row -->
+
+{% endblock %}
+
+{% block scripts %}
+{% endblock%}

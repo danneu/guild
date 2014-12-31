@@ -58,6 +58,11 @@ exports.presentTopic = presentTopic;
 function presentTopic(topic) {
   topic.url = '/forums/' + topic.forum_id + '/topics/' + topic.id;
 
+  // created_at will be string when embedded in query result via to_json
+  if (_.isString(topic.created_at))
+    topic.created_at = new Date(topic.created_at);
+  topic.formattedCreatedAt = formatDate(topic.created_at);
+
   if (topic.posts)
     topic.posts = topic.posts.map(presentPost);
   if (topic.forum)
@@ -74,10 +79,14 @@ function presentTopic(topic) {
 
 exports.presentConvo = presentConvo;
 function presentConvo(convo) {
+  if (_.isString(convo.created_at))
+    convo.created_at = new Date(convo.created_at);
   convo.formattedCreatedAt = formatDate(convo.created_at);
   convo.url = '/convos/' + convo.id;
-  convo.user = presentUser(convo.user);
-  convo.participants = convo.participants.map(presentUser);
+  if (convo.user)
+    convo.user = presentUser(convo.user);
+  if (convo.participants)
+    convo.participants = convo.participants.map(presentUser);
   return convo;
 }
 
@@ -99,7 +108,7 @@ function presentPm(pm) {
   if (_.isString(pm.created_at))
     pm.created_at = new Date(pm.created_at);
   pm.formattedCreatedAt = formatDate(pm.created_at);
-  pm.url = '/posts/' + pm.id;
+  pm.url = '/pms/' + pm.id;
   if (pm.user)
     pm.user = presentUser(pm.user);
   if (pm.convo)
