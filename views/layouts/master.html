@@ -51,9 +51,22 @@
                      value="Logout"
                      class="btn-link">
             </form>
+
             <div class="btn-group pull-right">
+              <a href="/me/convos"
+                 class="btn btn-default navbar-btn">
+                <span class="glyphicon glyphicon-envelope"></span>
+                PMs
+              </a>
+            <div class="btn-group pull-right">
+              <a href="/me/subscriptions"
+                 class="btn btn-default navbar-btn">
+                <span class="glyphicon glyphicon-list"></span>
+                Subs
+              </a>
               <a href="/me"
                  class="btn btn-default navbar-btn">
+                <span class="glyphicon glyphicon-user"></span>
                 {{ ctx.currUser.uname }}
               </a>
             </div>

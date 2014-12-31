@@ -1,0 +1,30 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  {% for convo in convos %}
+    <div class="panel panel-default">
+      <div class="panel-body">
+        <div class="row">
+          <div class="col-sm-7">
+            <a href="{{ convo.url }}">{{ convo.title }}</a>
+            <div>
+              by <a href="{{ convo.user.url }}">{{ convo.user.uname }}</a>,
+              <abbr class="timeago" title="{{ convo.created_at.toISOString() }}">
+                {{ convo.formattedCreatedAt }}
+              </abbr>
+            </div>
+            <div>
+              Participants:
+              {% for user in convo.participants %}
+                <a href="{{ user.url }}">{{ user.uname }}</a>{% if !loop.last %}, {% endif %}
+              {% endfor %}
+            </div>
+          </div> <!-- /.col-sm-7 -->
+          <div class="col-sm-2">
+            Messages: {{ convo.pms_count }}
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+{% endblock %}

@@ -1,5 +1,8 @@
+// Node
+var util = require('util');
 // 3rd party
 var _ = require('lodash');
+var debug = require('debug')('app:presenters');
 
 // Util ////////////////////////////////////////////////////
 
@@ -69,13 +72,37 @@ function presentTopic(topic) {
   return topic;
 }
 
+exports.presentConvo = presentConvo;
+function presentConvo(convo) {
+  convo.formattedCreatedAt = formatDate(convo.created_at);
+  convo.url = '/convos/' + convo.id;
+  convo.user = presentUser(convo.user);
+  convo.participants = convo.participants.map(presentUser);
+  return convo;
+}
+
 exports.presentPost = presentPost;
 function presentPost(post) {
   if (_.isString(post.created_at))
     post.created_at = new Date(post.created_at);
   post.formattedCreatedAt = formatDate(post.created_at);
   post.url = '/posts/' + post.id;
+  if (post.user)
+    post.user = presentUser(post.user);
   if (post.topic)
     post.topic = presentTopic(post.topic);
   return post;
+}
+
+exports.presentPm = presentPm;
+function presentPm(pm) {
+  if (_.isString(pm.created_at))
+    pm.created_at = new Date(pm.created_at);
+  pm.formattedCreatedAt = formatDate(pm.created_at);
+  pm.url = '/posts/' + pm.id;
+  if (pm.user)
+    pm.user = presentUser(pm.user);
+  if (pm.convo)
+    pm.convo = presentConvo(pm.convo);
+  return pm;
 }

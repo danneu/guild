@@ -224,7 +224,6 @@ app.use(route.get('/', function*() {
   var groupedTopLevelForums = _.groupBy(topLevelForums, 'category_id');
   categories = categories.map(function(category) {
     category.forums = (groupedTopLevelForums[category.id] || []).map(pre.presentForum);
-    debug(category.forums);
     return category;
   });
   yield this.render('homepage', {
@@ -260,6 +259,53 @@ app.use(route.post('/forums/:forumId/topics/:topicId/posts', function*(forumId, 
   var post = yield db.createPost(this.currUser.id, this.request.ip, topicId, text);
   post = pre.presentPost(post);
   this.response.redirect(post.url);
+}));
+
+//
+// View my PMs
+//
+app.use(route.get('/me/convos', function*() {
+  // TODO: Authz, pagination
+  if (!this.currUser) return;
+  var convos = yield db.findConvosInvolvingUserId(this.currUser.id);
+  convos = convos.map(pre.presentConvo);
+  yield this.render('me_convos.html', {
+    ctx: this,
+    convos: convos
+  });
+}));
+
+//
+// Create PM
+//
+app.use(route.post('/convos/:convoId/pms', function*(convoId) {
+  var text = this.request.body.text;
+  assert(text);
+  // TODO: Validation
+  var pm = yield db.createPm({
+    userId: this.currUser.id,
+    ipAddress: this.request.ip,
+    convoId: convoId,
+    text: text});
+  pm = pre.presentPm(pm);
+  this.response.redirect(pm.url);
+}));
+
+//
+// View convo
+//
+var cancan = require('./cancan');
+app.use(route.get('/convos/:convoId', function*(convoId) {
+  // TODO: Authz
+  var convo = yield db.findConvo(convoId);
+  yield cancan.ensure.apply(this, [this.currUser, 'READ_CONVO', convo]);
+  var pms = yield db.findPmsByConvoId(convoId);
+  convo.pms = pms;
+  convo = pre.presentConvo(convo);
+  yield this.render('show_convo', {
+    ctx: this,
+    convo: convo
+  });
 }));
 
 //

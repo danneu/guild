@@ -34,6 +34,13 @@ a {
     user-select: none;
 }
 
+/* Invert the well to make it dark. Remove background-image added by
+   Bootstrap-theme */
+.well {
+    background-color: #222;
+    border-color: #111;
+    background-image: none;
+}
 
 /* =========================================================== */
 /* Undocumented overrides I ported over from the clojure Guild */

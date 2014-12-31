@@ -3,40 +3,42 @@
 {% block embed %}
   <ol class="breadcrumb">
     <li><a href="/">Home</a></li>
-    <li><a href="{{ topic.forum.url }}">{{ topic.forum.title }}</a></li>
+    <li><a href="/me/convos">Private Convos</a></li>
   </ol>
 
-  <div class="page-header" style="border: 0">
-    <h2><a href="{{ topic.url }}" style="color: #fff">{{ topic.title }}</a></h2>
-    {% if topic.is_closed %}
-      <span class="label label-default">Closed</span>
-    {% endif %}
-    {% if topic.is_hidden %}
-      <span class="label label-warning">Hidden</span>
-    {% endif %}
-    {% if topic.is_sticky %}
-      <span class="label label-primary">Sticky</span>
-    {% endif %}
+  <!-- Participants list -->
+  <div class="well">
+    <h4>Participants</h4>
+    <p>These are the only people that can see these messages and respond to them.</p>
+    <ul>
+      {% for user in convo.participants %}
+        <li><a href="{{ user.url }}">{{ user.uname }}</a></li>
+      {% endfor %}
+    </ul>
   </div>
 
-  <!-- Posts list -->
+  <div class="page-header" style="border: 0">
+    <h2><a href="{{ convo.url }}" style="color: #fff">{{ convo.title }}</a></h2>
+  </div>
 
-  {% for post in topic.posts %}
-    <a name="post-{{ post.id }}"></a>
+  <!-- Pms list -->
+
+  {% for pm in convo.pms %}
+    <a name="pm-{{ pm.id }}"></a>
     <div class="panel panel-default post"
-         id="post-{{ post.id }}"
+         id="pm-{{ pm.id }}"
          style="border: 1px solid #111;">
       <div class="panel-heading clearfix"
            style="background-color: #1D1D1D; border-color: #111; border-radius: 0">
         <span class="pull-left">
           Posted
-          <abbr class="timeago" title="{{ post.created_at.toISOString() }}">
-            {{ post.formattedCreatedAt }}
+          <abbr class="timeago" title="{{ pm.created_at.toISOString() }}">
+            {{ pm.formattedCreatedAt }}
           </abbr>
         </span>
         <div class="pull-right post-header">
           <a href="/">View Raw</a> -
-          <a href="{{ post.url }}">
+          <a href="{{ pm.url }}">
             <span class="glyphicon glyphicon-link"></span>
           </a>
         </div>
@@ -47,12 +49,12 @@
            style="background-color: #2E2C2C">
         <!-- Author metadata -->
         <div class="col-sm-2 clearfix">
-          <a href="{{ post.user.url }}">{{ post.user.uname }}</a>
-          <br>{{ post.user.role }}
+          <a href="{{ pm.user.url }}">{{ pm.user.uname }}</a>
+          <br>{{ pm.user.role }}
         </div> <!-- /.col-sm-2 post-meta -->
         <!-- Post text -->
         <div class="col-sm-10">
-          <div class="post-body">{{ post.text }}</div>
+          <div class="post-body">{{ pm.text }}</div>
         </div>
       </div> <!-- /.panel-body -->
 
@@ -62,7 +64,7 @@
         <!-- IP address -->
         <div class="pull-left"
              style="margin-left: 5px; color: #6E6B6B">
-          {{ post.ip_address }}
+          {{ pm.ip_address }}
         </div>
         <!-- Reply button -->
         <a href=""
@@ -92,7 +94,7 @@
     }
   </style>
   <form id="reply-form" role="form" method="post"
-        action="{{ topic.url }}/posts">
+        action="{{ convo.url }}/pms">
     <div class="form-group">
       <textarea rows=10
                 id="reply-input"

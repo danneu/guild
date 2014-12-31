@@ -42,24 +42,6 @@ WHERE t.id = $1
   return result.rows[0];
 };
 
-// TODO: Order by
-// TODO: Pagination
-// exports.findTopicWithPosts = function* (topicId) {
-//   var sql = m(function() {/*
-// SELECT
-//   t.*,
-//   to_json(f.*) "forum",
-//   to_json(array_agg(p.*)) "posts"
-// FROM topics t
-// JOIN posts p ON t.id = p.topic_id
-// JOIN forums f ON t.forum_id = f.id
-// WHERE topic_id = $1
-// GROUP BY t.id, f.id
-//   */});
-//   var result = yield query(sql, [topicId]);
-//   return result.rows[0];
-// };
-
 // Note: Case-insensitive
 exports.findUserByUname = findUserByUname;
 function *findUserByUname(uname) {
@@ -145,6 +127,61 @@ WHERE id = $1
   return result.rows[0];
 };
 
+// TODO: Sort by latest_pm_at
+exports.findConvosInvolvingUserId = function*(userId) {
+  var sql = m(function() {/*
+SELECT
+  c.*,
+  to_json(u1.*) "user",
+  to_json(array_agg(u2.*)) "participants"
+FROM convos c
+JOIN convos_participants cp ON c.id = cp.convo_id
+JOIN users u1 ON c.user_id = u1.id
+JOIN users u2 ON cp.user_id = u2.id
+WHERE c.id IN (
+  SELECT cp.convo_id
+  FROM convos_participants cp
+  WHERE cp.user_id = $1
+)
+GROUP BY c.id, u1.id
+  */});
+  var result = yield query(sql, [userId]);
+  return result.rows;
+};
+
+exports.findConvo = function*(convoId) {
+  assert(!_.isUndefined(convoId));
+  var sql = m(function() {/*
+SELECT
+  c.*,
+  to_json(u1.*) "user",
+  to_json(array_agg(u2.*)) "participants"
+FROM convos c
+JOIN convos_participants cp ON c.id = cp.convo_id
+JOIN users u1 ON c.user_id = u1.id
+JOIN users u2 ON cp.user_id = u2.id
+WHERE c.id = $1
+GROUP BY c.id, u1.id
+  */});
+  var result = yield query(sql, [convoId]);
+  return result.rows[0];
+};
+
+exports.findPmsByConvoId = function*(convoId) {
+  var sql = m(function() {/*
+SELECT
+  pms.*,
+  to_json(u.*) "user"
+FROM pms
+JOIN users u ON pms.user_id = u.id
+WHERE pms.convo_id = $1
+GROUP BY pms.id, u.id
+ORDER BY pms.id
+  */});
+  var result = yield query(sql, [convoId]);
+  return result.rows;
+};
+
 exports.findPostsByTopicId = function*(topicId) {
   var sql = m(function() {/*
 SELECT
@@ -193,6 +230,25 @@ WHERE p.id = $1
 GROUP BY p.id, t.id
   */});
   var result = yield query(sql, [postId]);
+  return result.rows[0];
+};
+
+// Returns created PM
+exports.createPm = function*(props) {
+  assert(_.isNumber(props.userId));
+  assert(props.convoId);
+  assert(_.isString(props.text));
+  var sql = m(function() {/*
+INSERT INTO pms (user_id, ip_address, convo_id, text)
+VALUES ($1, $2::inet, $3, $4)
+RETURNING *
+  */});
+  var result = yield query(sql, [
+    props.userId,
+    props.ipAddress,
+    props.convoId,
+    props.text
+  ]);
   return result.rows[0];
 };
 

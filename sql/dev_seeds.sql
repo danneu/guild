@@ -2,9 +2,36 @@
 INSERT INTO users (id, uname, email, digest)
 VALUES
 -- The password for seed users is 'secret'
-(1, 'foo', 'foo@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci')
+(1, 'foo', 'foo@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci'),
+(2, 'bar', 'bar@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci'),
+(3, 'fuz', 'fuz@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci')
 ;
-SELECT nextval('users_id_seq'::regclass);
+SELECT setval('users_id_seq'::regclass, (SELECT MAX(id) FROM users));
+
+---- Convos
+INSERT INTO convos (id, user_id, title)
+VALUES
+(1, 1, 'Just foo'),
+(2, 1, 'foo -> bar'),
+(3, 1, 'foo -> bar, fuz')
+;
+INSERT INTO convos_participants (convo_id, user_id)
+VALUES
+(1, 1)
+,(2, 1)
+,(2, 2)
+,(3, 1)
+,(3, 2)
+,(3, 3)
+;
+SELECT setval('convos_id_seq'::regclass, (SELECT MAX(id) FROM convos));
+
+--- Pms
+INSERT INTO pms (convo_id, user_id, text)
+VALUES
+(1, 1, 'hey, self')
+;
+SELECT setval('pms_id_seq'::regclass, (SELECT MAX(id) FROM pms));
 
 ---- Categories
 INSERT INTO categories (id, title, description, pos)
@@ -15,11 +42,7 @@ VALUES
 (4, 'Off-Topic', null, 4),
 (5, 'Meta', null, 5)
 ;
-SELECT nextval('categories_id_seq'::regclass);
-SELECT nextval('categories_id_seq'::regclass);
-SELECT nextval('categories_id_seq'::regclass);
-SELECT nextval('categories_id_seq'::regclass);
-SELECT nextval('categories_id_seq'::regclass);
+SELECT setval('categories_id_seq'::regclass, (SELECT MAX(id) FROM categories));
 
 ---- Forums
 INSERT INTO forums (category_id, parent_forum_id, id, title, description, pos, is_roleplay)
