@@ -77,6 +77,13 @@
           <abbr class="timeago" title="{{ post.created_at.toISOString() }}">
             {{ post.formattedCreatedAt }}
           </abbr>
+          {% if post.updated_at %}
+            &rarr;
+            <span class="glyphicon glyphicon-pencil"></span>
+            <abbr class="timeago" title="{{ post.updated_at.toISOString() }}">
+              {{ post.formattedUpdatedAt }}
+            </abbr>
+          {% endif %}
         </span>
         <div class="pull-right post-header">
           <a href="{{ post.url }}/raw">View Raw</a> -
@@ -126,10 +133,10 @@
         </div> <!-- /.panel -->
   {% endfor %}
 
-  <!-- New post forum -->
+  <!-- New post form -->
 
   {% if ctx.can(ctx.currUser, 'CREATE_POST', topic) %}
-    <h2>New Reply</h2>
+    <h2 style="margin-top: 100px;">New Reply</h2>
     <form id="reply-form" role="form" method="post"
           action="{{ topic.url }}/posts">
       <input type="hidden" name="post-type" value="{{ postType }}">

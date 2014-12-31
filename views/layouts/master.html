@@ -52,13 +52,12 @@
                      class="btn-link">
             </form>
 
-            <div class="btn-group pull-right">
+            <div class="btn-group btn-group-sm pull-right">
               <a href="/me/convos"
                  class="btn btn-default navbar-btn">
                 <span class="glyphicon glyphicon-envelope"></span>
                 PMs
               </a>
-            <div class="btn-group pull-right">
               <a href="/me/subscriptions"
                  class="btn btn-default navbar-btn">
                 <span class="glyphicon glyphicon-list"></span>
@@ -71,7 +70,6 @@
               </a>
             </div>
           {% endif %}
-
           <!-- If user is not logged in, show login/register controls -->
           {% if !ctx.currUser %}
             <div class="navbar-right">
