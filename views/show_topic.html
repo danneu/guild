@@ -1,0 +1,236 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="{{ topic.forum.url }}">{{ topic.forum.title }}</a></li>
+  </ol>
+
+  <div class="page-header" style="border: 0">
+    <h2><a href="{{ topic.url }}" style="color: #fff">{{ topic.title }}</a></h2>
+    {% if topic.is_closed %}
+      <span class="label label-default">Closed</span>
+    {% endif %}
+    {% if topic.is_hidden %}
+      <span class="label label-warning">Hidden</span>
+    {% endif %}
+    {% if topic.is_sticky %}
+      <span class="label label-primary">Sticky</span>
+    {% endif %}
+  </div>
+
+  <!-- Posts list -->
+
+  {% for post in topic.posts %}
+    <a name="post-{{ post.id }}"></a>
+    <div class="panel panel-default post"
+         id="post-{{ post.id }}"
+         style="border: 1px solid #111;">
+      <div class="panel-heading clearfix"
+           style="background-color: #1D1D1D; border-color: #111; border-radius: 0">
+        <span class="pull-left">
+          Posted
+          <abbr class="timeago" title="{{ post.created_at.toISOString() }}">
+            {{ post.formattedCreatedAt }}
+          </abbr>
+        </span>
+        <div class="pull-right">
+          <a href="/">View Raw</a> - <a href="{{ post.url }}">Permalink</a>
+        </div>
+      </div> <!-- /.panel-heading -->
+
+      <!-- Panel body -->
+      <div class="panel-body"
+           style="background-color: #2E2C2C">
+        <!-- Author metadata -->
+        <div class="col-sm-2 clearfix">
+          {{ post.user.uname }}
+        </div> <!-- /.col-sm-2 post-meta -->
+        <!-- Post text -->
+        <div class="col-sm-10">
+          <div class="post-body">{{ post.text }}</div>
+        </div>
+      </div> <!-- /.panel-body -->
+
+      <!-- Panel footer -->
+      <div class="panel-footer clearfix"
+           style="background-color: #2E2C2C; border-radius: 0; border: 0">
+        <!-- IP address -->
+        <div class="pull-left"
+             style="margin-left: 5px; color: #6E6B6B">
+          {{ post.ip_address }}
+        </div>
+        <!-- Reply button -->
+        <a href=""
+           class="btn btn-default btn-xs pull-right post-reply-btn"
+           post-id="{{ post.id }}"
+           style="margin-left: 5px"
+           {#{% if !ctx.currUser.canCreatePost %}disabled{% endif %}#}
+           >Reply</a>
+        <!-- Edit button -->
+        <a href="/"
+           class="btn btn-default btn-xs pull-right post-edit-btn"
+           style="margin-left: 5px;"
+           post-id={{ post.id }}
+           {#{% if !post.canUpdate %}disabled{% endif %}#}
+           >Edit</a>
+          </div> <!-- /.panel-footer -->
+        </div> <!-- /.panel -->
+  {% endfor %}
+
+  <!-- New post forum -->
+
+  <h2>New Reply</h2>
+
+  <style>
+    #reply-form {
+      color: black;
+    }
+  </style>
+  <form id="reply-form" role="form" method="post"
+        action="{{ topic.url }}/posts">
+    <div class="form-group">
+      <textarea rows=10
+                id="reply-input"
+                name="text"
+                class="form-control"
+                placeholder="Click here and begin writing"></textarea>
+    </div>
+    <input type="submit" class="btn btn-primary" value="Post Reply"></input>
+  </form>
+
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    $(function() {
+      $('#reply-input').markdown({
+        resize: 'vertical'
+      });
+      $('.post-body').each(function() {
+        var $this = $(this);
+        $this.html(markdown.toHTML($this.text()));
+      });
+    });
+  </script>
+
+  {#
+          REPLY BUTTON
+  #}
+  <script>
+$(function() {
+  $('.post-reply-btn').click(function(e) {
+    e.preventDefault();
+    $reply_btn = $(this);
+    $reply_btn.addClass('disabled').html('Loading...');
+    var post_id = $reply_btn.attr('post-id');
+    // Get this post's text
+    //var post_text = $('#post-' + post_id).find('.post-body').text()
+    //-prev-var post_url = '/api/posts/' + post_id;
+    var post_url = '/posts/' + post_id + '/raw';
+    $.get(post_url, function(markup) {
+      console.log('returned')
+      $reply_btn.removeClass('disabled').html('Reply');
+      // var quote_markup = _.map(markup.split('\n'), function(line) { return '> ' + line }).join('\n')
+      var quote_markup = markup.split('\n').map(function(line) {
+        return '> ' + line;
+      }).join('\n')
+      var $reply_textarea = $('#reply-form textarea');
+      var prev_content = $('textarea').val().trim();
+      // Only add \n\n padding if there was already content in textarea
+      var padding = (function() {
+        if (prev_content.length === 0) {
+          return '';
+        }
+        return '\n\n'
+      })();
+      $reply_textarea.focus().val('').val(prev_content + padding + quote_markup + '\n\n');
+      $reply_textarea.scrollTop($reply_textarea[0].scrollHeight);
+
+      $('html, body').animate({
+        scrollTop: $reply_textarea.offset().top
+      }, 100);
+
+    });
+  });
+});
+  </script>
+
+  {#
+          EDIT POST BUTTON
+  #}
+  <script>
+$(function() {
+  $('.post-edit-btn').click(function(e) {
+    e.preventDefault();
+    $post_edit_btn = $(this);
+    $post_edit_btn.addClass('disabled');
+    var post_id = $(this).attr('post-id');
+    // $('#post-' + post_id + ' .post-editor').markdown({
+    //   savabe: true
+    // });
+    // $('#post-' + post_id + ' .post-body').html('<p>lol</p>');
+    //-prev- var post_url = '/api/posts/' + post_id;
+    var $post_body = $('#post-' + post_id + ' .post-body');
+    var prev_body = $post_body.html();
+    var $spinner = $('<span><img src="/img/spinner.gif"> Loading edit form...</span>');
+    $post_body.html($spinner);
+    $cancel_btn = $('<button style="margin-left: 5px;" class="btn btn-default post-edit-cancel-btn">Cancel</button>');
+
+    $.ajax({
+      url: '/posts/' + post_id + '/raw',
+      dataType: 'html',
+      success: function(post_text) {
+        console.log(post_text);
+        var $post_editor = $('<div class="post-editor"></div>');
+        $spinner.remove();
+        $post_body.append($post_editor);
+        $post_editor.markdown({
+          resize: 'vertical',
+          savable: true,
+          onSave: function(e) {
+            //
+            $success_btn = $post_body.find('.btn-success');
+            $success_btn.html('Saving...');
+            $success_btn.attr('disabled', true);
+            $post_body.find('.btn').attr('disabled', true);
+
+            var text_to_save = e.getContent();
+            $.ajax({
+              url: '/api/posts/' + post_id,
+              dataType: 'json',
+              type: 'POST',
+              headers: { 'X-HTTP-Method-Override': 'PUT' },
+              data: { text: text_to_save },
+              success: function(updated_post) {
+                console.log('updated post: ' + JSON.stringify(updated_post, null, '  '))
+                $post_body.html(markdown.toHTML(updated_post.text));
+                $post_edit_btn.removeClass('disabled');
+                // Set the post's .edited-marker to ' edited'
+                var $edited_marker = $('#post-' + post_id + ' .edited-marker')
+                $edited_marker.html(' edited');
+                console.log($edited_marker)
+              }
+            })
+          }
+        });
+
+        // Gotta set the text before the .markdown() call or else
+        // .markdown() escapes html entities.
+        $post_body.find('textarea').val(post_text)
+
+        $('#post-' + post_id + ' .md-footer').append(
+          $cancel_btn
+        );
+        $($cancel_btn).click(function() {
+          $post_body.html(prev_body);
+          $post_edit_btn.removeClass('disabled');
+        });
+      }
+    });
+
+    return false;
+  });
+});
+  </script>
+{% endblock%}

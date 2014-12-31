@@ -1,0 +1,107 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li>
+      <a href="/">Home</a>
+    </li>
+  </ol>
+
+  <div class="page-header" style="border-color: #000">
+    <h3><a href="{{ forum.url }}" style="color: #fff">{{ forum.title }}</a></h3>
+    {% if forum.description %}
+      <div>{{ forum.description }}</div>
+    {% endif %}
+  </div>
+
+  <!-- Topic list -->
+
+  {% if forum.topics.length === 0 %}
+    This forum has no topics yet.
+  {% endif %}
+
+  {% if forum.topics.length > 0 %}
+    <div class="list-group">
+      <div class="list-group-item"
+           style="background-color: #1D1D1D; border: 1px solid #111;">
+        <div class="row">
+          <div class="col-xs-6">Topics</div>
+          <div class="col-xs-1"></div>
+          <div class="col-xs-2">Posts</div>
+          <div class="col-xs-3">Latest Post</div>
+        </div> <!-- /.row -->
+      </div><!-- /.list-group-item -->
+      {% for topic in forum.topics %}
+        <div class="list-group-item"
+             style="background-color: #3d3a3a; border: 1px solid #111; color: #fff;">
+          <div class="row">
+            <div class="col-xs-6">
+              <h5 class="list-group-item-heading topic-panel-title">
+                {% if topic.is_closed %}
+                  <span class="label label-default">Closed</span>
+                {% endif %}
+                {% if topic.is_hidden %}
+                  <span class="label label-warning">Hidden</span>
+                {% endif %}
+                {% if topic.is_sticky %}
+                  <span class="label label-primary">Sticky</span>
+                {% endif %}
+                <a href="{{ topic.url }}">{{ topic.title }}</a>
+                <div style="margin-top: 6px;">
+                  by <a href="{{ topic.user.url }}" style="color: #fff">{{ topic.user.uname }}</a>
+                <div>
+              </h5>
+            </div>
+            <div class="col-xs-1"></div>
+            <div class="col-xs-2">{{ topic.posts_count }}</div>
+            <!-- Latest post -->
+            <div class="col-xs-3">
+              <a href="{{ topic.latest_post.url }}">Latest Post</a>
+              <div>
+                by <a href="{{ topic.latest_user.url }}" style="color: #fff">{{ topic.latest_user.uname }}</a>
+              </div>
+              <abbr class="timeago"
+                    title="{{ topic.latest_post.created_at.toISOString() }}">
+                {{ topic.latest_post.formattedCreatedAt }}
+              </abbr>
+            </div>
+          </div> <!-- /.row -->
+        </div> <!-- /.list-group-item -->
+      {% endfor %}
+    </div> <!-- /.list-group -->
+  {% endif %}
+
+  <!-- New post forum -->
+
+  <h2>New Topic</h2>
+
+  <form id="new-topic-form" role="form" method="post"
+        action="{{ forum.url }}/topics">
+    <input type="hidden" name="forum-id" value="{{ forum.id }}">
+    <div class="form-group">
+      <input type="text"
+             placeholder="Topic Title"
+             name="title"
+             class="form-control">
+    </div>
+    <div class="form-group">
+      <textarea rows=10
+                id="reply-input"
+                name="text"
+                class="form-control"
+                placeholder="Click here and begin writing"></textarea>
+    </div>
+    <input type="submit" class="btn btn-primary" value="Create Topics"></input>
+  </form>
+
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    $(function() {
+      $('#reply-input').markdown({
+        resize: 'vertical'
+      });
+    });
+  </script>
+{% endblock %}

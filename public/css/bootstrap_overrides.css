@@ -1,0 +1,9 @@
+
+/*
+    Add gutter to the global navbar so that it's not flush against
+    the top of the screen.
+*/
+
+body {
+  padding-top: 20px;
+}

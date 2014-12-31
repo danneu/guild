@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="keywords" content="roleplay forum, forum based roleplay, play by post, rp forum, roleplaying forum, rpg forum">
+  <meta name="description" content="Forum based play-by-post role playing games from fantasy to futuristic settings where members create and interact with freeform user-driven characters, story lines, and settings. Role plays are organized by skill-level.">
+  <title>Roleplayer Guild</title>
+
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css">
+  <!-- Other 3rd party CSS -->
+  <link rel="stylesheet" href="/vendor/bootstrap-markdown/css/bootstrap-markdown.min.css">
+  <!-- RPGuild CSS -->
+  <link href="/css/bootstrap_overrides.css" rel="stylesheet">
+  <link href="/css/general.css" rel="stylesheet">
+</head>
+<body>
+<div class="container">
+
+  <!-- Global info banner -->
+  <div class="alert alert-info" role="alert">
+    <strong>Welcome</strong> This is the development server. I still have a long way to go.
+  </div>
+
+    <!-- Static navbar -->
+    <nav class="navbar navbar-default" role="navigation"
+         style="background-color: transparent; border: 0;">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="/">Roleplayer Guild</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="/users">Users</a></li>
+          </ul>
+
+          <!-- If user is logged in, show logout button -->
+          {% if ctx.currUser %}
+            <form style="padding-top:3px;"
+                  action="/me/logout"
+                  method="post"
+                  class="navbar-form pull-right">
+              <input type="submit"
+                     value="Logout"
+                     class="btn-link">
+            </form>
+            <div class="btn-group pull-right">
+              <a href="/me"
+                 class="btn btn-default navbar-btn">
+                {{ ctx.currUser.uname }}
+              </a>
+            </div>
+          {% endif %}
+
+          <!-- If user is not logged in, show login/register controls -->
+          {% if !ctx.currUser %}
+            <div class="navbar-right">
+              <a class="btn btn-default" href="/login" id="login-btn">
+                Login
+              </a>
+              <a class="btn btn-primary" href="/register" id="register-btn">
+                Register
+              </a>
+            </div>
+          {% endif %}
+
+        </div><!--/.nav-collapse -->
+      </div><!--/.container-fluid -->
+    </nav><!-- /navbar -->
+
+    <!-- Display flash message -->
+    {% if ctx.flash && ctx.flash.message %}
+      <div class="alert alert-{{= ctx.flash.message[0] }}"
+           role="alert">
+        {{ ctx.flash.message[1] }}
+      </div>
+    {% endif %}
+
+    <!-- Embedded content is nested here -->
+    {% block embed %}{% endblock %}
+
+  </div> <!-- /container -->
+
+  <!-- JS -->
+  <script src="/vendor/jquery/jquery-2.1.3.min.js"></script>
+  <script src="/vendor/timeago/jquery.timeago.js"></script>
+  <script src="/vendor/markdown/markdown.js"></script>
+  <script src="/vendor/bootstrap-markdown/js/bootstrap-markdown.js"></script>
+  <script>
+    $.timeago.settings.allowFuture = true;
+    $.timeago.settings.strings = {
+      prefixAgo: null,
+      prefixFromNow: "in",
+      suffixAgo: "ago",
+      suffixFromNow: "",
+      seconds: "<1 min",
+      minute: "1 min",
+      minutes: "%d min",
+      hour: "1 hour",
+      hours: "%d hours",
+      day: "1 day",
+      days: "%d days",
+      month: "1 month",
+      months: "%d months",
+      year: "1 year",
+      years: "%d years",
+      wordSeparator: " ",
+      numbers: []
+    };
+  </script>
+  <script>
+    $(function() {
+      $("abbr.timeago").timeago();
+    });
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

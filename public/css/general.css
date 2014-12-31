@@ -1,0 +1,45 @@
+
+body {
+    background-color: #222020;
+    color: #fff;
+}
+
+/* Provide a gutter so that content isn't flush against the bottom of the window */
+body {
+    padding-bottom: 200px;
+}
+
+/* Make all links dat ugly taxi-cab yellow */
+a {
+    color: #ffc300;
+}
+
+/* Invert (darken) the bgcolor of breadcrumbs */
+.breadcrumb {
+    background-color: #3d3a3a;
+}
+
+/* Ensure images can be no wider than post container width */
+.post-body img {
+    max-width: 100%;
+}
+
+/* =========================================================== */
+/* Undocumented overrides I ported over from the clojure Guild */
+/* TODO: Review and prune/document these to explain purpose    */
+/* =========================================================== */
+
+.panel-default {
+    background-color: #3d3a3a;
+}
+.panel-default>.panel-heading {
+    background-color: #262626;
+    border-color: #2e2c2c;
+    color: #fff;
+}
+.panel-default {
+    border-color: #3d3a3a;
+}
+.panel-footer {
+    background-color: #7A7575;
+}
