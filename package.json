@@ -6,6 +6,10 @@
     "start": "node --harmony ./server",
     "reset-db": "node --harmony ./server/reset_db"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/danneu/guild"
+  },
   "dependencies": {
     "bcryptjs": "^2.1.0",
     "better-assert": "^1.0.2",
