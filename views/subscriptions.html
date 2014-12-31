@@ -1,0 +1,25 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+
+  <!-- Breadcrumbs -->
+
+  <ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+  </ol>
+
+  <!-- Page header -->
+
+  <div class="page-header">
+    <h2><a href="/subscriptions" style="color: #fff">My Subscriptions</a></h2>
+    <p>Subscribing to a topic gives you a convenient way to track only the topics you care about.</p>
+  </div>
+
+  <p class="lead">Total: {{ topics.length }}, Max: 100</p>
+
+  <h3>Roleplays <small>{{ roleplayTopics.length }}</small></h3>
+
+{% endblock %}
+
+{% block scripts %}
+{% endblock%}

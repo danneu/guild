@@ -1,10 +1,15 @@
 {% extends 'layouts/master.html' %}
 
 {% block embed %}
+
+  <!-- Breadcrumbs -->
+
   <ol class="breadcrumb">
     <li><a href="/">Home</a></li>
     <li><a href="{{ topic.forum.url }}">{{ topic.forum.title }}</a></li>
   </ol>
+
+  <!-- Page header -->
 
   <div class="page-header" style="border: 0">
     <h2><a href="{{ topic.url }}" style="color: #fff">{{ topic.title }}</a></h2>
@@ -18,6 +23,46 @@
       <span class="label label-primary">Sticky</span>
     {% endif %}
   </div>
+
+  <!-- New Reply button -->
+
+  {% if ctx.can(ctx.currUser, 'CREATE_POST', topic) %}
+    <a class="btn btn-primary pull-right" href="">
+      <span class="glyphicon glyphicon-pencil"></span>
+      New Reply
+    </a>
+  {% else %}
+    <a class="btn btn-primary pull-right" href="" disabled>
+      <span class="glyphicon glyphicon-pencil"></span>
+      Login to Reply
+    </a>
+  {% endif %}
+
+  <ul class="nav nav-tabs">
+    {% if topic.forum.is_roleplay %}
+      <li class="active">
+        <a href="{{ topic.url }}/ic">
+          IC <span class="badge">{{ topic.ic_posts_count }}</span>
+        </a>
+      </li>
+      <li>
+        <a href="{{ topic.url }}/ooc">
+          OOC <span class="badge">{{ topic.ooc_posts_count }}</span>
+        </a>
+      </li>
+      <li>
+        <a href="{{ topic.url }}/ooc">
+          Characters <span class="badge">{{ topic.char_posts_count }}</span>
+        </a>
+      </li>
+    {% else %}
+      <li class="active">
+        <a href="{{ topic.url }}">Posts <span class="badge">
+            {{ topic.posts_count }}
+        </span></a>
+      </li>
+    {% endif %}
+  </ul>
 
   <!-- Posts list -->
 
@@ -34,7 +79,7 @@
           </abbr>
         </span>
         <div class="pull-right post-header">
-          <a href="/">View Raw</a> -
+          <a href="{{ post.url }}/raw">View Raw</a> -
           <a href="{{ post.url }}">
             <span class="glyphicon glyphicon-link"></span>
           </a>
@@ -68,14 +113,14 @@
            class="btn btn-default btn-xs pull-right post-reply-btn"
            post-id="{{ post.id }}"
            style="margin-left: 5px"
-           {#{% if !ctx.currUser.canCreatePost %}disabled{% endif %}#}
+           {% if !ctx.can(ctx.currUser, 'CREATE_POST', topic) %}disabled{% endif %}
            >Reply</a>
         <!-- Edit button -->
         <a href="/"
            class="btn btn-default btn-xs pull-right post-edit-btn"
            style="margin-left: 5px;"
            post-id={{ post.id }}
-           {#{% if !post.canUpdate %}disabled{% endif %}#}
+           {% if !ctx.can(ctx.currUser, 'UPDATE_POST', post) %}disabled{% endif %}
            >Edit</a>
           </div> <!-- /.panel-footer -->
         </div> <!-- /.panel -->
@@ -83,24 +128,21 @@
 
   <!-- New post forum -->
 
-  <h2>New Reply</h2>
-
-  <style>
-    #reply-form {
-      color: black;
-    }
-  </style>
-  <form id="reply-form" role="form" method="post"
-        action="{{ topic.url }}/posts">
-    <div class="form-group">
-      <textarea rows=10
-                id="reply-input"
-                name="text"
-                class="form-control"
-                placeholder="Click here and begin writing"></textarea>
-    </div>
-    <input type="submit" class="btn btn-primary" value="Post Reply"></input>
-  </form>
+  {% if ctx.can(ctx.currUser, 'CREATE_POST', topic) %}
+    <h2>New Reply</h2>
+    <form id="reply-form" role="form" method="post"
+          action="{{ topic.url }}/posts">
+      <input type="hidden" name="post-type" value="{{ postType }}">
+      <div class="form-group">
+        <textarea rows=10
+                  id="reply-input"
+                  name="text"
+                  class="form-control"
+                  placeholder="Click here and begin writing"></textarea>
+      </div>
+      <input type="submit" class="btn btn-primary" value="Post Reply"></input>
+    </form>
+  {% endif %}
 
 {% endblock %}
 

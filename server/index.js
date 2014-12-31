@@ -10,6 +10,7 @@ var route = require('koa-route');
 var views = require('koa-views');
 // Node
 var util = require('util');
+var path = require('path');
 // 3rd party
 var _ = require('lodash');
 var debug = require('debug')('app:index');
@@ -39,6 +40,7 @@ app.use(middleware.flash('flash'));
 
 app.use(function*(next) {
   var ctx = this;
+  this.can = cancan.can;
   this.assertAuthorized = function(user, action, target) {
     var canResult = cancan.can(user, action, target);
     debug('[' + action + ' canResult]: ' + canResult);
@@ -198,7 +200,7 @@ app.use(route.post('/sessions', function*() {
 }));
 
 //
-// Users listview
+// Show users
 //
 app.use(route.get('/users', function*() {
   yield this.render('users', {
@@ -237,6 +239,7 @@ app.use(route.get('/', function*() {
     category.forums = (groupedTopLevelForums[category.id] || []).map(pre.presentForum);
     return category;
   });
+
   yield this.render('homepage', {
     ctx: this,
     categories: categories
@@ -244,7 +247,27 @@ app.use(route.get('/', function*() {
 }));
 
 //
-// Canonical show-forum page
+// Show subscriptions
+//
+app.use(route.get('/me/subscriptions', function*() {
+  this.assert(this.currUser, 404);
+  var topics = yield db.findSubscribedTopicsForUserId(this.currUser.id);
+  console.log(JSON.stringify(topics));
+  var grouped = _.groupBy(topics, function(topic) {
+    return topic.forum.is_roleplay;
+  });
+  var roleplayTopics = grouped[true];
+  var nonroleplayTopics = grouped[false];
+  yield this.render('subscriptions', {
+    ctx: this,
+    topics: topics,
+    roleplayTopics: roleplayTopics,
+    nonroleplayTopics: nonroleplayTopics
+  });
+}));
+
+//
+// Canonical show forum
 //
 app.use(route.get('/forums/:forumId', function*(forumId) {
   // TODO: Ensure currUser can view forum
@@ -263,17 +286,32 @@ app.use(route.get('/forums/:forumId', function*(forumId) {
 //
 // Create post
 //
-app.use(route.post('/forums/:forumId/topics/:topicId/posts', function*(forumId, topicId) {
+app.use(route.post('/topics/:topicId/posts', function*(topicId) {
+  var postType = this.request.body['post-type'];
+  this.assert(_.contains(['ic', 'ooc', 'char'], postType), 404);
+  var topic = yield db.findTopic(topicId);
+  this.assert(topic, 404);
+  this.assertAuthorized(this.currUser, 'CREATE_POST', topic);
+
+  // If non-rp forum, then the post must be 'ooc' type
+  if (!topic.forum.is_roleplay)
+    this.assert(postType === 'ooc', 400);
+
   var text = this.request.body.text;
-  assert(text);
   // TODO: Validation
-  var post = yield db.createPost(this.currUser.id, this.request.ip, topicId, text);
+  var post = yield db.createPost({
+    userId: this.currUser.id,
+    ipAddress: this.request.ip,
+    topicId: topic.id,
+    text: text,
+    type: postType
+  });
   post = pre.presentPost(post);
   this.response.redirect(post.url);
 }));
 
 //
-// View my PMs
+// Show convos
 //
 app.use(route.get('/me/convos', function*() {
   // TODO: Authz, pagination
@@ -414,15 +452,20 @@ app.use(route.post('/forums/:forumId/topics', function*(forumId) {
   var forumId = this.request.body['forum-id'];
   var title = this.request.body.title;
   var text = this.request.body.text;
+
+  var forum = yield db.findForum(forumId);
+  if (!forum) return;
+
+  this.assertAuthorized(this.currUser, 'CREATE_TOPIC', forum);
+
   // TODO: Validation
-  assert(title);
-  assert(text);
   var topic = yield db.createTopic({
     userId: this.currUser.id,
     forumId: forumId,
     ipAddress: this.request.ip,
     title: title,
-    text: text
+    text: text,
+    postType: forum.is_roleplay ? 'ic' : 'ooc'
   });
   topic = pre.presentTopic(topic);
   this.response.redirect(topic.url);
@@ -495,18 +538,37 @@ app.use(route.get('/pms/:id', function*(id) {
 }));
 
 //
-// Canonical show-topic page
+// Canonical show topic
 //
-app.use(route.get('/forums/:forumId/topics/:topicId', function*(forumId, topicId) {
+app.use(route.get('/topics/:topicId/posts/:postType', function*(topicId, postType) {
+  this.assert(_.contains(['ic', 'ooc', 'char'], postType), 404);
   var topic = yield db.findTopic(topicId);
+  this.assert(topic, 404);
+  this.assertAuthorized(this.currUser, 'READ_TOPIC', topic);
+
   // TODO: Pagination
-  var posts = yield db.findPostsByTopicId(topicId);
+  var posts = yield db.findPostsByTopicId(topicId, postType);
   topic.posts = posts;
   topic = pre.presentTopic(topic);
   yield this.render('show_topic', {
     ctx: this,
     topic: topic,
+    postType: postType
   });
+}));
+
+//
+// Redirect topic to canonical url
+//
+app.use(route.get('/topics/:topicId', function*(topicId) {
+  var topic = yield db.findTopic(topicId);
+  this.assert(topic, 404);
+  this.assertAuthorized(this.currUser, 'READ_TOPIC', topic);
+
+  if (topic.forum.is_roleplay)
+    this.response.redirect(path.join(this.request.path, '/posts/ic'));
+  else
+    this.response.redirect(path.join(this.request.path, '/posts/ooc'));
 }));
 
 app.listen(config.PORT);

@@ -73,7 +73,11 @@
 
   <!-- New post forum -->
 
-  <h2>New Topic</h2>
+  {% if forum.is_roleplay %}
+    <h2>New Roleplay</h2>
+  {% else %}
+    <h2>New Topic</h2>
+  {% endif %}
 
   <form id="new-topic-form" role="form" method="post"
         action="{{ forum.url }}/topics">

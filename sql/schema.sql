@@ -9,6 +9,10 @@ DROP TYPE IF EXISTS role_type;
 DROP TABLE IF EXISTS convos CASCADE;
 DROP TABLE IF EXISTS pms CASCADE;
 DROP TABLE IF EXISTS convos_participants CASCADE;
+DROP TYPE IF EXISTS post_type;
+DROP TABLE IF EXISTS topic_subscriptions CASCADE;
+
+CREATE EXTENSION IF NOT EXISTS plv8;
 
 CREATE TYPE role_type AS ENUM ('admin', 'smod', 'mod', 'member', 'banned');
 
@@ -73,8 +77,13 @@ CREATE TABLE topics (
   is_closed  boolean NOT NULL  DEFAULT false,
   is_sticky  boolean NOT NULL  DEFAULT false,
   -- Cache
-  posts_count int NOT NULL  DEFAULT 0
+  posts_count int NOT NULL  DEFAULT 0,
+  ic_posts_count int NOT NULL DEFAULT 0,
+  ooc_posts_count int NOT NULL DEFAULT 0,
+  char_posts_count int NOT NULL DEFAULT 0
 );
+
+CREATE TYPE post_type AS ENUM ('ic', 'ooc', 'char');
 
 CREATE TABLE posts (
   id         serial PRIMARY KEY,
@@ -83,12 +92,18 @@ CREATE TABLE posts (
   user_id    int NOT NULL  REFERENCES users(id),
   created_at timestamp with time zone NOT NULL  DEFAULT NOW(),
   updated_at timestamp with time zone NULL,
+  type       post_type NOT NULL,
   ip_address inet NULL,
   is_hidden  boolean NOT NULL  DEFAULT false
 );
 
 ALTER TABLE forums ADD COLUMN latest_post_id int NULL REFERENCES posts(id);
 ALTER TABLE topics ADD COLUMN latest_post_id int NULL REFERENCES posts(id);
+
+CREATE TABLE topic_subscriptions (
+  user_id int NOT NULL  REFERENCES users(id),
+  topic_id int NOT NULL  REFERENCES topics(id)
+);
 
 --
 -- Convos/Private-messaging system
@@ -181,72 +196,66 @@ CREATE TRIGGER post_created1
     EXECUTE PROCEDURE update_forum_posts_count();
 
 ------------------------------------------------------------
--- Update topic.posts_count when a post is inserted/deleted
+-- Update the counter caches for a topic when a post is added/removed
+CREATE OR REPLACE FUNCTION update_topic_post_counts() RETURNS trigger AS
+$$
+  var totalDelta = 0;
+  var icDelta = 0;
+  var oocDelta = 0;
+  var charDelta = 0;
+  var topicId;
+  var q;
+  if (TG_OP === 'DELETE') {
+    totalDelta--;
+    topicId = OLD.topic_id;
+  }
+  if (TG_OP === 'INSERT') {
+    totalDelta++;
+    topicId = NEW.topic_id;
+  }
+  if (TG_OP === 'DELETE' && OLD.type === 'ic') icDelta--;
+  if (TG_OP === 'INSERT' && NEW.type === 'ic') icDelta++;
+  if (TG_OP === 'DELETE' && OLD.type === 'ooc') oocDelta--;
+  if (TG_OP === 'INSERT' && NEW.type === 'ooc') oocDelta++;
+  if (TG_OP === 'DELETE' && OLD.type === 'char') charDelta--;
+  if (TG_OP === 'INSERT' && NEW.type === 'char') charDelta++;
+  q = 'UPDATE topics SET posts_count = posts_count + $1, ic_posts_count = ic_posts_count + $2, ooc_posts_count = ooc_posts_count + $3, char_posts_count = char_posts_count + $4 WHERE id = $5';
+  plv8.execute(q, [totalDelta, icDelta, oocDelta, charDelta, topicId]);
+$$ LANGUAGE 'plv8';
 
-CREATE OR REPLACE FUNCTION update_topic_posts_count()
-RETURNS trigger AS $update_topic_posts_count$
-    BEGIN
-        IF (TG_OP = 'DELETE') THEN
-            UPDATE topics
-            SET posts_count = posts_count - 1
-            WHERE id = OLD.topic_id;
-        ELSIF (TG_OP = 'INSERT') THEN
-            UPDATE topics
-            SET posts_count = posts_count + 1
-            WHERE id = NEW.topic_id;
-        END IF;
-        RETURN NULL; -- result is ignored since this is an AFTER trigger
-    END;
-$update_topic_posts_count$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS post_created2 ON posts;
-CREATE TRIGGER post_created2
+DROP TRIGGER IF EXISTS post_inserted_or_deleted ON posts;
+CREATE TRIGGER post_inserted_or_deleted
     AFTER INSERT OR DELETE ON posts
     FOR EACH ROW
-    EXECUTE PROCEDURE update_topic_posts_count();
+    EXECUTE PROCEDURE update_topic_post_counts();
 
 ------------------------------------------------------------
--- Update forum.latest_post_id when a post is inserted/deleted
+-- Update the containing forum's and topic's latest_post_id whenever a post
+-- is created
 
-CREATE OR REPLACE FUNCTION update_forum_latest_post_id()
-RETURNS trigger AS $update_forum_latest_post_id$
-    BEGIN
-        UPDATE forums
-        SET latest_post_id = NEW.id
-        WHERE id = (
-          SELECT forum_id
-          FROM topics
-          WHERE topics.id = NEW.topic_id
-        );
-        RETURN NULL; -- result is ignored since this is an AFTER trigger
-    END;
-$update_forum_latest_post_id$ LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION update_latest_post_id() RETURNS trigger AS
+$$
+  var q = 'UPDATE forums           '+
+          'SET latest_post_id = $1 '+
+          'WHERE id = (            '+
+          '  SELECT forum_id       '+
+          '  FROM topics           '+
+          '  WHERE topics.id = $2  '+
+          ')                       ';
+  plv8.execute(q, [NEW.id, NEW.topic_id]);
 
-DROP TRIGGER IF EXISTS post_created3 ON posts;
-CREATE TRIGGER post_created3
+  var q = 'UPDATE topics           '+
+          'SET latest_post_id = $1 '+
+          'WHERE id = $2           ';
+  plv8.execute(q, [NEW.id, NEW.topic_id]);
+
+$$ LANGUAGE 'plv8';
+
+DROP TRIGGER IF EXISTS post_created5 ON posts;
+CREATE TRIGGER post_created5
     AFTER INSERT ON posts  -- Only on insert
     FOR EACH ROW
-    EXECUTE PROCEDURE update_forum_latest_post_id();
-
-------------------------------------------------------------
-
--- Update topic.latest_post_id when a post is inserted/deleted
-
-CREATE OR REPLACE FUNCTION update_topic_latest_post_id()
-RETURNS trigger AS $update_topic_latest_post_id$
-    BEGIN
-        UPDATE topics
-        SET latest_post_id = NEW.id
-        WHERE id = NEW.topic_id;
-        RETURN NULL; -- result is ignored since this is an AFTER trigger
-    END;
-$update_topic_latest_post_id$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS post_created4 ON posts;
-CREATE TRIGGER post_created4
-    AFTER INSERT ON posts  -- Only on insert
-    FOR EACH ROW
-    EXECUTE PROCEDURE update_topic_latest_post_id();
+    EXECUTE PROCEDURE update_latest_post_id();
 
 ------------------------------------------------------------
 -- Update convo.pms_count when a pm is inserted/deleted

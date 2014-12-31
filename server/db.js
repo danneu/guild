@@ -282,18 +282,18 @@ ORDER BY pms.id
   return result.rows;
 };
 
-exports.findPostsByTopicId = function*(topicId) {
+exports.findPostsByTopicId = function*(topicId, postType) {
   var sql = m(function() {/*
 SELECT
   p.*,
   to_json(u.*) "user"
 FROM posts p
 JOIN users u ON p.user_id = u.id
-WHERE p.topic_id = $1
+WHERE p.topic_id = $1 AND p.type = $2
 GROUP BY p.id, u.id
 ORDER BY p.id
   */});
-  var result = yield query(sql, [topicId]);
+  var result = yield query(sql, [topicId, postType]);
   return result.rows;
 };
 
@@ -368,16 +368,18 @@ RETURNING *
   return result.rows[0];
 };
 
-exports.createPost = function*(userId, ipAddress, topicId, text) {
-  assert(_.isNumber(userId));
-  assert(_.isString(ipAddress));
-  assert(_.isString(text));
+exports.createPost = function*(args) {
+  assert(_.isNumber(args.userId));
+  assert(_.isString(args.ipAddress));
+  assert(_.isString(args.text));
+  assert(args.topicId);
+  assert(_.contains(['ic', 'ooc', 'char'], args.type));
   var sql = m(function() {/*
-INSERT INTO posts (user_id, ip_address, topic_id, text)
-VALUES ($1, $2::inet, $3, $4)
+INSERT INTO posts (user_id, ip_address, topic_id, text, type)
+VALUES ($1, $2::inet, $3, $4, $5)
 RETURNING *
   */});
-  var result = yield query(sql, [userId, ipAddress, topicId, text]);
+  var result = yield query(sql, [args.userId, args.ipAddress, args.topicId, args.text, args.type]);
   return result.rows[0];
 };
 
@@ -388,14 +390,15 @@ exports.createTopic = function*(props) {
   assert(_.isString(props.ipAddress));
   assert(_.isString(props.title));
   assert(_.isString(props.text));
+  assert(_.contains(['ic', 'ooc', 'char'], props.postType));
   var topicSql = m(function() {/*
 INSERT INTO topics (forum_id, user_id, title)
 VALUES ($1, $2, $3)
 RETURNING *
   */});
   var postSql = m(function() {/*
-INSERT INTO posts (topic_id, user_id, ip_address, text)
-VALUES ($1, $2, $3::inet, $4)
+INSERT INTO posts (topic_id, user_id, ip_address, text, type)
+VALUES ($1, $2, $3::inet, $4, $5)
 RETURNING *
   */});
   try {
@@ -404,7 +407,7 @@ RETURNING *
       props.forumId, props.userId, props.title
     ]);
     var topic = topicResult.rows[0];
-    yield query(postSql, [topic.id, props.userId, props.ipAddress, props.text]);
+    yield query(postSql, [topic.id, props.userId, props.ipAddress, props.text, props.postType]);
     yield query('COMMIT');
   } catch(ex) {
     yield query('ROLLBACK');
@@ -487,10 +490,29 @@ WHERE user_id = $1 AND id = $2
   return yield query(sql, [userId, sessionId]);
 };
 
+exports.findSubscribedTopicsForUserId = function*(userId) {
+  var sql = m(function() {/*
+SELECT
+  t.*,
+  to_json(u.*) "user",
+  to_json(latest_post.*) "latest_post",
+  to_json(u2.*) "latest_user",
+  to_json(f.*) "forum"
+FROM topic_subscriptions ts
+JOIN topics t ON ts.topic_id = t.id
+JOIN users u ON t.user_id = u.id
+JOIN posts latest_post ON t.latest_post_id = latest_post.id
+JOIN users u2 ON latest_post.user_id = u2.id
+JOIN forums f ON t.forum_id = f.id
+WHERE ts.user_id = $1
+  */});
+  var result = yield query(sql, [userId]);
+  return result.rows;
+};
+
 exports.findForums = findForums;
 function* findForums(categoryIds) {
   assert(_.isArray(categoryIds));
-  console.log('dd');
   var sql = m(function() {/*
 SELECT
   f.*,

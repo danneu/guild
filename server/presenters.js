@@ -56,7 +56,7 @@ function presentUser(user) {
 
 exports.presentTopic = presentTopic;
 function presentTopic(topic) {
-  topic.url = '/forums/' + topic.forum_id + '/topics/' + topic.id;
+  topic.url = '/topics/' + topic.id;
 
   // created_at will be string when embedded in query result via to_json
   if (_.isString(topic.created_at))
