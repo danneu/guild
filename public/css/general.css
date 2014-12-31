@@ -6,7 +6,7 @@ body {
 
 /* Provide a gutter so that content isn't flush against the bottom of the window */
 body {
-    padding-bottom: 200px;
+    padding-bottom: 100px;
 }
 
 /* Make all links dat ugly taxi-cab yellow */
