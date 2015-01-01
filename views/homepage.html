@@ -35,7 +35,9 @@
                   {% if forum.latest_post %}
                     <div>
                       by
-                      <a href="{{ forum.latest_user.url }}">{{ forum.latest_user.uname }}</a>
+                      <a href="{{ forum.latest_user.url }}" style="color: #fff;">
+                        {{- forum.latest_user.uname -}}
+                      </a>
                       <a href="{{ topic.latest_post.url }}">
                         <span class="glyphicon glyphicon-link"></span>
                         &rarr;
