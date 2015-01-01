@@ -17,7 +17,9 @@
   <!-- Topic list -->
 
   {% if forum.topics.length === 0 %}
-    This forum has no topics yet.
+    <div class="well">
+      This forum has no topics yet.
+    </div>
   {% endif %}
 
   {% if forum.topics.length > 0 %}

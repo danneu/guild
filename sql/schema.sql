@@ -74,10 +74,12 @@ CREATE TABLE topics (
   user_id    int NOT NULL  REFERENCES users(id),
   forum_id   int NOT NULL  REFERENCES forums(id),
   created_at timestamp with time zone NOT NULL  DEFAULT NOW(),
+  is_roleplay boolean NOT NULL,
+  -- Modkit flags
   is_hidden  boolean NOT NULL  DEFAULT false,
   is_closed  boolean NOT NULL  DEFAULT false,
   is_sticky  boolean NOT NULL  DEFAULT false,
-  -- Cache
+  -- Counter Cache
   posts_count int NOT NULL  DEFAULT 0,
   ic_posts_count int NOT NULL DEFAULT 0,
   ooc_posts_count int NOT NULL DEFAULT 0,
@@ -93,13 +95,18 @@ CREATE TABLE posts (
   user_id    int NOT NULL  REFERENCES users(id),
   created_at timestamp with time zone NOT NULL  DEFAULT NOW(),
   updated_at timestamp with time zone NULL,
+  is_roleplay boolean NOT NULL,
   type       post_type NOT NULL,
   ip_address inet NULL,
   is_hidden  boolean NOT NULL  DEFAULT false
 );
 
+-- Last post cache
 ALTER TABLE forums ADD COLUMN latest_post_id int NULL REFERENCES posts(id);
 ALTER TABLE topics ADD COLUMN latest_post_id int NULL REFERENCES posts(id);
+ALTER TABLE topics ADD COLUMN latest_ic_post_id int NULL REFERENCES posts(id);
+ALTER TABLE topics ADD COLUMN latest_ooc_post_id int NULL REFERENCES posts(id);
+ALTER TABLE topics ADD COLUMN latest_char_post_id int NULL REFERENCES posts(id);
 
 CREATE TABLE topic_subscriptions (
   user_id int NOT NULL  REFERENCES users(id),
@@ -243,13 +250,34 @@ $$
           '  FROM topics           '+
           '  WHERE topics.id = $2  '+
           ')                       ';
+
   plv8.execute(q, [NEW.id, NEW.topic_id]);
 
-  var q = 'UPDATE topics           '+
-          'SET latest_post_id = $1 '+
-          'WHERE id = $2           ';
-  plv8.execute(q, [NEW.id, NEW.topic_id]);
+  q = 'UPDATE topics                 '+
+      'SET latest_post_id      = $2, '+
+      '    latest_ic_post_id   = $3, '+
+      '    latest_ooc_post_id  = $4, '+
+      '    latest_char_post_id = $5  '+
+      'WHERE id = $1                 ';
 
+  // If NonRP, just set the latest_post_id
+  if (!NEW.is_roleplay) {
+    plv8.execute(q, [NEW.topic_id, NEW.id, null, null, null]);
+    return;
+  }
+
+  // Since it is a roleplay, update the appropriate cache
+  switch(NEW.type) {
+    case 'ic':
+      plv8.execute(q, [NEW.topic_id, NEW.id, NEW.id, null,   null]);
+      return;
+    case 'ooc':
+      plv8.execute(q, [NEW.topic_id, NEW.id, null,   NEW.id, null]);
+      return;
+    case 'char':
+      plv8.execute(q, [NEW.topic_id, NEW.id, null,   null,   NEW.id]);
+      return;
+  }
 $$ LANGUAGE 'plv8';
 
 DROP TRIGGER IF EXISTS post_created5 ON posts;

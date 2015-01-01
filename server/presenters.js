@@ -69,10 +69,26 @@ function presentTopic(topic) {
     topic.forum = presentForum(topic.forum);
   if (topic.user)
     topic.user = presentUser(topic.user);
+
+  //// Check for cache props
+  // Post caches
   if (topic.latest_post)
     topic.latest_post = presentPost(topic.latest_post);
+  if (topic.latest_ic_post)
+    topic.latest_ic_post = presentPost(topic.latest_ic_post);
+  if (topic.latest_ooc_post)
+    topic.latest_ooc_post = presentPost(topic.latest_ooc_post);
+  if (topic.latest_char_post)
+    topic.latest_char_post = presentPost(topic.latest_char_post);
+  // User caches
   if (topic.latest_user)
     topic.latest_user = presentUser(topic.latest_user);
+  if (topic.latest_ic_user)
+    topic.latest_ic_user = presentUser(topic.latest_ic_user);
+  if (topic.latest_ooc_user)
+    topic.latest_ooc_user = presentUser(topic.latest_ooc_user);
+  if (topic.latest_char_user)
+    topic.latest_char_user = presentUser(topic.latest_char_user);
 
   return topic;
 }

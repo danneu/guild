@@ -367,46 +367,64 @@ RETURNING *
   return result.rows[0];
 };
 
+// Args:
+// - userId      Required Number/String
+// - ipAddress   Optional String
+// - text        Required String
+// - topicId     Required Number/String
+// - type        Required String, ic | ooc | char
+// - isRoleplay  Required Boolean
 exports.createPost = function*(args) {
   assert(_.isNumber(args.userId));
   assert(_.isString(args.ipAddress));
   assert(_.isString(args.text));
   assert(args.topicId);
+  assert(_.isBoolean(args.isRoleplay));
   assert(_.contains(['ic', 'ooc', 'char'], args.type));
   var sql = m(function() {/*
-INSERT INTO posts (user_id, ip_address, topic_id, text, type)
-VALUES ($1, $2::inet, $3, $4, $5)
+INSERT INTO posts (user_id, ip_address, topic_id, text, type, is_roleplay)
+VALUES ($1, $2::inet, $3, $4, $5, $6)
 RETURNING *
   */});
-  var result = yield query(sql, [args.userId, args.ipAddress, args.topicId, args.text, args.type]);
+  var result = yield query(sql, [args.userId, args.ipAddress, args.topicId, args.text, args.type, args.isRoleplay]);
   return result.rows[0];
 };
 
 // TODO: Wrap in txn abstraction
+// Args:
+// - userId     Required Number/String
+// - forumId    Required Number/String
+// - ipAddress  Optional String
+// - title      Required String
+// - text       Required String
+// - postType   Required String, ic | ooc | char
+// - isRoleplay Required Boolean
+//
 exports.createTopic = function*(props) {
   assert(_.isNumber(props.userId));
   assert(props.forumId);
   assert(_.isString(props.ipAddress));
   assert(_.isString(props.title));
   assert(_.isString(props.text));
+  assert(_.isBoolean(props.isRoleplay));
   assert(_.contains(['ic', 'ooc', 'char'], props.postType));
   var topicSql = m(function() {/*
-INSERT INTO topics (forum_id, user_id, title)
-VALUES ($1, $2, $3)
+INSERT INTO topics (forum_id, user_id, title, is_roleplay)
+VALUES ($1, $2, $3, $4)
 RETURNING *
   */});
   var postSql = m(function() {/*
-INSERT INTO posts (topic_id, user_id, ip_address, text, type)
-VALUES ($1, $2, $3::inet, $4, $5)
+INSERT INTO posts (topic_id, user_id, ip_address, text, type, is_roleplay)
+VALUES ($1, $2, $3::inet, $4, $5, $6)
 RETURNING *
   */});
   try {
     yield query('BEGIN');
     var topicResult = yield query(topicSql, [
-      props.forumId, props.userId, props.title
+      props.forumId, props.userId, props.title, props.isRoleplay
     ]);
     var topic = topicResult.rows[0];
-    yield query(postSql, [topic.id, props.userId, props.ipAddress, props.text, props.postType]);
+    yield query(postSql, [topic.id, props.userId, props.ipAddress, props.text, props.postType, props.isRoleplay]);
     yield query('COMMIT');
   } catch(ex) {
     yield query('ROLLBACK');
@@ -489,18 +507,31 @@ WHERE user_id = $1 AND id = $2
   return yield query(sql, [userId, sessionId]);
 };
 
+// Sort them by latest_posts first
 exports.findSubscribedTopicsForUserId = function*(userId) {
   var sql = m(function() {/*
 SELECT
   t.*,
-  to_json(u.*) "user",
-  to_json(latest_post.*) "latest_post",
-  to_json(u2.*) "latest_user",
-  to_json(f.*) "forum"
+  to_json(u.*)                "user",
+  to_json(latest_post.*)      "latest_post",
+  to_json(u2.*)               "latest_user",
+  to_json(latest_ic_post.*)   "latest_ic_post",
+  to_json(latest_ic_user.*)   "latest_ic_user",
+  to_json(latest_ooc_post.*)  "latest_ooc_post",
+  to_json(latest_ooc_user.*)  "latest_ooc_user",
+  to_json(latest_char_post.*) "latest_char_post",
+  to_json(latest_char_user.*) "latest_char_user",
+  to_json(f.*)                "forum"
 FROM topic_subscriptions ts
 JOIN topics t ON ts.topic_id = t.id
 JOIN users u ON t.user_id = u.id
-JOIN posts latest_post ON t.latest_post_id = latest_post.id
+LEFT OUTER JOIN posts latest_post ON t.latest_post_id = latest_post.id
+LEFT OUTER JOIN posts latest_ic_post ON t.latest_ic_post_id = latest_ic_post.id
+LEFT OUTER JOIN users latest_ic_user ON latest_ic_post.user_id = latest_ic_user.id
+LEFT OUTER JOIN posts latest_ooc_post ON t.latest_ooc_post_id = latest_ooc_post.id
+LEFT OUTER JOIN users latest_ooc_user ON latest_ooc_post.user_id = latest_ooc_user.id
+LEFT OUTER JOIN posts latest_char_post ON t.latest_char_post_id = latest_char_post.id
+LEFT OUTER JOIN users latest_char_user ON latest_char_post.user_id = latest_char_user.id
 JOIN users u2 ON latest_post.user_id = u2.id
 JOIN forums f ON t.forum_id = f.id
 WHERE ts.user_id = $1

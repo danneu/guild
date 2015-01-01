@@ -83,20 +83,20 @@ VALUES
 SELECT setval('forums_id_seq'::regclass, (SELECT MAX(id) FROM forums));
 
 ---- Topics
-INSERT INTO topics (id, forum_id, title, user_id, is_hidden, is_closed, is_sticky)
+INSERT INTO topics (id, forum_id, title, user_id, is_hidden, is_closed, is_sticky, is_roleplay)
 VALUES
- (1, 1, 'Test Topic A', 1, false, true, false)  -- nonrp
-,(2, 1, 'Test Topic B', 1, false, false, true)  -- nonrp
-,(3, 1, 'Test Topic C', 1, false, false, false) -- nonrp
-,(4, 3, 'The Flob''s Journey', 1, false, false, false)  -- free-rp
+ (1, 1, 'Test Topic A',        1, false, true,  false, false)  -- nonrp
+,(2, 1, 'Test Topic B',        1, false, false, true,  false)  -- nonrp
+,(3, 1, 'Test Topic C',        1, false, false, false, false) -- nonrp
+,(4, 3, 'The Flob''s Journey', 1, false, false, false, true)  -- free-rp
 ;
 ---- Posts
-INSERT INTO posts (id, topic_id, user_id, text, ip_address, type)
+INSERT INTO posts (id, topic_id, user_id, text, ip_address, type, is_roleplay)
 VALUES
-(1, 1, 1, 'First post', '1.2.3.4', 'ooc')
-,(2, 2, 1, 'First post', '1.2.3.4', 'ooc')
-,(3, 3, 1, 'First post', '1.2.3.4', 'ooc')
-,(4, 4, 1, 'First IC post', '1.2.3.4', 'ic');
+(1, 1, 1, 'First post', '1.2.3.4', 'ooc', false)
+,(2, 2, 1, 'First post', '1.2.3.4', 'ooc', false)
+,(3, 3, 1, 'First post', '1.2.3.4', 'ooc', false)
+,(4, 4, 1, 'First IC post', '1.2.3.4', 'ic', true);
 SELECT setval('topics_id_seq'::regclass, (SELECT MAX(id) FROM topics));
 SELECT setval('posts_id_seq'::regclass, (SELECT MAX(id) FROM posts));
 

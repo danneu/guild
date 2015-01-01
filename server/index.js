@@ -252,6 +252,7 @@ app.use(route.get('/', function*() {
 app.use(route.get('/me/subscriptions', function*() {
   this.assert(this.currUser, 404);
   var topics = yield db.findSubscribedTopicsForUserId(this.currUser.id);
+  topics = topics.map(pre.presentTopic);
   console.log(JSON.stringify(topics));
   var grouped = _.groupBy(topics, function(topic) {
     return topic.forum.is_roleplay;
@@ -304,7 +305,8 @@ app.use(route.post('/topics/:topicId/posts', function*(topicId) {
     ipAddress: this.request.ip,
     topicId: topic.id,
     text: text,
-    type: postType
+    type: postType,
+    isRoleplay: topic.forum.is_roleplay
   });
   post = pre.presentPost(post);
   this.response.redirect(post.url);
@@ -465,7 +467,8 @@ app.use(route.post('/forums/:forumId/topics', function*(forumId) {
     ipAddress: this.request.ip,
     title: title,
     text: text,
-    postType: forum.is_roleplay ? 'ic' : 'ooc'
+    postType: forum.is_roleplay ? 'ic' : 'ooc',
+    isRoleplay: forum.is_roleplay
   });
   topic = pre.presentTopic(topic);
   this.response.redirect(topic.url);
