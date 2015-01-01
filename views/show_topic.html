@@ -40,18 +40,18 @@
 
   <ul class="nav nav-tabs">
     {% if topic.forum.is_roleplay %}
-      <li class="active">
-        <a href="{{ topic.url }}/ic">
+      <li class="{% if ctx.request.path.endsWith('/ic') %}active{% endif %}">
+        <a href="{{ topic.url }}/posts/ic">
           IC <span class="badge">{{ topic.ic_posts_count }}</span>
         </a>
       </li>
-      <li>
-        <a href="{{ topic.url }}/ooc">
+      <li class="{% if ctx.request.path.endsWith('/ooc') %}active{% endif %}">
+        <a href="{{ topic.url }}/posts/ooc">
           OOC <span class="badge">{{ topic.ooc_posts_count }}</span>
         </a>
       </li>
-      <li>
-        <a href="{{ topic.url }}/ooc">
+      <li class="{% if ctx.request.path.endsWith('/char') %}active{% endif %}">
+        <a href="{{ topic.url }}/posts/char">
           Characters <span class="badge">{{ topic.char_posts_count }}</span>
         </a>
       </li>
@@ -65,6 +65,12 @@
   </ul>
 
   <!-- Posts list -->
+
+  {% if topic.posts.length === 0 %}
+    <div class="well">
+      There are no {{ postType.toUpperCase() }} posts, yet.
+    </div>
+  {% endif %}
 
   {% for post in topic.posts %}
     <a name="post-{{ post.id }}"></a>
