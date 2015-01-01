@@ -34,13 +34,14 @@
                 <div class="col-xs-3">
                   {% if forum.latest_post %}
                     <div>
+                      <a href="{{ forum.latest_post.url }}">
+                        {{ forum.latest_topic.title|truncate(40) }}
+                      </a>
+                    </div>
+                    <div>
                       by
                       <a href="{{ forum.latest_user.url }}" style="color: #fff;">
                         {{- forum.latest_user.uname -}}
-                      </a>
-                      <a href="{{ topic.latest_post.url }}">
-                        <span class="glyphicon glyphicon-link"></span>
-                        &rarr;
                       </a>
                     </div>
                     <abbr class="timeago"

@@ -15,6 +15,7 @@ var path = require('path');
 var _ = require('lodash');
 var debug = require('debug')('app:index');
 var assert = require('better-assert');
+var swig = require('swig');
 // 1st party
 var db = require('./db');
 var config = require('./config');
@@ -37,6 +38,21 @@ app.use(function*(next) {
 });
 app.use(middleware.currUser());
 app.use(middleware.flash('flash'));
+
+// TODO: Extract custom swig filters
+// {{ 'firetruck'|truncate(5) }}  -> 'firet...'
+// {{ 'firetruck'|truncate(6) }}  -> 'firetruck'
+function makeTruncate(suffix) {
+  return function(str, n) {
+    suffix = suffix || '';
+    var sliced = str.slice(0, n).trim();
+    var totalLength = sliced.length + suffix.length;
+    if (totalLength >= str.length)
+      return str;
+    return sliced + suffix;
+  }
+}
+swig.setFilter('truncate', makeTruncate('…'));
 
 app.use(function*(next) {
   var ctx = this;
