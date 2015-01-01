@@ -33,10 +33,14 @@
                 <div class="col-xs-1">{{ forum.posts_count }}</div>
                 <div class="col-xs-3">
                   {% if forum.latest_post %}
-                    <a href="{{ forum.latest_post.url }}">Latest Post</a>
-                    <br>by
-                    <a href="{{ forum.latest_user.url }}">{{ forum.latest_user.uname }}</a>
-                    <br>
+                    <div>
+                      by
+                      <a href="{{ forum.latest_user.url }}">{{ forum.latest_user.uname }}</a>
+                      <a href="{{ topic.latest_post.url }}">
+                        <span class="glyphicon glyphicon-link"></span>
+                        &rarr;
+                      </a>
+                    </div>
                     <abbr class="timeago"
                           title="{{ forum.latest_post.created_at.toISOString() }}">
                       {{ forum.latest_post.formattedCreatedAt }}
