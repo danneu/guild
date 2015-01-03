@@ -15,7 +15,6 @@ DROP VIEW IF EXISTS active_reset_tokens;
 DROP TABLE IF EXISTS reset_tokens CASCADE;
 
 CREATE EXTENSION IF NOT EXISTS plv8;
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TYPE role_type AS ENUM ('admin', 'smod', 'mod', 'member', 'banned');
 
