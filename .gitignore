@@ -1,0 +1,8 @@
+bower_components
+.env
+.test-env
+.projectile
+db-backup.tar.gz
+node_modules
+server/sandbox.js
+test

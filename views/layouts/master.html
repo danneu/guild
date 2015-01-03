@@ -6,14 +6,18 @@
   <meta name="description" content="Forum based play-by-post role playing games from fantasy to futuristic settings where members create and interact with freeform user-driven characters, story lines, and settings. Role plays are organized by skill-level.">
   <title>Roleplayer Guild</title>
 
-  <!-- Bootstrap CSS -->
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css">
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap-theme.min.css">
-  <!-- Other 3rd party CSS -->
-  <link rel="stylesheet" href="/vendor/bootstrap-markdown/css/bootstrap-markdown.min.css">
-  <!-- RPGuild CSS -->
-  <link href="/css/bootstrap_overrides.css" rel="stylesheet">
-  <link href="/css/general.css" rel="stylesheet">
+  {% if ctx.dist && ctx.dist.css %}
+    <link rel="stylesheet" href="/{{ ctx.dist.css }}">
+  {% else %}
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap-theme.min.css">
+    <!-- Other 3rd party CSS -->
+    <link rel="stylesheet" href="/vendor/bootstrap-markdown/css/bootstrap-markdown.min.css">
+    <!-- RPGuild CSS -->
+    <link href="/css/bootstrap_overrides.css" rel="stylesheet">
+    <link href="/css/general.css" rel="stylesheet">
+  {% endif %}
 </head>
 <body>
 <div class="container">
@@ -112,10 +116,14 @@
   </div> <!-- /container -->
 
   <!-- JS -->
-  <script src="/vendor/jquery/jquery-2.1.3.min.js"></script>
-  <script src="/vendor/timeago/jquery.timeago.js"></script>
-  <script src="/vendor/markdown/markdown.js"></script>
-  <script src="/vendor/bootstrap-markdown/js/bootstrap-markdown.js"></script>
+  {% if ctx.dist && ctx.dist.js %}
+    <script src="/{{ ctx.dist.js }}"></script>
+  {% else %}
+    <script src="/vendor/jquery/jquery-2.1.3.min.js"></script>
+    <script src="/vendor/timeago/jquery.timeago.js"></script>
+    <script src="/vendor/markdown/markdown.js"></script>
+    <script src="/vendor/bootstrap-markdown/js/bootstrap-markdown.js"></script>
+  {% endif %}
   <script>
     $.timeago.settings.allowFuture = true;
     $.timeago.settings.strings = {

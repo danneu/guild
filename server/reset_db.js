@@ -4,6 +4,7 @@ var fs = require('co-fs');
 // 3rd party
 var pg = require('co-pg')(require('pg'));
 var co = require('co');
+var _ = require('lodash');
 // 1st party
 var db = require('./db');
 var config = require('./config');
@@ -22,6 +23,12 @@ function* resetDb() {
   if (config.NODE_ENV === 'development') {
     var sql = yield slurpSql('dev_seeds.sql');
     yield db.query(sql);
+    yield _.range(100).map(function(n) {
+      return db.createPost({
+        userId: 1, ipAddress: '1.2.3.4', text: n.toString(), topicId: 1, isRoleplay: false,
+        type: 'ooc'
+      });
+    });
   }
 }
 

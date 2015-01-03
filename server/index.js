@@ -3,6 +3,7 @@ var app = require('koa')();
 app.poweredBy = false;
 app.proxy = true;
 app.use(require('koa-static')('public'));
+app.use(require('koa-static')('dist', { maxage: 1000 * 60 * 60 * 24 * 365 }));
 app.use(require('koa-logger')());
 app.use(require('koa-body')());
 app.use(require('koa-methodoverride')('_method'));
@@ -15,6 +16,9 @@ var _ = require('lodash');
 var debug = require('debug')('app:index');
 var assert = require('better-assert');
 var swig = require('swig');
+var fs = require('co-fs');
+var co = require('co');
+var path = require('path');
 // 1st party
 var db = require('./db');
 var config = require('./config');
@@ -25,17 +29,37 @@ var valid = require('./validation');
 var cancan = require('./cancan');
 var emailer = require('./emailer');
 
-// Since app.proxy === true (we trust X-Proxy-* headers), we want to
-// reject all requests that hit origin. app.proxy should only be turned on
-// when app is behind trusted proxy like Cloudflare.
+// Upon app boot, check for compiled assets
+// in the `dist` folder. If found, attach their
+// paths to the context so the view layer can render
+// them.
+var dist;
+co(function*() {
+  var manifest = {};
+  var manifestPath = './dist/rev-manifest.json';
+  if (yield fs.exists(manifestPath)) {
+    var jsonString = yield fs.readFile(manifestPath, 'utf8');
+    manifest = JSON.parse(jsonString);
+  }
+  dist = {
+    css: manifest['all.css'],
+    js: manifest['all.js']
+  };
+}).then(function() {
+  console.log('dist set');
+}, function(err) {
+  console.error('Error: ', err, err.stack);
+});
+
 app.use(function*(next) {
-  // Example:
-  // if (this.request.headers.host === 'dev-guild.herokuapp.com') {
-  //   this.body = 'Please do not connect directly to the origin server.';
-  //   return;
-  // }
+  this.dist = dist;
   yield next;
 });
+
+// TODO: Since app.proxy === true (we trust X-Proxy-* headers), we want to
+// reject all requests that hit origin. app.proxy should only be turned on
+// when app is behind trusted proxy like Cloudflare.
+
 app.use(require('koa-validate')());
 app.use(middleware.currUser());
 app.use(middleware.flash('flash'));
@@ -62,7 +86,7 @@ function makeTruncate(suffix) {
     if (totalLength >= str.length)
       return str;
     return sliced + suffix;
-  }
+  };
 }
 swig.setFilter('truncate', makeTruncate('…'));
 
