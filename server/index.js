@@ -263,6 +263,45 @@ app.use(route.get('/', function*() {
 }));
 
 //
+// Remove subcription
+//
+app.use(route.delete('/me/subscriptions/:topicId', function*(topicId) {
+  this.assert(this.currUser, 404);
+  var topic = yield db.findTopic(topicId);
+  this.assertAuthorized(this.currUser, 'SUBSCRIBE_TOPIC', topic);
+  yield db.unsubscribeFromTopic(this.currUser.id, topicId);
+  // TODO: flash
+  topic = pre.presentTopic(topic);
+
+  if (this.request.body['return-to-topic'])
+    return this.response.redirect(topic.url);
+
+  this.response.redirect('/me/subscriptions');
+}));
+
+//
+// Create subscription
+//
+app.use(route.post('/me/subscriptions', function*() {
+  this.assert(this.currUser, 404);
+  var topicId = this.request.body['topic-id'];
+  this.assert(topicId, 404);
+  var topic = yield db.findTopic(topicId);
+  this.assert(topic, 404);
+  this.assertAuthorized(this.currUser, 'SUBSCRIBE_TOPIC', topic);
+  // TODO: flash
+  yield db.subscribeToTopic(this.currUser.id, topicId);
+
+  topic = pre.presentTopic(topic);
+
+  debug(this.request.body);
+  if (this.request.body['return-to-topic'])
+    return this.response.redirect(topic.url);
+
+  this.response.redirect('/me/subscriptions');
+}));
+
+//
 // Show subscriptions
 //
 app.use(route.get('/me/subscriptions', function*() {
@@ -273,8 +312,8 @@ app.use(route.get('/me/subscriptions', function*() {
   var grouped = _.groupBy(topics, function(topic) {
     return topic.forum.is_roleplay;
   });
-  var roleplayTopics = grouped[true];
-  var nonroleplayTopics = grouped[false];
+  var roleplayTopics = grouped[true] || [];
+  var nonroleplayTopics = grouped[false] || [];
   yield this.render('subscriptions', {
     ctx: this,
     topics: topics,
@@ -560,8 +599,16 @@ app.use(route.get('/pms/:id', function*(id) {
 // Canonical show topic
 //
 app.use(route.get('/topics/:topicId/posts/:postType', function*(topicId, postType) {
+  debug('[GET /topics/:topicId/posts/:postType]');
   this.assert(_.contains(['ic', 'ooc', 'char'], postType), 404);
-  var topic = yield db.findTopic(topicId);
+
+  // Only incur the topic_subscriptions join if currUser exists
+  var topic;
+  if (this.currUser) {
+    topic = yield db.findTopicWithIsSubscribed(this.currUser.id, topicId);
+  } else {
+    topic = yield db.findTopic(topicId);
+  }
   this.assert(topic, 404);
   this.assertAuthorized(this.currUser, 'READ_TOPIC', topic);
 
@@ -580,6 +627,7 @@ app.use(route.get('/topics/:topicId/posts/:postType', function*(topicId, postTyp
 // Redirect topic to canonical url
 //
 app.use(route.get('/topics/:topicId', function*(topicId) {
+  debug('[GET /topics/:topicId]');
   var topic = yield db.findTopic(topicId);
   this.assert(topic, 404);
   this.assertAuthorized(this.currUser, 'READ_TOPIC', topic);

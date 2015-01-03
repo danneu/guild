@@ -110,7 +110,8 @@ ALTER TABLE topics ADD COLUMN latest_char_post_id int NULL REFERENCES posts(id);
 
 CREATE TABLE topic_subscriptions (
   user_id int NOT NULL  REFERENCES users(id),
-  topic_id int NOT NULL  REFERENCES topics(id)
+  topic_id int NOT NULL  REFERENCES topics(id),
+  UNIQUE (user_id, topic_id)
 );
 
 --

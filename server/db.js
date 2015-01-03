@@ -29,6 +29,47 @@ function *query(sql, params) {
   return result;
 }
 
+exports.subscribeToTopic = function*(userId, topicId) {
+  var sql = m(function() {/*
+INSERT INTO topic_subscriptions (user_id, topic_id)
+VALUES ($1, $2)
+  */});
+  try {
+  var result = yield query(sql, [userId, topicId]);
+  } catch(ex) {
+    if (ex.code === '23505')
+      return;
+    throw ex;
+  }
+};
+
+exports.unsubscribeFromTopic = function*(userId, topicId) {
+  var sql = m(function() {/*
+DELETE FROM topic_subscriptions
+WHERE user_id = $1 AND topic_id = $2
+  */});
+  var result = yield query(sql, [userId, topicId]);
+  return;
+};
+
+// Same as findTopic but takes a userid so that it can return a topic
+// with an is_subscribed boolean for the user
+exports.findTopicWithIsSubscribed = function* (userId, topicId) {
+  var sql = m(function() {/*
+SELECT
+  t.*,
+  to_json(f.*) "forum",
+  array_agg($1::int) @> Array[ts.user_id::int] "is_subscribed"
+FROM topics t
+JOIN forums f ON t.forum_id = f.id
+LEFT OUTER JOIN topic_subscriptions ts ON t.id = ts.topic_id
+WHERE t.id = $2
+GROUP BY t.id, f.id, ts.user_id
+  */});
+  var result = yield query(sql, [userId, topicId]);
+  return result.rows[0];
+};
+
 exports.findTopic = function* (topicId) {
   var sql = m(function() {/*
 SELECT

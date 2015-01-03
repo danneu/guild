@@ -38,6 +38,30 @@
     </a>
   {% endif %}
 
+  <!-- Subscribe button -->
+
+  {% if ctx.can(ctx.currUser, 'SUBSCRIBE_TOPIC', topic) %}
+    {% if topic.is_subscribed %}
+      <form action="{{ topic.subscriptionUrl }}" method="post">
+        <input type="hidden" name="_method" value="delete">
+        <input type="hidden" name="return-to-topic" value="true">
+        <button type="submit" class="btn btn-danger pull-right" style="margin-right: 10px">
+          <span class="glyphicon glyphicon-remove"></span>
+          Unsubscribe
+        </button>
+      </form>
+    {% else %}
+      <form action="/me/subscriptions" method="post">
+        <input type="hidden" name="topic-id" value="{{ topic.id }}">
+        <input type="hidden" name="return-to-topic" value="true">
+        <button type="submit" class="btn btn-success pull-right" style="margin-right: 10px">
+          <span class="glyphicon glyphicon-plus"></span>
+          Subscribe
+        </button>
+      </form>
+    {% endif %}
+  {% endif %}
+
   <ul class="nav nav-tabs">
     {% if topic.forum.is_roleplay %}
       <li class="{% if ctx.request.path.endsWith('/ic') %}active{% endif %}">

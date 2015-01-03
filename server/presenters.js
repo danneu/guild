@@ -56,12 +56,16 @@ function presentUser(user) {
 
 exports.presentTopic = presentTopic;
 function presentTopic(topic) {
+  debug(topic);
   topic.url = '/topics/' + topic.id;
 
   // created_at will be string when embedded in query result via to_json
   if (_.isString(topic.created_at))
     topic.created_at = new Date(topic.created_at);
   topic.formattedCreatedAt = formatDate(topic.created_at);
+
+  // Subs
+  topic.subscriptionUrl = '/me/subscriptions/' + topic.id;
 
   if (topic.posts)
     topic.posts = topic.posts.map(presentPost);
