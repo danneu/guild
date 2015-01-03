@@ -13,6 +13,16 @@ function can(user, action, target) {
   if (user && user.role === 'admin') return true;
 
   switch(action) {
+    // Topic state
+    case 'STICK_TOPIC':
+    case 'UNSTICK_TOPIC':
+    case 'HIDE_TOPIC':
+    case 'UNHIDE_TOPIC':
+    case 'CLOSE_TOPIC':
+    case 'OPEN_TOPIC':
+      // Only staff can do this
+      return _.contains(['mod', 'smod', 'admin'], user.role);
+      return false;
     case 'CREATE_POST': // target is topic
       if (!user) return false;
       if (user.role === 'banned') return false;
@@ -77,12 +87,12 @@ function can(user, action, target) {
         return user && _.contains(['admin', 'smod', 'mod'], user.role);
       if (!target.is_hidden) return true;
       return false;
-    case 'CREATE_TOPIC':  // target is category
+    case 'CREATE_TOPIC':  // target is forum
       assert(target);
       if (!user) return false;
       if (user.role === 'banned') return false;
       // Members can create topics in any category that's not Lexus Lounge
-      if (user.role === 'member') return target.id !== 6;
+      if (user.role === 'member') return target.category_id !== 6;
       // Only staff can create topics in lexus lounge
       if (target.id === 6) {
         return _.contains(['admin', 'smod', 'mod'], user.role);

@@ -6,6 +6,7 @@ var pg = require('co-pg')(require('pg'));
 var co = require('co');
 // 1st party
 var db = require('./db');
+var config = require('./config');
 
 ////////////////////////////////////////////////////////////
 
@@ -15,13 +16,24 @@ function* slurpSql(filePath) {
   return yield fs.readFile(fullPath, 'utf8');
 }
 
-var succBack = function() { console.log('Database reset!'); };
-var errBack = function(err) { console.error('Caught error: ', err, err.stack); };
-
-co(function*() {
-  console.log('Resetting the database...');
+function* resetDb() {
   var sql = yield slurpSql('schema.sql');
   yield db.query(sql);
-  var sql = yield slurpSql('dev_seeds.sql');
-  yield db.query(sql);
-}).then(succBack, errBack);
+  if (config.NODE_ENV === 'development') {
+    var sql = yield slurpSql('dev_seeds.sql');
+    yield db.query(sql);
+  }
+}
+
+if (!module.parent) {
+  // Called from cli
+  var succBack = function() { console.log('Database reset!'); };
+  var errBack = function(err) { console.error('Caught error: ', err, err.stack); };
+  co(function*() {
+    console.log('Resetting the database...');
+    yield resetDb();
+  }).then(succBack, errBack);
+} else {
+  // Loaded by a script
+  module.exports = resetDb;
+}
