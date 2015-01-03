@@ -1,0 +1,61 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li>
+      <a href="/">Home</a>
+    </li>
+  </ol>
+
+  <div class="page-header" style="border-color: #000">
+    <h3>Reset Password</h3>
+  </div>
+
+  <div class="row">
+    <div class="col-sm-6 col-sm-offset-3">
+      <form action="/forgot" method="post" class="form-horizontal">
+        <div class="panel panel-default no-select"
+             style="border-color: #000">
+          <!--
+              PANEL BODY
+              -->
+          <div class="panel-body">
+
+            <div class="form-group">
+              <label for="email-input"
+                     class="col-sm-3 control-label">
+                Email:
+              </label>
+              <div class="col-sm-9">
+                <input id="email-input"
+                       type="email"
+                       name="email"
+                       class="form-control"
+                       required>
+              </div>
+            </div>
+
+          </div> <!-- /.panel-body -->
+          <!--
+              PANEL FOOTER
+              -->
+          <div class="panel-footer" style="border-color: #000">
+            <div class="text-right">
+              <input id="forgot-submit"
+                     type="submit"
+                     value="Submit"
+                     class="btn btn-primary">
+            </div>
+          </div> <!-- /.panel-footer -->
+        </div> <!-- /.panel -->
+      </form>
+    </div> <!-- /col -->
+  </div> <!-- /.row -->
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  $('#email-input').focus();
+</script>
+{% endblock %}

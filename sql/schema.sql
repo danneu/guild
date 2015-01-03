@@ -11,6 +11,8 @@ DROP TABLE IF EXISTS pms CASCADE;
 DROP TABLE IF EXISTS convos_participants CASCADE;
 DROP TYPE IF EXISTS post_type;
 DROP TABLE IF EXISTS topic_subscriptions CASCADE;
+DROP VIEW IF EXISTS active_reset_tokens;
+DROP TABLE IF EXISTS reset_tokens CASCADE;
 
 CREATE EXTENSION IF NOT EXISTS plv8;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -19,15 +21,23 @@ CREATE TYPE role_type AS ENUM ('admin', 'smod', 'mod', 'member', 'banned');
 
 CREATE TABLE users (
   id             serial PRIMARY KEY,
-  uname          text NOT NULL,
+  uname          text NOT NULL,  -- Unique index added later in schema
   digest         text NOT NULL,
-  email          text NOT NULL,
+  email          text NOT NULL,  -- Unique index added later in schema
   oldguild_uname text NULL,
   created_at     timestamp with time zone NOT NULL  DEFAULT NOW(),
   role           role_type NOT NULL  DEFAULT 'member'
 );
 
 CREATE UNIQUE INDEX unique_username ON users USING btree (lower(uname));
+CREATE UNIQUE INDEX unique_email ON users USING btree (lower(email));
+
+CREATE TABLE reset_tokens (
+  user_id int  NOT NULL  REFERENCES users(id),
+  token   uuid NOT NULL,
+  created_at timestamp with time zone NOT NULL  DEFAULT NOW(),
+  expired_at timestamp with time zone NOT NULL  DEFAULT NOW() + INTERVAL '15 minutes'
+);
 
 CREATE TABLE sessions (
   id         uuid PRIMARY KEY,
@@ -41,6 +51,12 @@ CREATE TABLE sessions (
 CREATE VIEW active_sessions AS
   SELECT *
   FROM sessions
+  WHERE expired_at >= NOW()
+;
+
+CREATE VIEW active_reset_tokens AS
+  SELECT *
+  FROM reset_tokens
   WHERE expired_at >= NOW()
 ;
 

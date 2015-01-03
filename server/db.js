@@ -83,6 +83,30 @@ WHERE t.id = $1
   return result.rows[0];
 };
 
+exports.createResetToken = function*(userId) {
+  debug('[createResetToken] userId: ' + userId);
+  var sql = m(function() {/*
+INSERT INTO reset_tokens (user_id, token)
+VALUES ($1, uuid_generate_v4())
+RETURNING *
+  */});
+  var result = yield query(sql, [userId]);
+  return result.rows[0];
+};
+
+// Note: Case-insensitive
+exports.findUserByEmail = findUserByEmail;
+function *findUserByEmail(email) {
+  debug('[findUserByEmail] email: ' + email);
+  var sql = m(function() {/*
+SELECT *
+FROM users u
+WHERE lower(u.email) = lower($1);
+  */});
+  var result = yield query(sql, [email]);
+  return result.rows[0];
+}
+
 // Note: Case-insensitive
 exports.findUserByUname = findUserByUname;
 function *findUserByUname(uname) {
@@ -172,6 +196,28 @@ VALUES ($1, $2)
   return convo;
 };
 
+// Only returns user if reset token has not expired
+// so this can be used to verify tokens
+exports.findUserByResetToken = function*(resetToken) {
+  assert(belt.isValidUuid(resetToken));
+
+  // Short circuit if it's not even a UUID
+  if (!belt.isValidUuid(resetToken))
+    return;
+
+  var sql = m(function() {/*
+SELECT *
+FROM users u
+WHERE u.id = (
+  SELECT rt.user_id
+  FROM active_reset_tokens rt
+  WHERE rt.token = $1
+)
+  */});
+  var result = yield query(sql, [resetToken]);
+  return result.rows[0];
+}
+
 exports.findUserBySessionId = findUserBySessionId;
 function *findUserBySessionId(sessionId) {
   assert(belt.isValidUuid(sessionId));
@@ -219,6 +265,20 @@ ORDER BY t.latest_post_id DESC
   */});
   var result = yield query(sql, [forumId]);
   return result.rows;
+};
+
+exports.updateUserPassword = function*(userId, password) {
+  assert(_.isNumber(userId));
+  assert(_.isString(password));
+  var digest = yield belt.hashPassword(password);
+  var sql = m(function() {/*
+UPDATE users
+SET digest = $2
+WHERE id = $1
+RETURNING *
+  */});
+  var result = yield query(sql, [userId, digest]);
+  return result.rows[0];
 };
 
 // Keep updatePost and UpdatePm in sync

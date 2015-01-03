@@ -24,6 +24,7 @@ var belt = require('./belt');
 var middleware = require('./middleware');
 var valid = require('./validation');
 var cancan = require('./cancan');
+var emailer = require('./emailer');
 
 // Since app.proxy === true (we trust X-Proxy-* headers), we want to
 // reject all requests that hit origin. app.proxy should only be turned on
@@ -277,6 +278,102 @@ app.use(route.delete('/me/subscriptions/:topicId', function*(topicId) {
     return this.response.redirect(topic.url);
 
   this.response.redirect('/me/subscriptions');
+}));
+
+//
+// Forgot password page
+//
+app.use(route.get('/forgot', function*() {
+  if (!config.IS_EMAIL_CONFIGURED)
+    return this.body = 'This feature is currently disabled';
+  yield this.render('forgot', {
+    ctx: this
+  });
+}));
+
+// - Required param: email
+app.use(route.post('/forgot', function*() {
+  if (!config.IS_EMAIL_CONFIGURED)
+    return this.body = 'This feature is currently disabled';
+  var email = this.request.body.email;
+  if (!email) {
+    this.flash = { message: ['danger', 'You must provide an email']};
+    return this.response.redirect('/forgot');
+  }
+  // Check if it belongs to a user
+  var user = yield db.findUserByEmail(email);
+
+  // Don't let the user know if the email belongs to anyone.
+  // Always look like a success
+  if (!user) {
+    this.flash = { message: ['success', 'Check your email']};
+    return this.response.redirect('/');
+  }
+
+  var resetToken = yield db.createResetToken(user.id);
+  // Send email in background
+  emailer.sendResetTokenEmail(user.uname, user.email, resetToken.token);
+
+  this.flash = { message: ['success', 'Check your email']};
+  this.response.redirect('/');
+}));
+
+// Password reset form
+// - This form allows a user to enter a reset token and new password
+// - The email from /forgot will link the user here
+app.use(route.get('/reset-password', function*() {
+  if (!config.IS_EMAIL_CONFIGURED)
+    return this.body = 'This feature is currently disabled';
+  var resetToken = this.request.query.token
+  yield this.render('reset_password', {
+    ctx: this,
+    resetToken: resetToken
+  });
+}));
+
+// Params
+// - token
+// - password1
+// - password2
+app.use(route.post('/reset-password', function*() {
+  if (!config.IS_EMAIL_CONFIGURED)
+    return this.body = 'This feature is currently disabled';
+  var token = this.request.body.token;
+  var password1 = this.request.body.password1;
+  var password2 = this.request.body.password2;
+
+  // Check passwords
+  if (password1 !== password2) {
+    this.flash = {
+      message: ['danger', 'Your new password and the new password confirmation must match'],
+      params: { token: token }
+    };
+    return this.response.redirect('/reset-password?token=' + token);
+  }
+
+  // Check reset token
+  var user = yield db.findUserByResetToken(token);
+
+  if (!user) {
+    this.flash = {
+      message: ['danger', 'Invalid reset token. Either you typed the token in wrong or the token expired.']
+    };
+    return this.response.redirect('/reset-password?token=' + token);
+  }
+
+  // Reset token and passwords were valid, so update user password
+  yield db.updateUserPassword(user.id, password1);
+
+  // Log the user in
+  var session = yield db.createSession({
+    userId: user.id,
+    ipAddress: this.request.ip,
+    interval: '1 day'  // TODO: Add remember-me button to reset form?
+  });
+  this.cookies.set('sessionId', session.id);
+
+  this.flash = { message: ['success', 'Your password was updated'] };
+  return this.response.redirect('/');
 }));
 
 //
