@@ -270,12 +270,12 @@ $$
 
   plv8.execute(q, [NEW.id, NEW.topic_id]);
 
-  q = 'UPDATE topics                 '+
-      'SET latest_post_id      = $2, '+
-      '    latest_ic_post_id   = $3, '+
-      '    latest_ooc_post_id  = $4, '+
-      '    latest_char_post_id = $5  '+
-      'WHERE id = $1                 ';
+  q = 'UPDATE topics                                               '+
+      'SET latest_post_id      = $2,                               '+
+      '    latest_ic_post_id   = COALESCE($3, latest_ic_post_id),  '+
+      '    latest_ooc_post_id  = COALESCE($4, latest_ooc_post_id), '+
+      '    latest_char_post_id = COALESCE($5, latest_char_post_id) '+
+      'WHERE id = $1                                               ';
 
   // If NonRP, just set the latest_post_id
   if (!NEW.is_roleplay) {
