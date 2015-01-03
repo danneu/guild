@@ -775,9 +775,9 @@ app.use(route.get('/topics/:topicId', function*(topicId) {
   this.assertAuthorized(this.currUser, 'READ_TOPIC', topic);
 
   if (topic.forum.is_roleplay)
-    this.response.redirect(path.join(this.request.path, '/posts/ic'));
+    this.response.redirect(this.request.path + '/posts/ic');
   else
-    this.response.redirect(path.join(this.request.path, '/posts/ooc'));
+    this.response.redirect(this.request.path + '/posts/ooc');
 }));
 
 app.listen(config.PORT);
