@@ -36,6 +36,11 @@ exports.presentForum = presentForum;
 function presentForum(forum) {
   forum.url = '/forums/' + forum.id;
 
+  if (forum.parent_forum)
+    forum.parent_forum = presentForum(forum.parent_forum);
+  if (forum.child_forum)
+    forum.child_forum = presentForum(forum.child_forum);
+
   if (forum.topics)
     forum.topics = forum.topics.map(presentTopic);
   if (forum.latest_post)

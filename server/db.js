@@ -537,9 +537,15 @@ RETURNING *
 
 exports.findForum = function*(forumId) {
   var sql = m(function() {/*
-SELECT *
-FROM forums
-WHERE id = $1
+SELECT
+  f.*,
+  to_json(f2.*) "child_forum",
+  to_json(f3.*) "parent_forum"
+FROM forums f
+LEFT OUTER JOIN forums f2 ON f.id = f2.parent_forum_id
+LEFT OUTER JOIN forums f3 ON f.parent_forum_id = f3.id
+WHERE f.id = $1
+GROUP BY f.id, f2.id, f3.id
   */});
   var result = yield query(sql, [forumId]);
   return result.rows[0];
