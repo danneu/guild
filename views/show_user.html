@@ -10,6 +10,11 @@
     <h1>
       <a href="/users/{{ user.id }}">{{ user.uname }}</a>
       <small>{{ user.role|capitalize}}</small>
+      {% if ctx.can(ctx.currUser, 'UPDATE_USER', user) %}
+        <a href="/users/{{ user.id }}/edit" class="btn btn-default btn-xs">
+          Edit
+        </a>
+      {% endif %}
     </h1>
   </div>
 

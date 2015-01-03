@@ -13,6 +13,22 @@ function can(user, action, target) {
   if (user && user.role === 'admin') return true;
 
   switch(action) {
+    case 'UPDATE_USER_ROLE': // target is user
+      // Staff can change staff below them
+      if (_.contains(['banned', 'member'], target.role))
+        return _.contains(['mod', 'smod'], user.role);
+      if (target.role === 'mod')
+        return user.role === 'smod';
+      return false;
+    case 'UPDATE_USER':  // target is user
+      // Anyone can update themselves
+      if (user.id === target.id) return true;
+      // Staff can change staff below them
+      if (_.contains(['banned', 'member'], target.role))
+        return _.contains(['mod', 'smod'], user.role);
+      if (target.role === 'mod')
+        return user.role === 'smod';
+      return false;
     // Topic state
     case 'STICK_TOPIC':
     case 'UNSTICK_TOPIC':

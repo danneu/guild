@@ -10,7 +10,6 @@ var route = require('koa-route');
 var views = require('koa-views');
 // Node
 var util = require('util');
-var path = require('path');
 // 3rd party
 var _ = require('lodash');
 var debug = require('debug')('app:index');
@@ -37,8 +36,20 @@ app.use(function*(next) {
   // }
   yield next;
 });
+app.use(require('koa-validate')());
 app.use(middleware.currUser());
 app.use(middleware.flash('flash'));
+app.use(function*(next) {  // Must become before koa-router
+  var ctx = this;
+  this.can = cancan.can;
+  this.assertAuthorized = function(user, action, target) {
+    debug('[assertAuthorized]');
+    var canResult = cancan.can(user, action, target);
+    debug('[',  action, ' canResult]: ', canResult);
+    ctx.assert(canResult, 403);
+  };
+  yield next;
+});
 
 // TODO: Extract custom swig filters
 // {{ 'firetruck'|truncate(5) }}  -> 'firet...'
@@ -55,17 +66,6 @@ function makeTruncate(suffix) {
 }
 swig.setFilter('truncate', makeTruncate('…'));
 
-app.use(function*(next) {
-  var ctx = this;
-  this.can = cancan.can;
-  this.assertAuthorized = function(user, action, target) {
-    var canResult = cancan.can(user, action, target);
-    debug('[' + action + ' canResult]: ' + canResult);
-    ctx.assert(canResult, 403);
-  };
-  yield next;
-});
-
 // Configure templating system to use `swig`
 // and to find view files in `view` directory
 app.use(views('../views', {
@@ -74,8 +74,14 @@ app.use(views('../views', {
   map: { html: 'swig' }
 }));
 
-
 ////////////////////////////////////////////////////////////
+// Routes //////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
+// TODO: Migrate from route to koa-router.
+// For one, it lets koa-validate's checkParams work since it puts the params
+// in the koa context
+app.use(require('koa-router')(app));
 
 //
 // Logout
@@ -403,6 +409,74 @@ app.use(route.post('/me/subscriptions', function*() {
 }));
 
 //
+// Edit user
+//
+app.get('/users/:userId/edit', function*() {
+  this.assert(this.currUser, 404);
+  var user = yield db.findUser(this.params.userId);
+  this.assert(user, 404);
+  this.assertAuthorized(this.currUser, 'UPDATE_USER', user);
+  user = pre.presentUser(user);
+  yield this.render('edit_user', {
+    ctx: this,
+    user: user
+  });
+});
+
+//// TODO: DRY up all of these individual PUT routes
+//// While I like the simplicity of individual logic per route,
+//// it introduces syncing overhead between the implementations
+
+//
+// Update user role
+//
+app.put('/users/:userId/role', function*() {
+  this.checkBody('role').isIn(['banned', 'member', 'mod', 'smod', 'admin'],
+                              'Invalid role');
+  this.assert(!this.errors, 400, belt.joinErrors(this.errors));
+  // TODO: Authorize role param against role of both parties
+  var user = yield db.findUser(this.params.userId);
+  this.assert(user, 404);
+  this.assertAuthorized(this.currUser, 'UPDATE_USER_ROLE', user);
+  yield db.updateUserRole(user.id, this.request.body.role);
+  user = pre.presentUser(user);
+  this.flash = { message: ['success', 'User role updated'] };
+  this.response.redirect(user.url + '/edit');
+});
+
+//
+// Update user
+//
+// This is a generic update route for updates that only need the
+// UPDATE_USER cancan authorization check. In other words, this is
+// a generic update route for updates that don't have complex logic
+// or authorization checks
+//
+// At least one of these updates:
+// - email
+//
+// TODO: This isn't very abstracted yet. Just an email endpoint for now.
+//
+app.put('/users/:userId', function*() {
+  this.request.body.email;
+  this.checkBody('email').optional().isEmail('Invalid email address');
+  debug(this.errors);
+  if (this.errors) {
+    this.flash = { message: ['danger', belt.joinErrors(this.errors)] }
+    return this.response.redirect(this.request.path + '/edit');
+  }
+  var user = yield db.findUser(this.params.userId);
+  this.assert(user, 404);
+  this.assertAuthorized(this.currUser, 'UPDATE_USER', user);
+  yield db.updateUser(user.id, {
+    email: this.request.body.email || user.email
+  });
+  user = pre.presentUser(user);
+  this.flash = { message: ['success', 'User updated'] };
+  this.response.redirect(user.url + '/edit');
+});
+
+//
 // Show subscriptions
 //
 app.use(route.get('/me/subscriptions', function*() {
@@ -505,7 +579,8 @@ app.use(route.get('/me/convos', function*() {
 //
 // Show user
 //
-app.use(route.get('/users/:userId', function*(userId) {
+app.get('/users/:userId', function*() {
+  var userId = this.params.userId;
   var user = yield db.findUser(userId);
   // Ensure user exists
   if (!user) return;
@@ -519,7 +594,7 @@ app.use(route.get('/users/:userId', function*(userId) {
     user: user,
     recentPosts: recentPosts
   });
-}));
+});
 
 //
 // Create convo

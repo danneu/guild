@@ -583,6 +583,30 @@ RETURNING *
   return topic;
 };
 
+// Generic user-update route. Intended to be paired with
+// the generic PUT /users/:userId route.
+exports.updateUser = function*(userId, attrs) {
+  var sql = m(function() {/*
+UPDATE users
+SET email = COALESCE($2, email)
+WHERE id = $1
+RETURNING *
+  */});
+  var result = yield query(sql, [userId, attrs.email]);
+  return result.rows[0];
+};
+
+exports.updateUserRole = function*(userId, role) {
+  var sql = m(function() {/*
+UPDATE users
+SET role = $2
+WHERE id = $1
+RETURNING *
+  */});
+  var result = yield query(sql, [userId, role]);
+  return result.rows[0];
+};
+
 exports.findForum = function*(forumId) {
   var sql = m(function() {/*
 SELECT

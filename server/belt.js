@@ -17,6 +17,22 @@ var config = require('./config');
 //// Somewhat of a junk drawer.
 ////
 
+/// Convenience functions for working with the this.errors
+/// object provided by koa-validate
+
+// errObj is the this.errors object from koa-validate
+// Maybe Object -> Maybe [String]
+exports.extractErrors = function(errObj) {
+  return errObj &&  _.chain(errObj).map(_.values)
+                                   .map(function(s) { return s.join(', '); })
+                                   .value();
+};
+
+// Maybe Object -> Maybe String
+exports.joinErrors = function(errObj) {
+  return errObj && exports.extractErrors(errObj).join(', ');
+};
+
 ////////////////////////////////////////////////////////////
 // Authentication
 ////////////////////////////////////////////////////////////

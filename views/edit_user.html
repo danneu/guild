@@ -1,0 +1,105 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="{{ user.url }}">{{ user.uname }}</a></li>
+  </ol>
+
+  <div class="page-header" style="border-color: #000">
+    <h3>Edit {{ user.uname }}</h3>
+  </div>
+
+  <div class="row">
+    <div class="col-sm-6 col-sm-offset-3">
+
+      <!-- Change role form -->
+      {% if ctx.can(ctx.currUser, 'UPDATE_USER_ROLE', user) %}
+        <form action="{{ user.url }}/role" method="post" class="form-horizontal">
+          <input type="hidden" name="_method" value="put">
+          <div class="panel panel-default no-select" style="border-color: #000">
+            <div class="panel-heading">Edit Role</div>
+            <!-- PANEL BODY -->
+            <div class="panel-body">
+              <div class="form-group">
+                <label for="role-input" class="col-sm-3 control-label">Role:</label>
+                <div class="col-sm-9">
+                  <select id="role-input" name="role" class="form-control"
+                          autocomplete="off">
+                    <option value="admin"
+                            {% if user.role === 'admin' %}selected{% endif %}
+                            >
+                      Admin
+                    </option>
+                    <option value="smod"
+                            {% if user.role === 'smod' %}selected{% endif %}
+                            >
+                      Super Mod
+                    </option>
+                    <option value="mod"
+                            {% if user.role === 'mod' %}selected{% endif %}
+                            >
+                      Mod
+                    </option>
+                    <option value="member"
+                            {% if user.role === 'member' %}selected{% endif %}
+                            >
+                      Member
+                    </option>
+                    <option value="banned"
+                            {% if user.role === 'banned' %}selected{% endif %}
+                            >
+                      Banned
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </div> <!-- /.panel-body -->
+            <!-- PANEL FOOTER -->
+            <div class="panel-footer" style="border-color: #000">
+              <div class="text-right">
+                <input id="role-submit" type="submit" value="Submit"
+                       class="btn btn-primary">
+              </div>
+            </div> <!-- /.panel-footer -->
+          </div> <!-- /.panel -->
+        </form>
+      {% endif %}
+
+      <!-- Change email form -->
+      <form action="{{ user.url }}" method="post" class="form-horizontal">
+        <input type="hidden" name="_method" value="put">
+        <div class="panel panel-default no-select"
+             style="border-color: #000">
+          <div class="panel-heading">Edit Email</div>
+          <!-- PANEL BODY -->
+          <div class="panel-body">
+
+            <div class="form-group">
+              <label for="email-input" class="col-sm-3 control-label">Email:</label>
+              <div class="col-sm-9">
+                <input id="email-input" name="email"
+                       class="form-control" value="{{ user.email }}">
+              </div>
+            </div>
+          </div> <!-- /.panel-body -->
+          <!-- PANEL FOOTER -->
+          <div class="panel-footer" style="border-color: #000">
+            <div class="text-right">
+              <input id="email-submit" type="submit" value="Submit"
+                     class="btn btn-primary">
+            </div>
+          </div> <!-- /.panel-footer -->
+        </div> <!-- /.panel -->
+      </form>
+
+    </div> <!-- /col -->
+  </div> <!-- /.row -->
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  $('#uname-input').focus();
+</script>
+{% endblock %}
