@@ -22,7 +22,7 @@ function can(user, action, target) {
       // Members can post as long as it's outside the lexus lounge,
       // the topic is open, and the topic is visible
       if (user.role === 'member')
-        return target.category_id !== 6 && !target.is_closed && !target.is_hidden
+        return target.category_id !== 6 && !target.is_closed && !target.is_hidden;
       return false;
     case 'READ_POST': // target is post with a post.topic prop
       assert(target, 'Post missing');
@@ -66,7 +66,7 @@ function can(user, action, target) {
       // Staff can post everywhere
       if (_.contains(['admin', 'smod', 'mod'], user.role)) return true;
       if (user.role === 'member')
-        return (!target.is_hidden && !target.is_closed && !target.category_id === 6);
+        return (!target.is_hidden && !target.is_closed && target.category_id !== 6);
       return false;
     case 'READ_TOPIC':  // target is topic
       // Only staff can read lexus lounge
