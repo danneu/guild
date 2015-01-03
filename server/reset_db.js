@@ -27,8 +27,13 @@ function* resetDb() {
 
 if (!module.parent) {
   // Called from cli
-  var succBack = function() { console.log('Database reset!'); };
-  var errBack = function(err) { console.error('Caught error: ', err, err.stack); };
+  var succBack = function() {
+    console.log('Database reset!');
+    process.exit();
+  };
+  var errBack = function(err) {
+    console.error('Caught error: ', err, err.stack);
+  };
   co(function*() {
     console.log('Resetting the database...');
     yield resetDb();
