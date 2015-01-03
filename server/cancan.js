@@ -56,8 +56,11 @@ function can(user, action, target) {
       if (_.contains(['mod', 'smod', 'admin'], user.role)) return true;
       return false;
     case 'SUBSCRIBE_TOPIC':  // target is topic
-      // Someone can subscribe if they can read the topic
-      return can(user, 'READ_TOPIC', target);
+      if (!user) return false;
+      // Members and up can subscribe if they can read the topic
+      if (_.contains(['member', 'mod', 'smod', 'admin'], user.role))
+        return can(user, 'READ_TOPIC', target);
+      return false;
     case 'CREATE_POST':  // target is topic
       if (!user) return false;
       // Staff can post everywhere
