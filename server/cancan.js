@@ -13,6 +13,17 @@ function can(user, action, target) {
   if (user && user.role === 'admin') return true;
 
   switch(action) {
+    case 'READ_FORUM':  // target is a forum
+      // TODO: Remove hardcoded mod forum
+      if (target.category_id === 6)
+        return user & _.contains(['admin', 'smod', 'mod'], user.role);
+      else
+        return true; // for now, anyone can read a non-lexus-lounge forum
+      return false;
+    case 'LEXUS_LOUNGE':  // no target
+      if (!user) return false;
+      if (_.contains(['mod', 'smod', 'admin'], user.role)) return true;
+      return false;
     case 'SUBSCRIBE_TOPIC':
       if (!user) return false;
       if (user.role === 'member') return true

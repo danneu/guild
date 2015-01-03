@@ -63,6 +63,13 @@
                 <span class="glyphicon glyphicon-list"></span>
                 Subs
               </a>
+              {% if ctx.can(ctx.currUser, 'LEXUS_LOUNGE') %}
+                <a href="/lexus-lounge"
+                   class="btn btn-default navbar-btn">
+                  <span class="glyphicon glyphicon-eye-open"></span>
+                  Mod
+                </a>
+              {% endif %}
               <a href="/users/{{ ctx.currUser.id }}"
                  class="btn btn-default navbar-btn">
                 <span class="glyphicon glyphicon-user"></span>

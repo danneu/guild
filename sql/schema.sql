@@ -26,7 +26,9 @@ CREATE TABLE users (
   email          text NOT NULL,  -- Unique index added later in schema
   oldguild_uname text NULL,
   created_at     timestamp with time zone NOT NULL  DEFAULT NOW(),
-  role           role_type NOT NULL  DEFAULT 'member'
+  role           role_type NOT NULL  DEFAULT 'member',
+  posts_count    int NOT NULL  DEFAULT 0,
+  pms_count      int NOT NULL  DEFAULT 0
 );
 
 CREATE UNIQUE INDEX unique_username ON users USING btree (lower(uname));
@@ -219,6 +221,44 @@ CREATE TRIGGER post_created1
     AFTER INSERT OR DELETE ON posts
     FOR EACH ROW
     EXECUTE PROCEDURE update_forum_posts_count();
+
+------------------------------------------------------------
+-- Update the counter caches for a user when a post is created/deleted
+CREATE OR REPLACE FUNCTION update_user_posts_count() RETURNS trigger AS
+$$
+  var delta = 0;
+  var userId = (OLD && OLD.user_id) || (NEW && NEW.user_id);
+  if (TG_OP === 'DELETE') delta--;
+  if (TG_OP === 'INSERT') delta++
+  q = 'UPDATE users SET posts_count = posts_count + $2 WHERE id = $1';
+  plv8.execute(q, [userId, delta]);
+$$ LANGUAGE 'plv8';
+
+DROP TRIGGER IF EXISTS update_user_posts_count_trigger ON posts;
+CREATE TRIGGER update_user_posts_count_trigger
+    AFTER INSERT OR DELETE ON posts
+    FOR EACH ROW
+    EXECUTE PROCEDURE update_user_posts_count();
+
+------------------------------------------------------------
+-- Update the counter caches for a user when a pm is created/deleted
+CREATE OR REPLACE FUNCTION update_user_pms_count() RETURNS trigger AS
+$$
+  var delta = 0;
+  var userId = (OLD && OLD.user_id) || (NEW && NEW.user_id);
+  if (TG_OP === 'DELETE') delta--;
+  if (TG_OP === 'INSERT') delta++
+  q = 'UPDATE users SET pms_count = pms_count + $2 WHERE id = $1';
+  plv8.execute(q, [userId, delta]);
+$$ LANGUAGE 'plv8';
+
+DROP TRIGGER IF EXISTS update_user_pms_count_trigger ON pms;
+CREATE TRIGGER update_user_pms_count_trigger
+    AFTER INSERT OR DELETE ON pms
+    FOR EACH ROW
+    EXECUTE PROCEDURE update_user_pms_count();
+
+------------------------------------------------------------
 
 ------------------------------------------------------------
 -- Update the counter caches for a topic when a post is added/removed

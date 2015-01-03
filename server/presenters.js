@@ -102,6 +102,12 @@ function presentTopic(topic) {
   return topic;
 }
 
+exports.presentCategory = function(category) {
+  if (category.forums)
+    category.forums = category.forums.map(presentForum);
+  return category;
+};
+
 exports.presentConvo = presentConvo;
 function presentConvo(convo) {
   if (_.isString(convo.created_at))

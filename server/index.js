@@ -239,6 +239,10 @@ app.use(route.get('/register', function*() {
 //
 app.use(route.get('/', function*() {
   var categories = yield db.findCategories();
+  // We don't show the mod forum on the homepage.
+  // Nasty, but just delete it for now
+  // TODO: Abstract
+  _.remove(categories, { id: 6 });
   var categoryIds = _.pluck(categories, 'id');
   var allForums = yield db.findForums(categoryIds);
   var topLevelForums = _.reject(allForums, 'parent_forum_id');
@@ -420,13 +424,31 @@ app.use(route.get('/me/subscriptions', function*() {
 }));
 
 //
+// Lexus lounge (Mod forum)
+//
+app.use(route.get('/lexus-lounge', function*() {
+  this.assertAuthorized(this.currUser, 'LEXUS_LOUNGE');
+  var category = yield db.findModCategory();
+  category = pre.presentCategory(category);
+  var latestUserLimit = 50;
+  var latestUsers = yield db.findLatestUsers(latestUserLimit);
+  latestUsers = latestUsers.map(pre.presentUser);
+  yield this.render('lexus_lounge', {
+    ctx: this,
+    category: category,
+    latestUsers: latestUsers,
+    latestUserLimit: latestUserLimit
+  });
+}));
+
+//
 // Canonical show forum
 //
 app.use(route.get('/forums/:forumId', function*(forumId) {
-  // TODO: Ensure currUser can view forum
   // TODO: Pagination
   var forum = yield db.findForum(forumId);
   if (!forum) return;
+  this.assertAuthorized(this.currUser, 'READ_FORUM', forum);
   var topics = yield db.findTopicsByForumId(forumId);
   forum.topics = topics;
   forum = pre.presentForum(forum);

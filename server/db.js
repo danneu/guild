@@ -557,6 +557,34 @@ GROUP BY f.id, f2.id, f3.id
   return result.rows[0];
 };
 
+exports.findLatestUsers = function*(limit) {
+  var sql = m(function() {/*
+SELECT u.*
+FROM users u
+ORDER BY id DESC
+LIMIT $1
+  */});
+  var result = yield query(sql, [limit || 25]);
+  return result.rows;
+};
+
+// Also has cat.forums array
+exports.findModCategory = function*() {
+  var MOD_CATEGORY_ID = 6;
+  var sql = m(function() {/*
+SELECT
+  c.*,
+  to_json(array_agg(f.*)) "forums"
+FROM categories c
+LEFT OUTER JOIN forums f ON c.id = f.category_id
+WHERE c.id = $1
+GROUP BY c.id
+  */});
+  var result = yield query(sql, [MOD_CATEGORY_ID]);
+  return result.rows[0];
+};
+
+// Only returns non-mod-forum categories
 exports.findCategories = function*() {
   var sql = m(function() {/*
 SELECT c.*

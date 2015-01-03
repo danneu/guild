@@ -1,10 +1,13 @@
 ---- Users
-INSERT INTO users (id, uname, email, digest)
+INSERT INTO users (id, uname, email, digest, role)
 VALUES
 -- The password for seed users is 'secret'
-(1, 'foo', 'foo@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci'),
-(2, 'bar', 'bar@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci'),
-(3, 'fuz', 'fuz@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci')
+(1, 'foo', 'foo@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'member'),
+(2, 'bar', 'bar@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'member'),
+(3, 'fuz', 'fuz@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'member'),
+(4, 'admin', 'admin@example.com',  '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'admin'),
+(5, 'mod', 'mod@example.com',  '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'mod'),
+(6, 'smod', 'smod@example.com',  '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'smod')
 ;
 SELECT setval('users_id_seq'::regclass, (SELECT MAX(id) FROM users));
 
@@ -40,7 +43,8 @@ VALUES
 (2, 'Roleplaying', null, 2),
 (3, 'Test Category', null, 3),
 (4, 'Off-Topic', null, 4),
-(5, 'Meta', null, 5)
+(5, 'Meta', null, 5),
+(6, 'Mod Forums', null, 6)
 ;
 SELECT setval('categories_id_seq'::regclass, (SELECT MAX(id) FROM categories));
 
@@ -78,7 +82,10 @@ VALUES
 (4, null, 37, 'Articles & Guides', 'User-submitted resources for helping you with your roleplay life, your forum life, and your life life.', 6, false),
 -- Meta (id 5)
 (5, null, 9, 'Feature Requests & Bugs', 'Share and brainstorming ideas for making RPGuild a better community.', 1, false),
-(5, null, 36, 'Need Help?', 'Have a question about the site? Need to talk to Guild staff? Until I have a better solution, you can come here to get help. (Note: No more username changes allowed. We don''t rename topics. We don''t delete roleplays once other people have posted in them. There are exceptions, of course.)', 2, false)
+(5, null, 36, 'Need Help?', 'Have a question about the site? Need to talk to Guild staff? Until I have a better solution, you can come here to get help. (Note: No more username changes allowed. We don''t rename topics. We don''t delete roleplays once other people have posted in them. There are exceptions, of course.)', 2, false),
+-- [category_id, parent_forum_id, id, title, description, pos, is_roleplay]
+-- Mod Forums (id 6)
+(6, null, 10, 'Mod Discussion', 'Mods + Admins only', 1, false)
 ;
 SELECT setval('forums_id_seq'::regclass, (SELECT MAX(id) FROM forums));
 
