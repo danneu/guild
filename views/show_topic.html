@@ -12,22 +12,72 @@
   <!-- Page header -->
 
   <div class="page-header" style="border: 0">
-    <h2><a href="{{ topic.url }}" style="color: #fff">{{ topic.title }}</a></h2>
-    {% if topic.is_closed %}
-      <span class="label label-default">Closed</span>
-    {% endif %}
-    {% if topic.is_hidden %}
-      <span class="label label-warning">Hidden</span>
-    {% endif %}
-    {% if topic.is_sticky %}
-      <span class="label label-primary">Sticky</span>
-    {% endif %}
-  </div>
+    <h2>
+      <a href="{{ topic.url }}" style="color: #fff">{{ topic.title }}</a>
+      {% if topic.is_sticky %}
+        <span class="label label-primary">Sticky</span>
+      {% endif %}
+      {% if topic.is_hidden %}
+        <span class="label label-warning">Hidden</span>
+      {% endif %}
+      {% if topic.is_closed %}
+        <span class="label label-default">Closed</span>
+      {% endif %}
+    </h2>
+
+    <!-- Topic state buttons -->
+
+    <div class="topic-controls">
+
+      <!-- STICK -->
+      {% if ctx.can(ctx.currUser, 'STICK_TOPIC', topic) %}
+        <form action="{{ topic.url }}/status" method="post">
+          <input type="hidden" name="_method" value="put">
+          {% if topic.is_sticky %}
+            <input type="hidden" name="status" value="unstick">
+            <button type="submit" class="btn btn-primary btn-xs">Unstick</button>
+          {% else %}
+            <input type="hidden" name="status" value="stick">
+            <button type="submit" class="btn btn-default btn-xs">Stick</button>
+          {% endif %}
+        </form>
+      {% endif %}
+
+      <!-- HIDE -->
+      {% if ctx.can(ctx.currUser, 'HIDE_TOPIC', topic) %}
+        <form action="{{ topic.url }}/status" method="post">
+          <input type="hidden" name="_method" value="put">
+          {% if topic.is_hidden %}
+            <input type="hidden" name="status" value="unhide">
+            <button type="submit" class="btn btn-warning btn-xs">Unhide</button>
+          {% else %}
+            <input type="hidden" name="status" value="hide">
+            <button type="submit" class="btn btn-default btn-xs">Hide</button>
+          {% endif %}
+        </form>
+      {% endif %}
+
+      <!-- CLOSE -->
+      {% if ctx.can(ctx.currUser, 'CLOSE_TOPIC', topic) %}
+        <form action="{{ topic.url }}/status" method="post">
+          <input type="hidden" name="_method" value="put">
+          {% if topic.is_closed %}
+            <input type="hidden" name="status" value="open">
+            <button type="submit" class="btn btn-gray btn-xs">Open</button>
+          {% else %}
+            <input type="hidden" name="status" value="close">
+            <button type="submit" class="btn btn-default btn-xs">Close</button>
+          {% endif %}
+        </form>
+      {% endif %}
+
+    </div><!--/.topic-controls-->
+  </div><!--/.page-header-->
 
   <!-- New Reply button -->
 
   {% if ctx.can(ctx.currUser, 'CREATE_POST', topic) %}
-    <a class="btn btn-primary pull-right" href="">
+    <a class="btn btn-primary pull-right" href="#new-reply-form">
       <span class="glyphicon glyphicon-pencil"></span>
       New Reply
     </a>
@@ -141,10 +191,12 @@
       <div class="panel-footer clearfix"
            style="background-color: #2E2C2C; border-radius: 0; border: 0">
         <!-- IP address -->
-        <div class="pull-left"
-             style="margin-left: 5px; color: #6E6B6B">
-          {{ post.ip_address }}
-        </div>
+        {% if ctx.can(ctx.currUser, 'READ_USER_IP', post.user) %}
+          <div class="pull-left"
+               style="margin-left: 5px; color: #6E6B6B">
+            {{ post.ip_address }}
+          </div>
+        {% endif %}
         <!-- Reply button -->
         <a href=""
            class="btn btn-default btn-xs pull-right post-reply-btn"
@@ -166,6 +218,7 @@
   <!-- New post form -->
 
   {% if ctx.can(ctx.currUser, 'CREATE_POST', topic) %}
+    <a name="new-reply-form"></a>
     <h2 style="margin-top: 100px;">New Reply</h2>
     <form id="reply-form" role="form" method="post"
           action="{{ topic.url }}/posts">
@@ -184,6 +237,20 @@
 {% endblock %}
 
 {% block scripts %}
+
+<script>
+// Prevent double-submit on new-reply form
+$('#new-reply').submit(function() {
+  $(this).submit(function() {
+      return false;
+  });
+  $(this).find("input[type='submit']")
+         .attr('disabled', 'disabled')
+         .val('Submitting...');
+  return true;
+});
+</script>
+
   <script>
     $(function() {
       $('#reply-input').markdown({

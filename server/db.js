@@ -35,6 +35,31 @@ function *query(sql, params) {
   }
 }
 
+exports.updateTopicStatus = function*(topicId, status) {
+  var STATUS_WHITELIST = ['stick', 'unstick', 'hide', 'unhide', 'close', 'open'];
+  assert(_.contains(STATUS_WHITELIST, status));
+  var sql = m(function() {/*
+UPDATE topics
+SET is_sticky = COALESCE($2, is_sticky),
+    is_hidden = COALESCE($3, is_hidden),
+    is_closed = COALESCE($4, is_closed)
+WHERE id = $1
+RETURNING *
+  */});
+  var params;
+  switch(status) {
+    case 'stick':   params = [true,  null,  null]; break;
+    case 'unstick': params = [false, null,  null]; break;
+    case 'hide':    params = [null,  true,  null]; break;
+    case 'unhide':  params = [null,  false, null]; break;
+    case 'close':   params = [null,  null,  true]; break;
+    case 'open':    params = [null,  null,  false]; break;
+    default: throw new Error('Invalid status ' + status);
+  }
+  var result = yield query(sql, [topicId].concat(params));
+  return result.rows[0];
+};
+
 exports.subscribeToTopic = function*(userId, topicId) {
   var sql = m(function() {/*
 INSERT INTO topic_subscriptions (user_id, topic_id)
@@ -288,28 +313,43 @@ RETURNING *
 };
 
 // Keep updatePost and UpdatePm in sync
-exports.updatePost = function*(userId, postId, text) {
-  assert(_.isNumber(userId));
+exports.updatePost = function*(postId, text) {
   assert(_.isString(text));
   var sql = m(function() {/*
 UPDATE posts
-SET text = $3, updated_at = NOW()
-WHERE user_id = $1 AND id = $2
+SET text = $2, updated_at = NOW()
+WHERE id = $1
 RETURNING *
   */});
-  var result = yield query(sql, [userId, postId, text]);
+  var result = yield query(sql, [postId, text]);
   return result.rows[0];
 };
-exports.updatePm = function*(userId, id, text) {
-  assert(_.isNumber(userId));
+exports.updatePm = function*(id, text) {
   assert(_.isString(text));
   var sql = m(function() {/*
 UPDATE pms
-SET text = $3, updated_at = NOW()
-WHERE user_id = $1 AND id = $2
+SET text = $2, updated_at = NOW()
+WHERE id = $1
 RETURNING *
   */});
-  var result = yield query(sql, [userId, id, text]);
+  var result = yield query(sql, [id, text]);
+  return result.rows[0];
+};
+
+// Attaches topic and forum to post for authorization checks
+// See cancan.js 'READ_POST'
+exports.findPostWithTopicAndForum = function*(postId) {
+  var sql = m(function() {/*
+SELECT
+  p.*,
+  to_json(t.*) "topic",
+  to_json(f.*) "forum"
+FROM posts p
+JOIN topics t ON p.topic_id = t.id
+JOIN forums f ON t.forum_id = f.id
+WHERE p.id = $1
+  */});
+  var result = yield query(sql, [postId]);
   return result.rows[0];
 };
 
@@ -572,13 +612,9 @@ LIMIT $1
 exports.findModCategory = function*() {
   var MOD_CATEGORY_ID = 6;
   var sql = m(function() {/*
-SELECT
-  c.*,
-  to_json(array_agg(f.*)) "forums"
+SELECT c.*
 FROM categories c
-LEFT OUTER JOIN forums f ON c.id = f.category_id
 WHERE c.id = $1
-GROUP BY c.id
   */});
   var result = yield query(sql, [MOD_CATEGORY_ID]);
   return result.rows[0];

@@ -429,6 +429,8 @@ app.use(route.get('/me/subscriptions', function*() {
 app.use(route.get('/lexus-lounge', function*() {
   this.assertAuthorized(this.currUser, 'LEXUS_LOUNGE');
   var category = yield db.findModCategory();
+  var forums = yield db.findForums([category.id]);
+  category.forums = forums;
   category = pre.presentCategory(category);
   var latestUserLimit = 50;
   var latestUsers = yield db.findLatestUsers(latestUserLimit);
@@ -655,10 +657,12 @@ app.use(route.post('/forums/:forumId/topics', function*(forumId) {
 //
 app.use(route.get('/posts/:postId/raw', function*(postId) {
   // TODO: Authz
-  var post = yield db.findPost(postId);
-  if (!post) return;
+  var post = yield db.findPostWithTopicAndForum(postId);
+  this.assert(post, 404);
+  this.assertAuthorized(this.currUser, 'READ_POST', post);
   this.body = post.text;
 }));
+// TODO: pm/:pmId/raw needs equivalent to findPostWithTopicAndForum
 app.use(route.get('/pms/:pmId/raw', function*(pmId) {
   // TODO: Authz
   var pm = yield db.findPm(pmId);
@@ -676,16 +680,35 @@ app.use(route.put('/api/posts/:postId', function*(id) {
   this.assertAuthorized(this.currUser, 'UPDATE_POST', post)
   // TODO: Authz, validation
   var text = this.request.body.text;
-  var updatedPost = yield db.updatePost(this.currUser.id, id, text);
+  var updatedPost = yield db.updatePost(id, text);
   updatedPost = pre.presentPost(updatedPost);
   this.body = JSON.stringify(updatedPost);
 }));
 app.use(route.put('/api/pms/:id', function*(id) {
   // TODO: Authz, validation
   var text = this.request.body.text;
-  var pm = yield db.updatePm(this.currUser.id, id, text);
+  var pm = yield db.updatePm(id, text);
   pm = pre.presentPm(pm);
   this.body = JSON.stringify(pm);
+}));
+
+//
+// Update topic status
+// Params
+// - status (Required) String, one of STATUS_WHITELIST
+//
+app.use(route.put('/topics/:topicId/status', function*(topicId) {
+  var STATUS_WHITELIST = ['stick', 'unstick', 'hide', 'unhide', 'close', 'open'];
+  var status = this.request.body.status;
+  this.assert(_.contains(STATUS_WHITELIST, status), 400, 'Invalid status');
+  var topic = yield db.findTopic(topicId);
+  this.assert(topic, 404);
+  var action = status.toUpperCase() + '_TOPIC';
+  this.assertAuthorized(this.currUser, action, topic);
+  yield db.updateTopicStatus(topicId, status);
+  this.flash = { message: ['success', 'Topic updated'] };
+  topic = pre.presentTopic(topic);
+  this.response.redirect(topic.url);
 }));
 
 //
