@@ -7,28 +7,34 @@ Work in progress
 
 The Guild is a Node.js app (v0.11.x) that talks to a Postgres database.
 
-It depends on the environment variables found here: https://github.com/danneu/guild/blob/master/server/config.js
+- Download the repository and enter the directory that it created:
 
-Download the repository and enter the directory from the command line:
+        git clone git@github.com:danneu/guild.git
+        cd guild
 
-    git clone git@github.com:danneu/guild.git
+- Enter the `guild` directory and install its dependencies:
 
-Enter the `guild` directory and install its dependencies:
+        npm install
 
-    npm install
+- Launch Postgres (by default it will run on `http://localhost:5432`) and create an empty database named `guild`.
 
-(Installing Node.js is what gives you that `npm` command)
+- The Guild comes with a command that rebuilds the database with tables and fills them with some data to play with:
 
-Launch Postgres (by default it will run on `http://localhost:5432`) and create an empty database named `guild`.
+        npm run-script reset-db
 
-The Guild comes with a command that rebuilds the database with tables and fills them with some data to play with:
+- Now you can launch the server:
 
-    npm run-script reset-db
+        npm start
+        > Listening on http://localhost:3000
 
-Now you can launch the server:
+## Config and Environment Variables
 
-    npm start
-    > Listening on http://localhost:3000
+The Guild is configured with environment variable listed in [server/config.js](https://github.com/danneu/guild/blob/master/server/config.js).
+
+It will run with the default variables, but some features are turned off until they are configured:
+
+- Email-sending system requires `AWS_KEY` and `AWS_SECRET` (your http://aws.amazon.com/ API creds)
+- User registration system requires `RECAPTCHA_SITEKEY` and `RECAPTCHA_SITESECRET` (your https://www.google.com/recaptcha/intro/index.html API creds)
 
 ## TODO
 
