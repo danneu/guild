@@ -8,7 +8,7 @@ var _bcrypt = require('bcryptjs');
 var request = require('co-request');
 var debug = require('debug')('app:belt');
 var _ = require('lodash');
-var uuid = require('uuid');
+var uuid = require('node-uuid');
 // 1st party
 var config = require('./config');
 
