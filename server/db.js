@@ -24,9 +24,15 @@ function *query(sql, params) {
   var conn_result = yield pg.connectPromise(config.DATABASE_URL);
   var client = conn_result[0];
   var done = conn_result[1];
-  var result = yield client.queryPromise(sql, params);
-  done();  // Release client back to pool
-  return result;
+  try {
+    var result = yield client.queryPromise(sql, params);
+    done();  // Release client back to pool
+    return result;
+  } catch(ex) {
+    // Passing truthy value removes (instead of releases) conn
+    done(ex);
+    throw ex;
+  }
 }
 
 exports.subscribeToTopic = function*(userId, topicId) {
