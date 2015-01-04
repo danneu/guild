@@ -121,3 +121,15 @@ a {
     border-color: #111;
 
 }
+
+
+/* Remove inline styles from homepage */
+.category-group-heading {
+    background-color: #1d1d1d;
+    border: 1px solid #111;
+}
+.forum-item {
+    background-color: #3d3a3a;
+    border: 1px solid #111;
+    color: #fff;
+}

@@ -4,29 +4,29 @@
   <div class="row">
     <div class="col-sm-12">
       {% for category in categories %}
-        <div class="list-group">
-          <div class="list-group-item"
-               style="background-color: #1d1d1d; border: 1px solid #111;">
+        <div class="list-group category-group">
+          <div class="list-group-item category-group-heading">
+               <!--style="background-color: #1d1d1d; border: 1px solid #111;"-->
             <div class="row">
               <div class="col-xs-7">
                 <h4>{{ category.title }}</h4>
               </div>
-              <div class="col-xs-1">Topics</div>
-              <div class="col-xs-1">Posts</div>
-              <div class="col-xs-3">Latest Post</div>
+              <div class="col-xs-1 category-group-stats-heading">Topics</div>
+              <div class="col-xs-1 category-group-stats-heading">Posts</div>
+              <div class="col-xs-3 category-group-stats-heading">Latest Post</div>
             </div> <!-- /.row -->
           </div> <!-- /.list-group-item -->
           {% for forum in category.forums %}
-            <div class="list-group-item" href="/"
-                 style="background-color: #3d3a3a; border: 1px solid #111;
-                        color: #fff;">
+            <div class="list-group-item forum-item" href="/">
+                 <!-- style="background-color: #3d3a3a; border: 1px solid #111; -->
+                 <!--        color: #fff;" -->
               <div class="row">
                 <div class="col-xs-7">
-                  <h5 class="list-group-item-heading">
+                  <h5 class="list-group-item-heading forum-item-title">
                     <a href="{{ forum.url }}">{{ forum.title }}</a>
                   </h5>
                   {% if forum.description %}
-                    <p>{{ forum.description }}</p>
+                    <p class="forum-item-description">{{ forum.description }}</p>
                   {% endif %}
                 </div> <!-- /.col-xs-7 -->
                 <div class="col-xs-1">{{ forum.topics_count }}</div>
