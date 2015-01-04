@@ -125,7 +125,7 @@ exports.calcPager = function(pageParam, perPage, totalItems) {
   var result = {
     currPage: currPage,
     totalPages: totalPages,
-    offset: perPage * (currPage - 1),
+    offset: Math.max(0, perPage * (currPage - 1)),
     limit: perPage
   };
   debug('[calcPager] result: ', result);
