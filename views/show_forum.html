@@ -1,4 +1,5 @@
 {% extends 'layouts/master.html' %}
+{% import 'macros/paginate.html' as paginate %}
 
 {% block embed %}
   <ol class="breadcrumb">
@@ -7,12 +8,16 @@
     </li>
   </ol>
 
+  <!-- Page header -->
+
   <div class="page-header" style="border-color: #000">
     <h3><a href="{{ forum.url }}" style="color: #fff">{{ forum.title }}</a></h3>
     {% if forum.description %}
       <div>{{ forum.description }}</div>
     {% endif %}
   </div>
+
+  {{ paginate.render(currPage, totalPages, forum.url) }}
 
   <!-- Tabs -->
 
@@ -97,6 +102,8 @@
       {% endfor %}
     </div> <!-- /.list-group -->
   {% endif %}
+
+  {{ paginate.render(currPage, totalPages, forum.url) }}
 
   <!-- New post forum -->
 

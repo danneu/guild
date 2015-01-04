@@ -99,3 +99,35 @@ exports.makeRecaptchaRequest = function *(args) {
   else
     return true;
 };
+
+////////////////////////////////////////////////////////////
+
+// pageParam comes from the query string (the client). ?page={pageParam}
+// The route should ensure that it's a number since routes shouldn't
+// let bad input infect the rest of the system. It can also be undefined.
+//
+// This function is for use in routes to calculate currPage (Int) and
+// totalPages (Int) for use in the view-layer's paginate.render macro
+// to generate prev/next button for arbitrary collections.
+exports.calcPager = function(pageParam, perPage, totalItems) {
+  assert(_.isNumber(totalItems));
+  assert(_.isNumber(perPage));
+  pageParam = pageParam || 1;
+  debug('[calcPager] pageParam: ', pageParam);
+  assert(_.isNumber(pageParam));
+  var currPage, totalPages;
+
+  totalPages = Math.ceil(totalItems / perPage);
+
+  currPage = Math.max(pageParam, 1);
+  currPage = Math.min(pageParam, totalPages);
+
+  var result = {
+    currPage: currPage,
+    totalPages: totalPages,
+    offset: perPage * (currPage - 1),
+    limit: perPage
+  };
+  debug('[calcPager] result: ', result);
+  return result;
+};

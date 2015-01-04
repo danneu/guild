@@ -35,6 +35,45 @@ function *query(sql, params) {
   }
 }
 
+// `runner` is a function that takes the pg client as an argument.
+//
+// Ex:
+//   return yield withTransaction(function*(client) {
+//     var result = yield [
+//       client.queryPromise(fromUpdateSql, [amount, fromAccountId]),
+//       client.queryPromise(toUpdateSql,   [amount, toAccountId])
+//     ];
+//     var updatedFromAccount = result[0].rows[0];
+//     var updatedToAccount   = result[1].rows[0];
+//     return { fromAccount: updatedFromAccount, toAccount: updatedToAccount };
+//   });
+//
+function* withTransaction(runner) {
+  while (true) {
+    var connResult = yield pg.connectPromise(config.DATABASE_URL);
+    var client = connResult[0];
+    var done = connResult[1];
+
+    try {
+      yield client.queryPromise('BEGIN');
+      var result = yield runner(client);
+      yield client.queryPromise('COMMIT');
+      done();
+
+      return result;
+    } catch(ex) {
+      try {
+        yield client.queryPromise('ROLLBACK');
+        done();  // Release the rolled back conn
+      } catch(ex) {
+        done(ex);  // Kill the botched conn
+      }
+
+      throw ex;
+    }
+  }
+}
+
 exports.updateTopicStatus = function*(topicId, status) {
   var STATUS_WHITELIST = ['stick', 'unstick', 'hide', 'unhide', 'close', 'open'];
   assert(_.contains(STATUS_WHITELIST, status));
@@ -571,20 +610,18 @@ INSERT INTO posts (topic_id, user_id, ip_address, text, type, is_roleplay)
 VALUES ($1, $2, $3::inet, $4, $5, $6)
 RETURNING *
   */});
-  try {
-    yield query('BEGIN');
-    var topicResult = yield query(topicSql, [
+
+  return yield withTransaction(function*(client) {
+    var topicResult = yield client.queryPromise(topicSql, [
       props.forumId, props.userId, props.title, props.isRoleplay
     ]);
     var topic = topicResult.rows[0];
-    yield query(postSql, [topic.id, props.userId, props.ipAddress, props.text, props.postType, props.isRoleplay]);
-    yield query('COMMIT');
-  } catch(ex) {
-    yield query('ROLLBACK');
-    throw ex;
-  }
-
-  return topic;
+    yield client.queryPromise(postSql, [
+      topic.id, props.userId, props.ipAddress,
+      props.text, props.postType, props.isRoleplay
+    ]);
+    return topic;
+  });
 };
 
 // Generic user-update route. Intended to be paired with

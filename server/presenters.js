@@ -61,7 +61,6 @@ function presentUser(user) {
 
 exports.presentTopic = presentTopic;
 function presentTopic(topic) {
-  debug(topic);
   topic.url = '/topics/' + topic.id;
 
   // created_at will be string when embedded in query result via to_json

@@ -547,19 +547,27 @@ app.use(route.get('/lexus-lounge', function*() {
 //
 // Canonical show forum
 //
-app.use(route.get('/forums/:forumId', function*(forumId) {
-  // TODO: Pagination
-  var forum = yield db.findForum(forumId);
+app.get('/forums/:forumId', function*() {
+  this.checkQuery('page').optional().toInt();
+  this.assert(!this.errors, 400, belt.joinErrors(this.errors))
+
+  var forum = yield db.findForum(this.params.forumId);
   if (!forum) return;
+
   this.assertAuthorized(this.currUser, 'READ_FORUM', forum);
-  var topics = yield db.findTopicsByForumId(forumId);
+
+  var pager = belt.calcPager(this.request.query.page, 25, forum.topics_count);
+
+  var topics = yield db.findTopicsByForumId(this.params.forumId);
   forum.topics = topics;
   forum = pre.presentForum(forum);
   yield this.render('show_forum', {
     ctx: this,
-    forum: forum
+    forum: forum,
+    currPage: pager.currPage,
+    totalPages: pager.totalPages
   });
-}));
+});
 
 //
 // Create post
@@ -845,6 +853,8 @@ app.use(route.get('/pms/:id', function*(id) {
 app.use(route.get('/topics/:topicId/posts/:postType', function*(topicId, postType) {
   debug('[GET /topics/:topicId/posts/:postType]');
   this.assert(_.contains(['ic', 'ooc', 'char'], postType), 404);
+  this.checkQuery('page').optional().toInt();
+  this.assert(!this.errors, 400, belt.joinErrors(this.errors))
 
   // Only incur the topic_subscriptions join if currUser exists
   var topic;
@@ -856,30 +866,14 @@ app.use(route.get('/topics/:topicId/posts/:postType', function*(topicId, postTyp
   this.assert(topic, 404);
   this.assertAuthorized(this.currUser, 'READ_TOPIC', topic);
 
-  // TODO: Extract pagination calculation into some function
   // TODO: Extract perPage config
-  // TODO: koa-validate the query page param
 
-  var perPage = 10;
-  var totalPages = Math.ceil(topic[postType + '_posts_count'] / perPage);
+  var totalItems = topic[postType + '_posts_count'];
+  var pager = belt.calcPager(this.request.query.page, 10, totalItems);
 
-  // TODO: Pagination
-  var currPage = (function() {
-    if (!this.request.query.page) return 1;
-    if (this.request.query.page) {
-      var parsed = parseInt(this.request.query.page, 10);
-      // If it's not a number, set it to 1
-      if (_.isNaN(parsed)) return 1;
-      // Clamp it to minimum of 1
-      parsed = Math.max(1, parsed);
-      // Clamp it to maximum of possible amount of pages
-      parsed = Math.min(totalPages, parsed);
-      return parsed;
-  }}.bind(this))(this);
-
-  var offset = perPage * (currPage - 1);
-  var limit = perPage;
-  var posts = yield db.findPostsByTopicId(topicId, postType, limit, offset);
+  var posts = yield db.findPostsByTopicId(
+    topicId, postType, pager.limit, pager.offset
+  );
   topic.posts = posts;
   topic = pre.presentTopic(topic);
   yield this.render('show_topic', {
@@ -887,8 +881,8 @@ app.use(route.get('/topics/:topicId/posts/:postType', function*(topicId, postTyp
     topic: topic,
     postType: postType,
     // Pagination
-    currPage: currPage,
-    totalPages: totalPages
+    currPage: pager.currPage,
+    totalPages: pager.totalPages
   });
 }));
 

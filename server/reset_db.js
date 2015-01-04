@@ -5,6 +5,7 @@ var fs = require('co-fs');
 var pg = require('co-pg')(require('pg'));
 var co = require('co');
 var _ = require('lodash');
+var coParallel = require('co-parallel');
 // 1st party
 var db = require('./db');
 var config = require('./config');
@@ -23,9 +24,22 @@ function* resetDb() {
   if (config.NODE_ENV === 'development') {
     var sql = yield slurpSql('dev_seeds.sql');
     yield db.query(sql);
+
+    // Insert 100 topics for forum1
+    var thunks = _.range(100).map(function(n) {
+      return db.createTopic({
+        userId: 1, forumId: 1, ipAddress: '1.2.3.4',
+        title: 'My topic ' + n, text: 'Post ' + n,
+        isRoleplay: false, postType: 'ooc'
+      });
+    });
+    yield coParallel(thunks, 2);
+
+    // Insert 100 posts for user1, forum1 (in parallel)
     yield _.range(100).map(function(n) {
       return db.createPost({
-        userId: 1, ipAddress: '1.2.3.4', text: n.toString(), topicId: 1, isRoleplay: false,
+        userId: 1, ipAddress: '1.2.3.4',
+        text: n.toString(), topicId: 1, isRoleplay: false,
         type: 'ooc'
       });
     });
