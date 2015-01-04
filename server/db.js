@@ -321,7 +321,7 @@ RETURNING *
   ])).rows[0];
 };
 
-exports.findTopicsByForumId = function*(forumId) {
+exports.findTopicsByForumId = function*(forumId, limit, offset) {
   var sql = m(function() {/*
 SELECT
   t.*,
@@ -334,8 +334,10 @@ LEFT JOIN posts p ON t.latest_post_id = p.id
 LEFT JOIN users u2 ON p.user_id = u2.id
 WHERE t.forum_id = $1
 ORDER BY t.latest_post_id DESC
+LIMIT $2
+OFFSET $3
   */});
-  var result = yield query(sql, [forumId]);
+  var result = yield query(sql, [forumId, limit, offset]);
   return result.rows;
 };
 

@@ -11,7 +11,7 @@ var debug = require('debug')('app:middleware');
 exports.currUser = function() {
   return function *(next) {
     var sessionId = this.cookies.get('sessionId');
-    debug('[wrapCurrUser] sessionId: ' + sessionId);
+    debug('[wrapCurrUser] sessionId: ', sessionId);
     if (! sessionId) return yield next;
     var user = yield db.findUserBySessionId(sessionId);
     if (user)

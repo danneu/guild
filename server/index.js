@@ -558,7 +558,7 @@ app.get('/forums/:forumId', function*() {
 
   var pager = belt.calcPager(this.request.query.page, 25, forum.topics_count);
 
-  var topics = yield db.findTopicsByForumId(this.params.forumId);
+  var topics = yield db.findTopicsByForumId(this.params.forumId, pager.limit, pager.offset);
   forum.topics = topics;
   forum = pre.presentForum(forum);
   yield this.render('show_forum', {
