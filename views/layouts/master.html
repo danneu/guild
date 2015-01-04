@@ -125,6 +125,15 @@
     <script src="/vendor/bootstrap-markdown/js/bootstrap-markdown.js"></script>
   {% endif %}
   <script>
+    // Prevent double-clicking on links
+    $('a').on('click', function() {
+      var $this = $(this);
+      if ($this.data('already-clicked'))
+        return false;
+      $this.data('already-clicked', true);
+    });
+  </script>
+  <script>
     $.timeago.settings.allowFuture = true;
     $.timeago.settings.strings = {
       prefixAgo: null,

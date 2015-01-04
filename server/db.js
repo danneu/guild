@@ -233,7 +233,7 @@ WHERE u.uname = ANY ($1::text[])
 // If toUsrIds is not given, then it's a self-convo
 // TODO: Wrap in transaction, Document the args of this fn
 exports.createConvo = function*(args) {
-  debug('[createConvo] args: ' + util.inspect(args));
+  debug('[createConvo] args: ', args);
   assert(_.isNumber(args.userId));
   assert(_.isUndefined(args.toUserIds) || _.isArray(args.toUserIds));
   assert(_.isString(args.title));
@@ -306,7 +306,7 @@ WHERE u.id = (
 
 exports.createSession = createSession;
 function *createSession(props) {
-  debug('[createSession] props: ' + util.inspect(props));
+  debug('[createSession] props: ', props);
   assert(_.isNumber(props.userId));
   assert(_.isString(props.ipAddress));
   assert(_.isString(props.interval));
@@ -719,7 +719,7 @@ ORDER BY c.pos
 // - Use `createUser` if you only want to create a user.
 exports.createUserWithSession = createUserWithSession;
 function *createUserWithSession(props) {
-  debug('[createUserWithSession] props: ' + util.inspect(props));
+  debug('[createUserWithSession] props: ', props);
   assert(_.isString(props.uname));
   assert(_.isString(props.ipAddress));
   assert(_.isString(props.password));

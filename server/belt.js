@@ -74,7 +74,7 @@ exports.generateUuid = function() {
 
 // Returns Bool
 exports.makeRecaptchaRequest = function *(args) {
-  debug('[makeRecaptchaRequest] args: ' + util.inspect(args));
+  debug('[makeRecaptchaRequest] args: ', args);
   assert(config.RECAPTCHA_SITESECRET);
   assert(_.isString(args.userResponse));
   assert(_.isString(args.userIp));
@@ -93,7 +93,7 @@ exports.makeRecaptchaRequest = function *(args) {
   //    "error-codes":  [...]      // Optional
   // }
   var result = yield request({ url: googleUrl, json: true });
-  debug('Response body from google: ' + util.inspect(result.body));
+  debug('Response body from google: ', result.body);
   if (! result.body.success)
     return false;
   else
