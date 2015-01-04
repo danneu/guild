@@ -430,7 +430,9 @@ ORDER BY pms.id
   return result.rows;
 };
 
-exports.findPostsByTopicId = function*(topicId, postType) {
+exports.findPostsByTopicId = function*(topicId, postType, limit, offset) {
+  assert(_.isNumber(limit));
+  assert(_.isNumber(offset));
   var sql = m(function() {/*
 SELECT
   p.*,
@@ -440,8 +442,10 @@ JOIN users u ON p.user_id = u.id
 WHERE p.topic_id = $1 AND p.type = $2
 GROUP BY p.id, u.id
 ORDER BY p.id
+LIMIT $3
+OFFSET $4
   */});
-  var result = yield query(sql, [topicId, postType]);
+  var result = yield query(sql, [topicId, postType, limit, offset]);
   return result.rows;
 };
 

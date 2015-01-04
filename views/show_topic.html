@@ -1,6 +1,8 @@
 {% extends 'layouts/master.html' %}
+{% import './macros/paginate.html' as paginate %}
 
 {% block embed %}
+
 
   <!-- Breadcrumbs -->
 
@@ -73,6 +75,9 @@
 
     </div><!--/.topic-controls-->
   </div><!--/.page-header-->
+
+  <!-- Pagination -->
+  {{ paginate.render(currPage, totalPages, ctx.request.path) }}
 
   <!-- New Reply button -->
 
@@ -214,6 +219,8 @@
           </div> <!-- /.panel-footer -->
         </div> <!-- /.panel -->
   {% endfor %}
+
+  {{ paginate.render(currPage, totalPages, ctx.request.path) }}
 
   <!-- New post form -->
 

@@ -107,3 +107,17 @@ a {
   text-shadow: 0 -1px 0 rgba(0,0,0,.2);
   color: white;
 }
+
+
+/* Paginater adjustments taken from oldguild. */
+
+.pager li>a {
+    background-color: #222;
+    border-color: #111;
+    }
+
+.pager .disabled>a, .pager .disabled>a:hover, .pager .disabled>a:focus, .pager .disabled>span {
+        background-color: #222;
+    border-color: #111;
+
+}

@@ -1,0 +1,28 @@
+{% macro render(currPage, totalPages, baseUrl) %}
+  <ul class="pager">
+    <li {% if currPage === 1 %} class="disabled" {% endif %}>
+      <a href="{{ baseUrl }}?page=1">First</a>
+    </li>
+
+    <li {% if currPage === 1 %} class="disabled" {% endif %}>
+      <a href="{{ baseUrl + '?page=' + Math.max(currPage-1, 1) }}">
+        &larr; Prev Page
+      </a>
+    </li>
+
+    <a style="color: white;" href="{{ baseUrl + '?page=' + currPage }}">
+      Page {{ currPage }} of {{ totalPages -}}
+    </a>
+
+    <li {% if currPage === totalPages %} class="disabled" {% endif %}>
+      <a href="{{ baseUrl + '?page=' + Math.min(currPage+1, totalPages) }}">
+        Next Page &rarr;
+      </a>
+    </li>
+
+    <li {% if currPage === totalPages %} class="disabled" {% endif %}>
+      <a href="{{ baseUrl }}?page={{ totalPages }}">Last</a>
+    </li>
+
+  </ul>
+{% endmacro %}

@@ -33,6 +33,9 @@ var emailer = require('./emailer');
 // in the `dist` folder. If found, attach their
 // paths to the context so the view layer can render
 // them.
+//
+// Exaple value of `dist`:
+// { css: 'all-ab42cf1.css', js: 'all-d181a21.js' }'
 var dist;
 co(function*() {
   var manifest = {};
@@ -853,14 +856,39 @@ app.use(route.get('/topics/:topicId/posts/:postType', function*(topicId, postTyp
   this.assert(topic, 404);
   this.assertAuthorized(this.currUser, 'READ_TOPIC', topic);
 
+  // TODO: Extract pagination calculation into some function
+  // TODO: Extract perPage config
+  // TODO: koa-validate the query page param
+
+  var perPage = 10;
+  var totalPages = Math.ceil(topic[postType + '_posts_count'] / perPage);
+
   // TODO: Pagination
-  var posts = yield db.findPostsByTopicId(topicId, postType);
+  var currPage = (function() {
+    if (!this.request.query.page) return 1;
+    if (this.request.query.page) {
+      var parsed = parseInt(this.request.query.page, 10);
+      // If it's not a number, set it to 1
+      if (_.isNaN(parsed)) return 1;
+      // Clamp it to minimum of 1
+      parsed = Math.max(1, parsed);
+      // Clamp it to maximum of possible amount of pages
+      parsed = Math.min(totalPages, parsed);
+      return parsed;
+  }}.bind(this))(this);
+
+  var offset = perPage * (currPage - 1);
+  var limit = perPage;
+  var posts = yield db.findPostsByTopicId(topicId, postType, limit, offset);
   topic.posts = posts;
   topic = pre.presentTopic(topic);
   yield this.render('show_topic', {
     ctx: this,
     topic: topic,
-    postType: postType
+    postType: postType,
+    // Pagination
+    currPage: currPage,
+    totalPages: totalPages
   });
 }));
 
