@@ -118,6 +118,8 @@ CREATE TABLE posts (
   is_hidden  boolean NOT NULL  DEFAULT false
 );
 
+CREATE INDEX ON posts (topic_id);
+
 -- Last post cache
 ALTER TABLE forums ADD COLUMN latest_post_id int NULL REFERENCES posts(id);
 ALTER TABLE topics ADD COLUMN latest_post_id int NULL REFERENCES posts(id);
