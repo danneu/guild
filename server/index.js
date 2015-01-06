@@ -78,6 +78,9 @@ app.use(function*(next) {  // Must become before koa-router
   yield next;
 });
 
+// Custom Swig filters
+////////////////////////////////////////////////////////////
+
 // TODO: Extract custom swig filters
 // {{ 'firetruck'|truncate(5) }}  -> 'firet...'
 // {{ 'firetruck'|truncate(6) }}  -> 'firetruck'
@@ -92,6 +95,15 @@ function makeTruncate(suffix) {
   };
 }
 swig.setFilter('truncate', makeTruncate('…'));
+
+// commafy(10) -> 10
+// commafy(1000000) -> 1,000,000
+function commafy(n) {
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+swig.setFilter('commafy', commafy);
+
+////////////////////////////////////////////////////////////
 
 // Configure templating system to use `swig`
 // and to find view files in `view` directory
