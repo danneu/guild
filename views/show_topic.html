@@ -145,7 +145,7 @@
 
   <!-- Posts list -->
 
-  {% if topic.ic_posts_count === 0 %}
+  {% if topic[postType + '_posts_count'] === 0 %}
     <div class="well">
       There are no {{ postType.toUpperCase() }} posts, yet.
     </div>
