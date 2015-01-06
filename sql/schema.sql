@@ -103,6 +103,7 @@ CREATE TABLE topics (
   char_posts_count int NOT NULL DEFAULT 0
 );
 
+CREATE INDEX topics_latest_post_id_DESC_idx ON topics (latest_post_id DESC);
 CREATE TYPE post_type AS ENUM ('ic', 'ooc', 'char');
 
 CREATE TABLE posts (
