@@ -12,6 +12,21 @@ var debug = require('debug')('app:db');
 var config = require('./config');
 var belt = require('./belt');
 
+// Wraps generator function in one that prints out the execution time
+// when app is run in development mode.
+function wrapTimer(fn) {
+  if (config.NODE_ENV !== 'development')
+    return fn;
+  else
+    return function*() {
+      var start = Date.now();
+      var result = yield fn.apply(this, arguments);
+      var diff = Date.now() - start;
+      debug('[%s] Executed in %sms', fn.name, diff);
+      return result;
+    };
+}
+
 // parse int8 as an integer
 // TODO: Handle numbers past parseInt range
 pg.types.setTypeParser(20, function(val) {
@@ -471,22 +486,22 @@ ORDER BY pms.id
   return result.rows;
 };
 
-exports.findPostsByTopicId = function*(topicId, postType, limit, offset) {
-  assert(_.isNumber(limit));
-  assert(_.isNumber(offset));
+exports.findPostsByTopicId = wrapTimer(findPostsByTopicId);
+function* findPostsByTopicId(topicId, postType, page) {
+  debug('[findPostsByTopicId] topicId: %s, postType: %s, page',
+        topicId, postType, page);
+  assert(_.isNumber(page));
   var sql = m(function() {/*
 SELECT
   p.*,
   to_json(u.*) "user"
 FROM posts p
 JOIN users u ON p.user_id = u.id
-WHERE p.topic_id = $1 AND p.type = $2
+WHERE p.topic_id = $1 AND p.type = $2 AND p.page = $3
 GROUP BY p.id, u.id
 ORDER BY p.id
-LIMIT $3
-OFFSET $4
   */});
-  var result = yield query(sql, [topicId, postType, limit, offset]);
+  var result = yield query(sql, [topicId, postType, page]);
   return result.rows;
 };
 
@@ -608,8 +623,8 @@ VALUES ($1, $2, $3, $4)
 RETURNING *
   */});
   var postSql = m(function() {/*
-INSERT INTO posts (topic_id, user_id, ip_address, text, type, is_roleplay)
-VALUES ($1, $2, $3::inet, $4, $5, $6)
+INSERT INTO posts (topic_id, user_id, ip_address, text, type, is_roleplay, page)
+VALUES ($1, $2, $3::inet, $4, $5, $6, 1)
 RETURNING *
   */});
 

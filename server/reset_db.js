@@ -19,9 +19,13 @@ function* slurpSql(filePath) {
 }
 
 function* resetDb() {
+  // Create tables
   var sql = yield slurpSql('schema.sql');
   yield db.query(sql);
-  if (config.NODE_ENV === 'development') {
+  // Link up triggers
+  var sql = yield slurpSql('functions_and_triggers.sql');
+  yield db.query(sql);
+  if (false && config.NODE_ENV === 'development') {
     var sql = yield slurpSql('dev_seeds.sql');
     yield db.query(sql);
 
