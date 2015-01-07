@@ -108,8 +108,10 @@ swig.setFilter('commafy', commafy);
 // Configure templating system to use `swig`
 // and to find view files in `view` directory
 app.use(views('../views', {
-  default: 'html',  // Default extension is .html
-  cache: (process.env.NODE_ENV === 'production' ? 'memory' : undefined), // consolidate bug hack
+  // Default extension is .html
+  default: 'html',
+  // consolidate bug hack
+  cache: (process.env.NODE_ENV === 'development' ? false : 'memory'),
   map: { html: 'swig' }
 }));
 
