@@ -219,15 +219,17 @@ CREATE TRIGGER pm_created1
 
 CREATE OR REPLACE FUNCTION set_post_page() RETURNS trigger AS
 $$
-  q = 'UPDATE posts                                    '+
-      'SET page = sub.page                             '+
-      'FROM (                                          '+
-      '  SELECT (COUNT(id) / 20) + 1 "page"            '+
-      '  FROM posts                                    '+
-      '  WHERE topic_id = $1 AND id < $2 AND type = $3 '+
-      '  GROUP BY topic_id                             '+
-      ') sub                                           '+
-      'WHERE posts.id = $2                             ';
+  q = 'UPDATE posts                                       '+
+      'SET page = sub.page                                '+
+      'FROM (                                             '+
+      '  SELECT COALESCE((                                '+
+      '    SELECT (COUNT(id) / 20) + 1 "page"             '+
+      '    FROM posts                                     '+
+      '    WHERE topic_id = $1 AND id < $2 AND type = $3  '+
+      '    GROUP BY topic_id                              '+
+      '  ), 1) "page"                                     '+
+      ') sub                                              '+
+      'WHERE posts.id = $2                                ';
   plv8.execute(q, [NEW.topic_id, NEW.id, NEW.type]);
 $$ LANGUAGE 'plv8';
 
