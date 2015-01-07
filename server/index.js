@@ -853,7 +853,14 @@ app.use(route.get('/posts/:postId', function*(postId) {
   var post = yield db.findPostWithTopic(postId);
   if (!post) return;
   post = pre.presentPost(post);
-  this.response.redirect(post.topic.url + '/posts/' + post.type + '#post-' + post.id);
+  var redirectUrl;
+  if (post.page === 1)
+    redirectUrl = post.topic.url + '/posts/' + post.type + '#post-' + post.id
+  else
+    redirectUrl = post.topic.url + '/posts/' + post.type +
+                  '?page=' + post.page +
+                  '#post-' + post.id;
+  this.response.redirect(redirectUrl);
 }));
 // PM permalink
 // Keep this in sync with /posts/:postId

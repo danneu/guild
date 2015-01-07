@@ -39,7 +39,7 @@
       <ul>
         {% for post in recentPosts %}
           <li>
-            In <a href="{{ post.topic.url }}">{{ post.topic.title }}</a>
+            In <a href="{{ post.url }}">{{ post.topic.title }}</a>
             <abbr class="timeago" title="{{ post.topic.created_at.toISOString() }}">
               {{ post.topic.formattedCreatedAt }}
             </abbr>
