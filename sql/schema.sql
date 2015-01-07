@@ -25,7 +25,7 @@ CREATE TABLE users (
   email          text   NOT NULL,  -- Unique index added later in schema
   oldguild_uname text   NULL,
   created_at     timestamp with time zone NOT NULL  DEFAULT NOW(),
-  last_online_at timestamp with time zone NOT NULL,
+  last_online_at timestamp with time zone NULL,
   is_ghost       boolean   NOT NULL  DEFAULT false,
   role           role_type NOT NULL  DEFAULT 'member',
   posts_count    int       NOT NULL  DEFAULT 0,
