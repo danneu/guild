@@ -139,7 +139,8 @@ WHERE user_id = $1 AND topic_id = $2
 
 // Same as findTopic but takes a userid so that it can return a topic
 // with an is_subscribed boolean for the user
-exports.findTopicWithIsSubscribed = function* (userId, topicId) {
+exports.findTopicWithIsSubscribed = wrapTimer(findTopicWithIsSubscribed);
+function* findTopicWithIsSubscribed(userId, topicId) {
   var sql = m(function() {/*
 SELECT
   t.*,
@@ -155,7 +156,8 @@ GROUP BY t.id, f.id, ts.user_id
   return result.rows[0];
 };
 
-exports.findTopic = function* (topicId) {
+exports.findTopic = wrapTimer(findTopic);
+function* findTopic(topicId) {
   var sql = m(function() {/*
 SELECT
   t.*,
@@ -181,7 +183,7 @@ RETURNING *
 };
 
 // Note: Case-insensitive
-exports.findUserByEmail = findUserByEmail;
+exports.findUserByEmail = wrapTimer(findUserByEmail);
 function *findUserByEmail(email) {
   debug('[findUserByEmail] email: ' + email);
   var sql = m(function() {/*
@@ -194,7 +196,7 @@ WHERE lower(u.email) = lower($1);
 }
 
 // Note: Case-insensitive
-exports.findUserByUname = findUserByUname;
+exports.findUserByUname = wrapTimer(findUserByUname);
 function *findUserByUname(uname) {
   debug('[findUserByUname] uname: ' + uname);
   var sql = m(function() {/*
@@ -206,7 +208,8 @@ WHERE lower(u.uname) = lower($1);
   return result.rows[0];
 }
 
-exports.findRecentPostsForUserId = findRecentPostsForUserId;
+
+exports.findRecentPostsForUserId = wrapTimer(findRecentPostsForUserId);
 function* findRecentPostsForUserId(userId) {
   var sql = m(function() {/*
 SELECT
@@ -221,7 +224,7 @@ LIMIT 25
   return result.rows;
 }
 
-exports.findUser = findUser;
+exports.findUser = wrapTimer(findUser);
 function *findUser(userId) {
   debug('[findUser] userId: ' + userId);
   var sql = m(function() {/*
@@ -233,7 +236,8 @@ WHERE id = $1
   return result.rows[0];
 }
 
-exports.findUsersByUnames = function*(unames) {
+exports.findUsersByUnames = wrapTimer(findUsersByUnames);
+function* findUsersByUnames(unames) {
   assert(_.isArray(unames));
   assert(_.every(unames, _.isString));
   var sql = m(function() {/*
@@ -269,7 +273,6 @@ VALUES ($1, $2)
 */});
   var convo = (yield query(convoSql, [args.userId, args.title])).rows[0];
 
-  debug(convo);
   // Run these in parallel
   yield args.toUserIds.map(function(toUserId) {
     return query(participantSql, [toUserId, convo.id]);
@@ -284,7 +287,8 @@ VALUES ($1, $2)
 
 // Only returns user if reset token has not expired
 // so this can be used to verify tokens
-exports.findUserByResetToken = function*(resetToken) {
+exports.findUserByResetToken = wrapTimer(findUserByResetToken);
+function* findUserByResetToken(resetToken) {
   assert(belt.isValidUuid(resetToken));
 
   // Short circuit if it's not even a UUID
@@ -304,17 +308,38 @@ WHERE u.id = (
   return result.rows[0];
 }
 
-exports.findUserBySessionId = findUserBySessionId;
+
+// exports.findUserBySessionId = wrapTimer(findUserBySessionId);
+// function *findUserBySessionId(sessionId) {
+//   assert(belt.isValidUuid(sessionId));
+//   var sql = m(function() {/*
+// SELECT *
+// FROM users u
+// WHERE u.id = (
+//   SELECT s.user_id
+//   FROM active_sessions s
+//   WHERE s.id = $1
+// )
+//   */});
+//   return (yield query(sql, [sessionId])).rows[0];
+// }
+
+exports.findUserBySessionId = wrapTimer(findUserBySessionId);
 function *findUserBySessionId(sessionId) {
   assert(belt.isValidUuid(sessionId));
   var sql = m(function() {/*
-SELECT *
-FROM users u
-WHERE u.id = (
-  SELECT s.user_id
-  FROM active_sessions s
-  WHERE s.id = $1
+UPDATE users
+SET last_online_at = NOW()
+WHERE id = (
+  SELECT u.id
+  FROM users u
+  WHERE u.id = (
+    SELECT s.user_id
+    FROM active_sessions s
+    WHERE s.id = $1
+  )
 )
+RETURNING *
   */});
   return (yield query(sql, [sessionId])).rows[0];
 }
@@ -336,7 +361,10 @@ RETURNING *
   ])).rows[0];
 };
 
-exports.findTopicsByForumId = function*(forumId, limit, offset) {
+exports.findTopicsByForumId = wrapTimer(findTopicsByForumId);
+function* findTopicsByForumId(forumId, limit, offset) {
+  debug('[%s] forumId: %s, limit: %s, offset: %s',
+        'findTopicsByForumId', forumId, limit, offset);
   var sql = m(function() {/*
 SELECT
   t.*,
@@ -396,7 +424,8 @@ RETURNING *
 
 // Attaches topic and forum to post for authorization checks
 // See cancan.js 'READ_POST'
-exports.findPostWithTopicAndForum = function*(postId) {
+exports.findPostWithTopicAndForum = wrapTimer(findPostWithTopic);
+function* findPostWithTopicAndForum(postId) {
   var sql = m(function() {/*
 SELECT
   p.*,
@@ -412,7 +441,8 @@ WHERE p.id = $1
 };
 
 // Keep findPost and findPm in sync
-exports.findPost = function*(postId) {
+exports.findPost = wrapTimer(findPost);
+function* findPost(postId) {
   var sql = m(function() {/*
 SELECT *
 FROM posts
@@ -421,7 +451,8 @@ WHERE id = $1
   var result = yield query(sql, [postId]);
   return result.rows[0];
 };
-exports.findPm = function*(id) {
+exports.findPm = wrapTimer(findPm);
+function* findPm(id) {
   var sql = m(function() {/*
 SELECT *
 FROM pms
@@ -432,7 +463,8 @@ WHERE id = $1
 };
 
 // TODO: Sort by latest_pm_at
-exports.findConvosInvolvingUserId = function*(userId) {
+exports.findConvosInvolvingUserId = wrapTimer(findConvosInvolvingUserId);
+function* findConvosInvolvingUserId(userId) {
   var sql = m(function() {/*
 SELECT
   c.*,
@@ -453,7 +485,8 @@ GROUP BY c.id, u1.id
   return result.rows;
 };
 
-exports.findConvo = function*(convoId) {
+exports.findConvo = wrapTimer(findConvo);
+function* findConvo(convoId) {
   assert(!_.isUndefined(convoId));
   var sql = m(function() {/*
 SELECT
@@ -507,7 +540,8 @@ ORDER BY p.id
 
 // TODO: Order by
 // TODO: Pagination
-exports.findForumWithTopics = function* (forumId) {
+exports.findForumWithTopics = wrapTimer(findForumWithTopics);
+function* findForumWithTopics(forumId) {
   var sql = m(function() {/*
 SELECT
   f.*,
@@ -528,7 +562,8 @@ GROUP BY f.id
 };
 
 // Keep findPostWithTopic and findPmWithConvo in sync
-exports.findPostWithTopic = function*(postId) {
+exports.findPostWithTopic = wrapTimer(findPostWithTopic);
+function* findPostWithTopic(postId) {
   var sql = m(function() {/*
 SELECT
   p.*,
@@ -543,7 +578,8 @@ GROUP BY p.id, t.id
 };
 
 // Keep findPostWithTopic and findPmWithConvo in sync
-exports.findPmWithConvo = function*(pmId) {
+exports.findPmWithConvo = wrapTimer(findPmWithConvo);
+function* findPmWithConvo(pmId) {
   var sql = m(function() {/*
 SELECT
   pms.*,
@@ -599,7 +635,6 @@ RETURNING *
   return result.rows[0];
 };
 
-// TODO: Wrap in txn abstraction
 // Args:
 // - userId     Required Number/String
 // - forumId    Required Number/String
@@ -610,6 +645,7 @@ RETURNING *
 // - isRoleplay Required Boolean
 //
 exports.createTopic = function*(props) {
+  debug('[createTopic]');
   assert(_.isNumber(props.userId));
   assert(props.forumId);
   assert(_.isString(props.ipAddress));
@@ -665,7 +701,8 @@ RETURNING *
   return result.rows[0];
 };
 
-exports.findForum = function*(forumId) {
+exports.findForum = wrapTimer(findForum);
+function* findForum(forumId) {
   var sql = m(function() {/*
 SELECT
   f.*,
@@ -681,7 +718,8 @@ GROUP BY f.id, f2.id, f3.id
   return result.rows[0];
 };
 
-exports.findLatestUsers = function*(limit) {
+exports.findLatestUsers = wrapTimer(findLatestUsers);
+function* findLatestUsers(limit) {
   var sql = m(function() {/*
 SELECT u.*
 FROM users u
@@ -705,7 +743,8 @@ WHERE c.id = $1
 };
 
 // Only returns non-mod-forum categories
-exports.findCategories = function*() {
+exports.findCategories = wrapTimer(findCategories);
+function* findCategories() {
   var sql = m(function() {/*
 SELECT c.*
 FROM categories c
@@ -769,7 +808,8 @@ WHERE user_id = $1 AND id = $2
 };
 
 // Sort them by latest_posts first
-exports.findSubscribedTopicsForUserId = function*(userId) {
+exports.findSubscribedTopicsForUserId = wrapTimer(findSubscribedTopicsForUserId);
+function* findSubscribedTopicsForUserId(userId) {
   var sql = m(function() {/*
 SELECT
   t.*,
@@ -801,7 +841,7 @@ WHERE ts.user_id = $1
   return result.rows;
 };
 
-exports.findForums = findForums;
+exports.findForums = wrapTimer(findForums);
 function* findForums(categoryIds) {
   assert(_.isArray(categoryIds));
   var sql = m(function() {/*
