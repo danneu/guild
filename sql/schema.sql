@@ -20,16 +20,16 @@ CREATE TYPE role_type AS ENUM ('admin', 'smod', 'mod', 'member', 'banned');
 
 CREATE TABLE users (
   id             serial PRIMARY KEY,
-  uname          text NOT NULL,  -- Unique index added later in schema
-  digest         text NOT NULL,
-  email          text NOT NULL,  -- Unique index added later in schema
-  oldguild_uname text NULL,
+  uname          text   NOT NULL,  -- Unique index added later in schema
+  digest         text   NOT NULL,
+  email          text   NOT NULL,  -- Unique index added later in schema
+  oldguild_uname text   NULL,
   created_at     timestamp with time zone NOT NULL  DEFAULT NOW(),
   last_online_at timestamp with time zone NOT NULL,
-  is_ghost       boolean NOT NULL  DEFAULT false,
+  is_ghost       boolean   NOT NULL  DEFAULT false,
   role           role_type NOT NULL  DEFAULT 'member',
-  posts_count    int NOT NULL  DEFAULT 0,
-  pms_count      int NOT NULL  DEFAULT 0
+  posts_count    int       NOT NULL  DEFAULT 0,
+  pms_count      int       NOT NULL  DEFAULT 0
 );
 
 CREATE UNIQUE INDEX unique_username ON users USING btree (lower(uname));
@@ -116,13 +116,14 @@ CREATE TABLE posts (
   created_at timestamp with time zone NOT NULL  DEFAULT NOW(),
   updated_at timestamp with time zone NULL,
   is_roleplay boolean NOT NULL,
+  page        int  NULL,
   type       post_type NOT NULL,
   ip_address inet NULL,
   is_hidden  boolean NOT NULL  DEFAULT false
 );
 
-CREATE INDEX ON posts (topic_id);
-CREATE INDEX ON posts (id, user_id);
+CREATE INDEX posts_topic_id_idx ON posts (topic_id);
+CREATE INDEX posts_id_user_id_idx ON posts (id, user_id);
 
 -- Last post cache
 ALTER TABLE forums ADD COLUMN latest_post_id int NULL REFERENCES posts(id);
