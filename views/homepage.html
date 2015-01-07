@@ -84,4 +84,52 @@
       {% endfor %} <!-- endfor categories -->
     </div> <!-- /.col-sm-12 -->
   </div> <!-- /.row -->
+
+  <!-- Stats box -->
+  <div class="panel panel-default" style="border: 1px solid #111">
+    <div class="panel-body">
+      <div class="row" style="border-bottom: 1px solid #111; padding-bottom: 10px">
+        <div class="col-xs-12">
+          <h4>{{ stats.onlineUsers.length }} Users Online (within 15 min)</h4>
+          {% for user in stats.onlineUsers %}
+            {% if user.is_ghost %}
+              <a href="{{ user.url }}" style="color: #000">{{ user.uname }}</a>
+            {% else %}
+              <a href="{{ user.url }}" style="color: #999">{{ user.uname }}</a>
+            {% endif %}
+            {% if !loop.last %}
+              ,
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div> <!--/.row-->
+      <div class="row">
+        <div class="col-xs-2 text-center">
+          <h4>Users</h4>
+          <div><b>{{ stats.usersCount|commafy }}</b> total</div>
+        </div>
+        <div class="col-xs-2 text-center">
+          <h4>Topics</h4>
+          <div><b>{{ stats.topicsCount|commafy }}</b> total</div>
+        </div>
+        <div class="col-xs-2 text-center">
+          <h4>Posts</h4>
+          <div><b>{{ stats.postsCount|commafy }}</b> total</div>
+        </div>
+        <div class="col-xs-2 text-center">
+          <h4>Newest User</h4>
+          <div>
+            {% if stats.latestUser %}
+            <a href="{{ stats.latestUser.url }}">{{ stats.latestUser.uname }}</a>
+            <abbr class="timeago" title="{{ stats.latestUser.created_at.toISOString() }}">
+              {{ stats.latestUser.formattedCreatedAt }}
+            </abbr>
+            {% else %}
+              --
+            {% endif %}
+          </div>
+        </div>
+      </div><!--/.row-->
+    </div> <!--/.panel-body-->
+  </div> <!--/.panel-->
 {% endblock %}

@@ -821,3 +821,46 @@ ORDER BY pos;
   var result = yield query(sql, [categoryIds]);
   return result.rows;
 }
+
+// Stats
+
+// https://wiki.postgresql.org/wiki/Count_estimate
+exports.getApproxCount = wrapTimer(getApproxCount);
+function* getApproxCount(tableName) {
+  assert(_.isString(tableName));
+  var sql = 'SELECT reltuples "count" FROM pg_class WHERE relname = $1';
+  var result = yield query(sql, [tableName]);
+  return result.rows[0].count;
+}
+
+exports.getLatestUser = wrapTimer(getLatestUser);
+function* getLatestUser() {
+  var sql = 'SELECT * FROM users ORDER BY created_at DESC LIMIT 1';
+  var result = yield query(sql);
+  return result.rows[0];
+}
+
+// Users online within 15 min
+exports.getOnlineUsers = wrapTimer(getOnlineUsers);
+function* getOnlineUsers() {
+  var sql = m(function() {/*
+SELECT *
+FROM users
+WHERE last_online_at > NOW() - interval '15 minutes'
+ORDER BY uname
+  */});
+  var result = yield query(sql);
+  return result.rows;
+}
+
+exports.getStats = wrapTimer(getStats);
+function* getStats() {
+  var results = yield {
+    topicsCount: getApproxCount('topics'),
+    usersCount: getApproxCount('users'),
+    postsCount: getApproxCount('posts'),
+    latestUser: exports.getLatestUser(),
+    onlineUsers: exports.getOnlineUsers()
+  };
+  return results;
+}

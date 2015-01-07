@@ -306,9 +306,16 @@ app.use(route.get('/', function*() {
     return category;
   });
 
+  // Get stats
+  var stats = yield db.getStats();
+  stats.onlineUsers = stats.onlineUsers.map(pre.presentUser);
+  if (stats.latestUser)
+    stats.latestUser = pre.presentUser(stats.latestUser);
+
   yield this.render('homepage', {
     ctx: this,
-    categories: categories
+    categories: categories,
+    stats: stats
   });
 }));
 
