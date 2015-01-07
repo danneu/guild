@@ -105,7 +105,6 @@ CREATE TABLE topics (
   char_posts_count int NOT NULL DEFAULT 0
 );
 
-CREATE INDEX topics_latest_post_id_DESC_idx ON topics (latest_post_id DESC);
 CREATE TYPE post_type AS ENUM ('ic', 'ooc', 'char');
 
 CREATE TABLE posts (
@@ -131,6 +130,7 @@ ALTER TABLE topics ADD COLUMN latest_post_id int NULL REFERENCES posts(id);
 ALTER TABLE topics ADD COLUMN latest_ic_post_id int NULL REFERENCES posts(id);
 ALTER TABLE topics ADD COLUMN latest_ooc_post_id int NULL REFERENCES posts(id);
 ALTER TABLE topics ADD COLUMN latest_char_post_id int NULL REFERENCES posts(id);
+CREATE INDEX topics_latest_post_id_DESC_idx ON topics (latest_post_id DESC);
 
 CREATE TABLE topic_subscriptions (
   user_id int NOT NULL  REFERENCES users(id),

@@ -23,10 +23,10 @@ function* resetDb() {
   var sql = yield slurpSql('schema.sql');
   yield db.query(sql);
   // Link up triggers
-  var sql = yield slurpSql('functions_and_triggers.sql');
+  sql = yield slurpSql('functions_and_triggers.sql');
   yield db.query(sql);
   if (false && config.NODE_ENV === 'development') {
-    var sql = yield slurpSql('dev_seeds.sql');
+    sql = yield slurpSql('dev_seeds.sql');
     yield db.query(sql);
 
     // Insert 100 topics for forum1
