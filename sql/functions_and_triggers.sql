@@ -220,7 +220,7 @@ CREATE TRIGGER pm_created1
 CREATE OR REPLACE FUNCTION set_post_page() RETURNS trigger AS
 $$
   q = 'UPDATE posts                                    '+
-      'SET page = sub.page                             '+
+      'SET page = COALESCE(sub.page, 1)                '+
       'FROM (                                          '+
       '  SELECT (COUNT(id) / 20) + 1 "page"            '+
       '  FROM posts                                    '+
