@@ -619,6 +619,8 @@ app.use(route.post('/topics/:topicId/posts', function*(topicId) {
 // Show convos
 //
 app.use(route.get('/me/convos', function*() {
+  if (config.NODE_ENV !== 'development')
+    return this.body = 'PM system is currently disabled';
   // TODO: Authz, pagination
   if (!this.currUser) return;
   var convos = yield db.findConvosInvolvingUserId(this.currUser.id);
@@ -655,6 +657,8 @@ app.get('/users/:userId', function*() {
 // - 'to': Comma-delimited string of unames user wants to send to
 //
 app.use(route.post('/convos', function*() {
+  if (config.NODE_ENV !== 'development')
+    return this.body = 'PM system is currently disabled';
   var ctx = this;
   this.assertAuthorized(this.currUser, 'CREATE_CONVO');
   // TODO: Validation, Error msgs, preserve params
@@ -710,6 +714,8 @@ app.use(route.post('/convos', function*() {
 //
 // TODO: Implement typeahead
 app.use(route.get('/convos/new', function*() {
+  if (config.NODE_ENV !== 'development')
+    return this.body = 'PM system is currently disabled';
   this.assertAuthorized(this.currUser, 'CREATE_CONVO');
   // TODO: Validation, Error msgs, preserve params
   yield this.render('new_convo', {
@@ -722,6 +728,8 @@ app.use(route.get('/convos/new', function*() {
 // Create PM
 //
 app.use(route.post('/convos/:convoId/pms', function*(convoId) {
+  if (config.NODE_ENV !== 'development')
+    return this.body = 'PM system is currently disabled';
   var text = this.request.body.text;
   assert(text);
   // TODO: Validation
