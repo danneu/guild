@@ -12,7 +12,7 @@
       </li>
 
       <a style="color: white;" href="{{ baseUrl + '?page=' + currPage }}">
-        Page {{ currPage }} of {{ totalPages -}}
+        Page {{ currPage|commafy }} of {{ totalPages|commafy -}}
       </a>
 
       <li {% if currPage === totalPages %} class="disabled" {% endif %}>

@@ -121,23 +121,23 @@
     {% if topic.forum.is_roleplay %}
       <li class="{% if ctx.request.path.endsWith('/ic') %}active{% endif %}">
         <a href="{{ topic.url }}/posts/ic">
-          IC <span class="badge">{{ topic.ic_posts_count }}</span>
+          IC <span class="badge">{{ topic.ic_posts_count|commafy }}</span>
         </a>
       </li>
       <li class="{% if ctx.request.path.endsWith('/ooc') %}active{% endif %}">
         <a href="{{ topic.url }}/posts/ooc">
-          OOC <span class="badge">{{ topic.ooc_posts_count }}</span>
+          OOC <span class="badge">{{ topic.ooc_posts_count|commafy }}</span>
         </a>
       </li>
       <li class="{% if ctx.request.path.endsWith('/char') %}active{% endif %}">
         <a href="{{ topic.url }}/posts/char">
-          Characters <span class="badge">{{ topic.char_posts_count }}</span>
+          Characters <span class="badge">{{ topic.char_posts_count|commafy }}</span>
         </a>
       </li>
     {% else %}
       <li class="active">
         <a href="{{ topic.url }}">Posts <span class="badge">
-            {{ topic.posts_count }}
+            {{ topic.posts_count|commafy }}
         </span></a>
       </li>
     {% endif %}
@@ -145,7 +145,7 @@
 
   <!-- Posts list -->
 
-  {% if topic.posts.length === 0 %}
+  {% if topic[postType + '_posts_count'] === 0 %}
     <div class="well">
       There are no {{ postType.toUpperCase() }} posts, yet.
     </div>

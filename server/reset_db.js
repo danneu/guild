@@ -19,10 +19,14 @@ function* slurpSql(filePath) {
 }
 
 function* resetDb() {
+  // Create tables
   var sql = yield slurpSql('schema.sql');
   yield db.query(sql);
+  // Link up triggers
+  sql = yield slurpSql('functions_and_triggers.sql');
+  yield db.query(sql);
   if (config.NODE_ENV === 'development') {
-    var sql = yield slurpSql('dev_seeds.sql');
+    sql = yield slurpSql('dev_seeds.sql');
     yield db.query(sql);
 
     // Insert 100 topics for forum1

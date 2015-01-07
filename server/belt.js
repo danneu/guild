@@ -131,3 +131,8 @@ exports.calcPager = function(pageParam, perPage, totalItems) {
   debug('[calcPager] result: ', result);
   return result;
 };
+
+// Returns a number >= 1
+exports.calcTotalPostPages = function(totalItems) {
+  return Math.max(1, Math.ceil(totalItems / config.POSTS_PER_PAGE));
+};

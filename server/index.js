@@ -78,6 +78,9 @@ app.use(function*(next) {  // Must become before koa-router
   yield next;
 });
 
+// Custom Swig filters
+////////////////////////////////////////////////////////////
+
 // TODO: Extract custom swig filters
 // {{ 'firetruck'|truncate(5) }}  -> 'firet...'
 // {{ 'firetruck'|truncate(6) }}  -> 'firetruck'
@@ -92,6 +95,15 @@ function makeTruncate(suffix) {
   };
 }
 swig.setFilter('truncate', makeTruncate('…'));
+
+// commafy(10) -> 10
+// commafy(1000000) -> 1,000,000
+function commafy(n) {
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+swig.setFilter('commafy', commafy);
+
+////////////////////////////////////////////////////////////
 
 // Configure templating system to use `swig`
 // and to find view files in `view` directory
@@ -294,9 +306,16 @@ app.use(route.get('/', function*() {
     return category;
   });
 
+  // Get stats
+  var stats = yield db.getStats();
+  stats.onlineUsers = stats.onlineUsers.map(pre.presentUser);
+  if (stats.latestUser)
+    stats.latestUser = pre.presentUser(stats.latestUser);
+
   yield this.render('homepage', {
     ctx: this,
-    categories: categories
+    categories: categories,
+    stats: stats
   });
 }));
 
@@ -510,7 +529,6 @@ app.use(route.get('/me/subscriptions', function*() {
   this.assert(this.currUser, 404);
   var topics = yield db.findSubscribedTopicsForUserId(this.currUser.id);
   topics = topics.map(pre.presentTopic);
-  console.log(JSON.stringify(topics));
   var grouped = _.groupBy(topics, function(topic) {
     return topic.forum.is_roleplay;
   });
@@ -856,6 +874,13 @@ app.use(route.get('/topics/:topicId/posts/:postType', function*(topicId, postTyp
   this.checkQuery('page').optional().toInt();
   this.assert(!this.errors, 400, belt.joinErrors(this.errors))
 
+  // If ?page=1 was given, then redirect without param
+  // since page 1 is already the canonical destination of a topic url
+  if (this.request.query.page === 1)
+    return this.response.redirect(this.request.path);
+
+  var page = Math.max(1, this.request.query.page || 1);
+
   // Only incur the topic_subscriptions join if currUser exists
   var topic;
   if (this.currUser) {
@@ -866,14 +891,21 @@ app.use(route.get('/topics/:topicId/posts/:postType', function*(topicId, postTyp
   this.assert(topic, 404);
   this.assertAuthorized(this.currUser, 'READ_TOPIC', topic);
 
-  // TODO: Extract perPage config
-
   var totalItems = topic[postType + '_posts_count'];
-  var pager = belt.calcPager(this.request.query.page, 10, totalItems);
+  var totalPages = belt.calcTotalPostPages(totalItems);
+  debug(totalPages);
 
-  var posts = yield db.findPostsByTopicId(
-    topicId, postType, pager.limit, pager.offset
-  );
+  // Don't need this page when post pages are pre-calc'd in the database
+  // var pager = belt.calcPager(page, config.POSTS_PER_PAGE, totalItems);
+
+  // Redirect to the highest page if page parameter exceeded it
+  if (page > totalPages) {
+    var redirectUrl = page === 1 ? this.request.path :
+                                   this.request.path + '?page=' + totalPages;
+    return this.response.redirect(redirectUrl);
+  }
+
+  var posts = yield db.findPostsByTopicId(topicId, postType, page);
   topic.posts = posts;
   topic = pre.presentTopic(topic);
   yield this.render('show_topic', {
@@ -881,8 +913,8 @@ app.use(route.get('/topics/:topicId/posts/:postType', function*(topicId, postTyp
     topic: topic,
     postType: postType,
     // Pagination
-    currPage: pager.currPage,
-    totalPages: pager.totalPages
+    currPage: page,
+    totalPages: totalPages
   });
 }));
 

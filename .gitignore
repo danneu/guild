@@ -6,3 +6,12 @@ db-backup.tar.gz
 node_modules
 server/sandbox.js
 test
+prevguild*
+guild-importer
+PERSONAL_README.md
+server/import.js
+users.csv
+users.dump
+x-users.json
+HOW_TO_MIGRATE.md
+public/css/redPANDA.css

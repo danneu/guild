@@ -12,7 +12,6 @@ function formatDate(d) {
   var months = ["Jan", "Feb", "Mar", "Apr",
                 "May", "Jun", "Jul", "Aug",
                 "Sep", "Oct", "Nov", "Dec"];
-  console.log(typeof d);
   var mins = d.getMinutes();
   // Pad mins to format "XX". e.g. 8 -> "08", 10 -> "10"
   var paddedMins = mins < 10 ? '0' + mins : mins;

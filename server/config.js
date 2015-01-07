@@ -14,6 +14,11 @@ exports.AWS_KEY = process.env.AWS_KEY;
 exports.AWS_SECRET = process.env.AWS_SECRET;
 exports.FROM_EMAIL = process.env.FROM_EMAIL;
 
+// This must match up with the actual pagination in the database since
+// pages are pre-calculated. This setting just assists the pagination calculator
+// in belt.js
+exports.POSTS_PER_PAGE = process.env.POSTS_PER_PAGE || 20;
+
 // Subsystem checks
 
 exports.IS_EMAIL_CONFIGURED = !!(exports.HOST &&
