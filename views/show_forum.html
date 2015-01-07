@@ -107,30 +107,32 @@
 
   <!-- New post forum -->
 
-  {% if forum.is_roleplay %}
-    <h2>New Roleplay</h2>
-  {% else %}
-    <h2>New Topic</h2>
-  {% endif %}
+  {% if ctx.can(ctx.currUser, 'CREATE_TOPIC', forum) %}
+    {% if forum.is_roleplay %}
+      <h2>New Roleplay</h2>
+    {% else %}
+      <h2>New Topic</h2>
+    {% endif %}
 
-  <form id="new-topic-form" role="form" method="post"
-        action="{{ forum.url }}/topics">
-    <input type="hidden" name="forum-id" value="{{ forum.id }}">
-    <div class="form-group">
-      <input type="text"
-             placeholder="Topic Title"
-             name="title"
-             class="form-control">
-    </div>
-    <div class="form-group">
-      <textarea rows=10
-                id="reply-input"
-                name="text"
-                class="form-control"
-                placeholder="Click here and begin writing"></textarea>
-    </div>
-    <input type="submit" class="btn btn-primary" value="Create Topics"></input>
-  </form>
+    <form id="new-topic-form" role="form" method="post"
+          action="{{ forum.url }}/topics">
+      <input type="hidden" name="forum-id" value="{{ forum.id }}">
+      <div class="form-group">
+        <input type="text"
+               placeholder="Topic Title"
+               name="title"
+               class="form-control">
+      </div>
+      <div class="form-group">
+        <textarea rows=10
+                  id="reply-input"
+                  name="text"
+                  class="form-control"
+                  placeholder="Click here and begin writing"></textarea>
+      </div>
+      <input type="submit" class="btn btn-primary" value="Create Topics"></input>
+    </form>
+  {% endif %}
 
 {% endblock %}
 
