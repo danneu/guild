@@ -25,7 +25,7 @@ function* resetDb() {
   // Link up triggers
   sql = yield slurpSql('functions_and_triggers.sql');
   yield db.query(sql);
-  if (false && config.NODE_ENV === 'development') {
+  if (config.NODE_ENV === 'development') {
     sql = yield slurpSql('dev_seeds.sql');
     yield db.query(sql);
 
