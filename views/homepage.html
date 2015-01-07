@@ -66,7 +66,9 @@
                     {% if subforum.latest_post %}
                       <a href="{{ subforum.latest_post.url }}">{{ subforum.latest_topic.title }}</a>
                       <br>by
-                      <a href="{{ subforum.latest_user.url }}">{{ subforum.latest_user.uname }}</a>
+                      <a href="{{ subforum.latest_user.url }}" style="color: #fff">
+                        {{ subforum.latest_user.uname }}
+                      </a>
                       <br>
                       <abbr class="timeago"
                             title="{{ subforum.latest_post.created_at.toISOString() }}">
