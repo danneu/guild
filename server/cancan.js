@@ -48,7 +48,7 @@ function can(user, action, target) {
       // Members can post as long as it's outside the lexus lounge,
       // the topic is open, and the topic is visible
       if (user.role === 'member')
-        return target.category_id !== 6 && !target.is_closed && !target.is_hidden;
+        return target.category_id !== 4 && !target.is_closed && !target.is_hidden;
       return false;
     case 'READ_PM': // target is pm with pm.convo and pm.participants props
       if (!user) return false;
@@ -64,7 +64,7 @@ function can(user, action, target) {
       // the topic is not hidden, and the topic is not in lexus lounge
       return !target.is_hidden &&
              !target.topic.is_hidden &&
-             target.forum.category_id !== 6;
+             target.forum.category_id !== 4;
     case 'READ_USER_IP': // target is a user
       if (!user) return false;
       // Staff can only see down-chain
@@ -75,7 +75,7 @@ function can(user, action, target) {
       return false;
     case 'READ_FORUM':  // target is a forum
       // TODO: Remove hardcoded mod forum
-      if (target.category_id === 6)
+      if (target.category_id === 4)
         return user && _.contains(['admin', 'smod', 'mod'], user.role);
       else
         return true; // for now, anyone can read a non-lexus-lounge forum
@@ -107,11 +107,11 @@ function can(user, action, target) {
       // Staff can post everywhere
       if (_.contains(['admin', 'smod', 'mod'], user.role)) return true;
       if (user.role === 'member')
-        return (!target.is_hidden && !target.is_closed && target.category_id !== 6);
+        return (!target.is_hidden && !target.is_closed && target.category_id !== 4);
       return false;
     case 'READ_TOPIC':  // target is topic
       // Only staff can read lexus lounge
-      if (target.category_id === 6)
+      if (target.category_id === 4)
         return user && _.contains(['admin', 'smod', 'mod'], user.role);
       // Only staff can see hidden topics
       if (target.is_hidden)
@@ -127,9 +127,9 @@ function can(user, action, target) {
       if (!user) return false;
       if (user.role === 'banned') return false;
       // Members can create topics in any category that's not Lexus Lounge
-      if (user.role === 'member') return target.category_id !== 6;
+      if (user.role === 'member') return target.category_id !== 4;
       // Only staff can create topics in lexus lounge
-      if (target.id === 6) {
+      if (target.id === 4) {
         return _.contains(['admin', 'smod', 'mod'], user.role);
       } else {
         return _.contains(['admin', 'smod', 'mod', 'member'], user.role);

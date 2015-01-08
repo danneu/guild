@@ -290,7 +290,7 @@ app.use(route.get('/', function*() {
   // We don't show the mod forum on the homepage.
   // Nasty, but just delete it for now
   // TODO: Abstract
-  _.remove(categories, { id: 6 });
+  _.remove(categories, { id: 4 });
   var categoryIds = _.pluck(categories, 'id');
   var allForums = yield db.findForums(categoryIds);
   var topLevelForums = _.reject(allForums, 'parent_forum_id');

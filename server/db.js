@@ -746,7 +746,7 @@ LIMIT $1
 
 // Also has cat.forums array
 exports.findModCategory = function*() {
-  var MOD_CATEGORY_ID = 6;
+  var MOD_CATEGORY_ID = 4;
   var sql = m(function() {/*
 SELECT c.*
 FROM categories c
