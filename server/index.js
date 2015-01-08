@@ -657,23 +657,43 @@ app.get('/users/:userId', function*() {
 // Create convo
 // Params:
 // - 'to': Comma-delimited string of unames user wants to send to
+// - 'title'
+// - 'text'
 //
 app.use(route.post('/convos', function*() {
   if (config.NODE_ENV !== 'development')
     return this.body = 'PM system is currently disabled';
   var ctx = this;
   this.assertAuthorized(this.currUser, 'CREATE_CONVO');
+
+  // Light input validation
+  this.checkBody('title').isLength(config.MIN_TOPIC_TITLE_LENGTH,
+                                   config.MAX_TOPIC_TITLE_LENGTH,
+                                   'Title required');
+  this.checkBody('text').isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH,
+                                  'Text required');
+
+  if (this.errors) {
+    this.flash = {
+      message: ['danger', belt.joinErrors(this.errors)],
+      params: this.request.body
+    };
+    this.response.redirect('/convos/new');
+    return;
+  }
+
   // TODO: Validation, Error msgs, preserve params
   // TODO: Sponge this up into a fixer+validater
-  var unames = this.request.body.to && this.request.body.to.split(',');
+
+  var unames = this.request.body.to && this.request.body.to.split(',') || [];
   var title = this.request.body.title;
   var text = this.request.body.text;
-  // Remove empty
+  // Remove empty (Note: unames contains lowercase unames)
   unames = _.compact(unames.map(function(uname) {
     return uname.trim().toLowerCase();
   }));
   // Ensure no more than 5 unames specified
-  if (unames.length > 5) return;
+  if (unames.length > 5) return this.body = 'You cannot send a PM to more than 5 people at once';
   // Ensure user didn't specify themself
   unames = _.reject(unames, function(uname) {
     return uname === ctx.currUser.uname.toLowerCase();
@@ -745,19 +765,41 @@ app.use(route.post('/convos/:convoId/pms', function*(convoId) {
 }));
 
 //
-// View convo
+// Show convo
 //
 app.use(route.get('/convos/:convoId', function*(convoId) {
-  // TODO: Authz
+  this.assert(this.currUser, 404);
   var convo = yield db.findConvo(convoId);
-  if (!convo) return;
+  this.assert(convo, 404);
   this.assertAuthorized(this.currUser, 'READ_CONVO', convo);
-  var pms = yield db.findPmsByConvoId(convoId);
+  this.checkQuery('page').optional().toInt();
+  this.assert(!this.errors, 400, belt.joinErrors(this.errors));
+
+  // If ?page=1 was given, then redirect without param
+  // since page 1 is already the canonical destination of a convo url
+  if (this.request.query.page === 1)
+    return this.response.redirect(this.request.path);
+
+  var page = Math.max(1, this.request.query.page || 1);
+  var totalItems = convo.pms_count;
+  var totalPages = belt.calcTotalPostPages(totalItems);
+
+  // Redirect to the highest page if page parameter exceeded it
+  if (page > totalPages) {
+    var redirectUrl = page === 1 ? this.request.path :
+                                   this.request.path + '?page=' + totalPages;
+    return this.response.redirect(redirectUrl);
+  }
+
+  var pms = yield db.findPmsByConvoId(convoId, page);
   convo.pms = pms;
   convo = pre.presentConvo(convo);
   yield this.render('show_convo', {
     ctx: this,
-    convo: convo
+    convo: convo,
+    // Pagination
+    currPage: page,
+    totalPages: totalPages
   });
 }));
 
@@ -911,7 +953,6 @@ app.use(route.get('/topics/:topicId/posts/:postType', function*(topicId, postTyp
 
   var totalItems = topic[postType + '_posts_count'];
   var totalPages = belt.calcTotalPostPages(totalItems);
-  debug(totalPages);
 
   // Don't need this page when post pages are pre-calc'd in the database
   // var pager = belt.calcPager(page, config.POSTS_PER_PAGE, totalItems);

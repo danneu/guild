@@ -258,31 +258,35 @@ exports.createConvo = function*(args) {
   assert(_.isString(args.title));
   assert(_.isString(args.text));
   var convoSql = m(function() {/*
-INSERT INTO convos (user_id, title)
-VALUES ($1, $2)
-RETURNING *
+INSERT INTO convos (user_id, title) VALUES ($1, $2) RETURNING *
   */});
   var pmSql = m(function() {/*
-INSERT INTO pms (user_id, convo_id, text, ip_address)
-VALUES ($1, $2, $3, $4)
+INSERT INTO pms
+  (convo_id, user_id, ip_address, text, idx)
+VALUES ($1, $2, $3, $4, 0)
 RETURNING *
 */});
   var participantSql = m(function() {/*
-INSERT INTO convos_participants (user_id, convo_id)
+INSERT INTO convos_participants (convo_id, user_id)
 VALUES ($1, $2)
 */});
-  var convo = (yield query(convoSql, [args.userId, args.title])).rows[0];
 
-  // Run these in parallel
-  yield args.toUserIds.map(function(toUserId) {
-    return query(participantSql, [toUserId, convo.id]);
-  }).concat([
-    query(participantSql, [args.userId, convo.id]),
-    query(pmSql, [args.userId, convo.id, args.text, args.ipAddress])
-  ]);
+  return yield withTransaction(function*(client) {
+    var result;
+    result = yield query(convoSql, [args.userId, args.title]);
+    var convo = result.rows[0];
 
-  convo.pms_count++;  // This is a stale copy so we need to manually inc
-  return convo;
+    // Run these in parallel
+    yield args.toUserIds.map(function(toUserId) {
+      return query(participantSql, [convo.id, toUserId]);
+    }).concat([
+      query(participantSql, [convo.id, args.userId]),
+      query(pmSql, [convo.id, args.userId, args.ipAddress, args.text])
+    ]);
+
+    convo.pms_count++;  // This is a stale copy so we need to manually inc
+    return convo;
+  });
 };
 
 // Only returns user if reset token has not expired
@@ -480,6 +484,7 @@ WHERE c.id IN (
   WHERE cp.user_id = $1
 )
 GROUP BY c.id, u1.id
+ORDER BY c.latest_pm_id DESC
   */});
   var result = yield query(sql, [userId]);
   return result.rows;
@@ -504,18 +509,20 @@ GROUP BY c.id, u1.id
   return result.rows[0];
 };
 
-exports.findPmsByConvoId = function*(convoId) {
+exports.findPmsByConvoId = function*(convoId, page) {
   var sql = m(function() {/*
 SELECT
   pms.*,
   to_json(u.*) "user"
 FROM pms
 JOIN users u ON pms.user_id = u.id
-WHERE pms.convo_id = $1
+WHERE pms.convo_id = $1 AND pms.idx >= $2 AND pms.idx < $3
 GROUP BY pms.id, u.id
 ORDER BY pms.id
   */});
-  var result = yield query(sql, [convoId]);
+  var fromIdx = (page - 1) * config.POSTS_PER_PAGE;
+  var toIdx = fromIdx + config.POSTS_PER_PAGE;
+  var result = yield query(sql, [convoId, fromIdx, toIdx]);
   return result.rows;
 };
 

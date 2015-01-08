@@ -7,6 +7,14 @@ exports.NODE_ENV = process.env.NODE_ENV || 'development';
 exports.RECAPTCHA_SITEKEY = process.env.RECAPTCHA_SITEKEY;
 exports.RECAPTCHA_SITESECRET = process.env.RECAPTCHA_SITESECRET;
 
+// Various configurable forum settings
+exports.MIN_TOPIC_TITLE_LENGTH = process.env.MIN_TOPIC_TITLE_LENGTH || 3;
+exports.MAX_TOPIC_TITLE_LENGTH = process.env.MAX_TOPIC_TITLE_LENGTH || 50;
+exports.MIN_POST_LENGTH = process.env.MIN_POST_LENGTH || 3;
+exports.MAX_POST_LENGTH = process.env.MAX_POST_LENGTH || 65535;
+exports.MIN_UNAME_LENGTH = process.env.MIN_UNAME_LENGTH || 3;
+exports.MAX_UNAME_LENGTH = process.env.MAX_UNAME_LENGTH || 15;
+
 // Determines the link in password reset token email
 exports.HOST = process.env.HOST || ('http://localhost:' + exports.PORT);
 // Required for sending emails

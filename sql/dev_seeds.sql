@@ -33,7 +33,12 @@ SELECT setval('convos_id_seq'::regclass, (SELECT MAX(id) FROM convos));
 --- Pms
 INSERT INTO pms (convo_id, user_id, text)
 VALUES
-(1, 1, 'hey, self')
+(1, 1, 'hey, self'),
+(2, 1, 'hey, bar'),
+(2, 2, 'hey, foo'),
+(3, 1, 'hey, guys'),
+(3, 2, 'hey, guys'),
+(3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys')
 ;
 SELECT setval('pms_id_seq'::regclass, (SELECT MAX(id) FROM pms));
 

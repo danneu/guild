@@ -1,4 +1,5 @@
 {% extends 'layouts/master.html' %}
+{% import './macros/paginate.html' as paginate %}
 
 {% block embed %}
   <ol class="breadcrumb">
@@ -16,6 +17,9 @@
       {% endfor %}
     </ul>
   </div>
+
+  <!-- Pagination -->
+  {{ paginate.render(currPage, totalPages, ctx.request.path) }}
 
   <div class="page-header" style="border: 0">
     <h2><a href="{{ convo.url }}" style="color: #fff">{{ convo.title }}</a></h2>
@@ -85,6 +89,9 @@
           </div> <!-- /.panel-footer -->
         </div> <!-- /.panel -->
   {% endfor %}
+
+  <!-- Pagination -->
+  {{ paginate.render(currPage, totalPages, ctx.request.path) }}
 
   <!-- New post forum -->
 

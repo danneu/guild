@@ -223,29 +223,20 @@ CREATE TRIGGER pm_created1
 
 ------------------------------------------------------------
 ------------------------------------------------------------
--- Update the post page when inserted
+-- Update convo.latest_pm_id and latest_pm_at when a pm is inserted
 
-CREATE OR REPLACE FUNCTION set_post_page() RETURNS trigger AS
-$$
-  q = 'UPDATE posts                                       '+
-      'SET page = sub.page                                '+
-      'FROM (                                             '+
-      '  SELECT COALESCE((                                '+
-      '    SELECT (COUNT(id) / 20) + 1 "page"             '+
-      '    FROM posts                                     '+
-      '    WHERE topic_id = $1 AND id < $2 AND type = $3  '+
-      '    GROUP BY topic_id                              '+
-      '  ), 1) "page"                                     '+
-      ') sub                                              '+
-      'WHERE posts.id = $2                                ';
-  plv8.execute(q, [NEW.topic_id, NEW.id, NEW.type]);
-$$ LANGUAGE 'plv8';
+CREATE OR REPLACE FUNCTION update_convo_latest_pm()
+RETURNS trigger AS $update_convo_latest_pm$
+    BEGIN
+        UPDATE convos
+        SET latest_pm_at = NOW(), latest_pm_id = NEW.id
+        WHERE id = NEW.convo_id;
+        RETURN NULL; -- result is ignored since this is an AFTER trigger
+    END;
+$update_convo_latest_pm$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS trigger_set_post_page ON posts;
-CREATE TRIGGER trigger_set_post_page
-    AFTER INSERT ON posts
+DROP TRIGGER IF EXISTS update_convo_latest_pm_trigger ON pms;
+CREATE TRIGGER update_convo_latest_pm_trigger
+    AFTER INSERT ON pms
     FOR EACH ROW
-    EXECUTE PROCEDURE set_post_page();
-
-------------------------------------------------------------
-------------------------------------------------------------
+    EXECUTE PROCEDURE update_convo_latest_pm();

@@ -156,7 +156,9 @@ CREATE TABLE convos (
   user_id     int    NOT NULL  REFERENCES users(id) ON DELETE CASCADE,
   created_at  timestamp with time zone NOT NULL  DEFAULT NOW(),
   title       text   NOT NULL,
-  pms_count int    NOT NULL  DEFAULT 0
+  -- Cache
+  pms_count int    NOT NULL  DEFAULT 0,
+  latest_pm_at timestamp with time zone NOT NULL  DEFAULT NOW()
 );
 
 CREATE TABLE pms (
@@ -165,9 +167,16 @@ CREATE TABLE pms (
   convo_id   int    NOT NULL  REFERENCES convos(id)  ON DELETE CASCADE,
   user_id    int    NOT NULL  REFERENCES users(id)  ON DELETE CASCADE,
   ip_address inet   NULL,
+  idx        int    NOT NULL,
   created_at timestamp with time zone NOT NULL  DEFAULT NOW(),
   updated_at timestamp with time zone NULL
 );
+
+-- Latest PM cache
+ALTER TABLE convos ADD COLUMN latest_pm_id
+  int NULL REFERENCES pms(id)  ON DELETE SET NULL;
+
+CREATE UNIQUE INDEX pms_convo_id_idx_idx ON pms (convo_id, idx DESC);
 
 CREATE TABLE convos_participants (
   convo_id int NOT NULL  REFERENCES convos(id) ON DELETE CASCADE,
@@ -199,3 +208,23 @@ CREATE TRIGGER trigger_set_post_idx
     BEFORE INSERT ON posts
     FOR EACH ROW
     EXECUTE PROCEDURE set_post_idx();
+
+------------------------------------------------------------
+------------------------------------------------------------
+-- Set pm idx before insertion
+
+CREATE OR REPLACE FUNCTION set_pm_idx() RETURNS trigger AS
+$$
+  q = 'SELECT COALESCE(MAX(pms.idx) + 1, 0) "idx"  '+
+      'FROM pms                                    '+
+      'WHERE pms.convo_id = $1                     ';
+  var rows = plv8.execute(q, [NEW.convo_id]);
+  NEW.idx = rows[0].idx;
+  return NEW;
+$$ LANGUAGE 'plv8';
+
+DROP TRIGGER IF EXISTS trigger_set_pm_idx ON pms;
+CREATE TRIGGER trigger_set_pm_idx
+    BEFORE INSERT ON pms
+    FOR EACH ROW
+    EXECUTE PROCEDURE set_pm_idx();
