@@ -621,10 +621,7 @@ app.use(route.post('/topics/:topicId/posts', function*(topicId) {
 // Show convos
 //
 app.use(route.get('/me/convos', function*() {
-  if (config.NODE_ENV !== 'development')
-    return this.body = 'PM system is currently disabled';
-  // TODO: Authz, pagination
-  if (!this.currUser) return;
+  this.assert(this.currUser, 404);
   var convos = yield db.findConvosInvolvingUserId(this.currUser.id);
   convos = convos.map(pre.presentConvo);
   yield this.render('me_convos.html', {
@@ -640,7 +637,7 @@ app.get('/users/:userId', function*() {
   var userId = this.params.userId;
   var user = yield db.findUser(userId);
   // Ensure user exists
-  if (!user) return;
+  this.assert(user, 404);
   user = pre.presentUser(user);
   // OPTIMIZE: Merge into single query?
   var recentPosts = yield db.findRecentPostsForUserId(user.id);
@@ -661,8 +658,6 @@ app.get('/users/:userId', function*() {
 // - 'text'
 //
 app.use(route.post('/convos', function*() {
-  if (config.NODE_ENV !== 'development')
-    return this.body = 'PM system is currently disabled';
   var ctx = this;
   this.assertAuthorized(this.currUser, 'CREATE_CONVO');
 
@@ -736,8 +731,6 @@ app.use(route.post('/convos', function*() {
 //
 // TODO: Implement typeahead
 app.use(route.get('/convos/new', function*() {
-  if (config.NODE_ENV !== 'development')
-    return this.body = 'PM system is currently disabled';
   this.assertAuthorized(this.currUser, 'CREATE_CONVO');
   // TODO: Validation, Error msgs, preserve params
   yield this.render('new_convo', {
