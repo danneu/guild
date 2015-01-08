@@ -20,6 +20,7 @@ a {
 }
 
 /* Ensure images can be no wider than post container width */
+.post-body-html img,
 .post-body img {
     max-width: 100%;
 }

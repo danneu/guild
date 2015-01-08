@@ -89,6 +89,29 @@ function* withTransaction(runner) {
   }
 }
 
+exports.updatePostStatus = function*(postId, status) {
+  var STATUS_WHITELIST = ['hide', 'unhide'];
+  assert(_.contains(STATUS_WHITELIST, status));
+  var sql = m(function() {/*
+UPDATE posts
+SET is_hidden = $2
+WHERE id = $1
+RETURNING *
+  */});
+  var params;
+  switch(status) {
+    case 'hide':
+      params = [postId, true];
+      break;
+    case 'unhide':
+      params = [postId, false];
+      break;
+    default: throw new Error('Invalid status ' + status);
+  }
+  var result = yield query(sql, params);
+  return result.rows[0];
+};
+
 exports.updateTopicStatus = function*(topicId, status) {
   var STATUS_WHITELIST = ['stick', 'unstick', 'hide', 'unhide', 'close', 'open'];
   assert(_.contains(STATUS_WHITELIST, status));
@@ -535,11 +558,15 @@ function* findPostsByTopicId(topicId, postType, page) {
   var sql = m(function() {/*
 SELECT
   p.*,
-  to_json(u.*) "user"
+  to_json(u.*) "user",
+  to_json(t.*) "topic",
+  to_json(f.*) "forum"
 FROM posts p
 JOIN users u ON p.user_id = u.id
+JOIN topics t ON p.topic_id = t.id
+JOIN forums f ON t.forum_id = f.id
 WHERE p.topic_id = $1 AND p.type = $2 AND p.idx >= $3 AND p.idx < $4
-GROUP BY p.id, u.id
+GROUP BY p.id, u.id, t.id, f.id
 ORDER BY p.id
   */});
   var fromIdx = (page - 1) * config.POSTS_PER_PAGE;

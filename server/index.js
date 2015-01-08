@@ -864,23 +864,23 @@ app.use(route.post('/forums/:forumId/topics', function*(forumId) {
 //
 // Returns the unformatted post source.
 //
-app.use(route.get('/posts/:postId/raw', function*(postId) {
-  var post = yield db.findPostWithTopicAndForum(postId);
+app.get('/posts/:id/raw', function*() {
+  var post = yield db.findPostWithTopicAndForum(this.params.id);
   this.assert(post, 404);
   this.assertAuthorized(this.currUser, 'READ_POST', post);
   this.body = post.text;
-}));
+});
 
-app.use(route.get('/pms/:pmId/raw', function*(pmId) {
+app.get('/pms/:id/raw', function*() {
   if (!config.IS_PM_SYSTEM_ONLINE)
     return this.body = 'PM system currently disabled';
 
   this.assert(this.currUser, 404);
-  var pm = yield db.findPmWithConvo(pmId);
+  var pm = yield db.findPmWithConvo(this.params.id);
   this.assert(pm, 404);
   this.assertAuthorized(this.currUser, 'READ_PM', pm);
   this.body = pm.text;
-}));
+});
 
 //
 // Update post text
@@ -888,7 +888,7 @@ app.use(route.get('/pms/:pmId/raw', function*(pmId) {
 // - text
 //
 // Keep /api/posts/:postId and /api/pms/:pmId in sync
-app.put('/api/posts/:postId', function*(id) {
+app.put('/api/posts/:postId', function*() {
   this.checkBody('text').isLength(config.MIN_POST_LENGTH,
                                   config.MAX_POST_LENGTH);
   if (this.errors) {
@@ -900,17 +900,17 @@ app.put('/api/posts/:postId', function*(id) {
     return;
   }
 
-  var post = yield db.findPost(id);
+  var post = yield db.findPost(this.params.id);
   this.assert(post, 404);
   this.assertAuthorized(this.currUser, 'UPDATE_POST', post)
 
   var text = this.request.body.text;
-  var updatedPost = yield db.updatePost(id, text);
+  var updatedPost = yield db.updatePost(this.params.id, text);
   updatedPost = pre.presentPost(updatedPost);
   this.body = JSON.stringify(updatedPost);
 });
 
-app.use(route.put('/api/pms/:id', function*(id) {
+app.put('/api/pms/:id', function*() {
   if (!config.IS_PM_SYSTEM_ONLINE)
     return this.body = 'PM system currently disabled';
 
@@ -926,16 +926,16 @@ app.use(route.put('/api/pms/:id', function*(id) {
   }
 
   this.assert(this.currUser, 404);
-  var pm = yield db.findPmWithConvo(id);
+  var pm = yield db.findPmWithConvo(this.params.id);
   this.assert(pm, 404);
   this.assertAuthorized(this.currUser, 'UPDATE_PM', pm)
 
   var text = this.request.body.text;
-  var updatedPm = yield db.updatePm(id, text);
+  var updatedPm = yield db.updatePm(this.params.id, text);
   updatedPm = pre.presentPm(updatedPm);
 
   this.body = JSON.stringify(updatedPm);
-}));
+});
 
 //
 // Update topic status
@@ -955,6 +955,24 @@ app.use(route.put('/topics/:topicId/status', function*(topicId) {
   topic = pre.presentTopic(topic);
   this.response.redirect(topic.url);
 }));
+
+// Update post state
+app.post('/posts/:postId/:status', function*() {
+  var STATUS_WHITELIST = ['hide', 'unhide'];
+  this.assert(_.contains(STATUS_WHITELIST, this.params.status), 400,
+              'Invalid status');
+  this.assert(this.currUser, 403);
+  var post = yield db.findPost(this.params.postId);
+  this.assert(post, 404);
+  this.assertAuthorized(this.currUser,
+                        this.params.status.toUpperCase() + '_POST',
+                        post);
+  var updatedPost = yield db.updatePostStatus(this.params.postId,
+                                              this.params.status);
+  updatedPost = pre.presentPost(updatedPost);
+
+  this.response.redirect(updatedPost.url);
+});
 
 //
 // Post permalink

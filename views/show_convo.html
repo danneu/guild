@@ -42,7 +42,7 @@
           </abbr>
         </span>
         <div class="pull-right post-header">
-          <a href="/">View Raw</a> -
+          <a href="{{ post.url }}/raw">View Raw</a> -
           <a href="{{ post.url }}">
             <span class="glyphicon glyphicon-link"></span>
           </a>
@@ -85,14 +85,15 @@
            {% if !ctx.can(ctx.currUser, 'CREATE_PM', convo) %}disabled{% endif %}
            >Reply</a>
         <!-- Edit button -->
-        <a href="/"
-           class="btn btn-default btn-xs pull-right post-edit-btn"
-           style="margin-left: 5px;"
-           post-id={{ post.id }}
-           {% if !ctx.can(ctx.currUser, 'UPDATE_PM', post) %} disabled {% endif %}
-           >Edit</a>
-          </div> <!-- /.panel-footer -->
-        </div> <!-- /.panel -->
+        {% if ctx.can(ctx.currUser, 'UPDATE_PM', post) %}
+          <a href="/"
+             class="btn btn-default btn-xs pull-right post-edit-btn"
+             style="margin-left: 5px;"
+             post-id={{ post.id }}
+            >Edit</a>
+        {% endif %}
+      </div> <!-- /.panel-footer -->
+    </div> <!-- /.panel -->
   {% endfor %}
 
   <!-- Pagination -->

@@ -9,9 +9,6 @@ var assert = require('better-assert');
 // TODO: Implement rules for all rules, not just member and admin
 exports.can = can;
 function can(user, action, target) {
-  // Admin can do all
-  if (user && user.role === 'admin') return true;
-
   switch(action) {
     case 'UPDATE_USER_ROLE': // target is user
       // Staff can change staff below them
@@ -29,6 +26,12 @@ function can(user, action, target) {
       if (target.role === 'mod')
         return user.role === 'smod';
       return false;
+    // Post state -- target is post
+    case 'UNHIDE_POST':
+    case 'HIDE_POST':
+      if (!user) return false;
+      // Staff can hide/unhide
+      return !!_.contains(['mod', 'smod', 'admin'], user.role);
     // Topic state
     case 'STICK_TOPIC':
     case 'UNSTICK_TOPIC':
