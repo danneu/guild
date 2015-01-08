@@ -530,11 +530,14 @@ SELECT
   to_json(u.*) "user"
 FROM posts p
 JOIN users u ON p.user_id = u.id
-WHERE p.topic_id = $1 AND p.type = $2 AND p.page = $3
+WHERE p.topic_id = $1 AND p.type = $2 AND p.idx >= $3 AND p.idx < $4
 GROUP BY p.id, u.id
 ORDER BY p.id
   */});
-  var result = yield query(sql, [topicId, postType, page]);
+  var fromIdx = (page - 1) * config.POSTS_PER_PAGE;
+  var toIdx = fromIdx + config.POSTS_PER_PAGE;
+  debug('%s <= post.idx < %s', fromIdx, toIdx);
+  var result = yield query(sql, [topicId, postType, fromIdx, toIdx]);
   return result.rows;
 };
 

@@ -2,6 +2,14 @@
 -- http://www.postgresql.org/docs/8.0/static/plpgsql-trigger.html
 -- http://www.postgresql.org/docs/9.1/static/sql-createtrigger.html
 
+-- This file contains indexes, constraints, and triggers that should only
+-- be created after the big COPY FROM migration.
+
+CREATE INDEX topics_latest_post_id_DESC_idx ON topics (latest_post_id DESC);
+CREATE INDEX topics_forum_id_idx            ON topics (forum_id);
+CREATE INDEX posts_topic_id_idx             ON posts (topic_id);
+CREATE INDEX posts_id_user_id_idx           ON posts (id, user_id);
+
 ------------------------------------------------------------
 ------------------------------------------------------------
 -- Update forum.topics_count when a topic is inserted/deleted

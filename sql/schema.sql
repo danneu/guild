@@ -14,6 +14,11 @@ DROP TABLE IF EXISTS topic_subscriptions CASCADE;
 DROP VIEW IF EXISTS active_reset_tokens;
 DROP TABLE IF EXISTS reset_tokens CASCADE;
 
+--
+-- Only put things in this file that should be present for the
+-- COPY FROM migration.
+--
+
 CREATE EXTENSION IF NOT EXISTS plv8;
 
 CREATE TYPE role_type AS ENUM ('admin', 'smod', 'mod', 'member', 'banned');
@@ -28,6 +33,7 @@ CREATE TABLE users (
   last_online_at timestamp with time zone NULL,
   is_ghost       boolean   NOT NULL  DEFAULT false,
   role           role_type NOT NULL  DEFAULT 'member',
+  -- Cache
   posts_count    int       NOT NULL  DEFAULT 0,
   pms_count      int       NOT NULL  DEFAULT 0
 );
@@ -115,14 +121,13 @@ CREATE TABLE posts (
   created_at timestamp with time zone NOT NULL  DEFAULT NOW(),
   updated_at timestamp with time zone NULL,
   is_roleplay boolean NOT NULL,
-  page        int  NULL,
   type       post_type NOT NULL,
   ip_address inet NULL,
-  is_hidden  boolean NOT NULL  DEFAULT false
+  is_hidden  boolean NOT NULL  DEFAULT false,
+  idx         int  NULL
 );
 
-CREATE INDEX posts_topic_id_idx ON posts (topic_id);
-CREATE INDEX posts_id_user_id_idx ON posts (id, user_id);
+CREATE UNIQUE INDEX posts_topic_id_type_idx_idx ON posts (topic_id, type, idx DESC);
 
 -- Last post cache
 ALTER TABLE forums ADD COLUMN latest_post_id int NULL REFERENCES posts(id);
@@ -130,7 +135,6 @@ ALTER TABLE topics ADD COLUMN latest_post_id int NULL REFERENCES posts(id);
 ALTER TABLE topics ADD COLUMN latest_ic_post_id int NULL REFERENCES posts(id);
 ALTER TABLE topics ADD COLUMN latest_ooc_post_id int NULL REFERENCES posts(id);
 ALTER TABLE topics ADD COLUMN latest_char_post_id int NULL REFERENCES posts(id);
-CREATE INDEX topics_latest_post_id_DESC_idx ON topics (latest_post_id DESC);
 
 CREATE TABLE topic_subscriptions (
   user_id int NOT NULL  REFERENCES users(id),
@@ -165,3 +169,28 @@ CREATE TABLE convos_participants (
   user_id  int NOT NULL  REFERENCES users(id) ON DELETE CASCADE
 );
 -- TODO: Uniq on user_id, convo_id
+
+------------------------------------------------------------
+------------------------------------------------------------
+-- Functions/triggers that should exist for the COPY FROM
+-- migration. Everything else should be in
+-- functions_and_triggers.sql
+------------------------------------------------------------
+------------------------------------------------------------
+-- Set post idx before inserted
+
+CREATE OR REPLACE FUNCTION set_post_idx() RETURNS trigger AS
+$$
+  q = 'SELECT COALESCE(MAX(p.idx) + 1, 0) "idx"  '+
+      'FROM posts p                              '+
+      'WHERE p.topic_id = $1 AND p.type = $2     ';
+  var rows = plv8.execute(q, [NEW.topic_id, NEW.type]);
+  NEW.idx = rows[0].idx;
+  return NEW;
+$$ LANGUAGE 'plv8';
+
+DROP TRIGGER IF EXISTS trigger_set_post_idx ON posts;
+CREATE TRIGGER trigger_set_post_idx
+    BEFORE INSERT ON posts
+    FOR EACH ROW
+    EXECUTE PROCEDURE set_post_idx();

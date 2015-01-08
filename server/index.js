@@ -868,7 +868,8 @@ app.use(route.get('/posts/:postId', function*(postId) {
     redirectUrl = post.topic.url + '/posts/' + post.type + '#post-' + post.id
   else
     redirectUrl = post.topic.url + '/posts/' + post.type +
-                  '?page=' + post.page +
+                  '?page=' +
+                  Math.max(1, Math.ceil(post.idx / config.POSTS_PER_PAGE)) +
                   '#post-' + post.id;
   this.response.redirect(redirectUrl);
 }));
