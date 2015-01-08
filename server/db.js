@@ -218,6 +218,7 @@ SELECT
 FROM posts p
 JOIN topics t ON p.topic_id = t.id
 WHERE p.user_id = $1
+ORDER BY p.id DESC
 LIMIT 25
   */});
   var result = yield query(sql, [userId]);
