@@ -42,7 +42,7 @@ CREATE UNIQUE INDEX unique_username ON users USING btree (lower(uname));
 CREATE UNIQUE INDEX unique_email ON users USING btree (lower(email));
 
 CREATE TABLE reset_tokens (
-  user_id int  NOT NULL  REFERENCES users(id),
+  user_id int  NOT NULL  REFERENCES users(id)  ON DELETE CASCADE,
   token   uuid NOT NULL,
   created_at timestamp with time zone NOT NULL  DEFAULT NOW(),
   expired_at timestamp with time zone NOT NULL  DEFAULT NOW() + INTERVAL '15 minutes'
@@ -50,7 +50,7 @@ CREATE TABLE reset_tokens (
 
 CREATE TABLE sessions (
   id         uuid PRIMARY KEY,
-  user_id    int  REFERENCES users(id),
+  user_id    int  REFERENCES users(id) ON DELETE CASCADE,
   ip_address inet NOT NULL,
   expired_at timestamp with time zone NOT NULL
                                       DEFAULT NOW() + INTERVAL '1 day',
@@ -78,8 +78,8 @@ CREATE TABLE categories (
 
 CREATE TABLE forums (
   id              serial PRIMARY KEY,
-  category_id     int NOT NULL  REFERENCES categories(id),
-  parent_forum_id int NULL  REFERENCES forums(id),
+  category_id     int NOT NULL  REFERENCES categories(id)  ON DELETE CASCADE,
+  parent_forum_id int NULL  REFERENCES forums(id)  ON DELETE SET NULL,
   title           text NOT NULL,
   description     text NULL,
   pos             int NOT NULL,
@@ -96,8 +96,8 @@ CREATE TABLE forums (
 CREATE TABLE topics (
   id         serial PRIMARY KEY,
   title      text NOT NULL,
-  user_id    int NOT NULL  REFERENCES users(id),
-  forum_id   int NOT NULL  REFERENCES forums(id),
+  user_id    int NOT NULL  REFERENCES users(id)  ON DELETE CASCADE,
+  forum_id   int NOT NULL  REFERENCES forums(id)  ON DELETE CASCADE,
   created_at timestamp with time zone NOT NULL  DEFAULT NOW(),
   is_roleplay boolean NOT NULL,
   -- Modkit flags
@@ -116,8 +116,8 @@ CREATE TYPE post_type AS ENUM ('ic', 'ooc', 'char');
 CREATE TABLE posts (
   id         serial PRIMARY KEY,
   text       text NOT NULL,
-  topic_id   int NOT NULL  REFERENCES topics(id),
-  user_id    int NOT NULL  REFERENCES users(id),
+  topic_id   int NOT NULL  REFERENCES topics(id)  ON DELETE CASCADE,
+  user_id    int NOT NULL  REFERENCES users(id)  ON DELETE CASCADE,
   created_at timestamp with time zone NOT NULL  DEFAULT NOW(),
   updated_at timestamp with time zone NULL,
   is_roleplay boolean NOT NULL,
@@ -130,15 +130,20 @@ CREATE TABLE posts (
 CREATE UNIQUE INDEX posts_topic_id_type_idx_idx ON posts (topic_id, type, idx DESC);
 
 -- Last post cache
-ALTER TABLE forums ADD COLUMN latest_post_id int NULL REFERENCES posts(id);
-ALTER TABLE topics ADD COLUMN latest_post_id int NULL REFERENCES posts(id);
-ALTER TABLE topics ADD COLUMN latest_ic_post_id int NULL REFERENCES posts(id);
-ALTER TABLE topics ADD COLUMN latest_ooc_post_id int NULL REFERENCES posts(id);
-ALTER TABLE topics ADD COLUMN latest_char_post_id int NULL REFERENCES posts(id);
+ALTER TABLE forums ADD COLUMN latest_post_id
+  int NULL REFERENCES posts(id)  ON DELETE SET NULL;
+ALTER TABLE topics ADD COLUMN latest_post_id
+  int NULL REFERENCES posts(id)  ON DELETE SET NULL;
+ALTER TABLE topics ADD COLUMN latest_ic_post_id
+  int NULL REFERENCES posts(id)  ON DELETE SET NULL;
+ALTER TABLE topics ADD COLUMN latest_ooc_post_id
+  int NULL REFERENCES posts(id)  ON DELETE SET NULL;
+ALTER TABLE topics ADD COLUMN latest_char_post_id
+  int NULL REFERENCES posts(id)  ON DELETE SET NULL;
 
 CREATE TABLE topic_subscriptions (
-  user_id int NOT NULL  REFERENCES users(id),
-  topic_id int NOT NULL  REFERENCES topics(id),
+  user_id int NOT NULL  REFERENCES users(id)  ON DELETE CASCADE,
+  topic_id int NOT NULL  REFERENCES topics(id)  ON DELETE CASCADE,
   UNIQUE (user_id, topic_id)
 );
 
@@ -157,8 +162,8 @@ CREATE TABLE convos (
 CREATE TABLE pms (
   id         serial PRIMARY KEY,
   text       text   NOT NULL,
-  convo_id   int    NOT NULL  REFERENCES convos(id) ON DELETE CASCADE,
-  user_id    int    NOT NULL  REFERENCES users(id),
+  convo_id   int    NOT NULL  REFERENCES convos(id)  ON DELETE CASCADE,
+  user_id    int    NOT NULL  REFERENCES users(id)  ON DELETE CASCADE,
   ip_address inet   NULL,
   created_at timestamp with time zone NOT NULL  DEFAULT NOW(),
   updated_at timestamp with time zone NULL
