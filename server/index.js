@@ -102,6 +102,7 @@ function commafy(n) {
   return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 swig.setFilter('commafy', commafy);
+swig.setFilter('formatDate', pre.formatDate);
 
 ////////////////////////////////////////////////////////////
 

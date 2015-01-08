@@ -55,6 +55,17 @@ function presentForum(forum) {
 exports.presentUser = presentUser;
 function presentUser(user) {
   user.url = '/users/' + user.id;
+
+  // Fix embedded
+  if (_.isString(user.created_at))
+    user.created_at = new Date(user.created_at);
+  if (_.isString(user.last_online_at))
+    user.last_online_at = new Date(user.last_online_at);
+
+  user.formattedCreatedAt = formatDate(user.created_at);
+  if (user.last_online_at)
+    user.formattedLastOnlineAt = formatDate(user.last_online_at);
+
   return user;
 }
 
