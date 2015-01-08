@@ -662,8 +662,8 @@ VALUES ($1, $2, $3, $4)
 RETURNING *
   */});
   var postSql = m(function() {/*
-INSERT INTO posts (topic_id, user_id, ip_address, text, type, is_roleplay, page)
-VALUES ($1, $2, $3::inet, $4, $5, $6, 1)
+INSERT INTO posts (topic_id, user_id, ip_address, text, type, is_roleplay, idx)
+VALUES ($1, $2, $3::inet, $4, $5, $6, 0)
 RETURNING *
   */});
 
