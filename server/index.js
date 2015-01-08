@@ -437,8 +437,16 @@ app.use(route.post('/reset-password', function*() {
 //
 // Create subscription
 //
+// Body params:
+// - topic-id
 app.use(route.post('/me/subscriptions', function*() {
   this.assert(this.currUser, 404);
+
+  // Ensure user doesn't have 100 subscriptions
+  var subs = yield db.findSubscribedTopicsForUserId(this.currUser.id);
+  if (subs.length >= 100)
+    return this.body = 'You cannot have more than 100 topic subscriptions';
+
   var topicId = this.request.body['topic-id'];
   this.assert(topicId, 404);
   var topic = yield db.findTopic(topicId);
@@ -449,7 +457,6 @@ app.use(route.post('/me/subscriptions', function*() {
 
   topic = pre.presentTopic(topic);
 
-  debug(this.request.body);
   if (this.request.body['return-to-topic'])
     return this.response.redirect(topic.url);
 
