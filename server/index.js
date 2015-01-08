@@ -888,7 +888,7 @@ app.get('/pms/:id/raw', function*() {
 // - text
 //
 // Keep /api/posts/:postId and /api/pms/:pmId in sync
-app.put('/api/posts/:postId', function*() {
+app.put('/api/posts/:id', function*() {
   this.checkBody('text').isLength(config.MIN_POST_LENGTH,
                                   config.MAX_POST_LENGTH);
   if (this.errors) {
