@@ -29,6 +29,7 @@ exports.POSTS_PER_PAGE = process.env.POSTS_PER_PAGE || 20;
 
 // Subsystem checks
 
+exports.IS_PM_SYSTEM_ONLINE = process.env.IS_PM_SYSTEM_ONLINE === 'true';
 exports.IS_EMAIL_CONFIGURED = !!(exports.HOST &&
                                  exports.AWS_KEY &&
                                  exports.AWS_SECRET &&

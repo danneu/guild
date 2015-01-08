@@ -621,6 +621,9 @@ app.use(route.post('/topics/:topicId/posts', function*(topicId) {
 // Show convos
 //
 app.use(route.get('/me/convos', function*() {
+  if (!config.IS_PM_SYSTEM_ONLINE)
+    return this.body = 'PM system currently disabled';
+
   this.assert(this.currUser, 404);
   var convos = yield db.findConvosInvolvingUserId(this.currUser.id);
   convos = convos.map(pre.presentConvo);
@@ -658,6 +661,9 @@ app.get('/users/:userId', function*() {
 // - 'text'
 //
 app.use(route.post('/convos', function*() {
+  if (!config.IS_PM_SYSTEM_ONLINE)
+    return this.body = 'PM system currently disabled';
+
   var ctx = this;
   this.assertAuthorized(this.currUser, 'CREATE_CONVO');
 
@@ -731,6 +737,9 @@ app.use(route.post('/convos', function*() {
 //
 // TODO: Implement typeahead
 app.use(route.get('/convos/new', function*() {
+  if (!config.IS_PM_SYSTEM_ONLINE)
+    return this.body = 'PM system currently disabled';
+
   this.assertAuthorized(this.currUser, 'CREATE_CONVO');
   // TODO: Validation, Error msgs, preserve params
   yield this.render('new_convo', {
@@ -745,6 +754,9 @@ app.use(route.get('/convos/new', function*() {
 // - text
 //
 app.use(route.post('/convos/:convoId/pms', function*(convoId) {
+  if (!config.IS_PM_SYSTEM_ONLINE)
+    return this.body = 'PM system currently disabled';
+
   this.assert(this.currUser, 403);
   this.checkBody('text').isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH);
   if (this.errors) {
@@ -774,6 +786,9 @@ app.use(route.post('/convos/:convoId/pms', function*(convoId) {
 // Show convo
 //
 app.use(route.get('/convos/:convoId', function*(convoId) {
+  if (!config.IS_PM_SYSTEM_ONLINE)
+    return this.body = 'PM system currently disabled';
+
   this.assert(this.currUser, 404);
   var convo = yield db.findConvo(convoId);
   this.assert(convo, 404);
@@ -847,11 +862,15 @@ app.use(route.get('/posts/:postId/raw', function*(postId) {
   this.assertAuthorized(this.currUser, 'READ_POST', post);
   this.body = post.text;
 }));
-// TODO: pm/:pmId/raw needs equivalent to findPostWithTopicAndForum
+
 app.use(route.get('/pms/:pmId/raw', function*(pmId) {
-  // TODO: Authz
-  var pm = yield db.findPm(pmId);
-  if (!pm) return;
+  if (!config.IS_PM_SYSTEM_ONLINE)
+    return this.body = 'PM system currently disabled';
+
+  this.assert(this.currUser, 404);
+  var pm = yield db.findPmWithConvo(pmId);
+  this.assert(pm, 404);
+  this.assertAuthorized(this.currUser, 'READ_PM', pm);
   this.body = pm.text;
 }));
 
@@ -884,6 +903,9 @@ app.put('/api/posts/:postId', function*(id) {
 });
 
 app.use(route.put('/api/pms/:id', function*(id) {
+  if (!config.IS_PM_SYSTEM_ONLINE)
+    return this.body = 'PM system currently disabled';
+
   this.checkBody('text').isLength(config.MIN_POST_LENGTH,
                                   config.MAX_POST_LENGTH);
   if (this.errors) {
@@ -895,6 +917,7 @@ app.use(route.put('/api/pms/:id', function*(id) {
     return;
   }
 
+  this.assert(this.currUser, 404);
   var pm = yield db.findPmWithConvo(id);
   this.assert(pm, 404);
   this.assertAuthorized(this.currUser, 'UPDATE_PM', pm)
@@ -954,6 +977,9 @@ app.use(route.get('/posts/:postId', function*(postId) {
 // PM permalink
 // Keep this in sync with /posts/:postId
 app.use(route.get('/pms/:id', function*(id) {
+  if (!config.IS_PM_SYSTEM_ONLINE)
+    return this.body = 'PM system currently disabled';
+
   this.assert(this.currUser, 404);
   var pm = yield db.findPmWithConvo(id);
   this.assert(pm, 404);
