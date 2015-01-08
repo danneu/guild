@@ -52,7 +52,7 @@
     <!-- Right side -->
 
     <div class="col-xs-6">
-      {% if ctx.currUser %}
+      {% if ctx.can(ctx.currUser, 'CREATE_CONVO') %}
         <a class="btn btn-primary btn-block pull-right"
            href="/convos/new?to={{ encodeURI(user.uname) }}">
           <span class="glyphicon glyphicon-envelope"></span>

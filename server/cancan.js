@@ -103,6 +103,10 @@ function can(user, action, target) {
         return user && _.contains(['admin', 'smod', 'mod'], user.role);
       if (!target.is_hidden) return true;
       return false;
+    case 'CREATE_CONVO':  // no target
+      if (!user) return false;
+      // Any user that isn't banned can start convo
+      return user.role !== 'banned';
     case 'CREATE_TOPIC':  // target is forum
       assert(target);
       if (!user) return false;
