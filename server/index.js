@@ -111,7 +111,7 @@ app.use(views('../views', {
   // Default extension is .html
   default: 'html',
   // consolidate bug hack
-  cache: (process.env.NODE_ENV === 'development' ? false : 'memory'),
+  cache: (config.NODE_ENV === 'development' ? false : 'memory'),
   map: { html: 'swig' }
 }));
 
