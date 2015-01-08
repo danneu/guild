@@ -9,6 +9,7 @@ CREATE INDEX topics_latest_post_id_DESC_idx ON topics (latest_post_id DESC);
 CREATE INDEX topics_forum_id_idx            ON topics (forum_id);
 CREATE INDEX posts_topic_id_idx             ON posts (topic_id);
 CREATE INDEX posts_id_user_id_idx           ON posts (id, user_id);
+CREATE INDEX users_created_at_desc          ON users (created_at DESC);
 
 ------------------------------------------------------------
 ------------------------------------------------------------
