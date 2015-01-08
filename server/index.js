@@ -985,7 +985,6 @@ app.post('/posts/:postId/:status', function*() {
 //
 app.use(route.get('/posts/:postId', function*(postId) {
   var post = yield db.findPostWithTopicAndForum(postId);
-  debug(post);
   this.assert(post, 404);
   this.assertAuthorized(this.currUser, 'READ_POST', post);
   post = pre.presentPost(post);
@@ -995,7 +994,7 @@ app.use(route.get('/posts/:postId', function*(postId) {
   else
     redirectUrl = post.topic.url + '/posts/' + post.type +
                   '?page=' +
-                  Math.max(1, Math.ceil(post.idx / config.POSTS_PER_PAGE)) +
+                  Math.ceil((post.idx + 1) / config.POSTS_PER_PAGE) +
                   '#post-' + post.id;
   this.response.redirect(redirectUrl);
 }));
@@ -1018,7 +1017,7 @@ app.use(route.get('/pms/:id', function*(id) {
     redirectUrl = pm.convo.url + '#post-' + pm.id
   else
     redirectUrl = pm.convo.url + '?page=' +
-                  Math.max(1, Math.ceil(pm.idx / config.POSTS_PER_PAGE)) +
+                  Math.max(1, Math.ceil((pm.idx + 1) / config.POSTS_PER_PAGE)) +
                   '#post-' + pm.id;
   this.response.redirect(redirectUrl);
 }));
