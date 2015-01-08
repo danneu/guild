@@ -156,6 +156,7 @@ CREATE TABLE convos (
   user_id     int    NOT NULL  REFERENCES users(id) ON DELETE CASCADE,
   created_at  timestamp with time zone NOT NULL  DEFAULT NOW(),
   title       text   NOT NULL,
+  is_archived boolean NOT NULL  DEFAULT false,
   -- Cache
   pms_count int    NOT NULL  DEFAULT 0,
   latest_pm_at timestamp with time zone NOT NULL  DEFAULT NOW()

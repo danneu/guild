@@ -116,6 +116,8 @@ function presentConvo(convo) {
     convo.user = presentUser(convo.user);
   if (convo.participants)
     convo.participants = convo.participants.map(presentUser);
+  if (convo.pms)
+    convo.pms = convo.pms.map(presentPm);
   return convo;
 }
 

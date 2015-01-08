@@ -50,6 +50,9 @@ function can(user, action, target) {
       if (user.role === 'member')
         return target.category_id !== 6 && !target.is_closed && !target.is_hidden;
       return false;
+    case 'READ_PM': // target is pm with pm.convo and pm.participants props
+      if (!user) return false;
+      return !!_.find(target.participants, { id: user.id });
     case 'READ_POST': // target is post with a post.topic prop
       assert(target, 'Post missing');
       assert(target.topic, 'post.topic is missing');
@@ -87,6 +90,10 @@ function can(user, action, target) {
       if (_.contains(['member', 'mod', 'smod', 'admin'], user.role))
         return can(user, 'READ_TOPIC', target);
       return false;
+    case 'CREATE_PM': // target is convo w/ participants prop
+      if (!user) return false;
+      // User can send pm if they're a participant
+      return !!_.find(target.participants, { id: user.id });
     case 'CREATE_POST':  // target is topic
       if (!user) return false;
       // Staff can post everywhere
@@ -121,6 +128,10 @@ function can(user, action, target) {
       }
       if (user.role === 'member') return true;
       return false;
+    case 'UPDATE_PM':  // target is pm with pm.convo and pm.participants
+      if (!user) return false;
+      // User can update a PM if they own it
+      return target.user_id === user.id;
     case 'UPDATE_POST':  // target expected to be a topic
       if (!user) return false;
       if (user.id === target.user_id) return true;

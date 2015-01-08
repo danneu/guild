@@ -748,13 +748,26 @@ app.use(route.get('/convos/new', function*() {
 
 //
 // Create PM
+// Body params
+// - text
 //
 app.use(route.post('/convos/:convoId/pms', function*(convoId) {
-  if (config.NODE_ENV !== 'development')
-    return this.body = 'PM system is currently disabled';
+  this.assert(this.currUser, 403);
+  this.checkBody('text').isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH);
+  if (this.errors) {
+    this.flash = {
+      message: ['danger', belt.joinErrors(this.errors)],
+      params: this.request.body
+    };
+    this.response.redirect('/convos/' + convoId);
+    return;
+  }
+
+  var convo = yield db.findConvo(convoId);
+  this.assert(convo, 404);
+  this.assertAuthorized(this.currUser, 'CREATE_PM', convo);
+
   var text = this.request.body.text;
-  assert(text);
-  // TODO: Validation
   var pm = yield db.createPm({
     userId: this.currUser.id,
     ipAddress: this.request.ip,
@@ -836,7 +849,6 @@ app.use(route.post('/forums/:forumId/topics', function*(forumId) {
 // Returns the unformatted post source.
 //
 app.use(route.get('/posts/:postId/raw', function*(postId) {
-  // TODO: Authz
   var post = yield db.findPostWithTopicAndForum(postId);
   this.assert(post, 404);
   this.assertAuthorized(this.currUser, 'READ_POST', post);
@@ -852,24 +864,53 @@ app.use(route.get('/pms/:pmId/raw', function*(pmId) {
 
 //
 // Update post text
+// Body params:
+// - text
 //
 // Keep /api/posts/:postId and /api/pms/:pmId in sync
-app.use(route.put('/api/posts/:postId', function*(id) {
+app.put('/api/posts/:postId', function*(id) {
+  this.checkBody('text').isLength(config.MIN_POST_LENGTH,
+                                  config.MAX_POST_LENGTH);
+  if (this.errors) {
+    this.flash = {
+      message: ['danger', belt.joinErrors(this.errors)],
+      params: this.request.body
+    };
+    this.response.redirect('back');
+    return;
+  }
+
   var post = yield db.findPost(id);
-  if (!post) return;
+  this.assert(post, 404);
   this.assertAuthorized(this.currUser, 'UPDATE_POST', post)
-  // TODO: Authz, validation
+
   var text = this.request.body.text;
   var updatedPost = yield db.updatePost(id, text);
   updatedPost = pre.presentPost(updatedPost);
   this.body = JSON.stringify(updatedPost);
-}));
+});
+
 app.use(route.put('/api/pms/:id', function*(id) {
-  // TODO: Authz, validation
+  this.checkBody('text').isLength(config.MIN_POST_LENGTH,
+                                  config.MAX_POST_LENGTH);
+  if (this.errors) {
+    this.flash = {
+      message: ['danger', belt.joinErrors(this.errors)],
+      params: this.request.body
+    };
+    this.response.redirect('back');
+    return;
+  }
+
+  var pm = yield db.findPmWithConvo(id);
+  this.assert(pm, 404);
+  this.assertAuthorized(this.currUser, 'UPDATE_PM', pm)
+
   var text = this.request.body.text;
-  var pm = yield db.updatePm(id, text);
-  pm = pre.presentPm(pm);
-  this.body = JSON.stringify(pm);
+  var updatedPm = yield db.updatePm(id, text);
+  updatedPm = pre.presentPm(updatedPm);
+
+  this.body = JSON.stringify(updatedPm);
 }));
 
 //
@@ -901,12 +942,13 @@ app.use(route.put('/topics/:topicId/status', function*(topicId) {
 // - Keep this in sync with /pms/:pmId
 //
 app.use(route.get('/posts/:postId', function*(postId) {
-  // TODO: Authz
-  var post = yield db.findPostWithTopic(postId);
-  if (!post) return;
+  var post = yield db.findPostWithTopicAndForum(postId);
+  debug(post);
+  this.assert(post, 404);
+  this.assertAuthorized(this.currUser, 'READ_POST', post);
   post = pre.presentPost(post);
   var redirectUrl;
-  if (post.page === 1)
+  if (post.idx < config.POSTS_PER_PAGE)
     redirectUrl = post.topic.url + '/posts/' + post.type + '#post-' + post.id
   else
     redirectUrl = post.topic.url + '/posts/' + post.type +
@@ -915,14 +957,25 @@ app.use(route.get('/posts/:postId', function*(postId) {
                   '#post-' + post.id;
   this.response.redirect(redirectUrl);
 }));
+
 // PM permalink
 // Keep this in sync with /posts/:postId
 app.use(route.get('/pms/:id', function*(id) {
-  // TODO: Authz
+  this.assert(this.currUser, 404);
   var pm = yield db.findPmWithConvo(id);
-  if (!pm) return;
+  this.assert(pm, 404);
+  this.assertAuthorized(this.currUser, 'READ_PM', pm);
+
   pm = pre.presentPm(pm);
-  this.response.redirect(pm.convo.url + '#pm-' + pm.id);
+
+  var redirectUrl;
+  if (pm.idx < config.POSTS_PER_PAGE)
+    redirectUrl = pm.convo.url + '#post-' + pm.id
+  else
+    redirectUrl = pm.convo.url + '?page=' +
+                  Math.max(1, Math.ceil(pm.idx / config.POSTS_PER_PAGE)) +
+                  '#post-' + pm.id;
+  this.response.redirect(redirectUrl);
 }));
 
 //

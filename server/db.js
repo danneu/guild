@@ -428,7 +428,7 @@ RETURNING *
 
 // Attaches topic and forum to post for authorization checks
 // See cancan.js 'READ_POST'
-exports.findPostWithTopicAndForum = wrapTimer(findPostWithTopic);
+exports.findPostWithTopicAndForum = wrapTimer(findPostWithTopicAndForum);
 function* findPostWithTopicAndForum(postId) {
   var sql = m(function() {/*
 SELECT
@@ -593,9 +593,12 @@ function* findPmWithConvo(pmId) {
   var sql = m(function() {/*
 SELECT
   pms.*,
-  to_json(c.*) "convo"
+  to_json(c.*) "convo",
+  to_json(array_agg(u.*)) "participants"
 FROM pms
 JOIN convos c ON pms.convo_id = c.id
+JOIN convos_participants cp ON cp.convo_id = pms.convo_id
+JOIN users u ON cp.user_id = u.id
 WHERE pms.id = $1
 GROUP BY pms.id, c.id
   */});
