@@ -224,13 +224,13 @@ CREATE TRIGGER pm_created1
 
 ------------------------------------------------------------
 ------------------------------------------------------------
--- Update convo.latest_pm_id and latest_pm_at when a pm is inserted
+-- Update convo.latest_pm_id when a pm is inserted
 
 CREATE OR REPLACE FUNCTION update_convo_latest_pm()
 RETURNS trigger AS $update_convo_latest_pm$
     BEGIN
         UPDATE convos
-        SET latest_pm_at = NOW(), latest_pm_id = NEW.id
+        SET latest_pm_id = NEW.id
         WHERE id = NEW.convo_id;
         RETURN NULL; -- result is ignored since this is an AFTER trigger
     END;

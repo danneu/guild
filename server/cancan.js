@@ -138,10 +138,14 @@ function can(user, action, target) {
       return false;
     case 'UPDATE_PM':  // target is pm with pm.convo and pm.participants
       if (!user) return false;
+      // Can't update legacy PMs
+      if (target.legacy_html) return false;
       // User can update a PM if they own it
       return target.user_id === user.id;
-    case 'UPDATE_POST':  // target expected to be a topic
+    case 'UPDATE_POST':  // target expected to be a post
       if (!user) return false;
+      // Can't update legacy posts
+      if (target.legacy_html) return false;
       if (user.id === target.user_id) return true;
       return false;
     case 'CREATE_CONVO':

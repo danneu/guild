@@ -116,6 +116,7 @@ CREATE TYPE post_type AS ENUM ('ic', 'ooc', 'char');
 CREATE TABLE posts (
   id         serial PRIMARY KEY,
   text       text NOT NULL,
+  legacy_html text NULL,
   topic_id   int NOT NULL  REFERENCES topics(id)  ON DELETE CASCADE,
   user_id    int NOT NULL  REFERENCES users(id)  ON DELETE CASCADE,
   created_at timestamp with time zone NOT NULL  DEFAULT NOW(),
@@ -157,14 +158,15 @@ CREATE TABLE convos (
   created_at  timestamp with time zone NOT NULL  DEFAULT NOW(),
   title       text   NOT NULL,
   is_archived boolean NOT NULL  DEFAULT false,
+  legacy_participant_ids integer[] NULL,
   -- Cache
-  pms_count int    NOT NULL  DEFAULT 0,
-  latest_pm_at timestamp with time zone NOT NULL  DEFAULT NOW()
+  pms_count int    NOT NULL  DEFAULT 0
 );
 
 CREATE TABLE pms (
   id         serial PRIMARY KEY,
   text       text   NOT NULL,
+  legacy_html text NULL,
   convo_id   int    NOT NULL  REFERENCES convos(id)  ON DELETE CASCADE,
   user_id    int    NOT NULL  REFERENCES users(id)  ON DELETE CASCADE,
   ip_address inet   NULL,
@@ -181,9 +183,9 @@ CREATE UNIQUE INDEX pms_convo_id_idx_idx ON pms (convo_id, idx DESC);
 
 CREATE TABLE convos_participants (
   convo_id int NOT NULL  REFERENCES convos(id) ON DELETE CASCADE,
-  user_id  int NOT NULL  REFERENCES users(id) ON DELETE CASCADE
+  user_id  int NOT NULL  REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE (user_id, convo_id)
 );
--- TODO: Uniq on user_id, convo_id
 
 ------------------------------------------------------------
 ------------------------------------------------------------
