@@ -84,6 +84,14 @@ function can(user, action, target) {
       if (!user) return false;
       if (_.contains(['mod', 'smod', 'admin'], user.role)) return true;
       return false;
+    // TODO: Replace LEXUS_LOUNGE with this?
+    case 'READ_CATEGORY':  //  target is category
+      // Users can view any category except for lexus lounge
+      // Only staff can view lexus lounge
+      if (target.id === 4)
+        return !!_.contains(['mod', 'smod', 'admin'], user.role);
+      else
+        return true;
     case 'SUBSCRIBE_TOPIC':  // target is topic
       if (!user) return false;
       // Members and up can subscribe if they can read the topic
