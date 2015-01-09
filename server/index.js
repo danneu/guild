@@ -225,9 +225,9 @@ app.use(route.post('/users', function*() {
   }
 
   // User params validated, so create a user and log them in
-  var errMessage;
+  var result, errMessage;
   try {
-    var result = yield db.createUserWithSession({
+    result = yield db.createUserWithSession({
       uname: validatedParams.uname,
       email: validatedParams.email,
       password: validatedParams.password1,
