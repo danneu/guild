@@ -1046,6 +1046,11 @@ app.use(route.get('/topics/:topicId/posts/:postType', function*(topicId, postTyp
     topic = yield db.findTopic(topicId);
   }
   this.assert(topic, 404);
+
+  // If user tried to go to ic/char tabs on a non-rp, then 404
+  if (!topic.is_roleplay)
+    this.assert(!_.contains(['ic', 'char'], postType), 404);
+
   this.assertAuthorized(this.currUser, 'READ_TOPIC', topic);
 
   var totalItems = topic[postType + '_posts_count'];
