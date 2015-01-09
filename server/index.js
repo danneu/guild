@@ -225,13 +225,36 @@ app.use(route.post('/users', function*() {
   }
 
   // User params validated, so create a user and log them in
-  debug(validatedParams);
-  var result = yield db.createUserWithSession({
-    uname: validatedParams.uname,
-    email: validatedParams.email,
-    password: validatedParams.password1,
-    ipAddress: this.request.ip
-  });
+  var errMessage;
+  try {
+    var result = yield db.createUserWithSession({
+      uname: validatedParams.uname,
+      email: validatedParams.email,
+      password: validatedParams.password1,
+      ipAddress: this.request.ip
+    });
+  } catch(ex) {
+    if (_.isString(ex))
+      switch(ex) {
+        case 'UNAME_TAKEN':
+          errMessage = 'Username is taken';
+          break;
+        case 'EMAIL_TAKEN':
+          errMessage = 'Email is taken';
+          break;
+      }
+    else
+      throw ex;
+  }
+
+  if (errMessage) {
+    this.flash = {
+      message: ['danger', errMessage],
+      params: unvalidatedParams
+    };
+    return this.response.redirect('/register');
+  }
+
   var user = result['user'];
   var session = result['session'];
   this.cookies.set('sessionId', session.id);

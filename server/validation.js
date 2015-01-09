@@ -70,14 +70,13 @@ exports.validateNewUser = function*(attrs) {
   if (attrs.password1 !== attrs.password2)
     throw 'Password confirmation does not match';
 
-  // Case-insensitive comparison. If 'ace' exists, we don't allow 'Ace'
-  if (yield db.findUserByUname(attrs.uname)) {
+  // Case-insensitive comparison
+  if (yield db.findUserByUname(attrs.uname))
     throw 'Username is taken';
-  };
 
-  if (yield db.findUserByEmail(attrs.email)) {
+  // Case-insensitive comparison
+  if (yield db.findUserByEmail(attrs.email))
     throw 'Email is taken';
-  };
 
   // Validation checks out, so return the fixed attrs
   return attrs;

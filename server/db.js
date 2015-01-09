@@ -12,6 +12,21 @@ var debug = require('debug')('app:db');
 var config = require('./config');
 var belt = require('./belt');
 
+// If a client is not provided to fn as first argument,
+// we'll pass one into it.
+function wrapOptionalClient(fn) {
+  return function*() {
+    var args = Array.prototype.slice.call(arguments, 0);
+    if (belt.isDBClient(args[0])) {
+      return yield fn.apply(null, args);
+    } else {
+      return yield withTransaction(function*(client) {
+        return yield fn.apply(null, [client].concat(args));
+      });
+    }
+  }
+};
+
 // Wraps generator function in one that prints out the execution time
 // when app is run in development mode.
 function wrapTimer(fn) {
@@ -297,15 +312,15 @@ VALUES ($1, $2)
 
   return yield withTransaction(function*(client) {
     var result;
-    result = yield query(convoSql, [args.userId, args.title]);
+    result = yield client.queryPromise(convoSql, [args.userId, args.title]);
     var convo = result.rows[0];
 
     // Run these in parallel
     yield args.toUserIds.map(function(toUserId) {
-      return query(participantSql, [convo.id, toUserId]);
+      return client.queryPromise(participantSql, [convo.id, toUserId]);
     }).concat([
-      query(participantSql, [convo.id, args.userId]),
-      query(pmSql, [convo.id, args.userId, args.ipAddress, args.text])
+      client.queryPromise(participantSql, [convo.id, args.userId]),
+      client.queryPromise(pmSql, [convo.id, args.userId, args.ipAddress, args.text])
     ]);
 
     convo.pms_count++;  // This is a stale copy so we need to manually inc
@@ -336,22 +351,6 @@ WHERE u.id = (
   return result.rows[0];
 }
 
-
-// exports.findUserBySessionId = wrapTimer(findUserBySessionId);
-// function *findUserBySessionId(sessionId) {
-//   assert(belt.isValidUuid(sessionId));
-//   var sql = m(function() {/*
-// SELECT *
-// FROM users u
-// WHERE u.id = (
-//   SELECT s.user_id
-//   FROM active_sessions s
-//   WHERE s.id = $1
-// )
-//   */});
-//   return (yield query(sql, [sessionId])).rows[0];
-// }
-
 exports.findUserBySessionId = wrapTimer(findUserBySessionId);
 function *findUserBySessionId(sessionId) {
   assert(belt.isValidUuid(sessionId));
@@ -372,9 +371,10 @@ RETURNING *
   return (yield query(sql, [sessionId])).rows[0];
 }
 
-exports.createSession = createSession;
-function *createSession(props) {
+exports.createSession = wrapOptionalClient(createSession);
+function *createSession(client, props) {
   debug('[createSession] props: ', props);
+  assert(belt.isDBClient(client));
   assert(_.isNumber(props.userId));
   assert(_.isString(props.ipAddress));
   assert(_.isString(props.interval));
@@ -384,9 +384,10 @@ INSERT INTO sessions (user_id, id, ip_address, expired_at)
 VALUES ($1, $2, $3::inet, NOW() + $4::interval)
 RETURNING *
   */});
-  return (yield query(sql, [
+  var result = yield client.queryPromise(sql, [
     props.userId, uuid, props.ipAddress, props.interval
-  ])).rows[0];
+  ]);
+  return result.rows[0];
 };
 
 // FIXME: Quick-hack query
@@ -831,6 +832,8 @@ ORDER BY c.pos
 // Creates a user and a session (logs them in).
 // - Returns {:user <User>, :session <Session>}
 // - Use `createUser` if you only want to create a user.
+//
+// Throws: 'UNAME_TAKEN', 'EMAIL_TAKEN'
 exports.createUserWithSession = createUserWithSession;
 function *createUserWithSession(props) {
   debug('[createUserWithSession] props: ', props);
@@ -845,13 +848,28 @@ INSERT INTO users (uname, digest, email)
 VALUES ($1, $2, $3)
 RETURNING *;
    */});
-  var user = (yield query(sql, [props.uname, digest, props.email])).rows[0];
-  var session = yield createSession({
-    userId: user.id,
-    ipAddress: props.ipAddress,
-    interval: '1 year'  // TODO: Decide how long to log user in upon registration
+
+  return yield withTransaction(function*(client) {
+    var user, session;
+    try {
+      user = (yield client.queryPromise(sql, [props.uname, digest, props.email])).rows[0];
+    } catch(ex) {
+      if (ex.code === '23505')
+        if (/unique_username/.test(ex.toString()))
+          throw 'UNAME_TAKEN';
+        else if (/unique_email/.test(ex.toString()))
+          throw 'EMAIL_TAKEN';
+      throw ex;
+    }
+
+    session = yield createSession(client, {
+      userId: user.id,
+      ipAddress: props.ipAddress,
+      interval: '1 year'  // TODO: Decide how long to log user in upon registration
+    });
+
+    return { user: user, session: session };
   });
-  return { user: user, session: session };
 };
 
 exports.logoutSession = logoutSession;
