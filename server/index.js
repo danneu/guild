@@ -599,11 +599,29 @@ app.get('/forums/:forumId', function*() {
 
 //
 // Create post
+// Body params:
+// - post-type
+// - text
 //
-app.use(route.post('/topics/:topicId/posts', function*(topicId) {
+app.post('/topics/:topicId/posts', function*() {
+  this.checkBody('post-type').isIn(['ic', 'ooc', 'char'], 'Invalid post-type');
+  this.checkBody('text').isLength(config.MIN_POST_LENGTH,
+                                  config.MAX_POST_LENGTH,
+                                  'Post must be between ' +
+                                  config.MIN_POST_LENGTH + ' and ' +
+                                  config.MAX_POST_LENGTH + ' chars long');
+  debug(this.errors);
+  if (this.errors) {
+    this.flash = {
+      message: ['danger', belt.joinErrors(this.errors)],
+      params: this.request.body
+    };
+    this.response.redirect('back');
+    return;
+  }
+
   var postType = this.request.body['post-type'];
-  this.assert(_.contains(['ic', 'ooc', 'char'], postType), 404);
-  var topic = yield db.findTopic(topicId);
+  var topic = yield db.findTopic(this.params.topicId);
   this.assert(topic, 404);
   this.assertAuthorized(this.currUser, 'CREATE_POST', topic);
 
@@ -623,7 +641,7 @@ app.use(route.post('/topics/:topicId/posts', function*(topicId) {
   });
   post = pre.presentPost(post);
   this.response.redirect(post.url);
-}));
+});
 
 //
 // Show convos
@@ -835,17 +853,40 @@ app.use(route.get('/convos/:convoId', function*(convoId) {
 //
 // Create topic
 //
-app.use(route.post('/forums/:forumId/topics', function*(forumId) {
-  var forumId = this.request.body['forum-id'];
+// Body params:
+// - forum-id
+// - title
+// - text
+//
+app.post('/forums/:forumId/topics', function*() {
+  this.checkBody('title').isLength(config.MIN_TOPIC_TITLE_LENGTH,
+                                   config.MAX_TOPIC_TITLE_LENGTH,
+                                   'Title must be between ' +
+                                   config.MIN_TOPIC_TITLE_LENGTH + ' and ' +
+                                   config.MAX_TOPIC_TITLE_LENGTH + ' chars');
+  this.checkBody('text').isLength(config.MIN_POST_LENGTH,
+                                   config.MAX_POST_LENGTH,
+                                   'Post text must be between ' +
+                                   config.MIN_POST_LENGTH + ' and ' +
+                                   config.MAX_POST_LENGTH + ' chars');
+
+  if (this.errors) {
+    this.flash = {
+      message: ['danger', belt.joinErrors(this.errors)],
+      params: this.request.body
+    };
+    this.response.redirect('/forums/' + this.params.forumId);
+    return;
+  }
+
+  var forumId = this.params.forumId;
   var title = this.request.body.title;
   var text = this.request.body.text;
 
-  var forum = yield db.findForum(forumId);
-  if (!forum) return;
-
+  var forum = yield db.findForum(this.params.forumId);
+  this.assert(forum, 404);
   this.assertAuthorized(this.currUser, 'CREATE_TOPIC', forum);
 
-  // TODO: Validation
   var topic = yield db.createTopic({
     userId: this.currUser.id,
     forumId: forumId,
@@ -857,7 +898,7 @@ app.use(route.post('/forums/:forumId/topics', function*(forumId) {
   });
   topic = pre.presentTopic(topic);
   this.response.redirect(topic.url);
-}));
+});
 
 //
 // Post markdown view
