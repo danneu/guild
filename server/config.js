@@ -27,6 +27,10 @@ exports.FROM_EMAIL = process.env.FROM_EMAIL;
 // in belt.js
 exports.POSTS_PER_PAGE = process.env.POSTS_PER_PAGE || 20;
 
+// newrelic
+exports.NEW_RELIC_LICENSE_KEY = process.env.NEW_RELIC_LICENSE_KEY;
+exports.NEW_RELIC_APP_NAME = process.env.NEW_RELIC_APP_NAME || 'localhost-guild';
+
 // Subsystem checks
 
 exports.IS_PM_SYSTEM_ONLINE = process.env.IS_PM_SYSTEM_ONLINE === 'true';

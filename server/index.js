@@ -1,3 +1,12 @@
+var newrelic = require('newrelic');
+
+// App memory grows until dyno throws OOM errors.
+// TODO: Replace this with GC config command-line flags
+// Until then, stop the world every 30 seconds.
+setInterval(function() {
+ global.gc();
+}, 30000);
+
 // Koa deps
 var app = require('koa')();
 app.poweredBy = false;
