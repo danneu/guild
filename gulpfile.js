@@ -28,7 +28,8 @@ gulp.task('build-js', function() {
     'public/vendor/jquery/jquery-2.1.3.min.js',
     'public/vendor/timeago/jquery.timeago.js',
     'public/vendor/markdown/markdown.js',
-    'public/vendor/bootstrap-markdown/js/bootstrap-markdown.js'
+    'public/vendor/bootstrap-markdown/js/bootstrap-markdown.js',
+    'public/vendor/jquery-appear/jquery.appear.js'
   ];
   gulp.src(jsPaths)
       .pipe(concat('all.js'))
