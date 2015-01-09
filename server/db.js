@@ -389,12 +389,13 @@ RETURNING *
   ])).rows[0];
 };
 
+// FIXME: Quick-hack query
 exports.findTopicsByForumId = wrapTimer(findTopicsByForumId);
 function* findTopicsByForumId(forumId, limit, offset) {
   debug('[%s] forumId: %s, limit: %s, offset: %s',
         'findTopicsByForumId', forumId, limit, offset);
   var sql = m(function() {/*
-SELECT
+(SELECT
   t.*,
   to_json(u.*) "user",
   to_json(p.*) "latest_post",
@@ -403,10 +404,26 @@ FROM topics t
 JOIN users u ON t.user_id = u.id
 LEFT JOIN posts p ON t.latest_post_id = p.id
 LEFT JOIN users u2 ON p.user_id = u2.id
-WHERE t.forum_id = $1
+WHERE t.forum_id = $1 AND t.is_sticky
 ORDER BY t.latest_post_id DESC
 LIMIT $2
-OFFSET $3
+OFFSET $3)
+
+UNION ALL
+
+(SELECT
+  t.*,
+  to_json(u.*) "user",
+  to_json(p.*) "latest_post",
+  to_json(u2.*) "latest_user"
+FROM topics t
+JOIN users u ON t.user_id = u.id
+LEFT JOIN posts p ON t.latest_post_id = p.id
+LEFT JOIN users u2 ON p.user_id = u2.id
+WHERE t.forum_id = $1 AND NOT t.is_sticky
+ORDER BY t.latest_post_id DESC
+LIMIT $2
+OFFSET $3)
   */});
   var result = yield query(sql, [forumId, limit, offset]);
   return result.rows;
