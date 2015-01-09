@@ -48,7 +48,7 @@ VALUES
 (1, 'News and Newcomers', null, 1),
 (2, 'Roleplaying', null, 2),
 (3, 'Test Category', null, 3),
-(4, 'Mod Forums', null, 6)
+(4, 'Mod Forums', null, 6),
 (5, 'Meta', null, 5),
 (6, 'Off-Topic', null, 4)
 ;
