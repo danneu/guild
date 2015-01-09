@@ -16,8 +16,11 @@
 //   if they need to do anything async (like db access)
 // Validator should return the fixed attrs so it's ready for db insertion.
 
+// 3rd party
 var _ = require('lodash');
 var assert = require('better-assert');
+var debug = require('debug')('app:validation');
+// 1st party
 var db = require('./db');
 
 // Util ////////////////////////////////////////////////////
@@ -58,6 +61,8 @@ exports.validateNewUser = function*(attrs) {
     throw 'Username starts or ends with underscores';
   if (attrs.uname.length < 2 || attrs.uname.length > 15)
     throw 'Username must be 2-15 characters';
+  if (!attrs.email || attrs.email.length < 3)
+    throw 'Email is required';
   if (! attrs.password1)
     throw 'Password is required';
   if (attrs.password1.length < 6)
@@ -68,6 +73,10 @@ exports.validateNewUser = function*(attrs) {
   // Case-insensitive comparison. If 'ace' exists, we don't allow 'Ace'
   if (yield db.findUserByUname(attrs.uname)) {
     throw 'Username is taken';
+  };
+
+  if (yield db.findUserByEmail(attrs.email)) {
+    throw 'Email is taken';
   };
 
   // Validation checks out, so return the fixed attrs
