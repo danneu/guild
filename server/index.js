@@ -44,12 +44,51 @@ var log = bunyan.createLogger({
   name: 'guild',
   serializers: {
     req: function(req) {
-      return { method: req.method, url: req.url };
+      var o = {
+        method: req.method,
+        url: req.url,
+      };
+      if (!_.isEmpty(req.body))
+        o.body = belt.truncateStringVals(req.body);
+      return o;
     },
     res: function(res) {
       return { status: res.status };
     },
     err: bunyan.stdSerializers.err,
+    convo: function(convo) {
+      return {
+        id: convo.id,
+        title: convo.title,
+      };
+    },
+    topic: function(topic) {
+      return {
+        id: topic.id,
+        title: topic.title,
+        is_roleplay: topic.is_roleplay
+      };
+    },
+    session: function(session) {
+      return {
+        id: session.id,
+        created_at: session.created_at,
+        expired_at: session.expired_at,
+      };
+    },
+    resetToken: function(resetToken) {
+      return {
+        user_id: resetToken.user_id,
+        token: resetToken.token
+      };
+    },
+    pm: function(pm) {
+      return {
+        id: pm.id,
+        convo_id: pm.convo_id,
+        text: belt.truncate(pm.text, 100)
+      };
+    },
     post: function(post) {
       var truncate = belt.makeTruncate('...');
       return {
@@ -73,10 +112,10 @@ if (config.NODE_ENV === 'development')
 app.use(function*(next) {
   var start = Date.now();
   this.log = log.child({ req_id: uuid.v1() });  // time-based uuid
-  this.log.info('--> %s %s', this.method, this.path);
+  this.log.info({ req: this.request }, '--> %s %s', this.method, this.path);
   yield next;
   var diff = Date.now() - start;
-  this.log.info({ ms: diff },
+  this.log.info({ ms: diff, res: this.response },
                 '<-- %s %s %s %s',
                 this.method, this.path, this.status, diff + 'ms');
 });
@@ -122,9 +161,9 @@ app.use(function*(next) {  // Must become before koa-router
   var ctx = this;
   this.can = cancan.can;
   this.assertAuthorized = function(user, action, target) {
-    debug('[assertAuthorized]');
     var canResult = cancan.can(user, action, target);
-    debug('[',  action, ' canResult]: ', canResult);
+    ctx.log.info('[assertAuthorized] Can %s %s: %s',
+                 user.uname || '<Guest>', action, canResult);
     ctx.assert(canResult, 403);
   };
   yield next;
@@ -299,36 +338,50 @@ app.use(route.post('/users', function*() {
 //
 // Create session
 //
-app.use(route.post('/sessions', function*() {
-  // TODO: Validation
-  var uname = this.request.body.uname;
+app.post('/sessions', function*() {
+  this.checkBody('uname-or-email').isLength(1);
+  this.checkBody('password').isLength(1);
+  if (this.errors) {
+    this.flash = { message: ['danger', 'Invalid creds'] };
+    this.response.redirect('/login');
+    return;
+  }
+
+  var unameOrEmail = this.request.body['uname-or-email'];
   var password = this.request.body.password;
   var rememberMe = !!this.request.body['remember-me'];
 
-  // Check if user with this uname exists
-  var user = yield db.findUserByUname(uname);
+  // Check if user with this uname or email exists
+  var user = yield db.findUserByUnameOrEmail(unameOrEmail);
   if (!user) {
+    this.log.info('Invalid creds');
     this.flash = { message: ['danger', 'Invalid creds'] };
-    return this.response.redirect('/login');
+    this.response.redirect('/login');
+    return;
   }
 
   // Check if provided password matches digest
   if (! (yield belt.checkPassword(password, user.digest))) {
+    this.log.info('Invalid creds');
     this.flash = { message: ['danger', 'Invalid creds'] };
-    return this.response.redirect('/login');
+    this.response.redirect('/login');
+    return;
   }
 
   // User authenticated
+  var interval = (rememberMe ? '1 day' : '1 year');
   var session = yield db.createSession({
     userId: user.id,
     ipAddress: this.request.ip,
-    interval: (rememberMe ? '1 day' : '1 year')
+    interval: interval
   });
 
+  this.log.info({ session: session, session_interval: interval },
+                'Created session');
   this.cookies.set('sessionId', session.id);
   this.flash = { message: ['success', 'Logged in successfully'] };
   this.response.redirect('/');
-}));
+});
 
 //
 // Show users
@@ -437,7 +490,7 @@ app.use(route.post('/forgot', function*() {
   // Don't let the user know if the email belongs to anyone.
   // Always look like a success
   if (!user) {
-    debug('[POST /forgot] User not found with email: %s', email);
+    this.log.info('User not found with email: %s', email);
     this.flash = { message: ['success', successMessage]};
     this.response.redirect('/');
     return;
@@ -445,15 +498,16 @@ app.use(route.post('/forgot', function*() {
 
   // Don't send another email until previous reset token has expired
   if (yield db.findLatestActiveResetToken(user.id)) {
-    debug('[POST /forgot] User already has an active reset token');
+    this.log.info('User already has an active reset token');
     this.flash = { message: ['success', successMessage] };
     this.response.redirect('/');
     return;
   }
 
   var resetToken = yield db.createResetToken(user.id);
+  this.log.info({ resetToken: resetToken }, 'Created reset token');
   // Send email in background
-  debug('[POST /forgot] Sending email to %s', user.email);
+  this.log.info('Sending email to %s', user.email);
   emailer.sendResetTokenEmail(user.uname, user.email, resetToken.token);
 
   this.flash = { message: ['success', successMessage] };
@@ -690,9 +744,6 @@ app.get('/forums/:forumId', function*() {
 // - text
 //
 app.post('/topics/:topicId/posts', function*() {
-  this.log.info({
-    body: belt.truncateStringVals(this.request.body)
-  }, 'Submitting post');
   this.checkBody('post-type').isIn(['ic', 'ooc', 'char'], 'Invalid post-type');
   this.checkBody('text').isLength(config.MIN_POST_LENGTH,
                                   config.MAX_POST_LENGTH,
@@ -852,6 +903,7 @@ app.use(route.post('/convos', function*() {
     text: text,
     ipAddress: this.request.ip
   });
+  this.log.info({ convo: convo, text: belt.truncate(text, 100) }, 'Created convo');
   convo = pre.presentConvo(convo);
   this.response.redirect(convo.url);
 }));
@@ -902,6 +954,7 @@ app.use(route.post('/convos/:convoId/pms', function*(convoId) {
     ipAddress: this.request.ip,
     convoId: convoId,
     text: text});
+  this.log.info({ pm: pm }, 'Created PM');
   pm = pre.presentPm(pm);
   this.response.redirect(pm.url);
 }));
@@ -985,15 +1038,21 @@ app.post('/forums/:forumId/topics', function*() {
   this.assert(forum, 404);
   this.assertAuthorized(this.currUser, 'CREATE_TOPIC', forum);
 
+  var postType = forum.is_roleplay ? 'ic' : 'ooc';
   var topic = yield db.createTopic({
     userId: this.currUser.id,
     forumId: forumId,
     ipAddress: this.request.ip,
     title: title,
     text: text,
-    postType: forum.is_roleplay ? 'ic' : 'ooc',
+    postType: postType,
     isRoleplay: forum.is_roleplay
   });
+  this.log.info({
+    topic: topic,
+    text: belt.truncate(text, 100),
+    post_type: postType
+  }, 'Created topic');
   topic = pre.presentTopic(topic);
   this.response.redirect(topic.url);
 });

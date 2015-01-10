@@ -23,7 +23,7 @@ exports.makeTruncate = function(suffix) {
       return str;
     return sliced + suffix;
   };
-}
+};
 
 exports.truncate = exports.makeTruncate('...');
 

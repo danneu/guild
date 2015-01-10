@@ -242,6 +242,18 @@ RETURNING *
   return result.rows[0];
 };
 
+exports.findUserByUnameOrEmail = wrapTimer(findUserByUnameOrEmail);
+function *findUserByUnameOrEmail(unameOrEmail) {
+  assert(_.isString(unameOrEmail));
+  var sql = m(function() {/*
+SELECT *
+FROM users u
+WHERE lower(u.uname) = lower($1) OR lower(u.email) = lower($1);
+  */});
+  var result = yield query(sql, [unameOrEmail]);
+  return result.rows[0];
+}
+
 // Note: Case-insensitive
 exports.findUserByEmail = wrapTimer(findUserByEmail);
 function *findUserByEmail(email) {
