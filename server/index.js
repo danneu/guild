@@ -1,4 +1,10 @@
-var newrelic = require('newrelic');
+var config = require('./config');
+
+var newrelic;
+if (config.NEW_RELIC_LICENSE_KEY) {
+  console.log('Initializing newrelic...');
+  newrelic = require('newrelic');
+}
 
 // App memory grows until dyno throws OOM errors.
 // TODO: Replace this with GC config command-line flags
@@ -32,7 +38,6 @@ var bunyan = require('bunyan');
 var uuid = require('node-uuid');
 // 1st party
 var db = require('./db');
-var config = require('./config');
 var pre = require('./presenters');
 var belt = require('./belt');
 var middleware = require('./middleware');
