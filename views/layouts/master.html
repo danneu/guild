@@ -24,7 +24,7 @@
 
   <!-- Global info banner -->
   <div class="alert alert-info" role="alert">
-    <strong>Welcome</strong> This is the development server. I still have a long way to go.
+    <strong>Welcome</strong> This is the development server. If you find a bug/issue, email me: <a href="mailto:mahz@fastmail.com" style="color: #31708f; text-decoration: underline">mahz@fastmail.com</a>
   </div>
 
     <!-- Static navbar -->
@@ -61,6 +61,7 @@
                  class="btn btn-default navbar-btn">
                 <span class="glyphicon glyphicon-envelope"></span>
                 PMs
+                <div class="badge">{{ ctx.currUser.pms_count|commafy }}</div>
               </a>
               <a href="/me/subscriptions"
                  class="btn btn-default navbar-btn">
@@ -123,10 +124,11 @@
     <script src="/vendor/timeago/jquery.timeago.js"></script>
     <script src="/vendor/markdown/markdown.js"></script>
     <script src="/vendor/bootstrap-markdown/js/bootstrap-markdown.js"></script>
+    <script src="/vendor/jquery-appear/jquery.appear.js"></script>
   {% endif %}
   <script>
     // Prevent double-clicking on links
-    $('a').on('click', function() {
+    $('a').on('click', function(e) {
       var $this = $(this);
       if ($this.data('already-clicked'))
         return false;
@@ -158,6 +160,12 @@
   <script>
     $(function() {
       $("abbr.timeago").timeago();
+    });
+  </script>
+  <script>
+    // Activate all cheatsheet toggles
+    $('#cheatsheet-toggle-btn').on('click', function() {
+      $('#cheatsheet-body').toggle();
     });
   </script>
   {% block scripts %}{% endblock %}

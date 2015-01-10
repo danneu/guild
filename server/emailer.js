@@ -34,20 +34,21 @@ var templates = {
   */}))
 };
 
-exports.sendResetTokenEmail = function(user, token) {
+exports.sendResetTokenEmail = function(toUname, toEmail, token) {
   debug('[sendResetTokenEmail]');
   assert(config.FROM_EMAIL, 'FROM_EMAIL must be set to send emails');
-  assert(_.isObject(user));
+  assert(config.HOST, 'HOST must be set to send emails');
+  assert(_.isString(toUname));
+  assert(_.isString(toEmail));
   assert(belt.isValidUuid(token));
-  assert(config.HOST);
   var transporter = getTransporter();
   //var result = yield transporter._sendMailPromise({
   var result = transporter.sendMail({
     from: config.FROM_EMAIL,
-    to: user.email,
+    to: toEmail,
     subject: 'Password Reset Token - RoleplayerGuild.com',
     html: templates.resetToken({
-      uname: user.uname,
+      uname: toUname,
       host: config.HOST,
       token: token
     })
@@ -55,6 +56,8 @@ exports.sendResetTokenEmail = function(user, token) {
     // TODO: Log errors in background.
     // Since we don't expose to user if they entered a valid email,
     // we can't really do anything upon email failure.
+    debug('Tried sending email from <%s> to <%s>', config.FROM_EMAIL, toEmail);
     if (err) return console.error(err);
+    console.log(info);
   });
 };

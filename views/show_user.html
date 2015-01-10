@@ -23,8 +23,25 @@
 
       <!-- Stats list -->
       <ul>
+        <li>Last Seen:
+          {% if user.is_ghost %}
+            [User enabled ghost mode]
+          {% else %}
+            {% if user.last_online_at %}
+              {% if user.last_online_at.getTime() >= Date.now() - (1000 * 60 * 15) %}
+                <span style="color: #3BB878">Online now</span>
+              {% else %}
+                <abbr class="timeago" title="{{ user.last_online_at.toISOString() }}">
+                  {{ user.last_online_at|formatDate }}
+                </abbr>
+              {% endif %}
+            {% else %}
+              Hasn't logged in since relaunch
+            {% endif %}
+          {% endif %}
+        </li>
         {% if user.oldguild_uname %}
-          <li>{{ user.oldguild_uname }}</li>
+          <li>Old Guild Username: {{ user.oldguild_uname }}</li>
         {% endif %}
         <li>
           Joined:
@@ -32,27 +49,103 @@
             {{ user.formattedCreatedAt }}
           </abbr>
         </li>
+        <li>Posts: {{ user.posts_count }}</li>
+        {% if ctx.can(ctx.currUser, 'READ_USER_PM_SENT_COUNT', user) %}
+          <li>PMs sent: {{ user.pms_count }}</li>
+        {% endif %}
       </ul>
 
       <!-- Most recent posts -->
+
+      <a name="recent-posts"></a>
       <h3>Most Recent Posts</h3>
-      <ul>
-        {% for post in recentPosts %}
+
+      <!-- Pagination -->
+
+      {% if user.posts_count > 1 %}
+        <ul class="pager">
           <li>
-            In <a href="{{ post.topic.url }}">{{ post.topic.title }}</a>
-            <abbr class="timeago" title="{{ post.topic.created_at.toISOString() }}">
-              {{ post.topic.formattedCreatedAt }}
-            </abbr>
+            <a href="{{ ctx.request.path }}#recent-posts">
+              First Page
+            </a>
           </li>
-        {% endfor %}
-      </ul>
+          {% if recentPosts.length < recentPostsPerPage %}
+            <li class="disabled">
+              <a href="{{ ctx.request.url }}">
+                Next Page &rarr;
+              </a>
+            </li>
+          {% else %}
+            <li>
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#recent-posts">
+                Next Page &rarr;
+              </a>
+            </li>
+          {% endif %}
+        </ul>
+      {% endif %}
+
+      <!-- Recent post list -->
+
+      {% if user.posts_count === 0 %}
+        <div class="well">
+          User has no posts, yet
+        </div>
+      {% endif %}
+
+      {% for post in recentPosts %}
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            In
+            <a href="{{ post.url }}" style="color: #ffc300">
+              {{ post.topic.title }}
+            </a>
+            <abbr class="timeago" title="{{ post.created_at.toISOString() }}">
+              {{ post.created_at|formatDate }}
+            </abbr>
+          </div>
+          <div class="panel-body" style="max-height: 100px; overflow: auto">
+            {% if post.legacy_html %}
+              <div class="post-body-html">{{ post.legacy_html|safe }}</div>
+            {% else %}
+              <div class="post-body">{{ post.text }}</div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+
+
+      <!-- Pagination -->
+
+      {% if user.posts_count > 1 %}
+        <ul class="pager">
+          <li>
+            <a href="{{ ctx.request.path }}#recent-posts">
+              First Page
+            </a>
+          </li>
+          {% if recentPosts.length < recentPostsPerPage %}
+            <li class="disabled">
+              <a href="{{ ctx.request.url }}">
+                Next Page &rarr;
+              </a>
+            </li>
+          {% else %}
+            <li>
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#recent-posts">
+                Next Page &rarr;
+              </a>
+            </li>
+          {% endif %}
+        </ul>
+      {% endif %}
 
     </div> <!-- /.col-6 -->
 
     <!-- Right side -->
 
     <div class="col-xs-6">
-      {% if ctx.currUser %}
+      {% if ctx.can(ctx.currUser, 'CREATE_CONVO') %}
         <a class="btn btn-primary btn-block pull-right"
            href="/convos/new?to={{ encodeURI(user.uname) }}">
           <span class="glyphicon glyphicon-envelope"></span>

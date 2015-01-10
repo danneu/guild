@@ -1,24 +1,35 @@
+var newrelic = require('newrelic');
+
+// App memory grows until dyno throws OOM errors.
+// TODO: Replace this with GC config command-line flags
+// Until then, stop the world every 30 seconds.
+setInterval(function() {
+ global.gc();
+}, 30000);
+
 // Koa deps
 var app = require('koa')();
 app.poweredBy = false;
 app.proxy = true;
 app.use(require('koa-static')('public'));
 app.use(require('koa-static')('dist', { maxage: 1000 * 60 * 60 * 24 * 365 }));
-app.use(require('koa-logger')());
+// app.use(require('koa-logger')());
 app.use(require('koa-body')());
 app.use(require('koa-methodoverride')('_method'));
 var route = require('koa-route');
 var views = require('koa-views');
 // Node
 var util = require('util');
+var path = require('path');
+var fs = require('co-fs');
 // 3rd party
 var _ = require('lodash');
 var debug = require('debug')('app:index');
 var assert = require('better-assert');
 var swig = require('swig');
-var fs = require('co-fs');
 var co = require('co');
-var path = require('path');
+var bunyan = require('bunyan');
+var uuid = require('node-uuid');
 // 1st party
 var db = require('./db');
 var config = require('./config');
@@ -28,6 +39,86 @@ var middleware = require('./middleware');
 var valid = require('./validation');
 var cancan = require('./cancan');
 var emailer = require('./emailer');
+
+var log = bunyan.createLogger({
+  name: 'guild',
+  serializers: {
+    req: function(req) {
+      var o = {
+        method: req.method,
+        url: req.url,
+      };
+      if (!_.isEmpty(req.body))
+        o.body = belt.truncateStringVals(req.body);
+      return o;
+    },
+    res: function(res) {
+      return { status: res.status };
+    },
+    err: bunyan.stdSerializers.err,
+    convo: function(convo) {
+      return {
+        id: convo.id,
+        title: convo.title,
+      };
+    },
+    topic: function(topic) {
+      return {
+        id: topic.id,
+        title: topic.title,
+        is_roleplay: topic.is_roleplay
+      };
+    },
+    session: function(session) {
+      return {
+        id: session.id,
+        created_at: session.created_at,
+        expired_at: session.expired_at,
+      };
+    },
+    resetToken: function(resetToken) {
+      return {
+        user_id: resetToken.user_id,
+        token: resetToken.token
+      };
+    },
+    pm: function(pm) {
+      return {
+        id: pm.id,
+        convo_id: pm.convo_id,
+        text: belt.truncate(pm.text, 100)
+      };
+    },
+    post: function(post) {
+      var truncate = belt.makeTruncate('...');
+      return {
+        id: post.id,
+        type: post.type,
+        topic_id: post.topic_id,
+        text: truncate(post.text, 100),
+        text_length: post.text.length,
+        is_roleplay: post.is_roleplay
+      };
+    },
+    currUser: function(user) {
+      return { id: user.id,  uname: user.uname };
+    }
+  }
+});
+
+if (config.NODE_ENV === 'development')
+  log.src = true;
+
+app.use(function*(next) {
+  var start = Date.now();
+  this.log = log.child({ req_id: uuid.v1() });  // time-based uuid
+  this.log.info({ req: this.request }, '--> %s %s', this.method, this.path);
+  yield next;
+  var diff = Date.now() - start;
+  this.log.info({ ms: diff, res: this.response },
+                '<-- %s %s %s %s',
+                this.method, this.path, this.status, diff + 'ms');
+});
 
 // Upon app boot, check for compiled assets
 // in the `dist` folder. If found, attach their
@@ -70,9 +161,9 @@ app.use(function*(next) {  // Must become before koa-router
   var ctx = this;
   this.can = cancan.can;
   this.assertAuthorized = function(user, action, target) {
-    debug('[assertAuthorized]');
     var canResult = cancan.can(user, action, target);
-    debug('[',  action, ' canResult]: ', canResult);
+    ctx.log.info('[assertAuthorized] Can %s %s: %s',
+                 user.uname || '<Guest>', action, canResult);
     ctx.assert(canResult, 403);
   };
   yield next;
@@ -84,17 +175,7 @@ app.use(function*(next) {  // Must become before koa-router
 // TODO: Extract custom swig filters
 // {{ 'firetruck'|truncate(5) }}  -> 'firet...'
 // {{ 'firetruck'|truncate(6) }}  -> 'firetruck'
-function makeTruncate(suffix) {
-  return function(str, n) {
-    suffix = suffix || '';
-    var sliced = str.slice(0, n).trim();
-    var totalLength = sliced.length + suffix.length;
-    if (totalLength >= str.length)
-      return str;
-    return sliced + suffix;
-  };
-}
-swig.setFilter('truncate', makeTruncate('…'));
+swig.setFilter('truncate', belt.makeTruncate('…'));
 
 // commafy(10) -> 10
 // commafy(1000000) -> 1,000,000
@@ -102,14 +183,17 @@ function commafy(n) {
   return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 swig.setFilter('commafy', commafy);
+swig.setFilter('formatDate', pre.formatDate);
 
 ////////////////////////////////////////////////////////////
 
 // Configure templating system to use `swig`
 // and to find view files in `view` directory
 app.use(views('../views', {
-  default: 'html',  // Default extension is .html
-  cache: (process.env.NODE_ENV === 'production' ? 'memory' : undefined), // consolidate bug hack
+  // Default extension is .html
+  default: 'html',
+  // consolidate bug hack
+  cache: (config.NODE_ENV === 'development' ? false : 'memory'),
   map: { html: 'swig' }
 }));
 
@@ -161,6 +245,7 @@ app.use(route.get('/register', function*() {
 // - email (Optional)
 // - g-recaptcha-response
 app.use(route.post('/users', function*() {
+  this.log.info({ body: this.request.body }, 'Submitting registration creds');
   var unvalidatedParams = valid.fixNewUser(_.pick(this.request.body, [
     'uname',
     'email',
@@ -213,13 +298,36 @@ app.use(route.post('/users', function*() {
   }
 
   // User params validated, so create a user and log them in
-  debug(validatedParams);
-  var result = yield db.createUserWithSession({
-    uname: validatedParams.uname,
-    email: validatedParams.email,
-    password: validatedParams.password1,
-    ipAddress: this.request.ip
-  });
+  var result, errMessage;
+  try {
+    result = yield db.createUserWithSession({
+      uname: validatedParams.uname,
+      email: validatedParams.email,
+      password: validatedParams.password1,
+      ipAddress: this.request.ip
+    });
+  } catch(ex) {
+    if (_.isString(ex))
+      switch(ex) {
+        case 'UNAME_TAKEN':
+          errMessage = 'Username is taken';
+          break;
+        case 'EMAIL_TAKEN':
+          errMessage = 'Email is taken';
+          break;
+      }
+    else
+      throw ex;
+  }
+
+  if (errMessage) {
+    this.flash = {
+      message: ['danger', errMessage],
+      params: unvalidatedParams
+    };
+    return this.response.redirect('/register');
+  }
+
   var user = result['user'];
   var session = result['session'];
   this.cookies.set('sessionId', session.id);
@@ -230,36 +338,50 @@ app.use(route.post('/users', function*() {
 //
 // Create session
 //
-app.use(route.post('/sessions', function*() {
-  // TODO: Validation
-  var uname = this.request.body.uname;
+app.post('/sessions', function*() {
+  this.checkBody('uname-or-email').isLength(1);
+  this.checkBody('password').isLength(1);
+  if (this.errors) {
+    this.flash = { message: ['danger', 'Invalid creds'] };
+    this.response.redirect('/login');
+    return;
+  }
+
+  var unameOrEmail = this.request.body['uname-or-email'];
   var password = this.request.body.password;
   var rememberMe = !!this.request.body['remember-me'];
 
-  // Check if user with this uname exists
-  var user = yield db.findUserByUname(uname);
+  // Check if user with this uname or email exists
+  var user = yield db.findUserByUnameOrEmail(unameOrEmail);
   if (!user) {
+    this.log.info('Invalid creds');
     this.flash = { message: ['danger', 'Invalid creds'] };
-    return this.response.redirect('/login');
+    this.response.redirect('/login');
+    return;
   }
 
   // Check if provided password matches digest
   if (! (yield belt.checkPassword(password, user.digest))) {
+    this.log.info('Invalid creds');
     this.flash = { message: ['danger', 'Invalid creds'] };
-    return this.response.redirect('/login');
+    this.response.redirect('/login');
+    return;
   }
 
   // User authenticated
+  var interval = (rememberMe ? '1 day' : '1 year');
   var session = yield db.createSession({
     userId: user.id,
     ipAddress: this.request.ip,
-    interval: (rememberMe ? '1 day' : '1 year')
+    interval: interval
   });
 
+  this.log.info({ session: session, session_interval: interval },
+                'Created session');
   this.cookies.set('sessionId', session.id);
   this.flash = { message: ['success', 'Logged in successfully'] };
   this.response.redirect('/');
-}));
+});
 
 //
 // Show users
@@ -287,9 +409,11 @@ app.use(route.get('/', function*() {
   // We don't show the mod forum on the homepage.
   // Nasty, but just delete it for now
   // TODO: Abstract
-  _.remove(categories, { id: 6 });
+  _.remove(categories, { id: 4 });
   var categoryIds = _.pluck(categories, 'id');
-  var allForums = yield db.findForums(categoryIds);
+  var results = yield [db.findForums(categoryIds), db.getStats()];
+  var allForums = results[0];
+  var stats = results[1];
   var topLevelForums = _.reject(allForums, 'parent_forum_id');
   var childForums = _.filter(allForums, 'parent_forum_id');
   // Map of {CategoryId: [Forums...]}
@@ -307,7 +431,6 @@ app.use(route.get('/', function*() {
   });
 
   // Get stats
-  var stats = yield db.getStats();
   stats.onlineUsers = stats.onlineUsers.map(pre.presentUser);
   if (stats.latestUser)
     stats.latestUser = pre.presentUser(stats.latestUser);
@@ -351,26 +474,43 @@ app.use(route.get('/forgot', function*() {
 app.use(route.post('/forgot', function*() {
   if (!config.IS_EMAIL_CONFIGURED)
     return this.body = 'This feature is currently disabled';
+
   var email = this.request.body.email;
   if (!email) {
     this.flash = { message: ['danger', 'You must provide an email']};
-    return this.response.redirect('/forgot');
+    this.response.redirect('/forgot');
+    return;
   }
   // Check if it belongs to a user
   var user = yield db.findUserByEmail(email);
 
+  // Always send the same message on success and failure.
+  var successMessage = 'Check your email';
+
   // Don't let the user know if the email belongs to anyone.
   // Always look like a success
   if (!user) {
-    this.flash = { message: ['success', 'Check your email']};
-    return this.response.redirect('/');
+    this.log.info('User not found with email: %s', email);
+    this.flash = { message: ['success', successMessage]};
+    this.response.redirect('/');
+    return;
+  }
+
+  // Don't send another email until previous reset token has expired
+  if (yield db.findLatestActiveResetToken(user.id)) {
+    this.log.info('User already has an active reset token');
+    this.flash = { message: ['success', successMessage] };
+    this.response.redirect('/');
+    return;
   }
 
   var resetToken = yield db.createResetToken(user.id);
+  this.log.info({ resetToken: resetToken }, 'Created reset token');
   // Send email in background
+  this.log.info('Sending email to %s', user.email);
   emailer.sendResetTokenEmail(user.uname, user.email, resetToken.token);
 
-  this.flash = { message: ['success', 'Check your email']};
+  this.flash = { message: ['success', successMessage] };
   this.response.redirect('/');
 }));
 
@@ -420,6 +560,9 @@ app.use(route.post('/reset-password', function*() {
   // Reset token and passwords were valid, so update user password
   yield db.updateUserPassword(user.id, password1);
 
+  // Delete user's reset tokens - They're for one-time use
+  yield db.deleteResetTokens(user.id);
+
   // Log the user in
   var session = yield db.createSession({
     userId: user.id,
@@ -435,8 +578,16 @@ app.use(route.post('/reset-password', function*() {
 //
 // Create subscription
 //
+// Body params:
+// - topic-id
 app.use(route.post('/me/subscriptions', function*() {
   this.assert(this.currUser, 404);
+
+  // Ensure user doesn't have 100 subscriptions
+  var subs = yield db.findSubscribedTopicsForUserId(this.currUser.id);
+  if (subs.length >= 100)
+    return this.body = 'You cannot have more than 100 topic subscriptions';
+
   var topicId = this.request.body['topic-id'];
   this.assert(topicId, 404);
   var topic = yield db.findTopic(topicId);
@@ -447,7 +598,6 @@ app.use(route.post('/me/subscriptions', function*() {
 
   topic = pre.presentTopic(topic);
 
-  debug(this.request.body);
   if (this.request.body['return-to-topic'])
     return this.response.redirect(topic.url);
 
@@ -589,11 +739,28 @@ app.get('/forums/:forumId', function*() {
 
 //
 // Create post
+// Body params:
+// - post-type
+// - text
 //
-app.use(route.post('/topics/:topicId/posts', function*(topicId) {
+app.post('/topics/:topicId/posts', function*() {
+  this.checkBody('post-type').isIn(['ic', 'ooc', 'char'], 'Invalid post-type');
+  this.checkBody('text').isLength(config.MIN_POST_LENGTH,
+                                  config.MAX_POST_LENGTH,
+                                  'Post must be between ' +
+                                  config.MIN_POST_LENGTH + ' and ' +
+                                  config.MAX_POST_LENGTH + ' chars long');
+  if (this.errors) {
+    this.flash = {
+      message: ['danger', belt.joinErrors(this.errors)],
+      params: this.request.body
+    };
+    this.response.redirect('back');
+    return;
+  }
+
   var postType = this.request.body['post-type'];
-  this.assert(_.contains(['ic', 'ooc', 'char'], postType), 404);
-  var topic = yield db.findTopic(topicId);
+  var topic = yield db.findTopic(this.params.topicId);
   this.assert(topic, 404);
   this.assertAuthorized(this.currUser, 'CREATE_POST', topic);
 
@@ -611,16 +778,19 @@ app.use(route.post('/topics/:topicId/posts', function*(topicId) {
     type: postType,
     isRoleplay: topic.forum.is_roleplay
   });
+  this.log.info({ post: post }, 'Post created');
   post = pre.presentPost(post);
   this.response.redirect(post.url);
-}));
+});
 
 //
 // Show convos
 //
 app.use(route.get('/me/convos', function*() {
-  // TODO: Authz, pagination
-  if (!this.currUser) return;
+  if (!config.IS_PM_SYSTEM_ONLINE)
+    return this.body = 'PM system currently disabled';
+
+  this.assert(this.currUser, 404);
   var convos = yield db.findConvosInvolvingUserId(this.currUser.id);
   convos = convos.map(pre.presentConvo);
   yield this.render('me_convos.html', {
@@ -633,19 +803,28 @@ app.use(route.get('/me/convos', function*() {
 // Show user
 //
 app.get('/users/:userId', function*() {
+  this.checkQuery('before-id').optional().toInt();  // will be undefined or number
   var userId = this.params.userId;
   var user = yield db.findUser(userId);
   // Ensure user exists
-  if (!user) return;
+  this.assert(user, 404);
   user = pre.presentUser(user);
   // OPTIMIZE: Merge into single query?
-  var recentPosts = yield db.findRecentPostsForUserId(user.id);
+  var recentPosts = yield db.findRecentPostsForUserId(user.id,
+                                                      this.query['before-id']);
   recentPosts = recentPosts.map(pre.presentPost);
+
+  // The ?before-id=_ of the "Next" button. i.e. the lowest
+  // id of the posts on the current page
+  var nextBeforeId = recentPosts.length > 0 ? _.last(recentPosts).id : null;
 
   yield this.render('show_user', {
     ctx: this,
     user: user,
-    recentPosts: recentPosts
+    recentPosts: recentPosts,
+    // Pagination
+    nextBeforeId: nextBeforeId,
+    recentPostsPerPage: config.RECENT_POSTS_PER_PAGE
   });
 });
 
@@ -653,21 +832,44 @@ app.get('/users/:userId', function*() {
 // Create convo
 // Params:
 // - 'to': Comma-delimited string of unames user wants to send to
+// - 'title'
+// - 'text'
 //
 app.use(route.post('/convos', function*() {
+  if (!config.IS_PM_SYSTEM_ONLINE)
+    return this.body = 'PM system currently disabled';
+
   var ctx = this;
   this.assertAuthorized(this.currUser, 'CREATE_CONVO');
+
+  // Light input validation
+  this.checkBody('title').isLength(config.MIN_TOPIC_TITLE_LENGTH,
+                                   config.MAX_TOPIC_TITLE_LENGTH,
+                                   'Title required');
+  this.checkBody('text').isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH,
+                                  'Text required');
+
+  if (this.errors) {
+    this.flash = {
+      message: ['danger', belt.joinErrors(this.errors)],
+      params: this.request.body
+    };
+    this.response.redirect('/convos/new');
+    return;
+  }
+
   // TODO: Validation, Error msgs, preserve params
   // TODO: Sponge this up into a fixer+validater
-  var unames = this.request.body.to && this.request.body.to.split(',');
+
+  var unames = this.request.body.to && this.request.body.to.split(',') || [];
   var title = this.request.body.title;
   var text = this.request.body.text;
-  // Remove empty
+  // Remove empty (Note: unames contains lowercase unames)
   unames = _.compact(unames.map(function(uname) {
     return uname.trim().toLowerCase();
   }));
   // Ensure no more than 5 unames specified
-  if (unames.length > 5) return;
+  if (unames.length > 5) return this.body = 'You cannot send a PM to more than 5 people at once';
   // Ensure user didn't specify themself
   unames = _.reject(unames, function(uname) {
     return uname === ctx.currUser.uname.toLowerCase();
@@ -701,6 +903,7 @@ app.use(route.post('/convos', function*() {
     text: text,
     ipAddress: this.request.ip
   });
+  this.log.info({ convo: convo, text: belt.truncate(text, 100) }, 'Created convo');
   convo = pre.presentConvo(convo);
   this.response.redirect(convo.url);
 }));
@@ -710,6 +913,9 @@ app.use(route.post('/convos', function*() {
 //
 // TODO: Implement typeahead
 app.use(route.get('/convos/new', function*() {
+  if (!config.IS_PM_SYSTEM_ONLINE)
+    return this.body = 'PM system currently disabled';
+
   this.assertAuthorized(this.currUser, 'CREATE_CONVO');
   // TODO: Validation, Error msgs, preserve params
   yield this.render('new_convo', {
@@ -720,105 +926,214 @@ app.use(route.get('/convos/new', function*() {
 
 //
 // Create PM
+// Body params
+// - text
 //
 app.use(route.post('/convos/:convoId/pms', function*(convoId) {
+  if (!config.IS_PM_SYSTEM_ONLINE)
+    return this.body = 'PM system currently disabled';
+
+  this.assert(this.currUser, 403);
+  this.checkBody('text').isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH);
+  if (this.errors) {
+    this.flash = {
+      message: ['danger', belt.joinErrors(this.errors)],
+      params: this.request.body
+    };
+    this.response.redirect('/convos/' + convoId);
+    return;
+  }
+
+  var convo = yield db.findConvo(convoId);
+  this.assert(convo, 404);
+  this.assertAuthorized(this.currUser, 'CREATE_PM', convo);
+
   var text = this.request.body.text;
-  assert(text);
-  // TODO: Validation
   var pm = yield db.createPm({
     userId: this.currUser.id,
     ipAddress: this.request.ip,
     convoId: convoId,
     text: text});
+  this.log.info({ pm: pm }, 'Created PM');
   pm = pre.presentPm(pm);
   this.response.redirect(pm.url);
 }));
 
 //
-// View convo
+// Show convo
 //
 app.use(route.get('/convos/:convoId', function*(convoId) {
-  // TODO: Authz
+  if (!config.IS_PM_SYSTEM_ONLINE)
+    return this.body = 'PM system currently disabled';
+
+  this.assert(this.currUser, 404);
   var convo = yield db.findConvo(convoId);
-  if (!convo) return;
+  this.assert(convo, 404);
   this.assertAuthorized(this.currUser, 'READ_CONVO', convo);
-  var pms = yield db.findPmsByConvoId(convoId);
+  this.checkQuery('page').optional().toInt();
+  this.assert(!this.errors, 400, belt.joinErrors(this.errors));
+
+  // If ?page=1 was given, then redirect without param
+  // since page 1 is already the canonical destination of a convo url
+  if (this.request.query.page === 1)
+    return this.response.redirect(this.request.path);
+
+  var page = Math.max(1, this.request.query.page || 1);
+  var totalItems = convo.pms_count;
+  var totalPages = belt.calcTotalPostPages(totalItems);
+
+  // Redirect to the highest page if page parameter exceeded it
+  if (page > totalPages) {
+    var redirectUrl = page === 1 ? this.request.path :
+                                   this.request.path + '?page=' + totalPages;
+    return this.response.redirect(redirectUrl);
+  }
+
+  var pms = yield db.findPmsByConvoId(convoId, page);
   convo.pms = pms;
   convo = pre.presentConvo(convo);
   yield this.render('show_convo', {
     ctx: this,
-    convo: convo
+    convo: convo,
+    // Pagination
+    currPage: page,
+    totalPages: totalPages
   });
 }));
 
 //
 // Create topic
 //
-app.use(route.post('/forums/:forumId/topics', function*(forumId) {
-  var forumId = this.request.body['forum-id'];
+// Body params:
+// - forum-id
+// - title
+// - text
+//
+app.post('/forums/:forumId/topics', function*() {
+  this.checkBody('title').isLength(config.MIN_TOPIC_TITLE_LENGTH,
+                                   config.MAX_TOPIC_TITLE_LENGTH,
+                                   'Title must be between ' +
+                                   config.MIN_TOPIC_TITLE_LENGTH + ' and ' +
+                                   config.MAX_TOPIC_TITLE_LENGTH + ' chars');
+  this.checkBody('text').isLength(config.MIN_POST_LENGTH,
+                                   config.MAX_POST_LENGTH,
+                                   'Post text must be between ' +
+                                   config.MIN_POST_LENGTH + ' and ' +
+                                   config.MAX_POST_LENGTH + ' chars');
+
+  if (this.errors) {
+    this.flash = {
+      message: ['danger', belt.joinErrors(this.errors)],
+      params: this.request.body
+    };
+    this.response.redirect('/forums/' + this.params.forumId);
+    return;
+  }
+
+  var forumId = this.params.forumId;
   var title = this.request.body.title;
   var text = this.request.body.text;
 
-  var forum = yield db.findForum(forumId);
-  if (!forum) return;
-
+  var forum = yield db.findForum(this.params.forumId);
+  this.assert(forum, 404);
   this.assertAuthorized(this.currUser, 'CREATE_TOPIC', forum);
 
-  // TODO: Validation
+  var postType = forum.is_roleplay ? 'ic' : 'ooc';
   var topic = yield db.createTopic({
     userId: this.currUser.id,
     forumId: forumId,
     ipAddress: this.request.ip,
     title: title,
     text: text,
-    postType: forum.is_roleplay ? 'ic' : 'ooc',
+    postType: postType,
     isRoleplay: forum.is_roleplay
   });
+  this.log.info({
+    topic: topic,
+    text: belt.truncate(text, 100),
+    post_type: postType
+  }, 'Created topic');
   topic = pre.presentTopic(topic);
   this.response.redirect(topic.url);
-}));
+});
 
 //
 // Post markdown view
 //
 // Returns the unformatted post source.
 //
-app.use(route.get('/posts/:postId/raw', function*(postId) {
-  // TODO: Authz
-  var post = yield db.findPostWithTopicAndForum(postId);
+app.get('/posts/:id/raw', function*() {
+  var post = yield db.findPostWithTopicAndForum(this.params.id);
   this.assert(post, 404);
   this.assertAuthorized(this.currUser, 'READ_POST', post);
   this.body = post.text;
-}));
-// TODO: pm/:pmId/raw needs equivalent to findPostWithTopicAndForum
-app.use(route.get('/pms/:pmId/raw', function*(pmId) {
-  // TODO: Authz
-  var pm = yield db.findPm(pmId);
-  if (!pm) return;
+});
+
+app.get('/pms/:id/raw', function*() {
+  if (!config.IS_PM_SYSTEM_ONLINE)
+    return this.body = 'PM system currently disabled';
+
+  this.assert(this.currUser, 404);
+  var pm = yield db.findPmWithConvo(this.params.id);
+  this.assert(pm, 404);
+  this.assertAuthorized(this.currUser, 'READ_PM', pm);
   this.body = pm.text;
-}));
+});
 
 //
 // Update post text
+// Body params:
+// - text
 //
 // Keep /api/posts/:postId and /api/pms/:pmId in sync
-app.use(route.put('/api/posts/:postId', function*(id) {
-  var post = yield db.findPost(id);
-  if (!post) return;
+app.put('/api/posts/:id', function*() {
+  this.checkBody('text').isLength(config.MIN_POST_LENGTH,
+                                  config.MAX_POST_LENGTH);
+  if (this.errors) {
+    this.flash = {
+      message: ['danger', belt.joinErrors(this.errors)],
+      params: this.request.body
+    };
+    this.response.redirect('back');
+    return;
+  }
+
+  var post = yield db.findPost(this.params.id);
+  this.assert(post, 404);
   this.assertAuthorized(this.currUser, 'UPDATE_POST', post)
-  // TODO: Authz, validation
+
   var text = this.request.body.text;
-  var updatedPost = yield db.updatePost(id, text);
+  var updatedPost = yield db.updatePost(this.params.id, text);
   updatedPost = pre.presentPost(updatedPost);
   this.body = JSON.stringify(updatedPost);
-}));
-app.use(route.put('/api/pms/:id', function*(id) {
-  // TODO: Authz, validation
+});
+
+app.put('/api/pms/:id', function*() {
+  if (!config.IS_PM_SYSTEM_ONLINE)
+    return this.body = 'PM system currently disabled';
+
+  this.checkBody('text').isLength(config.MIN_POST_LENGTH,
+                                  config.MAX_POST_LENGTH);
+  if (this.errors) {
+    this.flash = {
+      message: ['danger', belt.joinErrors(this.errors)],
+      params: this.request.body
+    };
+    this.response.redirect('back');
+    return;
+  }
+
+  this.assert(this.currUser, 404);
+  var pm = yield db.findPmWithConvo(this.params.id);
+  this.assert(pm, 404);
+  this.assertAuthorized(this.currUser, 'UPDATE_PM', pm)
+
   var text = this.request.body.text;
-  var pm = yield db.updatePm(id, text);
-  pm = pre.presentPm(pm);
-  this.body = JSON.stringify(pm);
-}));
+  var updatedPm = yield db.updatePm(this.params.id, text);
+  updatedPm = pre.presentPm(updatedPm);
+
+  this.body = JSON.stringify(updatedPm);
+});
 
 //
 // Update topic status
@@ -839,6 +1154,24 @@ app.use(route.put('/topics/:topicId/status', function*(topicId) {
   this.response.redirect(topic.url);
 }));
 
+// Update post state
+app.post('/posts/:postId/:status', function*() {
+  var STATUS_WHITELIST = ['hide', 'unhide'];
+  this.assert(_.contains(STATUS_WHITELIST, this.params.status), 400,
+              'Invalid status');
+  this.assert(this.currUser, 403);
+  var post = yield db.findPost(this.params.postId);
+  this.assert(post, 404);
+  this.assertAuthorized(this.currUser,
+                        this.params.status.toUpperCase() + '_POST',
+                        post);
+  var updatedPost = yield db.updatePostStatus(this.params.postId,
+                                              this.params.status);
+  updatedPost = pre.presentPost(updatedPost);
+
+  this.response.redirect(updatedPost.url);
+});
+
 //
 // Post permalink
 //
@@ -849,20 +1182,42 @@ app.use(route.put('/topics/:topicId/status', function*(topicId) {
 // - Keep this in sync with /pms/:pmId
 //
 app.use(route.get('/posts/:postId', function*(postId) {
-  // TODO: Authz
-  var post = yield db.findPostWithTopic(postId);
-  if (!post) return;
+  var post = yield db.findPostWithTopicAndForum(postId);
+  this.assert(post, 404);
+  this.assertAuthorized(this.currUser, 'READ_POST', post);
   post = pre.presentPost(post);
-  this.response.redirect(post.topic.url + '/posts/' + post.type + '#post-' + post.id);
+  var redirectUrl;
+  if (post.idx < config.POSTS_PER_PAGE)
+    redirectUrl = post.topic.url + '/posts/' + post.type + '#post-' + post.id
+  else
+    redirectUrl = post.topic.url + '/posts/' + post.type +
+                  '?page=' +
+                  Math.ceil((post.idx + 1) / config.POSTS_PER_PAGE) +
+                  '#post-' + post.id;
+  this.response.redirect(redirectUrl);
 }));
+
 // PM permalink
 // Keep this in sync with /posts/:postId
 app.use(route.get('/pms/:id', function*(id) {
-  // TODO: Authz
+  if (!config.IS_PM_SYSTEM_ONLINE)
+    return this.body = 'PM system currently disabled';
+
+  this.assert(this.currUser, 404);
   var pm = yield db.findPmWithConvo(id);
-  if (!pm) return;
+  this.assert(pm, 404);
+  this.assertAuthorized(this.currUser, 'READ_PM', pm);
+
   pm = pre.presentPm(pm);
-  this.response.redirect(pm.convo.url + '#pm-' + pm.id);
+
+  var redirectUrl;
+  if (pm.idx < config.POSTS_PER_PAGE)
+    redirectUrl = pm.convo.url + '#post-' + pm.id
+  else
+    redirectUrl = pm.convo.url + '?page=' +
+                  Math.max(1, Math.ceil((pm.idx + 1) / config.POSTS_PER_PAGE)) +
+                  '#post-' + pm.id;
+  this.response.redirect(redirectUrl);
 }));
 
 //
@@ -889,11 +1244,15 @@ app.use(route.get('/topics/:topicId/posts/:postType', function*(topicId, postTyp
     topic = yield db.findTopic(topicId);
   }
   this.assert(topic, 404);
+
+  // If user tried to go to ic/char tabs on a non-rp, then 404
+  if (!topic.is_roleplay)
+    this.assert(!_.contains(['ic', 'char'], postType), 404);
+
   this.assertAuthorized(this.currUser, 'READ_TOPIC', topic);
 
   var totalItems = topic[postType + '_posts_count'];
   var totalPages = belt.calcTotalPostPages(totalItems);
-  debug(totalPages);
 
   // Don't need this page when post pages are pre-calc'd in the database
   // var pager = belt.calcPager(page, config.POSTS_PER_PAGE, totalItems);

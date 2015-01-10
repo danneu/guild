@@ -55,6 +55,17 @@ function presentForum(forum) {
 exports.presentUser = presentUser;
 function presentUser(user) {
   user.url = '/users/' + user.id;
+
+  // Fix embedded
+  if (_.isString(user.created_at))
+    user.created_at = new Date(user.created_at);
+  if (_.isString(user.last_online_at))
+    user.last_online_at = new Date(user.last_online_at);
+
+  user.formattedCreatedAt = formatDate(user.created_at);
+  if (user.last_online_at)
+    user.formattedLastOnlineAt = formatDate(user.last_online_at);
+
   return user;
 }
 
@@ -116,6 +127,12 @@ function presentConvo(convo) {
     convo.user = presentUser(convo.user);
   if (convo.participants)
     convo.participants = convo.participants.map(presentUser);
+  if (convo.pms)
+    convo.pms = convo.pms.map(presentPm);
+  if (convo.latest_user)
+    convo.latest_user = presentUser(convo.latest_user);
+  if (convo.latest_pm)
+    convo.latest_pm = presentPm(convo.latest_pm);
   return convo;
 }
 

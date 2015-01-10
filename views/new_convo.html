@@ -74,10 +74,19 @@
       </form>
     </div> <!-- /col -->
   </div> <!-- /.row -->
+      {% include 'partials/markdown_cheatsheet.html' %}
 
 {% endblock %}
 
 {% block scripts %}
+  <script>
+      $('input[type="submit"]').on('click', function(e) {
+        var $this = $(this);
+        if ($this.data('already-clicked'))
+          return false;
+        $this.data('already-clicked', true);
+      });
+  </script>
 <script>
   $('#to-input').focus();
   $('#text-input').markdown({

@@ -12,6 +12,21 @@ var debug = require('debug')('app:db');
 var config = require('./config');
 var belt = require('./belt');
 
+// If a client is not provided to fn as first argument,
+// we'll pass one into it.
+function wrapOptionalClient(fn) {
+  return function*() {
+    var args = Array.prototype.slice.call(arguments, 0);
+    if (belt.isDBClient(args[0])) {
+      return yield fn.apply(null, args);
+    } else {
+      return yield withTransaction(function*(client) {
+        return yield fn.apply(null, [client].concat(args));
+      });
+    }
+  }
+};
+
 // Wraps generator function in one that prints out the execution time
 // when app is run in development mode.
 function wrapTimer(fn) {
@@ -88,6 +103,29 @@ function* withTransaction(runner) {
     }
   }
 }
+
+exports.updatePostStatus = function*(postId, status) {
+  var STATUS_WHITELIST = ['hide', 'unhide'];
+  assert(_.contains(STATUS_WHITELIST, status));
+  var sql = m(function() {/*
+UPDATE posts
+SET is_hidden = $2
+WHERE id = $1
+RETURNING *
+  */});
+  var params;
+  switch(status) {
+    case 'hide':
+      params = [postId, true];
+      break;
+    case 'unhide':
+      params = [postId, false];
+      break;
+    default: throw new Error('Invalid status ' + status);
+  }
+  var result = yield query(sql, params);
+  return result.rows[0];
+};
 
 exports.updateTopicStatus = function*(topicId, status) {
   var STATUS_WHITELIST = ['stick', 'unstick', 'hide', 'unhide', 'close', 'open'];
@@ -170,6 +208,28 @@ WHERE t.id = $1
   return result.rows[0];
 };
 
+exports.deleteResetTokens = function*(userId) {
+  assert(_.isNumber(userId));
+  var sql = m(function() {/*
+DELETE FROM reset_tokens
+WHERE user_id = $1
+  */});
+  yield query(sql, [userId]);
+};
+
+exports.findLatestActiveResetToken = function*(userId) {
+  assert(_.isNumber(userId));
+  var sql = m(function() {/*
+SELECT *
+FROM active_reset_tokens
+WHERE user_id = $1
+ORDER BY created_at DESC
+LIMIT 1
+  */});
+  var result = yield query(sql, [userId]);
+  return result.rows[0];
+};
+
 exports.createResetToken = function*(userId) {
   debug('[createResetToken] userId: ' + userId);
   var uuid = belt.generateUuid();
@@ -181,6 +241,18 @@ RETURNING *
   var result = yield query(sql, [userId, uuid]);
   return result.rows[0];
 };
+
+exports.findUserByUnameOrEmail = wrapTimer(findUserByUnameOrEmail);
+function *findUserByUnameOrEmail(unameOrEmail) {
+  assert(_.isString(unameOrEmail));
+  var sql = m(function() {/*
+SELECT *
+FROM users u
+WHERE lower(u.uname) = lower($1) OR lower(u.email) = lower($1);
+  */});
+  var result = yield query(sql, [unameOrEmail]);
+  return result.rows[0];
+}
 
 // Note: Case-insensitive
 exports.findUserByEmail = wrapTimer(findUserByEmail);
@@ -209,18 +281,25 @@ WHERE lower(u.uname) = lower($1);
 }
 
 
+// `beforeId` is undefined or a number
 exports.findRecentPostsForUserId = wrapTimer(findRecentPostsForUserId);
-function* findRecentPostsForUserId(userId) {
+function* findRecentPostsForUserId(userId, beforeId) {
+  assert(_.isNumber(beforeId) || _.isUndefined(beforeId));
   var sql = m(function() {/*
 SELECT
   p.*,
   to_json(t.*) "topic"
 FROM posts p
 JOIN topics t ON p.topic_id = t.id
-WHERE p.user_id = $1
-LIMIT 25
+WHERE p.user_id = $1 AND p.id < $3
+ORDER BY p.id DESC
+LIMIT $2
   */});
-  var result = yield query(sql, [userId]);
+  var result = yield query(sql, [
+    userId,
+    config.RECENT_POSTS_PER_PAGE,
+    beforeId || 1e9
+  ]);
   return result.rows;
 }
 
@@ -233,7 +312,7 @@ FROM users
 WHERE id = $1
   */});
   var result = yield query(sql, [userId]);
-  return result.rows[0];
+  return result.rows[0] || null;
 }
 
 exports.findUsersByUnames = wrapTimer(findUsersByUnames);
@@ -258,31 +337,35 @@ exports.createConvo = function*(args) {
   assert(_.isString(args.title));
   assert(_.isString(args.text));
   var convoSql = m(function() {/*
-INSERT INTO convos (user_id, title)
-VALUES ($1, $2)
-RETURNING *
+INSERT INTO convos (user_id, title) VALUES ($1, $2) RETURNING *
   */});
   var pmSql = m(function() {/*
-INSERT INTO pms (user_id, convo_id, text, ip_address)
-VALUES ($1, $2, $3, $4)
+INSERT INTO pms
+  (convo_id, user_id, ip_address, text, idx)
+VALUES ($1, $2, $3, $4, 0)
 RETURNING *
 */});
   var participantSql = m(function() {/*
-INSERT INTO convos_participants (user_id, convo_id)
+INSERT INTO convos_participants (convo_id, user_id)
 VALUES ($1, $2)
 */});
-  var convo = (yield query(convoSql, [args.userId, args.title])).rows[0];
 
-  // Run these in parallel
-  yield args.toUserIds.map(function(toUserId) {
-    return query(participantSql, [toUserId, convo.id]);
-  }).concat([
-    query(participantSql, [args.userId, convo.id]),
-    query(pmSql, [args.userId, convo.id, args.text, args.ipAddress])
-  ]);
+  return yield withTransaction(function*(client) {
+    var result;
+    result = yield client.queryPromise(convoSql, [args.userId, args.title]);
+    var convo = result.rows[0];
 
-  convo.pms_count++;  // This is a stale copy so we need to manually inc
-  return convo;
+    // Run these in parallel
+    yield args.toUserIds.map(function(toUserId) {
+      return client.queryPromise(participantSql, [convo.id, toUserId]);
+    }).concat([
+      client.queryPromise(participantSql, [convo.id, args.userId]),
+      client.queryPromise(pmSql, [convo.id, args.userId, args.ipAddress, args.text])
+    ]);
+
+    convo.pms_count++;  // This is a stale copy so we need to manually inc
+    return convo;
+  });
 };
 
 // Only returns user if reset token has not expired
@@ -308,22 +391,6 @@ WHERE u.id = (
   return result.rows[0];
 }
 
-
-// exports.findUserBySessionId = wrapTimer(findUserBySessionId);
-// function *findUserBySessionId(sessionId) {
-//   assert(belt.isValidUuid(sessionId));
-//   var sql = m(function() {/*
-// SELECT *
-// FROM users u
-// WHERE u.id = (
-//   SELECT s.user_id
-//   FROM active_sessions s
-//   WHERE s.id = $1
-// )
-//   */});
-//   return (yield query(sql, [sessionId])).rows[0];
-// }
-
 exports.findUserBySessionId = wrapTimer(findUserBySessionId);
 function *findUserBySessionId(sessionId) {
   assert(belt.isValidUuid(sessionId));
@@ -344,9 +411,10 @@ RETURNING *
   return (yield query(sql, [sessionId])).rows[0];
 }
 
-exports.createSession = createSession;
-function *createSession(props) {
+exports.createSession = wrapOptionalClient(createSession);
+function *createSession(client, props) {
   debug('[createSession] props: ', props);
+  assert(belt.isDBClient(client));
   assert(_.isNumber(props.userId));
   assert(_.isString(props.ipAddress));
   assert(_.isString(props.interval));
@@ -356,17 +424,19 @@ INSERT INTO sessions (user_id, id, ip_address, expired_at)
 VALUES ($1, $2, $3::inet, NOW() + $4::interval)
 RETURNING *
   */});
-  return (yield query(sql, [
+  var result = yield client.queryPromise(sql, [
     props.userId, uuid, props.ipAddress, props.interval
-  ])).rows[0];
+  ]);
+  return result.rows[0];
 };
 
+// FIXME: Quick-hack query
 exports.findTopicsByForumId = wrapTimer(findTopicsByForumId);
 function* findTopicsByForumId(forumId, limit, offset) {
   debug('[%s] forumId: %s, limit: %s, offset: %s',
         'findTopicsByForumId', forumId, limit, offset);
   var sql = m(function() {/*
-SELECT
+(SELECT
   t.*,
   to_json(u.*) "user",
   to_json(p.*) "latest_post",
@@ -375,10 +445,26 @@ FROM topics t
 JOIN users u ON t.user_id = u.id
 LEFT JOIN posts p ON t.latest_post_id = p.id
 LEFT JOIN users u2 ON p.user_id = u2.id
-WHERE t.forum_id = $1
+WHERE t.forum_id = $1 AND t.is_sticky
 ORDER BY t.latest_post_id DESC
 LIMIT $2
-OFFSET $3
+OFFSET $3)
+
+UNION ALL
+
+(SELECT
+  t.*,
+  to_json(u.*) "user",
+  to_json(p.*) "latest_post",
+  to_json(u2.*) "latest_user"
+FROM topics t
+JOIN users u ON t.user_id = u.id
+LEFT JOIN posts p ON t.latest_post_id = p.id
+LEFT JOIN users u2 ON p.user_id = u2.id
+WHERE t.forum_id = $1 AND NOT t.is_sticky
+ORDER BY t.latest_post_id DESC
+LIMIT $2
+OFFSET $3)
   */});
   var result = yield query(sql, [forumId, limit, offset]);
   return result.rows;
@@ -424,7 +510,7 @@ RETURNING *
 
 // Attaches topic and forum to post for authorization checks
 // See cancan.js 'READ_POST'
-exports.findPostWithTopicAndForum = wrapTimer(findPostWithTopic);
+exports.findPostWithTopicAndForum = wrapTimer(findPostWithTopicAndForum);
 function* findPostWithTopicAndForum(postId) {
   var sql = m(function() {/*
 SELECT
@@ -469,17 +555,22 @@ function* findConvosInvolvingUserId(userId) {
 SELECT
   c.*,
   to_json(u1.*) "user",
-  to_json(array_agg(u2.*)) "participants"
+  to_json(array_agg(u2.*)) "participants",
+  to_json(pms.*) "latest_pm",
+  to_json(u3.*) "latest_user"
 FROM convos c
 JOIN convos_participants cp ON c.id = cp.convo_id
 JOIN users u1 ON c.user_id = u1.id
 JOIN users u2 ON cp.user_id = u2.id
+JOIN pms ON c.latest_pm_id = pms.id
+JOIN users u3 ON pms.user_id = u3.id
 WHERE c.id IN (
   SELECT cp.convo_id
   FROM convos_participants cp
   WHERE cp.user_id = $1
 )
-GROUP BY c.id, u1.id
+GROUP BY c.id, u1.id, pms.id, u3.id
+ORDER BY c.latest_pm_id DESC
   */});
   var result = yield query(sql, [userId]);
   return result.rows;
@@ -504,18 +595,20 @@ GROUP BY c.id, u1.id
   return result.rows[0];
 };
 
-exports.findPmsByConvoId = function*(convoId) {
+exports.findPmsByConvoId = function*(convoId, page) {
   var sql = m(function() {/*
 SELECT
   pms.*,
   to_json(u.*) "user"
 FROM pms
 JOIN users u ON pms.user_id = u.id
-WHERE pms.convo_id = $1
+WHERE pms.convo_id = $1 AND pms.idx >= $2 AND pms.idx < $3
 GROUP BY pms.id, u.id
 ORDER BY pms.id
   */});
-  var result = yield query(sql, [convoId]);
+  var fromIdx = (page - 1) * config.POSTS_PER_PAGE;
+  var toIdx = fromIdx + config.POSTS_PER_PAGE;
+  var result = yield query(sql, [convoId, fromIdx, toIdx]);
   return result.rows;
 };
 
@@ -527,14 +620,21 @@ function* findPostsByTopicId(topicId, postType, page) {
   var sql = m(function() {/*
 SELECT
   p.*,
-  to_json(u.*) "user"
+  to_json(u.*) "user",
+  to_json(t.*) "topic",
+  to_json(f.*) "forum"
 FROM posts p
 JOIN users u ON p.user_id = u.id
-WHERE p.topic_id = $1 AND p.type = $2 AND p.page = $3
-GROUP BY p.id, u.id
+JOIN topics t ON p.topic_id = t.id
+JOIN forums f ON t.forum_id = f.id
+WHERE p.topic_id = $1 AND p.type = $2 AND p.idx >= $3 AND p.idx < $4
+GROUP BY p.id, u.id, t.id, f.id
 ORDER BY p.id
   */});
-  var result = yield query(sql, [topicId, postType, page]);
+  var fromIdx = (page - 1) * config.POSTS_PER_PAGE;
+  var toIdx = fromIdx + config.POSTS_PER_PAGE;
+  debug('%s <= post.idx < %s', fromIdx, toIdx);
+  var result = yield query(sql, [topicId, postType, fromIdx, toIdx]);
   return result.rows;
 };
 
@@ -583,9 +683,12 @@ function* findPmWithConvo(pmId) {
   var sql = m(function() {/*
 SELECT
   pms.*,
-  to_json(c.*) "convo"
+  to_json(c.*) "convo",
+  to_json(array_agg(u.*)) "participants"
 FROM pms
 JOIN convos c ON pms.convo_id = c.id
+JOIN convos_participants cp ON cp.convo_id = pms.convo_id
+JOIN users u ON cp.user_id = u.id
 WHERE pms.id = $1
 GROUP BY pms.id, c.id
   */});
@@ -659,8 +762,8 @@ VALUES ($1, $2, $3, $4)
 RETURNING *
   */});
   var postSql = m(function() {/*
-INSERT INTO posts (topic_id, user_id, ip_address, text, type, is_roleplay, page)
-VALUES ($1, $2, $3::inet, $4, $5, $6, 1)
+INSERT INTO posts (topic_id, user_id, ip_address, text, type, is_roleplay, idx)
+VALUES ($1, $2, $3::inet, $4, $5, $6, 0)
 RETURNING *
   */});
 
@@ -732,7 +835,7 @@ LIMIT $1
 
 // Also has cat.forums array
 exports.findModCategory = function*() {
-  var MOD_CATEGORY_ID = 6;
+  var MOD_CATEGORY_ID = 4;
   var sql = m(function() {/*
 SELECT c.*
 FROM categories c
@@ -773,6 +876,8 @@ ORDER BY c.pos
 // Creates a user and a session (logs them in).
 // - Returns {:user <User>, :session <Session>}
 // - Use `createUser` if you only want to create a user.
+//
+// Throws: 'UNAME_TAKEN', 'EMAIL_TAKEN'
 exports.createUserWithSession = createUserWithSession;
 function *createUserWithSession(props) {
   debug('[createUserWithSession] props: ', props);
@@ -787,13 +892,28 @@ INSERT INTO users (uname, digest, email)
 VALUES ($1, $2, $3)
 RETURNING *;
    */});
-  var user = (yield query(sql, [props.uname, digest, props.email])).rows[0];
-  var session = yield createSession({
-    userId: user.id,
-    ipAddress: props.ipAddress,
-    interval: '1 year'  // TODO: Decide how long to log user in upon registration
+
+  return yield withTransaction(function*(client) {
+    var user, session;
+    try {
+      user = (yield client.queryPromise(sql, [props.uname, digest, props.email])).rows[0];
+    } catch(ex) {
+      if (ex.code === '23505')
+        if (/unique_username/.test(ex.toString()))
+          throw 'UNAME_TAKEN';
+        else if (/unique_email/.test(ex.toString()))
+          throw 'EMAIL_TAKEN';
+      throw ex;
+    }
+
+    session = yield createSession(client, {
+      userId: user.id,
+      ipAddress: props.ipAddress,
+      interval: '1 year'  // TODO: Decide how long to log user in upon registration
+    });
+
+    return { user: user, session: session };
   });
-  return { user: user, session: session };
 };
 
 exports.logoutSession = logoutSession;

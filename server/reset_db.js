@@ -22,12 +22,15 @@ function* resetDb() {
   // Create tables
   var sql = yield slurpSql('schema.sql');
   yield db.query(sql);
+  console.log('Reset schema.sql');
   // Link up triggers
   sql = yield slurpSql('functions_and_triggers.sql');
   yield db.query(sql);
+  console.log('Reset functions_and_triggers.sql');
   if (config.NODE_ENV === 'development') {
     sql = yield slurpSql('dev_seeds.sql');
     yield db.query(sql);
+    console.log('Inserted dev_seeds.sql');
 
     // Insert 100 topics for forum1
     var thunks = _.range(100).map(function(n) {
@@ -37,16 +40,17 @@ function* resetDb() {
         isRoleplay: false, postType: 'ooc'
       });
     });
-    yield coParallel(thunks, 2);
+    yield coParallel(thunks, 1);
 
-    // Insert 100 posts for user1, forum1 (in parallel)
-    yield _.range(100).map(function(n) {
+    // Insert 100 posts for user1, forum1
+    var thunks = _.range(100).map(function(n) {
       return db.createPost({
         userId: 1, ipAddress: '1.2.3.4',
         text: n.toString(), topicId: 1, isRoleplay: false,
         type: 'ooc'
       });
     });
+    yield coParallel(thunks, 1);
   }
 }
 

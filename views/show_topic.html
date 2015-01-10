@@ -86,11 +86,6 @@
       <span class="glyphicon glyphicon-pencil"></span>
       New Reply
     </a>
-  {% else %}
-    <a class="btn btn-primary pull-right" href="" disabled>
-      <span class="glyphicon glyphicon-pencil"></span>
-      Login to Reply
-    </a>
   {% endif %}
 
   <!-- Subscribe button -->
@@ -152,72 +147,100 @@
   {% endif %}
 
   {% for post in topic.posts %}
-    <a name="post-{{ post.id }}"></a>
-    <div class="panel panel-default post"
-         id="post-{{ post.id }}"
-         style="border: 1px solid #111;">
-      <div class="panel-heading clearfix"
-           style="background-color: #1D1D1D; border-color: #111; border-radius: 0">
-        <span class="pull-left">
-          <abbr class="timeago" title="{{ post.created_at.toISOString() }}">
-            {{ post.formattedCreatedAt }}
-          </abbr>
-          {% if post.updated_at %}
-            &rarr;
-            <span class="glyphicon glyphicon-pencil"></span>
-            <abbr class="timeago" title="{{ post.updated_at.toISOString() }}">
-              {{ post.formattedUpdatedAt }}
+    {% if ctx.can(ctx.currUser, 'READ_POST', post) %}
+      <a name="post-{{ post.id }}"></a>
+      <div class="panel panel-default post"
+           id="post-{{ post.id }}"
+           style="border: 1px solid #111;">
+        <div class="panel-heading clearfix"
+             style="background-color: #1D1D1D; border-color: #111; border-radius: 0">
+          <span class="pull-left">
+            <abbr class="timeago" title="{{ post.created_at.toISOString() }}">
+              {{ post.formattedCreatedAt }}
             </abbr>
-          {% endif %}
-        </span>
-        <div class="pull-right post-header">
-          <a href="{{ post.url }}/raw">View Raw</a> -
-          <a href="{{ post.url }}">
-            <span class="glyphicon glyphicon-link"></span>
-          </a>
-        </div>
-      </div> <!-- /.panel-heading -->
-
-      <!-- Panel body -->
-      <div class="panel-body"
-           style="background-color: #2E2C2C">
-        <!-- Author metadata -->
-        <div class="col-sm-2 clearfix">
-          <a href="{{ post.user.url }}">{{ post.user.uname }}</a>
-          <br>{{ post.user.role }}
-        </div> <!-- /.col-sm-2 post-meta -->
-        <!-- Post text -->
-        <div class="col-sm-10">
-          <div class="post-body">{{ post.text }}</div>
-        </div>
-      </div> <!-- /.panel-body -->
-
-      <!-- Panel footer -->
-      <div class="panel-footer clearfix"
-           style="background-color: #2E2C2C; border-radius: 0; border: 0">
-        <!-- IP address -->
-        {% if ctx.can(ctx.currUser, 'READ_USER_IP', post.user) %}
-          <div class="pull-left"
-               style="margin-left: 5px; color: #6E6B6B">
-            {{ post.ip_address }}
+            {% if post.updated_at && post.updated_at.getTime() - post.created_at.getTime() > 1000 * 60 %}
+              &rarr;
+              <span class="glyphicon glyphicon-pencil"></span>
+              <abbr class="timeago" title="{{ post.updated_at.toISOString() }}">
+                {{ post.formattedUpdatedAt }}
+              </abbr>
+            {% endif %}
+          </span>
+          <div class="pull-right post-header">
+            <a href="{{ post.url }}/raw">View Raw</a> -
+            <a href="{{ post.url }}">
+              <span class="glyphicon glyphicon-link"></span>
+            </a>
           </div>
-        {% endif %}
-        <!-- Reply button -->
-        <a href=""
-           class="btn btn-default btn-xs pull-right post-reply-btn"
-           post-id="{{ post.id }}"
-           style="margin-left: 5px"
-           {% if !ctx.can(ctx.currUser, 'CREATE_POST', topic) %}disabled{% endif %}
-           >Reply</a>
-        <!-- Edit button -->
-        <a href="/"
-           class="btn btn-default btn-xs pull-right post-edit-btn"
-           style="margin-left: 5px;"
-           post-id={{ post.id }}
-           {% if !ctx.can(ctx.currUser, 'UPDATE_POST', post) %}disabled{% endif %}
-           >Edit</a>
-          </div> <!-- /.panel-footer -->
-        </div> <!-- /.panel -->
+        </div> <!-- /.panel-heading -->
+
+        <!-- Panel body -->
+        <div class="panel-body"
+             style="background-color: #2E2C2C">
+          <!-- Author metadata -->
+          <div class="col-sm-2 clearfix">
+            <a href="{{ post.user.url }}">{{ post.user.uname }}</a>
+            <br>{{ post.user.role }}
+          </div> <!-- /.col-sm-2 post-meta -->
+          <!-- Post text -->
+          <div class="col-sm-10">
+            {% if post.is_hidden %}
+              <i>[HIDDEN]</i>
+            {% else %}
+              {% if post.legacy_html %}
+                <div class="post-body-html">{{ post.legacy_html|safe }}</div>
+              {% else %}
+                <div class="post-body">{{ post.text }}</div>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div> <!-- /.panel-body -->
+
+        <!-- Panel footer -->
+        <div class="panel-footer clearfix"
+             style="background-color: #2E2C2C; border-radius: 0; border: 0">
+          <!-- IP address -->
+          {% if ctx.can(ctx.currUser, 'READ_USER_IP', post.user) %}
+            <div class="pull-left"
+                 style="margin-left: 5px; color: #6E6B6B">
+              {{ post.ip_address }}
+            </div>
+          {% endif %}
+          <!-- Reply button -->
+          {% if !ctx.can(ctx.currUser, 'CREATE_POST', topic) %}
+            <a href=""
+               class="btn btn-default btn-xs pull-right post-reply-btn"
+               post-id="{{ post.id }}"
+               style="margin-left: 5px"
+               >Reply</a>
+          {% endif %}
+          <!-- Edit button -->
+          {% if ctx.can(ctx.currUser, 'UPDATE_POST', post) %}
+            <a href="/"
+               class="btn btn-default btn-xs pull-right post-edit-btn"
+               style="margin-left: 5px;"
+               post-id={{ post.id }}
+              >Edit</a>
+          {% endif %}
+          <!-- Hide button -->
+          {% if post.is_hidden %}
+            {% if ctx.can(ctx.currUser, 'UNHIDE_POST', post) %}
+              <form action="{{ post.url}}/unhide" method="post">
+                <input type="submit" value="Unhide"
+                       class="btn btn-default btn-xs pull-right">
+              </form>
+            {% endif %}
+          {% else %}
+            {% if ctx.can(ctx.currUser, 'HIDE_POST', post) %}
+              <form action="{{ post.url}}/hide" method="post">
+                <input type="submit" value="Hide"
+                       class="btn btn-default btn-xs pull-right">
+              </form>
+            {% endif %}
+          {% endif %}
+        </div> <!-- /.panel-footer -->
+      </div> <!-- /.panel -->
+    {% endif %} <!-- can READ_POST check -->
   {% endfor %}
 
   {{ paginate.render(currPage, totalPages, ctx.request.path) }}
@@ -239,12 +262,33 @@
       </div>
       <input type="submit" class="btn btn-primary" value="Post Reply"></input>
     </form>
+    {% include 'partials/markdown_cheatsheet.html' %}
   {% endif %}
 
 {% endblock %}
 
 {% block scripts %}
 
+<script>
+    $('input[type="submit"]').on('click', function(e) {
+      var $this = $(this);
+      if ($this.data('already-clicked'))
+        return false;
+      $this.data('already-clicked', true);
+    });
+</script>
+
+<script>
+  // Render posts only as they appear in the user's browser
+  $('.post-body').appear();
+  $('.post-body').on('appear', function(e) {
+    if (!$(this).attr('data-post-rendered')) {
+      var $this = $(this);
+      $this.html(markdown.toHTML($this.text()));
+      $this.attr('data-post-rendered', true);
+    }
+  });
+</script>
 <script>
 // Prevent double-submit on new-reply form
 $('#new-reply').submit(function() {
@@ -259,13 +303,11 @@ $('#new-reply').submit(function() {
 </script>
 
   <script>
+    // Config bootstrap-markdown editor to allow user to resize it
+    // (Makes a resize icon appear on bottom-right of New Post editor)
     $(function() {
       $('#reply-input').markdown({
         resize: 'vertical'
-      });
-      $('.post-body').each(function() {
-        var $this = $(this);
-        $this.html(markdown.toHTML($this.text()));
       });
     });
   </script>

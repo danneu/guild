@@ -3,6 +3,7 @@ var util = require('util');
 // 1st party
 var db = require('./db');
 var pre = require('./presenters');
+var belt = require('./belt');
 // 3rd party
 var debug = require('debug')('app:middleware');
 
@@ -11,16 +12,14 @@ var debug = require('debug')('app:middleware');
 exports.currUser = function() {
   return function *(next) {
     var sessionId = this.cookies.get('sessionId');
-    debug('[wrapCurrUser] sessionId: ', sessionId);
-    if (! sessionId) return yield next;
+    // Skip if no session id
+    if (!sessionId) return yield next;
+    // Skip if it's not a uuid
+    if (!belt.isValidUuid(sessionId)) yield next;
+
     var user = yield db.findUserBySessionId(sessionId);
-    if (user)
-      this.currUser = pre.presentUser(user);
-    if (user) {
-      debug('[wrapCurrUser] User found');
-    } else {
-      debug('[wrapCurrUser] No user found');
-    }
+    this.currUser = user && pre.presentUser(user);  // or null
+    this.log = this.log.child({ currUser: user });
     yield next;
   };
 };

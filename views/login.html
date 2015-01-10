@@ -29,10 +29,10 @@
               <div class="col-sm-9">
                 <input id="uname-input"
                        type="text"
-                       name="uname"
+                       name="uname-or-email"
                        class="form-control"
                        {% if ctx.flash.params %}
-                         value="{{ ctx.flash.params.uname }}"
+                         value="{{ ctx.flash.params['uname-or-email'] }}"
                        {% endif %}
                        >
               </div>

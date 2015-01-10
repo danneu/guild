@@ -2,6 +2,15 @@
 -- http://www.postgresql.org/docs/8.0/static/plpgsql-trigger.html
 -- http://www.postgresql.org/docs/9.1/static/sql-createtrigger.html
 
+-- This file contains indexes, constraints, and triggers that should only
+-- be created after the big COPY FROM migration.
+
+CREATE INDEX topics_latest_post_id_DESC_idx ON topics (latest_post_id DESC);
+CREATE INDEX topics_forum_id_idx            ON topics (forum_id);
+CREATE INDEX posts_topic_id_idx             ON posts (topic_id);
+CREATE INDEX posts_id_user_id_idx           ON posts (id, user_id);
+CREATE INDEX users_created_at_desc          ON users (created_at DESC);
+
 ------------------------------------------------------------
 ------------------------------------------------------------
 -- Update forum.topics_count when a topic is inserted/deleted
@@ -215,27 +224,20 @@ CREATE TRIGGER pm_created1
 
 ------------------------------------------------------------
 ------------------------------------------------------------
--- Update the post page when inserted
+-- Update convo.latest_pm_id when a pm is inserted
 
-CREATE OR REPLACE FUNCTION set_post_page() RETURNS trigger AS
-$$
-  q = 'UPDATE posts                                    '+
-      'SET page = COALESCE(sub.page, 1)                '+
-      'FROM (                                          '+
-      '  SELECT (COUNT(id) / 20) + 1 "page"            '+
-      '  FROM posts                                    '+
-      '  WHERE topic_id = $1 AND id < $2 AND type = $3 '+
-      '  GROUP BY topic_id                             '+
-      ') sub                                           '+
-      'WHERE posts.id = $2                             ';
-  plv8.execute(q, [NEW.topic_id, NEW.id, NEW.type]);
-$$ LANGUAGE 'plv8';
+CREATE OR REPLACE FUNCTION update_convo_latest_pm()
+RETURNS trigger AS $update_convo_latest_pm$
+    BEGIN
+        UPDATE convos
+        SET latest_pm_id = NEW.id
+        WHERE id = NEW.convo_id;
+        RETURN NULL; -- result is ignored since this is an AFTER trigger
+    END;
+$update_convo_latest_pm$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS trigger_set_post_page ON posts;
-CREATE TRIGGER trigger_set_post_page
-    AFTER INSERT ON posts
+DROP TRIGGER IF EXISTS update_convo_latest_pm_trigger ON pms;
+CREATE TRIGGER update_convo_latest_pm_trigger
+    AFTER INSERT ON pms
     FOR EACH ROW
-    EXECUTE PROCEDURE set_post_page();
-
-------------------------------------------------------------
-------------------------------------------------------------
+    EXECUTE PROCEDURE update_convo_latest_pm();

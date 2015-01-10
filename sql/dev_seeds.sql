@@ -33,7 +33,12 @@ SELECT setval('convos_id_seq'::regclass, (SELECT MAX(id) FROM convos));
 --- Pms
 INSERT INTO pms (convo_id, user_id, text)
 VALUES
-(1, 1, 'hey, self')
+(1, 1, 'hey, self'),
+(2, 1, 'hey, bar'),
+(2, 2, 'hey, foo'),
+(3, 1, 'hey, guys'),
+(3, 2, 'hey, guys'),
+(3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys')
 ;
 SELECT setval('pms_id_seq'::regclass, (SELECT MAX(id) FROM pms));
 
@@ -43,9 +48,9 @@ VALUES
 (1, 'News and Newcomers', null, 1),
 (2, 'Roleplaying', null, 2),
 (3, 'Test Category', null, 3),
-(4, 'Off-Topic', null, 4),
+(4, 'Mod Forums', null, 6),
 (5, 'Meta', null, 5),
-(6, 'Mod Forums', null, 6)
+(6, 'Off-Topic', null, 4)
 ;
 SELECT setval('categories_id_seq'::regclass, (SELECT MAX(id) FROM categories));
 
@@ -75,18 +80,18 @@ VALUES
 (3, null, 31, 'Test Forum', 'Test forum features and try to break things here.', 1, false),
 (3, null, 30, 'Spam Forum', 'Where people go to make me regret everything.', 2, false),
 -- Off-Topic (id 4)
-(4, null, 41, 'Roleplaying Discussion', 'Discussion related to roleplaying and GMing.', 1, false),
-(4, null, 32, 'Member Lounge', 'Come unwind with the rest of RPG and socialize. Post your blogs, leaving threads, birthday threads, and general interest threads here.', 2, false),
-(4, null, 33, 'Off-Topic Discussion', 'No spam.', 3, false),
-(4, null, 34, 'Character Sheets', 'Feel free to post your character sheets here to keep track of characters, view other characters, and share your characters with the world.', 4, false),
-(4, null, 35, 'The Gallery', 'Come share your own art and literary work! (Includes shops & requests)', 5, false),
-(4, null, 37, 'Articles & Guides', 'User-submitted resources for helping you with your roleplay life, your forum life, and your life life.', 6, false),
+(6, null, 41, 'Roleplaying Discussion', 'Discussion related to roleplaying and GMing.', 1, false),
+(6, null, 32, 'Member Lounge', 'Come unwind with the rest of RPG and socialize. Post your blogs, leaving threads, birthday threads, and general interest threads here.', 2, false),
+(6, null, 33, 'Off-Topic Discussion', 'No spam.', 3, false),
+(6, null, 34, 'Character Sheets', 'Feel free to post your character sheets here to keep track of characters, view other characters, and share your characters with the world.', 4, false),
+(6, null, 35, 'The Gallery', 'Come share your own art and literary work! (Includes shops & requests)', 5, false),
+(6, null, 37, 'Articles & Guides', 'User-submitted resources for helping you with your roleplay life, your forum life, and your life life.', 6, false),
 -- Meta (id 5)
 (5, null, 9, 'Feature Requests & Bugs', 'Share and brainstorming ideas for making RPGuild a better community.', 1, false),
 (5, null, 36, 'Need Help?', 'Have a question about the site? Need to talk to Guild staff? Until I have a better solution, you can come here to get help. (Note: No more username changes allowed. We don''t rename topics. We don''t delete roleplays once other people have posted in them. There are exceptions, of course.)', 2, false),
 -- [category_id, parent_forum_id, id, title, description, pos, is_roleplay]
 -- Mod Forums (id 6)
-(6, null, 10, 'Mod Discussion', 'Mods + Admins only', 1, false)
+(4, null, 10, 'Mod Discussion', 'Mods + Admins only', 1, false)
 ;
 SELECT setval('forums_id_seq'::regclass, (SELECT MAX(id) FROM forums));
 

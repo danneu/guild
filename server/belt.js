@@ -12,6 +12,37 @@ var uuid = require('node-uuid');
 // 1st party
 var config = require('./config');
 
+// {{ 'firetruck'|truncate(5) }}  -> 'firet...'
+// {{ 'firetruck'|truncate(6) }}  -> 'firetruck'
+exports.makeTruncate = function(suffix) {
+  return function(str, n) {
+    suffix = suffix || '';
+    var sliced = str.slice(0, n).trim();
+    var totalLength = sliced.length + suffix.length;
+    if (totalLength >= str.length)
+      return str;
+    return sliced + suffix;
+  };
+};
+
+exports.truncate = exports.makeTruncate('...');
+
+// Logging helper
+exports.truncateStringVals = function(obj) {
+  var out = {};
+  for (var k in obj) {
+    console.log(k)
+    if (obj.hasOwnProperty(k)) {
+      var v = obj[k];
+      if (_.isString(v))
+        out[k] = exports.truncate(v, 100);
+      else
+        out[k] = v;
+    }
+  }
+  return out;
+};
+
 ////
 //// This module is a general utility-belt of functions.
 //// Somewhat of a junk drawer.
@@ -135,4 +166,15 @@ exports.calcPager = function(pageParam, perPage, totalItems) {
 // Returns a number >= 1
 exports.calcTotalPostPages = function(totalItems) {
   return Math.max(1, Math.ceil(totalItems / config.POSTS_PER_PAGE));
+};
+
+// FIXME: This is a sloppy was to see if an object is a co-pg client
+exports.isDBClient = function(obj) {
+  var keys = Object.keys(obj);
+
+  return _.contains(keys, 'database') &&
+         _.contains(keys, 'connection') &&
+         _.contains(keys, 'readyForQuery') &&
+         _.contains(keys, 'hasExecuted') &&
+         _.contains(keys, 'queryQueue');
 };
