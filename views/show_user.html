@@ -60,26 +60,38 @@
       <a name="recent-posts"></a>
       <h3>Most Recent Posts</h3>
 
-      <ul class="pager">
-        <li>
-          <a href="{{ ctx.request.path }}#recent-posts">
-            First Page
-          </a>
-        </li>
-        {% if recentPosts.length < recentPostsPerPage %}
-          <li class="disabled">
-            <a href="{{ ctx.request.url }}">
-              Next Page &rarr;
-            </a>
-          </li>
-        {% else %}
+      <!-- Pagination -->
+
+      {% if user.posts_count > 1 %}
+        <ul class="pager">
           <li>
-            <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#recent-posts">
-              Next Page &rarr;
+            <a href="{{ ctx.request.path }}#recent-posts">
+              First Page
             </a>
           </li>
-        {% endif %}
-      </ul>
+          {% if recentPosts.length < recentPostsPerPage %}
+            <li class="disabled">
+              <a href="{{ ctx.request.url }}">
+                Next Page &rarr;
+              </a>
+            </li>
+          {% else %}
+            <li>
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#recent-posts">
+                Next Page &rarr;
+              </a>
+            </li>
+          {% endif %}
+        </ul>
+      {% endif %}
+
+      <!-- Recent post list -->
+
+      {% if user.posts_count === 0 %}
+        <div class="well">
+          User has no posts, yet
+        </div>
+      {% endif %}
 
       {% for post in recentPosts %}
         <div class="panel panel-default">
@@ -102,27 +114,31 @@
         </div>
       {% endfor %}
 
-      <ul class="pager">
-        <li>
-          <a href="{{ ctx.request.path }}#recent-posts">
-            First Page
-          </a>
-        </li>
-        {% if recentPosts.length < recentPostsPerPage %}
-          <li class="disabled">
-            <a href="{{ ctx.request.url }}">
-              Next Page &rarr;
-            </a>
-          </li>
-        {% else %}
-          <li>
-            <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#recent-posts">
-              Next Page &rarr;
-            </a>
-          </li>
-        {% endif %}
-      </ul>
 
+      <!-- Pagination -->
+
+      {% if user.posts_count > 1 %}
+        <ul class="pager">
+          <li>
+            <a href="{{ ctx.request.path }}#recent-posts">
+              First Page
+            </a>
+          </li>
+          {% if recentPosts.length < recentPostsPerPage %}
+            <li class="disabled">
+              <a href="{{ ctx.request.url }}">
+                Next Page &rarr;
+              </a>
+            </li>
+          {% else %}
+            <li>
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#recent-posts">
+                Next Page &rarr;
+              </a>
+            </li>
+          {% endif %}
+        </ul>
+      {% endif %}
 
     </div> <!-- /.col-6 -->
 
