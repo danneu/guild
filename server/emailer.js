@@ -34,20 +34,21 @@ var templates = {
   */}))
 };
 
-exports.sendResetTokenEmail = function(user, token) {
+exports.sendResetTokenEmail = function(toUname, toEmail, token) {
   debug('[sendResetTokenEmail]');
   assert(config.FROM_EMAIL, 'FROM_EMAIL must be set to send emails');
-  assert(_.isObject(user));
+  assert(config.HOST, 'HOST must be set to send emails');
+  assert(_.isString(toUname));
+  assert(_.isString(toEmail));
   assert(belt.isValidUuid(token));
-  assert(config.HOST);
   var transporter = getTransporter();
   //var result = yield transporter._sendMailPromise({
   var result = transporter.sendMail({
     from: config.FROM_EMAIL,
-    to: user.email,
+    to: toEmail,
     subject: 'Password Reset Token - RoleplayerGuild.com',
     html: templates.resetToken({
-      uname: user.uname,
+      uname: toUname,
       host: config.HOST,
       token: token
     })
