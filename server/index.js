@@ -324,7 +324,9 @@ app.use(route.get('/', function*() {
   // TODO: Abstract
   _.remove(categories, { id: 4 });
   var categoryIds = _.pluck(categories, 'id');
-  var allForums = yield db.findForums(categoryIds);
+  var results = yield [db.findForums(categoryIds), db.getStats()];
+  var allForums = results[0];
+  var stats = results[1];
   var topLevelForums = _.reject(allForums, 'parent_forum_id');
   var childForums = _.filter(allForums, 'parent_forum_id');
   // Map of {CategoryId: [Forums...]}
