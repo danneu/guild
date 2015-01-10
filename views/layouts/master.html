@@ -128,7 +128,7 @@
   {% endif %}
   <script>
     // Prevent double-clicking on links
-    $('a, input[type="submit"]').on('click', function(e) {
+    $('a').on('click', function(e) {
       var $this = $(this);
       if ($this.data('already-clicked'))
         return false;

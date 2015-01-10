@@ -125,6 +125,14 @@
 
 {% block scripts %}
   <script>
+      $('input[type="submit"]').on('click', function(e) {
+        var $this = $(this);
+        if ($this.data('already-clicked'))
+          return false;
+        $this.data('already-clicked', true);
+      });
+  </script>
+  <script>
     $(function() {
       $('#reply-input').markdown({
         resize: 'vertical'
