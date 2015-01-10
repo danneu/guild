@@ -43,75 +43,7 @@ var belt = require('./belt');
 var middleware = require('./middleware');
 var cancan = require('./cancan');
 var emailer = require('./emailer');
-
-var log = bunyan.createLogger({
-  name: 'guild',
-  serializers: {
-    req: function(req) {
-      var o = {
-        method: req.method,
-        url: req.url,
-      };
-      if (!_.isEmpty(req.body))
-        o.body = belt.truncateStringVals(req.body);
-      return o;
-    },
-    res: function(res) {
-      return { status: res.status };
-    },
-    err: bunyan.stdSerializers.err,
-    convo: function(convo) {
-      return {
-        id: convo.id,
-        title: convo.title,
-      };
-    },
-    topic: function(topic) {
-      return {
-        id: topic.id,
-        title: topic.title,
-        is_roleplay: topic.is_roleplay
-      };
-    },
-    session: function(session) {
-      return {
-        id: session.id,
-        created_at: session.created_at,
-        expired_at: session.expired_at,
-      };
-    },
-    resetToken: function(resetToken) {
-      return {
-        user_id: resetToken.user_id,
-        token: resetToken.token
-      };
-    },
-    pm: function(pm) {
-      return {
-        id: pm.id,
-        convo_id: pm.convo_id,
-        text: belt.truncate(pm.text, 100)
-      };
-    },
-    post: function(post) {
-      var truncate = belt.makeTruncate('...');
-      return {
-        id: post.id,
-        type: post.type,
-        topic_id: post.topic_id,
-        text: truncate(post.text, 100),
-        text_length: post.text.length,
-        is_roleplay: post.is_roleplay
-      };
-    },
-    currUser: function(user) {
-      return { id: user.id,  uname: user.uname };
-    }
-  }
-});
-
-if (config.NODE_ENV === 'development')
-  log.src = true;
+var log = require('./logger');
 
 app.use(function*(next) {
   var start = Date.now();

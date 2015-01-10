@@ -3,7 +3,8 @@
     "node": "0.11.x"
   },
   "scripts": {
-    "start": "node --harmony --expose-gc ./server",
+    "start": "node --harmony --expose-gc ./server | bunyan",
+    "start-dev": "env $(cat .env | xargs) nodemon --harmony --expose-gc ./server | bunyan",
     "reset-db": "node --harmony ./server/reset_db"
   },
   "repository": {
