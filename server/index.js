@@ -344,7 +344,6 @@ app.use(route.get('/', function*() {
   });
 
   // Get stats
-  var stats = yield db.getStats();
   stats.onlineUsers = stats.onlineUsers.map(pre.presentUser);
   if (stats.latestUser)
     stats.latestUser = pre.presentUser(stats.latestUser);
