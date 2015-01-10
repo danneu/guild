@@ -163,7 +163,7 @@ app.use(function*(next) {  // Must become before koa-router
   this.assertAuthorized = function(user, action, target) {
     var canResult = cancan.can(user, action, target);
     ctx.log.info('[assertAuthorized] Can %s %s: %s',
-                 user.uname || '<Guest>', action, canResult);
+                 (user && user.uname) || '<Guest>', action, canResult);
     ctx.assert(canResult, 403);
   };
   yield next;
