@@ -208,6 +208,28 @@ WHERE t.id = $1
   return result.rows[0];
 };
 
+exports.deleteResetTokens = function*(userId) {
+  assert(_.isNumber(userId));
+  var sql = m(function() {/*
+DELETE FROM reset_tokens
+WHERE user_id = $1
+  */});
+  yield query(sql, [userId]);
+};
+
+exports.findLatestActiveResetToken = function*(userId) {
+  assert(_.isNumber(userId));
+  var sql = m(function() {/*
+SELECT *
+FROM active_reset_tokens
+WHERE user_id = $1
+ORDER BY created_at DESC
+LIMIT 1
+  */});
+  var result = yield query(sql, [userId]);
+  return result.rows[0];
+};
+
 exports.createResetToken = function*(userId) {
   debug('[createResetToken] userId: ' + userId);
   var uuid = belt.generateUuid();

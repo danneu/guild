@@ -56,6 +56,8 @@ exports.sendResetTokenEmail = function(toUname, toEmail, token) {
     // TODO: Log errors in background.
     // Since we don't expose to user if they entered a valid email,
     // we can't really do anything upon email failure.
+    debug('Tried sending email from <%s> to <%s>', config.FROM_EMAIL, toEmail);
     if (err) return console.error(err);
+    console.log(info);
   });
 };

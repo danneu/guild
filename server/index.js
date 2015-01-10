@@ -386,26 +386,42 @@ app.use(route.get('/forgot', function*() {
 app.use(route.post('/forgot', function*() {
   if (!config.IS_EMAIL_CONFIGURED)
     return this.body = 'This feature is currently disabled';
+
   var email = this.request.body.email;
   if (!email) {
     this.flash = { message: ['danger', 'You must provide an email']};
-    return this.response.redirect('/forgot');
+    this.response.redirect('/forgot');
+    return;
   }
   // Check if it belongs to a user
   var user = yield db.findUserByEmail(email);
 
+  // Always send the same message on success and failure.
+  var successMessage = 'Check your email';
+
   // Don't let the user know if the email belongs to anyone.
   // Always look like a success
   if (!user) {
-    this.flash = { message: ['success', 'Check your email']};
-    return this.response.redirect('/');
+    debug('[POST /forgot] User not found with email: %s', email);
+    this.flash = { message: ['success', successMessage]};
+    this.response.redirect('/');
+    return;
+  }
+
+  // Don't send another email until previous reset token has expired
+  if (yield db.findLatestActiveResetToken(user.id)) {
+    debug('[POST /forgot] User already has an active reset token');
+    this.flash = { message: ['success', successMessage] };
+    this.response.redirect('/');
+    return;
   }
 
   var resetToken = yield db.createResetToken(user.id);
   // Send email in background
+  debug('[POST /forgot] Sending email to %s', user.email);
   emailer.sendResetTokenEmail(user.uname, user.email, resetToken.token);
 
-  this.flash = { message: ['success', 'Check your email']};
+  this.flash = { message: ['success', successMessage] };
   this.response.redirect('/');
 }));
 
@@ -454,6 +470,9 @@ app.use(route.post('/reset-password', function*() {
 
   // Reset token and passwords were valid, so update user password
   yield db.updateUserPassword(user.id, password1);
+
+  // Delete user's reset tokens - They're for one-time use
+  yield db.deleteResetTokens(user.id);
 
   // Log the user in
   var session = yield db.createSession({
