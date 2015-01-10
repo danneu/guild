@@ -300,7 +300,7 @@ FROM users
 WHERE id = $1
   */});
   var result = yield query(sql, [userId]);
-  return result.rows[0];
+  return result.rows[0] || null;
 }
 
 exports.findUsersByUnames = wrapTimer(findUsersByUnames);

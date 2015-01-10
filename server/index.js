@@ -13,21 +13,23 @@ app.poweredBy = false;
 app.proxy = true;
 app.use(require('koa-static')('public'));
 app.use(require('koa-static')('dist', { maxage: 1000 * 60 * 60 * 24 * 365 }));
-app.use(require('koa-logger')());
+// app.use(require('koa-logger')());
 app.use(require('koa-body')());
 app.use(require('koa-methodoverride')('_method'));
 var route = require('koa-route');
 var views = require('koa-views');
 // Node
 var util = require('util');
+var path = require('path');
+var fs = require('co-fs');
 // 3rd party
 var _ = require('lodash');
 var debug = require('debug')('app:index');
 var assert = require('better-assert');
 var swig = require('swig');
-var fs = require('co-fs');
 var co = require('co');
-var path = require('path');
+var bunyan = require('bunyan');
+var uuid = require('node-uuid');
 // 1st party
 var db = require('./db');
 var config = require('./config');
@@ -37,6 +39,47 @@ var middleware = require('./middleware');
 var valid = require('./validation');
 var cancan = require('./cancan');
 var emailer = require('./emailer');
+
+var log = bunyan.createLogger({
+  name: 'guild',
+  serializers: {
+    req: function(req) {
+      return { method: req.method, url: req.url };
+    },
+    res: function(res) {
+      return { status: res.status };
+    },
+    err: bunyan.stdSerializers.err,
+    post: function(post) {
+      var truncate = belt.makeTruncate('...');
+      return {
+        id: post.id,
+        type: post.type,
+        topic_id: post.topic_id,
+        text: truncate(post.text, 100),
+        text_length: post.text.length,
+        is_roleplay: post.is_roleplay
+      };
+    },
+    currUser: function(user) {
+      return { id: user.id,  uname: user.uname };
+    }
+  }
+});
+
+if (config.NODE_ENV === 'development')
+  log.src = true;
+
+app.use(function*(next) {
+  var start = Date.now();
+  this.log = log.child({ req_id: uuid.v1() });  // time-based uuid
+  this.log.info('--> %s %s', this.method, this.path);
+  yield next;
+  var diff = Date.now() - start;
+  this.log.info({ ms: diff },
+                '<-- %s %s %s %s',
+                this.method, this.path, this.status, diff + 'ms');
+});
 
 // Upon app boot, check for compiled assets
 // in the `dist` folder. If found, attach their
@@ -93,17 +136,7 @@ app.use(function*(next) {  // Must become before koa-router
 // TODO: Extract custom swig filters
 // {{ 'firetruck'|truncate(5) }}  -> 'firet...'
 // {{ 'firetruck'|truncate(6) }}  -> 'firetruck'
-function makeTruncate(suffix) {
-  return function(str, n) {
-    suffix = suffix || '';
-    var sliced = str.slice(0, n).trim();
-    var totalLength = sliced.length + suffix.length;
-    if (totalLength >= str.length)
-      return str;
-    return sliced + suffix;
-  };
-}
-swig.setFilter('truncate', makeTruncate('…'));
+swig.setFilter('truncate', belt.makeTruncate('…'));
 
 // commafy(10) -> 10
 // commafy(1000000) -> 1,000,000
@@ -173,6 +206,7 @@ app.use(route.get('/register', function*() {
 // - email (Optional)
 // - g-recaptcha-response
 app.use(route.post('/users', function*() {
+  this.log.info({ body: this.request.body }, 'Submitting registration creds');
   var unvalidatedParams = valid.fixNewUser(_.pick(this.request.body, [
     'uname',
     'email',
@@ -656,13 +690,15 @@ app.get('/forums/:forumId', function*() {
 // - text
 //
 app.post('/topics/:topicId/posts', function*() {
+  this.log.info({
+    body: belt.truncateStringVals(this.request.body)
+  }, 'Submitting post');
   this.checkBody('post-type').isIn(['ic', 'ooc', 'char'], 'Invalid post-type');
   this.checkBody('text').isLength(config.MIN_POST_LENGTH,
                                   config.MAX_POST_LENGTH,
                                   'Post must be between ' +
                                   config.MIN_POST_LENGTH + ' and ' +
                                   config.MAX_POST_LENGTH + ' chars long');
-  debug(this.errors);
   if (this.errors) {
     this.flash = {
       message: ['danger', belt.joinErrors(this.errors)],
@@ -691,6 +727,7 @@ app.post('/topics/:topicId/posts', function*() {
     type: postType,
     isRoleplay: topic.forum.is_roleplay
   });
+  this.log.info({ post: post }, 'Post created');
   post = pre.presentPost(post);
   this.response.redirect(post.url);
 });

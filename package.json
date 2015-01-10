@@ -13,6 +13,7 @@
   "dependencies": {
     "bcryptjs": "^2.1.0",
     "better-assert": "^1.0.2",
+    "bunyan": "^1.2.3",
     "co": "^4.1.0",
     "co-fs": "^1.2.0",
     "co-parallel": "^1.0.0",
