@@ -149,7 +149,7 @@ $(function() {
     // Get this post's text
     //var post_text = $('#post-' + post_id).find('.post-body').text()
     //-prev-var post_url = '/api/posts/' + post_id;
-    var post_url = '/posts/' + post_id + '/raw';
+    var post_url = '/pms/' + post_id + '/raw';
     $.get(post_url, function(markup) {
       console.log('returned')
       $reply_btn.removeClass('disabled').html('Reply');
