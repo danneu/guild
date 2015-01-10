@@ -2,6 +2,9 @@
 
 {% block embed %}
 <div class="page-header">
+  {% if ctx.config.NODE_ENV === 'development' %}
+    <button id="auto-fill-btn" type="button" class="btn btn-default btn-md pull-right">Auto-fill form</button>
+  {% endif %}
   <h1>Register</h1>
 </div>
 
@@ -71,6 +74,16 @@
 {% endblock %}
 
 {% block scripts %}
+  {% if ctx.config.NODE_ENV === 'development' %}
+    <script>
+      $('#auto-fill-btn').on('click', function() {
+        $('#email-input').val(Math.random().toString() + '@example.com');
+        $('#password1-input').val('secret');
+        $('#password2-input').val('secret');
+        $('#uname-input').focus();
+      });
+    </script>
+  {% endif %}
 <script>
   // Called when user submits successful recaptcha, so allow them
   // to actually submit the form.

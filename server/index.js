@@ -41,7 +41,6 @@ var db = require('./db');
 var pre = require('./presenters');
 var belt = require('./belt');
 var middleware = require('./middleware');
-var valid = require('./validation');
 var cancan = require('./cancan');
 var emailer = require('./emailer');
 
@@ -155,11 +154,21 @@ app.use(function*(next) {
   yield next;
 });
 
+// Expose config to view layer
+app.use(function*(next) {
+  this.config = config;
+  yield next;
+});
+
 // TODO: Since app.proxy === true (we trust X-Proxy-* headers), we want to
 // reject all requests that hit origin. app.proxy should only be turned on
 // when app is behind trusted proxy like Cloudflare.
 
+var valid = require('./validation');  // Load before koa-validate
 app.use(require('koa-validate')());
+
+////////////////////////////////////////////////////////////
+
 app.use(middleware.currUser());
 app.use(middleware.flash('flash'));
 app.use(function*(next) {  // Must become before koa-router
@@ -247,45 +256,51 @@ app.use(route.get('/register', function*() {
 // - uname
 // - password1
 // - password2
-// - email (Optional)
+// - email
 // - g-recaptcha-response
-app.use(route.post('/users', function*() {
+
+app.post('/users', function*() {
   this.log.info({ body: this.request.body }, 'Submitting registration creds');
-  var unvalidatedParams = valid.fixNewUser(_.pick(this.request.body, [
-    'uname',
-    'email',
-    'password1',
-    'password2'
-  ]));
 
-  var validatedParams;
+  // Validation
 
-  // Validate the user-input
-  try {
-    validatedParams = yield valid.validateNewUser(unvalidatedParams);
-  } catch(ex) {
-    // Upon validation failure, redirect back to /register, but preserve
-    // user input in flash so the form can be filled back in for user to
-    // make changes
-    if (_.isString(ex)) {
-      this.flash = {
-        message: ['danger', ex],
-        params: unvalidatedParams
-      };
-      return this.response.redirect('/register');
-    }
+  this.checkBody('uname')
+    .notEmpty()
+    .trim()
+    .isLength(config.MIN_UNAME_LENGTH,
+              config.MAX_UNAME_LENGTH,
+              'Username must be ' + config.MIN_UNAME_LENGTH +
+              '-' + config.MAX_UNAME_LENGTH + ' characters')
+    .notMatch(/[ ]{2,}/, 'Username contains consecutive spaces');
+  this.checkBody('email')
+    .notEmpty('Email required')
+    .trim()
+    .isEmail('Email must be valid');
+  this.checkBody('password2')
+    .notEmpty('Password confirmation required');
+  this.checkBody('password1')
+    .notEmpty('Password required')
+    .eq(this.request.body.password2, 'Password confirmation must match');
+  this.checkBody('g-recaptcha-response')
+    .notEmpty('You must attempt the human test');
 
-    throw ex;
-  }
+  this.checkBody('uname')
+    .assertNot(yield db.findUserByUname(this.request.body.uname),
+               'Username taken',
+               true);
+  this.checkBody('email')
+    .assertNot(yield db.findUserByEmail(this.request.body.email),
+               'Email taken',
+               true);
 
-  // Expect the recaptcha form param
-  if (! this.request.body['g-recaptcha-response']) {
-    debug('Missing param: g-recaptcha-response');
+  // Bail if any validation errs
+  if (this.errors) {
     this.flash = {
-      message: ['danger', 'You must attempt the human test'],
-      params: unvalidatedParams
+      message: ['danger', belt.joinErrors(this.errors)],
+      params: this.request.body
     };
-    return this.response.redirect('/register');
+    this.response.redirect('/register');
+    return;
   }
 
   // Check recaptcha against google
@@ -306,9 +321,9 @@ app.use(route.post('/users', function*() {
   var result, errMessage;
   try {
     result = yield db.createUserWithSession({
-      uname: validatedParams.uname,
-      email: validatedParams.email,
-      password: validatedParams.password1,
+      uname: this.request.body.uname,
+      email: this.request.body.email,
+      password: this.request.body.password1,
       ipAddress: this.request.ip
     });
   } catch(ex) {
@@ -328,7 +343,7 @@ app.use(route.post('/users', function*() {
   if (errMessage) {
     this.flash = {
       message: ['danger', errMessage],
-      params: unvalidatedParams
+      params: this.request.body
     };
     return this.response.redirect('/register');
   }
@@ -338,7 +353,7 @@ app.use(route.post('/users', function*() {
   this.cookies.set('sessionId', session.id);
   this.flash = { message: ['success', 'Registered successfully'] };
   return this.response.redirect('/');
-}));
+});
 
 //
 // Create session
