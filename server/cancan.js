@@ -10,6 +10,9 @@ var assert = require('better-assert');
 exports.can = can;
 function can(user, action, target) {
   switch(action) {
+    case 'READ_USER_PM_SENT_COUNT':  // target is user
+      if (!user) return false;
+      return _.contains(['mod', 'smod', 'admin'], user.role);
     case 'UPDATE_USER_ROLE': // target is user
       // Staff can change staff below them
       if (_.contains(['banned', 'member'], target.role))

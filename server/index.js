@@ -714,19 +714,28 @@ app.use(route.get('/me/convos', function*() {
 // Show user
 //
 app.get('/users/:userId', function*() {
+  this.checkQuery('before-id').optional().toInt();  // will be undefined or number
   var userId = this.params.userId;
   var user = yield db.findUser(userId);
   // Ensure user exists
   this.assert(user, 404);
   user = pre.presentUser(user);
   // OPTIMIZE: Merge into single query?
-  var recentPosts = yield db.findRecentPostsForUserId(user.id);
+  var recentPosts = yield db.findRecentPostsForUserId(user.id,
+                                                      this.query['before-id']);
   recentPosts = recentPosts.map(pre.presentPost);
+
+  // The ?before-id=_ of the "Next" button. i.e. the lowest
+  // id of the posts on the current page
+  var nextBeforeId = recentPosts.length > 0 ? _.last(recentPosts).id : null;
 
   yield this.render('show_user', {
     ctx: this,
     user: user,
-    recentPosts: recentPosts
+    recentPosts: recentPosts,
+    // Pagination
+    nextBeforeId: nextBeforeId,
+    recentPostsPerPage: config.RECENT_POSTS_PER_PAGE
   });
 });
 

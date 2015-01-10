@@ -208,11 +208,11 @@
           {% endif %}
           <!-- Reply button -->
           {% if !ctx.can(ctx.currUser, 'CREATE_POST', topic) %}
-          <a href=""
-             class="btn btn-default btn-xs pull-right post-reply-btn"
-             post-id="{{ post.id }}"
-             style="margin-left: 5px"
-             >Reply</a>
+            <a href=""
+               class="btn btn-default btn-xs pull-right post-reply-btn"
+               post-id="{{ post.id }}"
+               style="margin-left: 5px"
+               >Reply</a>
           {% endif %}
           <!-- Edit button -->
           {% if ctx.can(ctx.currUser, 'UPDATE_POST', post) %}

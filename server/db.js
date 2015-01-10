@@ -269,19 +269,25 @@ WHERE lower(u.uname) = lower($1);
 }
 
 
+// `beforeId` is undefined or a number
 exports.findRecentPostsForUserId = wrapTimer(findRecentPostsForUserId);
-function* findRecentPostsForUserId(userId) {
+function* findRecentPostsForUserId(userId, beforeId) {
+  assert(_.isNumber(beforeId) || _.isUndefined(beforeId));
   var sql = m(function() {/*
 SELECT
   p.*,
   to_json(t.*) "topic"
 FROM posts p
 JOIN topics t ON p.topic_id = t.id
-WHERE p.user_id = $1
+WHERE p.user_id = $1 AND p.id < $3
 ORDER BY p.id DESC
-LIMIT 25
+LIMIT $2
   */});
-  var result = yield query(sql, [userId]);
+  var result = yield query(sql, [
+    userId,
+    config.RECENT_POSTS_PER_PAGE,
+    beforeId || 1e9
+  ]);
   return result.rows;
 }
 

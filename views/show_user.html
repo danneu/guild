@@ -49,20 +49,80 @@
             {{ user.formattedCreatedAt }}
           </abbr>
         </li>
+        <li>Posts: {{ user.posts_count }}</li>
+        {% if ctx.can(ctx.currUser, 'READ_USER_PM_SENT_COUNT', user) %}
+          <li>PMs sent: {{ user.pms_count }}</li>
+        {% endif %}
       </ul>
 
       <!-- Most recent posts -->
+
+      <a name="recent-posts"></a>
       <h3>Most Recent Posts</h3>
-      <ul>
-        {% for post in recentPosts %}
-          <li>
-            In <a href="{{ post.url }}">{{ post.topic.title }}</a>
-            <abbr class="timeago" title="{{ post.created_at.toISOString() }}">
-              {{ post.formattedCreatedAt }}
-            </abbr>
+
+      <ul class="pager">
+        <li>
+          <a href="{{ ctx.request.path }}#recent-posts">
+            First Page
+          </a>
+        </li>
+        {% if recentPosts.length < recentPostsPerPage %}
+          <li class="disabled">
+            <a href="{{ ctx.request.url }}">
+              Next Page &rarr;
+            </a>
           </li>
-        {% endfor %}
+        {% else %}
+          <li>
+            <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#recent-posts">
+              Next Page &rarr;
+            </a>
+          </li>
+        {% endif %}
       </ul>
+
+      {% for post in recentPosts %}
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            In
+            <a href="{{ post.url }}" style="color: #ffc300">
+              {{ post.topic.title }}
+            </a>
+            <abbr class="timeago" title="{{ post.created_at.toISOString() }}">
+              {{ post.created_at|formatDate }}
+            </abbr>
+          </div>
+          <div class="panel-body" style="max-height: 100px; overflow: auto">
+            {% if post.legacy_html %}
+              <div class="post-body-html">{{ post.legacy_html|safe }}</div>
+            {% else %}
+              <div class="post-body">{{ post.text }}</div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+
+      <ul class="pager">
+        <li>
+          <a href="{{ ctx.request.path }}#recent-posts">
+            First Page
+          </a>
+        </li>
+        {% if recentPosts.length < recentPostsPerPage %}
+          <li class="disabled">
+            <a href="{{ ctx.request.url }}">
+              Next Page &rarr;
+            </a>
+          </li>
+        {% else %}
+          <li>
+            <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#recent-posts">
+              Next Page &rarr;
+            </a>
+          </li>
+        {% endif %}
+      </ul>
+
 
     </div> <!-- /.col-6 -->
 

@@ -22,10 +22,10 @@ exports.AWS_KEY = process.env.AWS_KEY;
 exports.AWS_SECRET = process.env.AWS_SECRET;
 exports.FROM_EMAIL = process.env.FROM_EMAIL;
 
-// This must match up with the actual pagination in the database since
-// pages are pre-calculated. This setting just assists the pagination calculator
-// in belt.js
+// How many posts/PMs to display per page in topics/convos
 exports.POSTS_PER_PAGE = process.env.POSTS_PER_PAGE || 20;
+// How many recent posts to display on user profile
+exports.RECENT_POSTS_PER_PAGE = process.env.RECENT_POSTS_PER_PAGE || 5;
 
 // newrelic
 exports.NEW_RELIC_LICENSE_KEY = process.env.NEW_RELIC_LICENSE_KEY;
