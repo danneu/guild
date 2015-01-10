@@ -162,6 +162,12 @@
       $("abbr.timeago").timeago();
     });
   </script>
+  <script>
+    // Activate all cheatsheet toggles
+    $('#cheatsheet-toggle-btn').on('click', function() {
+      $('#cheatsheet-body').toggle();
+    });
+  </script>
   {% block scripts %}{% endblock %}
 </body>
 </html>
