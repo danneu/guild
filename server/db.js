@@ -186,7 +186,8 @@ SELECT
   array_agg($1::int) @> Array[ts.user_id::int] "is_subscribed"
 FROM topics t
 JOIN forums f ON t.forum_id = f.id
-LEFT OUTER JOIN topic_subscriptions ts ON t.id = ts.topic_id
+LEFT OUTER JOIN topic_subscriptions ts
+  ON t.id = ts.topic_id AND ts.user_id = $1
 WHERE t.id = $2
 GROUP BY t.id, f.id, ts.user_id
   */});
