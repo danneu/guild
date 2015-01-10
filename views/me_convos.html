@@ -1,6 +1,15 @@
 {% extends 'layouts/master.html' %}
 
 {% block embed %}
+  <div class="panel panel-default" style="border: 0; background-color: #111">
+    <div class="panel-body" style="">
+      <div class="row">
+        <div class="col-sm-7">Convo</div>
+        <div class="col-sm-2">Messages</div>
+        <div class="col-sm-3">Latest PM</div>
+      </div>
+    </div>
+  </div>
   {% for convo in convos %}
     <div class="panel panel-default">
       <div class="panel-body">
@@ -8,7 +17,10 @@
           <div class="col-sm-7">
             <a href="{{ convo.url }}">{{ convo.title }}</a>
             <div>
-              by <a href="{{ convo.user.url }}">{{ convo.user.uname }}</a>,
+              by
+              <a href="{{ convo.user.url }}" style="color: white">
+                {{ convo.user.uname -}}
+              </a>,
               <abbr class="timeago" title="{{ convo.created_at.toISOString() }}">
                 {{ convo.formattedCreatedAt }}
               </abbr>
@@ -21,7 +33,21 @@
             </div>
           </div> <!-- /.col-sm-7 -->
           <div class="col-sm-2">
-            Messages: {{ convo.pms_count }}
+            {{ convo.pms_count }}
+          </div>
+          <div class="col-sm-3">
+            by <a href="{{ convo.latest_user.url }}" style="color: white">
+              {{ convo.latest_user.uname }}
+            </a>
+            <a href="{{ convo.latest_pm.url }}">
+              <span class="glyphicon glyphicon-link"></span>
+            </a>
+            <div>
+              <abbr class="timeago"
+                    title="{{ convo.latest_pm.created_at.toISOString() }}">
+                {{ convo.latest_pm.created_at|formatDate }}
+              </abbr>
+            </div>
           </div>
         </div>
       </div>

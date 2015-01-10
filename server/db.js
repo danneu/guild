@@ -515,17 +515,21 @@ function* findConvosInvolvingUserId(userId) {
 SELECT
   c.*,
   to_json(u1.*) "user",
-  to_json(array_agg(u2.*)) "participants"
+  to_json(array_agg(u2.*)) "participants",
+  to_json(pms.*) "latest_pm",
+  to_json(u3.*) "latest_user"
 FROM convos c
 JOIN convos_participants cp ON c.id = cp.convo_id
 JOIN users u1 ON c.user_id = u1.id
 JOIN users u2 ON cp.user_id = u2.id
+JOIN pms ON c.latest_pm_id = pms.id
+JOIN users u3 ON pms.user_id = u3.id
 WHERE c.id IN (
   SELECT cp.convo_id
   FROM convos_participants cp
   WHERE cp.user_id = $1
 )
-GROUP BY c.id, u1.id
+GROUP BY c.id, u1.id, pms.id, u3.id
 ORDER BY c.latest_pm_id DESC
   */});
   var result = yield query(sql, [userId]);
