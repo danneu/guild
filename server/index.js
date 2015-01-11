@@ -297,8 +297,10 @@ app.post('/users', function*() {
 // Create session
 //
 app.post('/sessions', function*() {
-  this.checkBody('uname-or-email').isLength(1);
-  this.checkBody('password').isLength(1);
+  this.checkBody('uname-or-email').notEmpty();
+  this.checkBody('password').notEmpty();
+  this.checkBody('remember-me').toBoolean();
+
   if (this.errors) {
     this.flash = { message: ['danger', 'Invalid creds'] };
     this.response.redirect('/login');
@@ -307,7 +309,7 @@ app.post('/sessions', function*() {
 
   var unameOrEmail = this.request.body['uname-or-email'];
   var password = this.request.body.password;
-  var rememberMe = !!this.request.body['remember-me'];
+  var rememberMe = this.request.body['remember-me'];
 
   // Check if user with this uname or email exists
   var user = yield db.findUserByUnameOrEmail(unameOrEmail);
