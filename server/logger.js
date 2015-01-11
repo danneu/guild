@@ -9,7 +9,8 @@ var log = bunyan.createLogger({
   name: 'guild',
   streams: [
     { level: 'info', stream: process.stdout },
-    { level: 'error', stream: process.stderr }
+    { level: 'error', stream: process.stderr },
+    { level: 'fatal', stream: process.stderr }
   ],
   serializers: {
     req: function(req) {
