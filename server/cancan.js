@@ -10,6 +10,9 @@ var assert = require('better-assert');
 exports.can = can;
 function can(user, action, target) {
   switch(action) {
+    case 'DELETE_USER':  // target is user
+      if (!user) return false;
+      return user.role === 'admin';
     case 'READ_USER_PM_SENT_COUNT':  // target is user
       if (!user) return false;
       return _.contains(['mod', 'smod', 'admin'], user.role);
@@ -21,9 +24,11 @@ function can(user, action, target) {
         return user.role === 'smod';
       return false;
     case 'UPDATE_USER':  // target is user
+      if (!user) return false;
       // Anyone can update themselves
       if (user.id === target.id) return true;
       // Staff can change staff below them
+      if (user.role === 'admin') return true;
       if (_.contains(['banned', 'member'], target.role))
         return _.contains(['mod', 'smod'], user.role);
       if (target.role === 'mod')
@@ -150,8 +155,11 @@ function can(user, action, target) {
       return target.user_id === user.id;
     case 'UPDATE_POST':  // target expected to be a post
       if (!user) return false;
-      // Can't update legacy posts
+      // Nobody can update legacy posts
       if (target.legacy_html) return false;
+      // Admin can update any post
+      if (user.role === 'admin') return true;
+      // TODO: Create rules for other staff roles
       if (user.id === target.user_id) return true;
       return false;
     case 'CREATE_CONVO':
@@ -160,10 +168,8 @@ function can(user, action, target) {
       return false;
     case 'READ_CONVO':
       if (!user) return false;
-      // Members can only read convos they're participants of
-      if (user.role === 'member')
-        return !!_.findWhere(target.participants, { id: user.id });
-      return false;
+      // Users can only read convos they're participants of
+      return !!_.findWhere(target.participants, { id: user.id });
     default:
       return false;
   }

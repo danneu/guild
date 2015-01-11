@@ -23,9 +23,24 @@
 <div class="container">
 
   <!-- Global info banner -->
-  <div class="alert alert-info" role="alert">
-    <strong>Welcome</strong> This is the development server. If you find a bug/issue, email me: <a href="mailto:mahz@fastmail.com" style="color: #31708f; text-decoration: underline">mahz@fastmail.com</a>
-  </div>
+  {% if ctx.config.NODE_ENV === 'staging' %}
+    <div class="alert alert-info" role="alert">
+      <strong>Welcome</strong> This is the development server. If you find a bug/issue, email me: <a href="mailto:mahz@fastmail.com" style="color: #31708f; text-decoration: underline">mahz@fastmail.com</a>
+    </div>
+  {% endif %}
+
+  {% if ctx.config.NODE_ENV === 'production' %}
+    <div class="alert alert-warning" role="alert">
+      <p>
+        <strong>Welcome!</strong> The Guild's software was rewritten from scratch to address its performance/downtime issues. If you're having any trouble, email me: <a href="mailto:mahz@fastmail.com" style="color: #31708f; text-decoration: underline">mahz@fastmail.com</a>
+      </p>
+      <ul>
+        <li>
+          I'm still working out some major kinks. I'll keep my <a href="http://www.roleplayerguild.com/topics/75056/posts/ooc" style="color: #31708f; text-decoration: underline">Dev Journal topic</a> updated if you'd like to see what's on my plate.
+        </li>
+      </ul>
+    </div>
+  {% endif %}
 
     <!-- Static navbar -->
     <nav class="navbar navbar-inverse" role="navigation"
@@ -42,8 +57,8 @@
         </div>
         <div id="navbar" class="navbar-collapse collapse">
           <ul class="nav navbar-nav">
-            <li><a href="http://widget02.mibbit.com/?settings=c2129339a43d8c49d86c34fa8dff7610&server=irc.foonetic.net&channel=%23Roleplayerguild">Chat</a></li>
-            <li><a href="https://www.facebook.com/groups/343860060223/"><img height="16" width="16" src="/img/fb.png"></a></li>
+            <li><a href="http://widget02.mibbit.com/?settings=c2129339a43d8c49d86c34fa8dff7610&server=irc.foonetic.net&channel=%23Roleplayerguild">Chat (IRC)</a></li>
+            <li><a href="https://www.facebook.com/groups/343860060223/">Facebook</a></li>
           </ul>
 
           <!-- If user is logged in, show logout button -->
@@ -168,6 +183,28 @@
     $('#cheatsheet-toggle-btn').on('click', function() {
       $('#cheatsheet-body').toggle();
     });
+  </script>
+  <script>
+    $('.hider-button').click(function(e) {
+       e.stopPropagation();
+       //$(this).next().toggle();
+
+       var $button = $(this);
+       var hiderName = $button.attr('data-name');
+       var $content = $button.parent().next();
+
+       if ($content.css('display') == 'none') {
+         $content.show();
+         $button.parent().parent().css('border', '1px solid #111')
+         $button.text(hiderName + ' [-]');
+       } else {
+         $content.hide();
+         $button.parent().parent().css('border', 'none')
+         $button.text(hiderName + ' [+]');
+       }
+
+       return false;
+     })
   </script>
   {% block scripts %}{% endblock %}
 </body>

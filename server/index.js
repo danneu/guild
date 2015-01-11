@@ -19,7 +19,7 @@ app.poweredBy = false;
 app.proxy = true;
 app.use(require('koa-static')('public'));
 app.use(require('koa-static')('dist', { maxage: 1000 * 60 * 60 * 24 * 365 }));
-// app.use(require('koa-logger')());
+app.use(require('koa-logger')());
 app.use(require('koa-body')());
 app.use(require('koa-methodoverride')('_method'));
 var route = require('koa-route');
@@ -82,7 +82,7 @@ co(function*() {
     js: manifest['all.js']
   };
 }).then(function() {
-  log.info(dist, 'dist set');
+  log.info({ dist: dist }, 'dist set');
 }, function(err) {
   log.error(err, 'dist failed');
 });
@@ -817,6 +817,22 @@ app.get('/users/:userId', function*() {
 });
 
 //
+// Delete user
+//
+app.delete('/users/:id', function*() {
+  var user = yield db.findUser(this.params.id);
+  this.assert(user, 404);
+  this.assertAuthorized(this.currUser, 'DELETE_USER', user);
+  yield db.deleteUser(this.params.id);
+
+  this.flash = {
+    message: ['success', util.format('User deleted along with %d posts and %d PMs',
+                                     user.posts_count, user.pms_count)]
+  };
+  this.response.redirect('/');
+});
+
+//
 // Create convo
 // Params:
 // - 'to': Comma-delimited string of unames user wants to send to
@@ -998,16 +1014,20 @@ app.use(route.get('/convos/:convoId', function*(convoId) {
 // - text
 //
 app.post('/forums/:forumId/topics', function*() {
-  this.checkBody('title').isLength(config.MIN_TOPIC_TITLE_LENGTH,
-                                   config.MAX_TOPIC_TITLE_LENGTH,
-                                   'Title must be between ' +
-                                   config.MIN_TOPIC_TITLE_LENGTH + ' and ' +
-                                   config.MAX_TOPIC_TITLE_LENGTH + ' chars');
-  this.checkBody('text').isLength(config.MIN_POST_LENGTH,
-                                   config.MAX_POST_LENGTH,
-                                   'Post text must be between ' +
-                                   config.MIN_POST_LENGTH + ' and ' +
-                                   config.MAX_POST_LENGTH + ' chars');
+  this.checkBody('title')
+    .notEmpty('Topic title is required')
+    .isLength(config.MIN_TOPIC_TITLE_LENGTH,
+              config.MAX_TOPIC_TITLE_LENGTH,
+              'Title must be between ' +
+              config.MIN_TOPIC_TITLE_LENGTH + ' and ' +
+              config.MAX_TOPIC_TITLE_LENGTH + ' chars');
+  this.checkBody('text')
+    .notEmpty('Post text is required')
+    .isLength(config.MIN_POST_LENGTH,
+              config.MAX_POST_LENGTH,
+              'Post text must be between ' +
+              config.MIN_POST_LENGTH + ' and ' +
+              config.MAX_POST_LENGTH + ' chars');
 
   if (this.errors) {
     this.flash = {

@@ -15,6 +15,14 @@
           Edit
         </a>
       {% endif %}
+      {% if ctx.can(ctx.currUser, 'DELETE_USER', user) %}
+        <form action="/users/{{ user.id }}" method="post" class="pull-right">
+          <input type="hidden" name="_method" value="delete">
+          <button type="submit" class="btn btn-danger btn-xs">
+            Delete
+          </button>
+        </a>
+      {% endif %}
     </h1>
   </div>
 

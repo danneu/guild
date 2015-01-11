@@ -243,6 +243,12 @@ RETURNING *
   return result.rows[0];
 };
 
+exports.findUser = function*(id) {
+  var sql = 'SELECT * FROM users WHERE id = $1';
+  var result = yield query(sql, [id]);
+  return result.rows[0];
+};
+
 exports.findUserByUnameOrEmail = wrapTimer(findUserByUnameOrEmail);
 function *findUserByUnameOrEmail(unameOrEmail) {
   assert(_.isString(unameOrEmail));
@@ -338,10 +344,11 @@ exports.findUsersByUnames = wrapTimer(findUsersByUnames);
 function* findUsersByUnames(unames) {
   assert(_.isArray(unames));
   assert(_.every(unames, _.isString));
+  unames = unames.map(function(s) { return s.toLowerCase(); });
   var sql = m(function() {/*
 SELECT u.*
 FROM users u
-WHERE u.uname = ANY ($1::text[])
+WHERE lower(u.uname) = ANY ($1::text[])
   */});
   var result = yield query(sql, [unames]);
   return result.rows;
@@ -1043,3 +1050,8 @@ function* getStats() {
   };
   return results;
 }
+
+exports.deleteUser = function*(id) {
+  var sql = 'DELETE FROM users WHERE id = $1';
+  yield query(sql, [id]);
+};
