@@ -7,6 +7,10 @@ var config = require('./config');
 
 var log = bunyan.createLogger({
   name: 'guild',
+  streams: [
+    { level: 'info', stream: process.stdout },
+    { level: 'error', stream: process.stderr }
+  ],
   serializers: {
     req: function(req) {
       var o = {

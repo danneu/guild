@@ -45,6 +45,11 @@ var cancan = require('./cancan');
 var emailer = require('./emailer');
 var log = require('./logger');
 
+// Catch and log all errors that bubble up to koa
+app.on('error', function(err){
+  log.error(err, 'Error');
+});
+
 app.use(function*(next) {
   var start = Date.now();
   this.log = log.child({ req_id: uuid.v1() });  // time-based uuid
