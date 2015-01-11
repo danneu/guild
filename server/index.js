@@ -82,7 +82,7 @@ co(function*() {
     js: manifest['all.js']
   };
 }).then(function() {
-  log.info(dist, 'dist set');
+  log.info({ dist: dist }, 'dist set');
 }, function(err) {
   log.error(err, 'dist failed');
 });
@@ -970,16 +970,20 @@ app.use(route.get('/convos/:convoId', function*(convoId) {
 // - text
 //
 app.post('/forums/:forumId/topics', function*() {
-  this.checkBody('title').isLength(config.MIN_TOPIC_TITLE_LENGTH,
-                                   config.MAX_TOPIC_TITLE_LENGTH,
-                                   'Title must be between ' +
-                                   config.MIN_TOPIC_TITLE_LENGTH + ' and ' +
-                                   config.MAX_TOPIC_TITLE_LENGTH + ' chars');
-  this.checkBody('text').isLength(config.MIN_POST_LENGTH,
-                                   config.MAX_POST_LENGTH,
-                                   'Post text must be between ' +
-                                   config.MIN_POST_LENGTH + ' and ' +
-                                   config.MAX_POST_LENGTH + ' chars');
+  this.checkBody('title')
+    .notEmpty('Topic title is required')
+    .isLength(config.MIN_TOPIC_TITLE_LENGTH,
+              config.MAX_TOPIC_TITLE_LENGTH,
+              'Title must be between ' +
+              config.MIN_TOPIC_TITLE_LENGTH + ' and ' +
+              config.MAX_TOPIC_TITLE_LENGTH + ' chars');
+  this.checkBody('text')
+    .notEmpty('Post text is required')
+    .isLength(config.MIN_POST_LENGTH,
+              config.MAX_POST_LENGTH,
+              'Post text must be between ' +
+              config.MIN_POST_LENGTH + ' and ' +
+              config.MAX_POST_LENGTH + ' chars');
 
   if (this.errors) {
     this.flash = {
