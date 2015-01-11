@@ -19,7 +19,7 @@ app.poweredBy = false;
 app.proxy = true;
 app.use(require('koa-static')('public'));
 app.use(require('koa-static')('dist', { maxage: 1000 * 60 * 60 * 24 * 365 }));
-// app.use(require('koa-logger')());
+app.use(require('koa-logger')());
 app.use(require('koa-body')());
 app.use(require('koa-methodoverride')('_method'));
 var route = require('koa-route');
