@@ -160,10 +160,8 @@ function can(user, action, target) {
       return false;
     case 'READ_CONVO':
       if (!user) return false;
-      // Members can only read convos they're participants of
-      if (user.role === 'member')
-        return !!_.findWhere(target.participants, { id: user.id });
-      return false;
+      // Users can only read convos they're participants of
+      return !!_.findWhere(target.participants, { id: user.id });
     default:
       return false;
   }
