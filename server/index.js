@@ -1,4 +1,10 @@
-var newrelic = require('newrelic');
+var config = require('./config');
+
+var newrelic;
+if (config.NEW_RELIC_LICENSE_KEY) {
+  console.log('Initializing newrelic...');
+  newrelic = require('newrelic');
+}
 
 // App memory grows until dyno throws OOM errors.
 // TODO: Replace this with GC config command-line flags
@@ -32,82 +38,18 @@ var bunyan = require('bunyan');
 var uuid = require('node-uuid');
 // 1st party
 var db = require('./db');
-var config = require('./config');
 var pre = require('./presenters');
 var belt = require('./belt');
 var middleware = require('./middleware');
-var valid = require('./validation');
 var cancan = require('./cancan');
 var emailer = require('./emailer');
+var log = require('./logger');
+var cache = require('./cache')(log);
 
-var log = bunyan.createLogger({
-  name: 'guild',
-  serializers: {
-    req: function(req) {
-      var o = {
-        method: req.method,
-        url: req.url,
-      };
-      if (!_.isEmpty(req.body))
-        o.body = belt.truncateStringVals(req.body);
-      return o;
-    },
-    res: function(res) {
-      return { status: res.status };
-    },
-    err: bunyan.stdSerializers.err,
-    convo: function(convo) {
-      return {
-        id: convo.id,
-        title: convo.title,
-      };
-    },
-    topic: function(topic) {
-      return {
-        id: topic.id,
-        title: topic.title,
-        is_roleplay: topic.is_roleplay
-      };
-    },
-    session: function(session) {
-      return {
-        id: session.id,
-        created_at: session.created_at,
-        expired_at: session.expired_at,
-      };
-    },
-    resetToken: function(resetToken) {
-      return {
-        user_id: resetToken.user_id,
-        token: resetToken.token
-      };
-    },
-    pm: function(pm) {
-      return {
-        id: pm.id,
-        convo_id: pm.convo_id,
-        text: belt.truncate(pm.text, 100)
-      };
-    },
-    post: function(post) {
-      var truncate = belt.makeTruncate('...');
-      return {
-        id: post.id,
-        type: post.type,
-        topic_id: post.topic_id,
-        text: truncate(post.text, 100),
-        text_length: post.text.length,
-        is_roleplay: post.is_roleplay
-      };
-    },
-    currUser: function(user) {
-      return { id: user.id,  uname: user.uname };
-    }
-  }
+// Catch and log all errors that bubble up to koa
+app.on('error', function(err){
+  log.error(err, 'Error');
 });
-
-if (config.NODE_ENV === 'development')
-  log.src = true;
 
 app.use(function*(next) {
   var start = Date.now();
@@ -140,9 +82,9 @@ co(function*() {
     js: manifest['all.js']
   };
 }).then(function() {
-  console.log('dist set');
+  log.info(dist, 'dist set');
 }, function(err) {
-  console.error('Error: ', err, err.stack);
+  log.error(err, 'dist failed');
 });
 
 app.use(function*(next) {
@@ -150,11 +92,21 @@ app.use(function*(next) {
   yield next;
 });
 
+// Expose config to view layer
+app.use(function*(next) {
+  this.config = config;
+  yield next;
+});
+
 // TODO: Since app.proxy === true (we trust X-Proxy-* headers), we want to
 // reject all requests that hit origin. app.proxy should only be turned on
 // when app is behind trusted proxy like Cloudflare.
 
+var valid = require('./validation');  // Load before koa-validate
 app.use(require('koa-validate')());
+
+////////////////////////////////////////////////////////////
+
 app.use(middleware.currUser());
 app.use(middleware.flash('flash'));
 app.use(function*(next) {  // Must become before koa-router
@@ -163,7 +115,7 @@ app.use(function*(next) {  // Must become before koa-router
   this.assertAuthorized = function(user, action, target) {
     var canResult = cancan.can(user, action, target);
     ctx.log.info('[assertAuthorized] Can %s %s: %s',
-                 user.uname || '<Guest>', action, canResult);
+                 (user && user.uname) || '<Guest>', action, canResult);
     ctx.assert(canResult, 403);
   };
   yield next;
@@ -242,45 +194,52 @@ app.use(route.get('/register', function*() {
 // - uname
 // - password1
 // - password2
-// - email (Optional)
+// - email
 // - g-recaptcha-response
-app.use(route.post('/users', function*() {
+
+app.post('/users', function*() {
   this.log.info({ body: this.request.body }, 'Submitting registration creds');
-  var unvalidatedParams = valid.fixNewUser(_.pick(this.request.body, [
-    'uname',
-    'email',
-    'password1',
-    'password2'
-  ]));
 
-  var validatedParams;
+  // Validation
 
-  // Validate the user-input
-  try {
-    validatedParams = yield valid.validateNewUser(unvalidatedParams);
-  } catch(ex) {
-    // Upon validation failure, redirect back to /register, but preserve
-    // user input in flash so the form can be filled back in for user to
-    // make changes
-    if (_.isString(ex)) {
-      this.flash = {
-        message: ['danger', ex],
-        params: unvalidatedParams
-      };
-      return this.response.redirect('/register');
-    }
+  this.checkBody('uname')
+    .notEmpty()
+    .trim()
+    .isLength(config.MIN_UNAME_LENGTH,
+              config.MAX_UNAME_LENGTH,
+              'Username must be ' + config.MIN_UNAME_LENGTH +
+              '-' + config.MAX_UNAME_LENGTH + ' characters')
+    .match(/^[a-z0-9 ]+$/i, 'Username must only contain a-z, 0-9, and spaces')
+    .notMatch(/[ ]{2,}/, 'Username contains consecutive spaces');
+  this.checkBody('email')
+    .notEmpty('Email required')
+    .trim()
+    .isEmail('Email must be valid');
+  this.checkBody('password2')
+    .notEmpty('Password confirmation required');
+  this.checkBody('password1')
+    .notEmpty('Password required')
+    .eq(this.request.body.password2, 'Password confirmation must match');
+  this.checkBody('g-recaptcha-response')
+    .notEmpty('You must attempt the human test');
 
-    throw ex;
-  }
+  this.checkBody('uname')
+    .assertNot(yield db.findUserByUname(this.request.body.uname),
+               'Username taken',
+               true);
+  this.checkBody('email')
+    .assertNot(yield db.findUserByEmail(this.request.body.email),
+               'Email taken',
+               true);
 
-  // Expect the recaptcha form param
-  if (! this.request.body['g-recaptcha-response']) {
-    debug('Missing param: g-recaptcha-response');
+  // Bail if any validation errs
+  if (this.errors) {
     this.flash = {
-      message: ['danger', 'You must attempt the human test'],
-      params: unvalidatedParams
+      message: ['danger', belt.joinErrors(this.errors)],
+      params: this.request.body
     };
-    return this.response.redirect('/register');
+    this.response.redirect('/register');
+    return;
   }
 
   // Check recaptcha against google
@@ -301,9 +260,9 @@ app.use(route.post('/users', function*() {
   var result, errMessage;
   try {
     result = yield db.createUserWithSession({
-      uname: validatedParams.uname,
-      email: validatedParams.email,
-      password: validatedParams.password1,
+      uname: this.request.body.uname,
+      email: this.request.body.email,
+      password: this.request.body.password1,
       ipAddress: this.request.ip
     });
   } catch(ex) {
@@ -323,7 +282,7 @@ app.use(route.post('/users', function*() {
   if (errMessage) {
     this.flash = {
       message: ['danger', errMessage],
-      params: unvalidatedParams
+      params: this.request.body
     };
     return this.response.redirect('/register');
   }
@@ -333,14 +292,16 @@ app.use(route.post('/users', function*() {
   this.cookies.set('sessionId', session.id);
   this.flash = { message: ['success', 'Registered successfully'] };
   return this.response.redirect('/');
-}));
+});
 
 //
 // Create session
 //
 app.post('/sessions', function*() {
-  this.checkBody('uname-or-email').isLength(1);
-  this.checkBody('password').isLength(1);
+  this.checkBody('uname-or-email').notEmpty();
+  this.checkBody('password').notEmpty();
+  this.checkBody('remember-me').toBoolean();
+
   if (this.errors) {
     this.flash = { message: ['danger', 'Invalid creds'] };
     this.response.redirect('/login');
@@ -349,7 +310,7 @@ app.post('/sessions', function*() {
 
   var unameOrEmail = this.request.body['uname-or-email'];
   var password = this.request.body.password;
-  var rememberMe = !!this.request.body['remember-me'];
+  var rememberMe = this.request.body['remember-me'];
 
   // Check if user with this uname or email exists
   var user = yield db.findUserByUnameOrEmail(unameOrEmail);
@@ -411,9 +372,7 @@ app.use(route.get('/', function*() {
   // TODO: Abstract
   _.remove(categories, { id: 4 });
   var categoryIds = _.pluck(categories, 'id');
-  var results = yield [db.findForums(categoryIds), db.getStats()];
-  var allForums = results[0];
-  var stats = results[1];
+  var allForums = yield db.findForums(categoryIds);
   var topLevelForums = _.reject(allForums, 'parent_forum_id');
   var childForums = _.filter(allForums, 'parent_forum_id');
   // Map of {CategoryId: [Forums...]}
@@ -431,6 +390,7 @@ app.use(route.get('/', function*() {
   });
 
   // Get stats
+  var stats = cache.get('stats');
   stats.onlineUsers = stats.onlineUsers.map(pre.presentUser);
   if (stats.latestUser)
     stats.latestUser = pre.presentUser(stats.latestUser);

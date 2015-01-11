@@ -12,6 +12,11 @@ var uuid = require('node-uuid');
 // 1st party
 var config = require('./config');
 
+////
+//// This module is a general utility-belt of functions.
+//// Somewhat of a junk drawer.
+////
+
 // {{ 'firetruck'|truncate(5) }}  -> 'firet...'
 // {{ 'firetruck'|truncate(6) }}  -> 'firetruck'
 exports.makeTruncate = function(suffix) {
@@ -42,11 +47,6 @@ exports.truncateStringVals = function(obj) {
   }
   return out;
 };
-
-////
-//// This module is a general utility-belt of functions.
-//// Somewhat of a junk drawer.
-////
 
 /// Convenience functions for working with the this.errors
 /// object provided by koa-validate

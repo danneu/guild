@@ -4,6 +4,7 @@
   },
   "scripts": {
     "start": "node --harmony --expose-gc ./server",
+    "start-dev": "env $(cat .env | xargs) nodemon --harmony --expose-gc ./server | bunyan",
     "reset-db": "node --harmony ./server/reset_db"
   },
   "repository": {
