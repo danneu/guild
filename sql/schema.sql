@@ -35,7 +35,9 @@ CREATE TABLE users (
   role           role_type NOT NULL  DEFAULT 'member',
   -- Cache
   posts_count    int       NOT NULL  DEFAULT 0,
-  pms_count      int       NOT NULL  DEFAULT 0
+  pms_count      int       NOT NULL  DEFAULT 0,
+  sig            text      NULL,
+  legacy_sig     text      NULL
 );
 
 CREATE UNIQUE INDEX unique_username ON users USING btree (lower(uname));
