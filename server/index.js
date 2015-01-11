@@ -789,6 +789,22 @@ app.get('/users/:userId', function*() {
 });
 
 //
+// Delete user
+//
+app.delete('/users/:id', function*() {
+  var user = yield db.findUser(this.params.id);
+  this.assert(user, 404);
+  this.assertAuthorized(this.currUser, 'DELETE_USER', user);
+  yield db.deleteUser(this.params.id);
+
+  this.flash = {
+    message: ['success', util.format('User deleted along with %d posts and %d PMs',
+                                     user.posts_count, user.pms_count)]
+  };
+  this.response.redirect('/');
+});
+
+//
 // Create convo
 // Params:
 // - 'to': Comma-delimited string of unames user wants to send to

@@ -10,6 +10,9 @@ var assert = require('better-assert');
 exports.can = can;
 function can(user, action, target) {
   switch(action) {
+    case 'DELETE_USER':  // target is user
+      if (!user) return false;
+      return user.role === 'admin';
     case 'READ_USER_PM_SENT_COUNT':  // target is user
       if (!user) return false;
       return _.contains(['mod', 'smod', 'admin'], user.role);
@@ -21,9 +24,11 @@ function can(user, action, target) {
         return user.role === 'smod';
       return false;
     case 'UPDATE_USER':  // target is user
+      if (!user) return false;
       // Anyone can update themselves
       if (user.id === target.id) return true;
       // Staff can change staff below them
+      if (user.role === 'admin') return true;
       if (_.contains(['banned', 'member'], target.role))
         return _.contains(['mod', 'smod'], user.role);
       if (target.role === 'mod')
