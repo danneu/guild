@@ -81,9 +81,9 @@ co(function*() {
     js: manifest['all.js']
   };
 }).then(function() {
-  console.log('dist set');
+  log.info(dist, 'dist set');
 }, function(err) {
-  console.error('Error: ', err, err.stack);
+  log.error(err, 'dist failed');
 });
 
 app.use(function*(next) {
