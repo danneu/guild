@@ -61,8 +61,8 @@
                       <img src="/img/subforum-icon.gif">
                       <a href="{{ subforum.url }}">{{ subforum.title }}</a>
                     </div>
-                    <div class="col-xs-1">{{ subforum.topics_count }}</div>
-                    <div class="col-xs-1">{{ subforum.posts_count }}</div>
+                    <div class="col-xs-1">{{ subforum.topics_count|commafy }}</div>
+                    <div class="col-xs-1">{{ subforum.posts_count|commafy }}</div>
                     <div class="col-xs-3">
                       {% if subforum.latest_post %}
                         <a href="{{ subforum.latest_post.url }}">{{ subforum.latest_topic.title }}</a>
