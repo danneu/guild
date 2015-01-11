@@ -150,8 +150,11 @@ function can(user, action, target) {
       return target.user_id === user.id;
     case 'UPDATE_POST':  // target expected to be a post
       if (!user) return false;
-      // Can't update legacy posts
+      // Nobody can update legacy posts
       if (target.legacy_html) return false;
+      // Admin can update any post
+      if (user.role === 'admin') return true;
+      // TODO: Create rules for other staff roles
       if (user.id === target.user_id) return true;
       return false;
     case 'CREATE_CONVO':
