@@ -169,6 +169,28 @@
       $('#cheatsheet-body').toggle();
     });
   </script>
+  <script>
+    $('.hider-button').click(function(e) {
+       e.stopPropagation();
+       //$(this).next().toggle();
+
+       var $button = $(this);
+       var hiderName = $button.attr('data-name');
+       var $content = $button.parent().next();
+
+       if ($content.css('display') == 'none') {
+         $content.show();
+         $button.parent().parent().css('border', '1px solid #111')
+         $button.text(hiderName + ' [-]');
+       } else {
+         $content.hide();
+         $button.parent().parent().css('border', 'none')
+         $button.text(hiderName + ' [+]');
+       }
+
+       return false;
+     })
+  </script>
   {% block scripts %}{% endblock %}
 </body>
 </html>
