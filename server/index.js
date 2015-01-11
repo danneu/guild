@@ -773,10 +773,34 @@ app.get('/users/:userId', function*() {
   var recentPosts = yield db.findRecentPostsForUserId(user.id,
                                                       this.query['before-id']);
   recentPosts = recentPosts.map(pre.presentPost);
+  var allPosts = yield db.findAllPostsForUserId(user.id);
 
   // The ?before-id=_ of the "Next" button. i.e. the lowest
   // id of the posts on the current page
   var nextBeforeId = recentPosts.length > 0 ? _.last(recentPosts).id : null;
+  var lastBeforeId = allPosts.length > 0 ? allPosts[allPosts.length-6].id : null;
+
+  var lastPage = false;
+
+  if (this.query['before-id'] == lastBeforeId)
+    lastPage = true;
+
+  // Go through all posts. Find the first post on the page,
+  // and set the BeforeId to the entry 6 behind that post (if it exists).
+  var prevBeforeId = null;
+  var secondPage = false; // Put in this loop for efficiency
+  for (var i = 0; i < allPosts.length; i++) {
+    if (recentPosts[0] != null) {
+      if (allPosts[i].id == recentPosts[0].id) {
+        if (i == 5 ||  (allPosts.length < 10 && i != 0)) { // Current post is the 6th entry in the list (In other words, first post of second page)
+          secondPage = true;
+          break; // End loop; on second page so prevBeforeId is not needed
+        }
+        prevBeforeId = allPosts[i-6] != null ? allPosts[i-6].id : null;
+        break; // End loop; id has been found
+      }
+    }
+  }
 
   yield this.render('show_user', {
     ctx: this,
@@ -784,6 +808,10 @@ app.get('/users/:userId', function*() {
     recentPosts: recentPosts,
     // Pagination
     nextBeforeId: nextBeforeId,
+    prevBeforeId: prevBeforeId,
+    lastBeforeId: lastBeforeId,
+    lastPage: lastPage,
+    secondPage: secondPage,
     recentPostsPerPage: config.RECENT_POSTS_PER_PAGE
   });
 });
