@@ -194,7 +194,12 @@
               {% endif %}
             {% endif %}
             {% if post.user.legacy_sig %}
-              <div class="post-sig" style="max-height: 150px; overflow: auto; margin-top: 50px; padding: 20px 20px 0 20px; border-top: 2px solid black">
+              <div class="post-sig"
+                   style="max-height: 300px;
+                          overflow: auto;
+                          margin-top: 50px;
+                          padding: 20px 20px 0 20px;
+                          border-top: 2px solid black">
                 {{ post.user.legacy_sig|safe }}
               </div>
             {% endif %}
