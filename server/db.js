@@ -320,10 +320,11 @@ exports.findUsersByUnames = wrapTimer(findUsersByUnames);
 function* findUsersByUnames(unames) {
   assert(_.isArray(unames));
   assert(_.every(unames, _.isString));
+  unames = unames.map(function(s) { return s.toLowerCase(); });
   var sql = m(function() {/*
 SELECT u.*
 FROM users u
-WHERE u.uname = ANY ($1::text[])
+WHERE lower(u.uname) = ANY ($1::text[])
   */});
   var result = yield query(sql, [unames]);
   return result.rows;
