@@ -134,3 +134,8 @@ a {
     border: 1px solid #111;
     color: #fff;
 }
+
+/* Shrink blockquote text to match regular font size */
+blockquote {
+    font-size: 14px;
+}
