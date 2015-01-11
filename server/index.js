@@ -330,7 +330,7 @@ app.post('/sessions', function*() {
   }
 
   // User authenticated
-  var interval = (rememberMe ? '1 day' : '1 year');
+  var interval = (rememberMe ? '1 year' : '1 day');
   var session = yield db.createSession({
     userId: user.id,
     ipAddress: this.request.ip,
