@@ -964,6 +964,7 @@ LEFT OUTER JOIN users latest_char_user ON latest_char_post.user_id = latest_char
 JOIN users u2 ON latest_post.user_id = u2.id
 JOIN forums f ON t.forum_id = f.id
 WHERE ts.user_id = $1
+ORDER BY t.latest_post_id DESC
   */});
   var result = yield query(sql, [userId]);
   return result.rows;
