@@ -208,6 +208,7 @@ app.post('/users', function*() {
               config.MAX_UNAME_LENGTH,
               'Username must be ' + config.MIN_UNAME_LENGTH +
               '-' + config.MAX_UNAME_LENGTH + ' characters')
+    .match(/^[a-z0-9 ]+$/i, 'Username must only contain a-z, 0-9, and spaces')
     .notMatch(/[ ]{2,}/, 'Username contains consecutive spaces');
   this.checkBody('email')
     .notEmpty('Email required')
