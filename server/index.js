@@ -47,8 +47,9 @@ var log = require('./logger');
 var cache = require('./cache')(log);
 
 // Catch and log all errors that bubble up to koa
-app.on('error', function(err){
+app.on('error', function(err) {
   log.error(err, 'Error');
+  console.error('Error:', err, err.stack);
 });
 
 app.use(function*(next) {
