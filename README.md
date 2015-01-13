@@ -43,5 +43,4 @@ It will run with the default variables, but some features are turned off until t
 ## TODO
 
 - Add tests for authorization abstraction
-- Consider merging post and pm logic (db fns, routes, views)
 - Add `:user/invisible?` -> `users.is_ghost` to migration

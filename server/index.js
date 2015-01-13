@@ -600,6 +600,16 @@ app.put('/users/:userId/role', function*() {
   this.response.redirect(user.url + '/edit');
 });
 
+// Delete legacy sig
+app.delete('/users/:userId/legacy-sig', function*() {
+  var user = db.findUser(this.params.userId);
+  this.assert(user, 404);
+  this.assertAuthorized(this.currUser, 'UPDATE_USER', user);
+  yield db.deleteLegacySig(this.params.userId);
+  this.flash = { message: ['success', 'Legacy sig deleted'] };
+  this.response.redirect('/users/' + this.params.userId + '/edit');
+});
+
 //
 // Update user
 //
@@ -610,22 +620,45 @@ app.put('/users/:userId/role', function*() {
 //
 // At least one of these updates:
 // - email
+// - avatar-url
+// - sig
+// - hide-sigs
 //
 // TODO: This isn't very abstracted yet. Just an email endpoint for now.
 //
 app.put('/users/:userId', function*() {
-  this.request.body.email;
-  this.checkBody('email').optional().isEmail('Invalid email address');
-  debug(this.errors);
+  this.checkBody('email')
+    .optional()
+    .isEmail('Invalid email address');
+  this.checkBody('sig')
+    .optional()
+  this.checkBody('avatar-url')
+    .optional()
+  if (this.request.body['avatar-url'] && this.request.body['avatar-url'].length > 0)
+    this.checkBody('avatar-url')
+      .trim()
+      .isUrl('Must specify a URL for the avatar');
+  this.checkBody('hide-sigs')
+    .optional()
+    .toBoolean();
+
   if (this.errors) {
     this.flash = { message: ['danger', belt.joinErrors(this.errors)] }
-    return this.response.redirect(this.request.path + '/edit');
+    this.response.redirect(this.request.path + '/edit');
+    return;
   }
+
   var user = yield db.findUser(this.params.userId);
   this.assert(user, 404);
   this.assertAuthorized(this.currUser, 'UPDATE_USER', user);
+
   yield db.updateUser(user.id, {
-    email: this.request.body.email || user.email
+    email: this.request.body.email || user.email,
+    sig: this.request.body.sig,
+    avatar_url: this.request.body['avatar-url'],
+    hide_sigs: _.isBoolean(this.request.body['hide-sigs'])
+                 ? this.request.body['hide-sigs']
+                 : user.hide_sigs
   });
   user = pre.presentUser(user);
   this.flash = { message: ['success', 'User updated'] };

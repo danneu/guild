@@ -793,11 +793,17 @@ RETURNING *
 exports.updateUser = function*(userId, attrs) {
   var sql = m(function() {/*
 UPDATE users
-SET email = COALESCE($2, email)
+SET
+  email = COALESCE($2, email),
+  sig = COALESCE($3, sig),
+  avatar_url = COALESCE($4, avatar_url),
+  hide_sigs = COALESCE($5, hide_sigs)
 WHERE id = $1
 RETURNING *
   */});
-  var result = yield query(sql, [userId, attrs.email]);
+  var result = yield query(sql, [
+    userId, attrs.email, attrs.sig, attrs.avatar_url, attrs.hide_sigs
+  ]);
   return result.rows[0];
 };
 
@@ -1037,4 +1043,9 @@ function* getStats() {
 exports.deleteUser = function*(id) {
   var sql = 'DELETE FROM users WHERE id = $1';
   yield query(sql, [id]);
+};
+
+exports.deleteLegacySig = function*(userId) {
+  var sql = 'UPDATE users SET legacy_sig = NULL WHERE id = $1';
+  yield query(sql, [userId]);
 };

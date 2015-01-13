@@ -36,8 +36,10 @@ CREATE TABLE users (
   -- Cache
   posts_count    int       NOT NULL  DEFAULT 0,
   pms_count      int       NOT NULL  DEFAULT 0,
-  sig            text      NULL,
-  legacy_sig     text      NULL
+  sig            text      NOT NULL  DEFAULT '',
+  legacy_sig     text      NULL,
+  avatar_url     text      NOT NULL DEFAULT '',
+  hide_sigs      boolean   NOT NULL  DEFAULT false;
 );
 
 CREATE UNIQUE INDEX unique_username ON users USING btree (lower(uname));
