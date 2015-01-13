@@ -92,7 +92,13 @@
                   {% endif %}
                   <a href="{{ topic.url }}">{{ topic.title }}</a>
                   <div style="margin-top: 6px;">
-                    by <a href="{{ topic.user.url }}" style="color: #fff">{{ topic.user.uname }}</a>
+                    by <a href="{{ topic.user.url }}" style="color: #fff">
+                      {{ topic.user.uname -}}
+                    </a>,
+                    <abbr class="timeago"
+                          title="{{ topic.created_at.toISOString() }}">
+                      {{ topic.created_at|formatDate }}
+                    </abbr>
                   <div>
                 </h5>
               </div>
