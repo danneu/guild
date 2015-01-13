@@ -20,7 +20,7 @@ function Cache(log) {
   };
 
   this.set = function(key, val) {
-    self.log.info({ key: key, val: val }, 'Updating cache[%s]', key);
+    self.log.info({ key: key }, 'Updating cache[%s]', key);
     self.store[key] = val;
     return val;
   };

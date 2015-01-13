@@ -173,19 +173,8 @@ app.use(route.post('/me/logout', function *() {
 //
 app.use(route.get('/login', function*() {
   yield this.render('login', {
-    ctx: this
-  });
-}));
-
-//
-// Register new user form
-//
-app.use(route.get('/register', function*() {
-  assert(config.RECAPTCHA_SITEKEY);
-  assert(config.RECAPTCHA_SITESECRET);
-  yield this.render('register', {
     ctx: this,
-    recaptchaSitekey: config.RECAPTCHA_SITEKEY
+    title: 'Login'
   });
 }));
 
@@ -357,8 +346,12 @@ app.use(route.get('/users', function*() {
 // Registration form
 //
 app.use(route.get('/register', function*() {
+  assert(config.RECAPTCHA_SITEKEY);
+  assert(config.RECAPTCHA_SITESECRET);
   yield this.render('register', {
-    ctx: this
+    ctx: this,
+    recaptchaSitekey: config.RECAPTCHA_SITEKEY,
+    title: 'Register'
   });
 }));
 
@@ -426,7 +419,8 @@ app.use(route.get('/forgot', function*() {
   if (!config.IS_EMAIL_CONFIGURED)
     return this.body = 'This feature is currently disabled';
   yield this.render('forgot', {
-    ctx: this
+    ctx: this,
+    title: 'Forgot Password'
   });
 }));
 
@@ -483,7 +477,8 @@ app.use(route.get('/reset-password', function*() {
   var resetToken = this.request.query.token
   yield this.render('reset_password', {
     ctx: this,
-    resetToken: resetToken
+    resetToken: resetToken,
+    title: 'Reset Password with Token'
   });
 }));
 
@@ -575,7 +570,8 @@ app.get('/users/:userId/edit', function*() {
   user = pre.presentUser(user);
   yield this.render('edit_user', {
     ctx: this,
-    user: user
+    user: user,
+    title: 'Edit User: ' + user.uname
   });
 });
 
@@ -681,7 +677,8 @@ app.use(route.get('/me/subscriptions', function*() {
     ctx: this,
     topics: topics,
     roleplayTopics: roleplayTopics,
-    nonroleplayTopics: nonroleplayTopics
+    nonroleplayTopics: nonroleplayTopics,
+    title: 'My Subscriptions'
   });
 }));
 
@@ -701,7 +698,8 @@ app.use(route.get('/lexus-lounge', function*() {
     ctx: this,
     category: category,
     latestUsers: latestUsers,
-    latestUserLimit: latestUserLimit
+    latestUserLimit: latestUserLimit,
+    title: 'Lexus Lounge — Mod Forum'
   });
 }));
 
@@ -726,7 +724,8 @@ app.get('/forums/:forumId', function*() {
     ctx: this,
     forum: forum,
     currPage: pager.currPage,
-    totalPages: pager.totalPages
+    totalPages: pager.totalPages,
+    title: forum.title
   });
 });
 
@@ -788,7 +787,8 @@ app.use(route.get('/me/convos', function*() {
   convos = convos.map(pre.presentConvo);
   yield this.render('me_convos.html', {
     ctx: this,
-    convos: convos
+    convos: convos,
+    title: 'My Private Conversations'
   });
 }));
 
@@ -815,6 +815,7 @@ app.get('/users/:userId', function*() {
     ctx: this,
     user: user,
     recentPosts: recentPosts,
+    title: 'User: ' + user.uname,
     // Pagination
     nextBeforeId: nextBeforeId,
     recentPostsPerPage: config.RECENT_POSTS_PER_PAGE
@@ -929,7 +930,8 @@ app.use(route.get('/convos/new', function*() {
   // TODO: Validation, Error msgs, preserve params
   yield this.render('new_convo', {
     ctx: this,
-    to: this.request.query.to
+    to: this.request.query.to,
+    title: 'New Conversation'
   });
 }));
 
@@ -1004,6 +1006,7 @@ app.use(route.get('/convos/:convoId', function*(convoId) {
   yield this.render('show_convo', {
     ctx: this,
     convo: convo,
+    title: 'Convo: ' + convo.title,
     // Pagination
     currPage: page,
     totalPages: totalPages
@@ -1284,6 +1287,7 @@ app.use(route.get('/topics/:topicId/posts/:postType', function*(topicId, postTyp
     ctx: this,
     topic: topic,
     postType: postType,
+    title: 'Topic: ' + topic.title,
     // Pagination
     currPage: page,
     totalPages: totalPages
