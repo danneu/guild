@@ -25,7 +25,11 @@
   {% if ctx.can(ctx.currUser, 'CREATE_TOPIC', forum) %}
     <a class="btn btn-primary pull-right" href="#new-topic-form">
       <span class="glyphicon glyphicon-pencil"></span>
-      New Topic
+      {% if forum.is_roleplay %}
+        New Roleplay
+      {% else %}
+        New Topic
+      {% endif %}
     </a>
   {% endif %}
 
