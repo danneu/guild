@@ -278,7 +278,9 @@ app.post('/users', function*() {
 
   var user = result['user'];
   var session = result['session'];
-  this.cookies.set('sessionId', session.id);
+  this.cookies.set('sessionId', session.id, {
+    expires: belt.futureDate(new Date(), { years: 365 })
+  });
   this.flash = { message: ['success', 'Registered successfully'] };
   return this.response.redirect('/');
 });
@@ -328,7 +330,9 @@ app.post('/sessions', function*() {
 
   this.log.info({ session: session, session_interval: interval },
                 'Created session');
-  this.cookies.set('sessionId', session.id);
+  this.cookies.set('sessionId', session.id, {
+    expires: belt.futureDate(new Date(), rememberMe ? { years: 1 } : { days: 1 })
+  });
   this.flash = { message: ['success', 'Logged in successfully'] };
   this.response.redirect('/');
 });
@@ -524,7 +528,9 @@ app.use(route.post('/reset-password', function*() {
     ipAddress: this.request.ip,
     interval: '1 day'  // TODO: Add remember-me button to reset form?
   });
-  this.cookies.set('sessionId', session.id);
+  this.cookies.set('sessionId', session.id, {
+    expires: belt.futureDate(new Date(), { days: 1 })
+  });
 
   this.flash = { message: ['success', 'Your password was updated'] };
   return this.response.redirect('/');
