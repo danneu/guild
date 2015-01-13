@@ -139,3 +139,82 @@ a {
 blockquote {
     font-size: 14px;
 }
+
+/* ================================================== */
+
+
+/* Tablets and up */
+@media (min-width: 768px) {
+    .post-user-meta .user-uname,
+    .post-user-meta .user-role {
+        text-align: center;
+    }
+}
+
+@media (min-width: 992px) {
+    /* 151px used so that images larger than 150px will
+         trigger the "This image is too large" event */
+    .post-avatar img {
+        max-width: 151px;
+    }
+}
+
+/* Large tablets/netbooks, not desktops/large laptops  */
+@media (min-width: 992px) and (max-width: 1199px) {
+    .post-avatar img {
+        max-width: 115px;
+    }
+}
+
+
+/* Tablets only */
+@media (min-width: 768px) and (max-width: 991px) {
+    .post-avatar img {
+        max-width: 90px;
+    }
+}
+
+@media (max-width: 768px) {
+    .post-avatar img {
+        max-width: 50px;
+    }
+    .post-sig {
+        height: 100px;
+    }
+
+    .post-content {
+      border-top: 2px solid black;
+      padding-top: 10px;
+    }
+}
+
+
+@media (max-width: 767px) {
+    .post-content {
+        margin-top:20px;
+    }
+    .post-sig {
+        margin-top: 20px;
+    }
+    /* .post-avatar { */
+    /*     float: left; */
+    /* } */
+    .user-avatar-img-mobile {
+        float: left;
+    }
+    .post-user-meta .user-avatar-box {
+    /* float:left; */
+    /* left: 10px; */
+    }
+    /* .post-user-meta .user-uname { */
+    /*     /\* position: absolute; *\/ */
+    /*     /\* left: 100px; *\/ */
+    /*     margin-left: 10px; */
+    /*     float: left; */
+    /* } */
+    .post-user-meta .user-role {
+    /* position: absolute; */
+    /* left: 100px; */
+    /* top: 20px; */
+    }
+}

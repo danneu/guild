@@ -178,23 +178,47 @@
         <div class="panel-body"
              style="background-color: #2E2C2C">
           <!-- Author metadata -->
-          <div class="col-sm-2 clearfix text-center">
-            <a href="{{ post.user.url }}">
-              {{ post.user.uname }}
-            </a>
+          <div class="col-sm-2 clearfix text-center post-user-meta">
 
-            {% if post.user.avatar_url %}
-              <div class="post-avatar"
-                   style="margin-top: 10px;">
-                <img src="{{ post.user.avatar_url}}"
-                     style="max-width: 151px; max-height: 151px;">
-                <!-- 151px used so that images larger than 150px will
-                     trigger the "This image is too large" event -->
+
+            <!-- For small devices -->
+            <div class="visible-xs-block">
+              <div class="media">
+                {% if post.user.avatar_url %}
+                  <a class="media-left" href="{{ post.user.url }}">
+                    <img src="{{ post.user.avatar_url}}" alt="avatar"
+                         style="max-width: 60px">
+                  </a>
+                {% endif %}
+                <div class="media-body">
+                  <h4 class="media-heading">
+                    <a href="{{ post.user.url }}">
+                      {{ post.user.uname }}
+                    </a>
+                  </h4>
+                  <div class="pull-left">{{ post.user.role|capitalize }}</div>
+                </div>
               </div>
-            {% endif %}
+            </div>
 
-            <div class="post-role" style="margin-top: 10px;">
-              {{ post.user.role|capitalize }}
+            <!-- For larger-than-smartphone devices -->
+            <div class="hidden-xs">
+              <div class="user-uname">
+                <a href="{{ post.user.url }}">
+                  {{ post.user.uname }}
+                </a>
+              </div>
+
+              {% if post.user.avatar_url %}
+                <div class="post-avatar"
+                     style="margin-top: 10px;">
+                  <img src="{{ post.user.avatar_url}}">
+                </div>
+              {% endif %}
+
+              <div class="user-role" style="margin-top: 10px;">
+                {{ post.user.role|capitalize }}
+              </div>
             </div>
           </div> <!-- /.col-sm-2 post-meta -->
           <!-- Post text -->
@@ -203,9 +227,9 @@
               <i>[HIDDEN]</i>
             {% else %}
               {% if post.legacy_html %}
-                <div class="post-body-html">{{ post.legacy_html|safe }}</div>
+                <div class="post-body-html post-content">{{ post.legacy_html|safe }}</div>
               {% else %}
-                <div class="post-body">{{ post.text }}</div>
+                <div class="post-body post-content">{{ post.text }}</div>
               {% endif %}
             {% endif %}
 
@@ -213,14 +237,14 @@
 
             {% if !post.user.hide_sigs %}
               {% if post.user.sig %}
-                <div class="post-sig-markdown"
+                <div class="post-sig-markdown post-sig"
                      style="max-height: 300px;
                             overflow: auto;
                             margin-top: 50px;
                             padding: 20px 20px 0 20px;
                             border-top: 2px solid black">{{ post.user.sig }}</div>
               {% elif post.user.legacy_sig %}
-                <div class="post-sig"
+                <div class="post-sig post-sig-legacy"
                      style="max-height: 300px;
                             overflow: auto;
                             margin-top: 50px;
