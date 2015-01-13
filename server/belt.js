@@ -1,6 +1,7 @@
 // Node
 var util = require('util');
 var url = require('url');
+var crypto = require('crypto');
 // 3rd party
 var promissory = require('promissory');
 var assert = require('better-assert');
@@ -28,6 +29,11 @@ exports.futureDate = function(nowDate, opts) {
                   (opts.seconds || 0) * 1000 +
                   (opts.milliseconds || 0));
 };
+
+exports.md5 = md5;
+function md5(s) {
+  return crypto.createHash('md5').update(s).digest('hex');
+}
 
 // {{ 'firetruck'|truncate(5) }}  -> 'firet...'
 // {{ 'firetruck'|truncate(6) }}  -> 'firetruck'
