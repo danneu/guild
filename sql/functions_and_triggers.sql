@@ -97,12 +97,24 @@ CREATE TRIGGER update_user_posts_count_trigger
 
 CREATE OR REPLACE FUNCTION update_user_pms_count() RETURNS trigger AS
 $$
-  var delta = 0;
-  var userId = (OLD && OLD.user_id) || (NEW && NEW.user_id);
+  var q, delta = 0, convoId;
+
+  q = 'UPDATE users                                          '+
+      'SET pms_count = pms_count + $1                        '+
+      'WHERE id IN (                                         '+
+      '  SELECT cp.user_id                                   '+
+      '  FROM convos c                                       '+
+      '  JOIN convos_participants cp ON c.id = cp.convo_id   '+
+      '  WHERE c.id = $2                                     '+
+      ')                                                     ';
+
+  delta = 0;
+  if (TG_OP === 'INSERT') delta++;
   if (TG_OP === 'DELETE') delta--;
-  if (TG_OP === 'INSERT') delta++
-  q = 'UPDATE users SET pms_count = pms_count + $2 WHERE id = $1';
-  plv8.execute(q, [userId, delta]);
+
+  convoId = (OLD && OLD.convo_id) || (NEW && NEW.convo_id);
+
+  plv8.execute(q, [delta, convoId]);
 $$ LANGUAGE 'plv8';
 
 DROP TRIGGER IF EXISTS update_user_pms_count_trigger ON pms;
