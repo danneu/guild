@@ -260,7 +260,7 @@
 
             <!-- Signature -->
 
-            {% if !post.user.hide_sigs %}
+            {% if ctx.currUser && !ctx.currUser.hide_sigs %}
               {% if post.user.sig %}
                 <div class="post-sig-markdown post-sig"
                      style="max-height: 300px;
