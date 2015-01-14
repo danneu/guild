@@ -605,7 +605,7 @@ app.put('/users/:userId/role', function*() {
 
 // Delete legacy sig
 app.delete('/users/:userId/legacy-sig', function*() {
-  var user = db.findUser(this.params.userId);
+  var user = yield db.findUser(this.params.userId);
   this.assert(user, 404);
   this.assertAuthorized(this.currUser, 'UPDATE_USER', user);
   yield db.deleteLegacySig(this.params.userId);

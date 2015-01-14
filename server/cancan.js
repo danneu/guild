@@ -17,6 +17,8 @@ function can(user, action, target) {
       if (!user) return false;
       return _.contains(['mod', 'smod', 'admin'], user.role);
     case 'UPDATE_USER_ROLE': // target is user
+      if (!user) return false;
+      if (user.role === 'admin') return true;
       // Staff can change staff below them
       if (_.contains(['banned', 'member'], target.role))
         return _.contains(['mod', 'smod'], user.role);
