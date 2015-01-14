@@ -785,19 +785,26 @@ app.post('/topics/:topicId/posts', function*() {
 //
 // Show convos
 //
-app.use(route.get('/me/convos', function*() {
+app.get('/me/convos', function*() {
   if (!config.IS_PM_SYSTEM_ONLINE)
     return this.body = 'PM system currently disabled';
 
+  this.checkQuery('before-id').optional().toInt();  // undefined || Number
+
   this.assert(this.currUser, 404);
-  var convos = yield db.findConvosInvolvingUserId(this.currUser.id);
+  var convos = yield db.findConvosInvolvingUserId(this.currUser.id,
+                                                  this.query['before-id']);
   convos = convos.map(pre.presentConvo);
+  var nextBeforeId = convos.length > 0 ? _.last(convos).latest_pm_id : null;
   yield this.render('me_convos.html', {
     ctx: this,
     convos: convos,
-    title: 'My Private Conversations'
+    title: 'My Private Conversations',
+    // Pagination
+    nextBeforeId: nextBeforeId,
+    perPage: config.CONVOS_PER_PAGE
   });
-}));
+});
 
 //
 // Show user

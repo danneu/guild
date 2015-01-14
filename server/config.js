@@ -26,6 +26,7 @@ exports.FROM_EMAIL = process.env.FROM_EMAIL;
 exports.POSTS_PER_PAGE = process.env.POSTS_PER_PAGE || 20;
 // How many recent posts to display on user profile
 exports.RECENT_POSTS_PER_PAGE = process.env.RECENT_POSTS_PER_PAGE || 5;
+exports.CONVOS_PER_PAGE = process.env.CONVOS_PER_PAGE || 10;
 
 // newrelic
 exports.NEW_RELIC_LICENSE_KEY = process.env.NEW_RELIC_LICENSE_KEY;

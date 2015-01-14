@@ -10,6 +10,8 @@ CREATE INDEX topics_forum_id_idx            ON topics (forum_id);
 CREATE INDEX posts_topic_id_idx             ON posts (topic_id);
 CREATE INDEX posts_id_user_id_idx           ON posts (id, user_id);
 CREATE INDEX users_created_at_desc          ON users (created_at DESC);
+CREATE UNIQUE INDEX cp_uniq_convoId_userId ON convos_participants (convo_id, user_id);
+CREATE INDEX convos_id_latestPmId_DESC ON convos (id, latest_pm_id DESC);
 
 ------------------------------------------------------------
 ------------------------------------------------------------

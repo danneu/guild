@@ -556,9 +556,11 @@ WHERE id = $1
   return result.rows[0];
 };
 
-// TODO: Sort by latest_pm_at
 exports.findConvosInvolvingUserId = wrapTimer(findConvosInvolvingUserId);
-function* findConvosInvolvingUserId(userId) {
+function* findConvosInvolvingUserId(userId, beforeId) {
+  // beforeId is the id of convo.latest_pm_id since that's how
+  // convos are sorted
+  assert(_.isNumber(beforeId) || _.isUndefined(beforeId));
   var sql = m(function() {/*
 SELECT
   c.*,
@@ -572,15 +574,16 @@ JOIN users u1 ON c.user_id = u1.id
 JOIN users u2 ON cp.user_id = u2.id
 JOIN pms ON c.latest_pm_id = pms.id
 JOIN users u3 ON pms.user_id = u3.id
-WHERE c.id IN (
+WHERE c.latest_pm_id < $2 AND c.id IN (
   SELECT cp.convo_id
   FROM convos_participants cp
   WHERE cp.user_id = $1
 )
 GROUP BY c.id, u1.id, pms.id, u3.id
 ORDER BY c.latest_pm_id DESC
+LIMIT $3
   */});
-  var result = yield query(sql, [userId]);
+  var result = yield query(sql, [userId, beforeId || 1e9, config.CONVOS_PER_PAGE]);
   return result.rows;
 };
 
