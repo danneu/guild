@@ -46,3 +46,4 @@ It will run with the default variables, but some features are turned off until t
 
 - Add tests for authorization abstraction
 - Create `docs/bulk_updates.sql`
+- Add online-status to post user-meta for mobile-sized devices
