@@ -103,6 +103,9 @@ function can(user, action, target) {
         return !!_.contains(['mod', 'smod', 'admin'], user.role);
       else
         return true;
+    case 'UNSUBSCRIBE_TOPIC':
+      // A user can unsubscribe from a topic if they're logged in
+      return !!user;
     case 'SUBSCRIBE_TOPIC':  // target is topic
       if (!user) return false;
       // Members and up can subscribe if they can read the topic

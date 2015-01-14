@@ -406,7 +406,7 @@ app.use(route.get('/', function*() {
 app.use(route.delete('/me/subscriptions/:topicId', function*(topicId) {
   this.assert(this.currUser, 404);
   var topic = yield db.findTopic(topicId);
-  this.assertAuthorized(this.currUser, 'SUBSCRIBE_TOPIC', topic);
+  this.assertAuthorized(this.currUser, 'UNSUBSCRIBE_TOPIC', topic);
   yield db.unsubscribeFromTopic(this.currUser.id, topicId);
   // TODO: flash
   topic = pre.presentTopic(topic);
