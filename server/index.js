@@ -820,6 +820,12 @@ app.get('/users/:userId', function*() {
   // OPTIMIZE: Merge into single query?
   var recentPosts = yield db.findRecentPostsForUserId(user.id,
                                                       this.query['before-id']);
+  // TODO: Figure out how to do this so I'm not possibly serving empty or
+  //       partial pages since they're being filtered post-query.
+  // Filter out posts that currUser is unauthorized to see
+  recentPosts = recentPosts.filter(function(post) {
+    return cancan.can(this.currUser, 'READ_POST', post);
+  }.bind(this));
   recentPosts = recentPosts.map(pre.presentPost);
 
   // The ?before-id=_ of the "Next" button. i.e. the lowest

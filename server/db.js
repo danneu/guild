@@ -295,9 +295,11 @@ function* findRecentPostsForUserId(userId, beforeId) {
   var sql = m(function() {/*
 SELECT
   p.*,
-  to_json(t.*) "topic"
+  to_json(t.*) "topic",
+  to_json(f.*) "forum"
 FROM posts p
 JOIN topics t ON p.topic_id = t.id
+JOIN forums f ON t.forum_id = f.id
 WHERE p.user_id = $1 AND p.id < $3
 ORDER BY p.id DESC
 LIMIT $2
