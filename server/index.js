@@ -801,6 +801,7 @@ app.get('/me/convos', function*() {
     convos: convos,
     title: 'My Private Conversations',
     // Pagination
+    beforeId: this.query['before-id'],
     nextBeforeId: nextBeforeId,
     perPage: config.CONVOS_PER_PAGE
   });

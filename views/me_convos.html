@@ -6,8 +6,8 @@
 
   {% if ctx.currUser.pms_count > 1 %}
     <ul class="pager">
-      <li>
-        <a href="{{ ctx.request.path }}#recent-posts">
+      <li class="{% if !beforeId %} disabled {% endif %}">
+        <a href="{{ ctx.request.path }}">
           First Page
         </a>
       </li>
@@ -19,7 +19,7 @@
         </li>
       {% else %}
         <li>
-          <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#recent-posts">
+          <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}">
             Next Page &rarr;
           </a>
         </li>
@@ -84,8 +84,8 @@
 
   {% if ctx.currUser.pms_count > 1 %}
     <ul class="pager">
-      <li>
-        <a href="{{ ctx.request.path }}#recent-posts">
+      <li class="{% if !beforeId %} disabled {% endif %}">
+        <a href="{{ ctx.request.path }}">
           First Page
         </a>
       </li>
@@ -97,7 +97,7 @@
         </li>
       {% else %}
         <li>
-          <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#recent-posts">
+          <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}">
             Next Page &rarr;
           </a>
         </li>
