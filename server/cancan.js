@@ -10,6 +10,14 @@ var assert = require('better-assert');
 exports.can = can;
 function can(user, action, target) {
   switch(action) {
+    case 'READ_USER_ONLINE_STATUS': // target is user
+      // Guests and members can see status if target isn't in invisible mode.
+      if (!user) return !target.is_ghost;
+      // Members can see themselves regardless of ghost status
+      if (user.role === 'member')
+        return target.id === user.id || !target.is_ghost;
+      // Staff can see ghosts
+      return _.contains(['mod', 'smod', 'admin'], user.role);
     case 'DELETE_USER':  // target is user
       if (!user) return false;
       return user.role === 'admin';
