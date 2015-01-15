@@ -39,7 +39,7 @@ CREATE TABLE users (
   sig            text      NOT NULL  DEFAULT '',
   legacy_sig     text      NULL,
   avatar_url     text      NOT NULL DEFAULT '',
-  hide_sigs      boolean   NOT NULL  DEFAULT false;
+  hide_sigs      boolean   NOT NULL  DEFAULT false
 );
 
 CREATE UNIQUE INDEX unique_username ON users USING btree (lower(uname));

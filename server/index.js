@@ -389,6 +389,9 @@ app.use(route.get('/', function*() {
 
   // Get stats
   var stats = cache.get('stats');
+  stats.onlineUsers = stats.onlineUsers.filter(function(user) {
+    return cancan.can(this.currUser, 'READ_USER_ONLINE_STATUS', user);
+  }, this);
   stats.onlineUsers = stats.onlineUsers.map(pre.presentUser);
   if (stats.latestUser)
     stats.latestUser = pre.presentUser(stats.latestUser);
@@ -479,7 +482,7 @@ app.use(route.post('/forgot', function*() {
 app.use(route.get('/reset-password', function*() {
   if (!config.IS_EMAIL_CONFIGURED)
     return this.body = 'This feature is currently disabled';
-  var resetToken = this.request.query.token
+  var resetToken = this.request.query.token;
   yield this.render('reset_password', {
     ctx: this,
     resetToken: resetToken,
@@ -497,6 +500,8 @@ app.use(route.post('/reset-password', function*() {
   var token = this.request.body.token;
   var password1 = this.request.body.password1;
   var password2 = this.request.body.password2;
+  this.checkBody('remember-me').optional().toBoolean();
+  var rememberMe = this.request.body['remember-me'];
 
   // Check passwords
   if (password1 !== password2) {
@@ -524,13 +529,14 @@ app.use(route.post('/reset-password', function*() {
   yield db.deleteResetTokens(user.id);
 
   // Log the user in
+  var interval = rememberMe ? '1 year' : '1 day';
   var session = yield db.createSession({
     userId: user.id,
     ipAddress: this.request.ip,
-    interval: '1 day'  // TODO: Add remember-me button to reset form?
+    interval: interval
   });
   this.cookies.set('sessionId', session.id, {
-    expires: belt.futureDate(new Date(), { days: 1 })
+    expires: belt.futureDate(new Date(), rememberMe ? { years : 1 } : { days: 1 })
   });
 
   this.flash = { message: ['success', 'Your password was updated'] };
