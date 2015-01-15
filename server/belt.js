@@ -39,6 +39,7 @@ function md5(s) {
 // {{ 'firetruck'|truncate(6) }}  -> 'firetruck'
 exports.makeTruncate = function(suffix) {
   return function(str, n) {
+    if (!str) return str;
     suffix = suffix || '';
     var sliced = str.slice(0, n).trim();
     var totalLength = sliced.length + suffix.length;
