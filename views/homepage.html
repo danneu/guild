@@ -96,13 +96,15 @@
         <div class="col-xs-12">
           <h4>{{ stats.onlineUsers.length }} Users Online (within 15 min)</h4>
           {% for user in stats.onlineUsers %}
-            {% if user.is_ghost %}
-              <a href="{{ user.url }}" style="color: #000">{{ user.uname }}</a>
-            {% else %}
-              <a href="{{ user.url }}" style="color: #999">{{ user.uname }}</a>
-            {% endif %}
-            {% if !loop.last %}
-              ,
+            {% if ctx.can(ctx.currUser, 'READ_USER_ONLINE_STATUS', user) %}
+              {% if user.is_ghost %}
+                <a href="{{ user.url }}" style="color: #000">{{ user.uname }}</a>
+              {% else %}
+                <a href="{{ user.url }}" style="color: #999">{{ user.uname }}</a>
+              {% endif %}
+              {% if !loop.last %}
+                ,
+              {% endif %}
             {% endif %}
           {% endfor %}
         </div>

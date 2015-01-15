@@ -389,9 +389,6 @@ app.use(route.get('/', function*() {
 
   // Get stats
   var stats = cache.get('stats');
-  stats.onlineUsers = stats.onlineUsers.filter(function(user) {
-    return cancan.can(this.currUser, 'READ_USER_ONLINE_STATUS', user);
-  }, this);
   stats.onlineUsers = stats.onlineUsers.map(pre.presentUser);
   if (stats.latestUser)
     stats.latestUser = pre.presentUser(stats.latestUser);
