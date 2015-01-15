@@ -382,7 +382,6 @@ VALUES ($1, $2)
 // so this can be used to verify tokens
 exports.findUserByResetToken = wrapTimer(findUserByResetToken);
 function* findUserByResetToken(resetToken) {
-  assert(belt.isValidUuid(resetToken));
 
   // Short circuit if it's not even a UUID
   if (!belt.isValidUuid(resetToken))
