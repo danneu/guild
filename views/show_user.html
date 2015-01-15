@@ -77,7 +77,24 @@
               First Page
             </a>
           </li>
-          {% if recentPosts.length < recentPostsPerPage %}
+          {% if prevBeforeId || secondPage %}
+            <li>
+              {% if secondPage %}
+                <a href="{{ ctx.request.path }}#recent-posts">
+              {% else %}
+                <a href="{{ ctx.request.path }}?before-id={{ prevBeforeId }}#recent-posts">
+              {% endif %}
+                &larr; Previous Page
+              </a>
+            </li>
+          {% else %}
+            <li class="disabled">
+              <a href="{{ ctx.request.url }}">
+                &larr; Previous Page
+              </a>
+            </li>
+          {% endif %}
+          {% if recentPosts.length < recentPostsPerPage || lastPage %}
             <li class="disabled">
               <a href="{{ ctx.request.url }}">
                 Next Page &rarr;
@@ -90,6 +107,11 @@
               </a>
             </li>
           {% endif %}
+            <li>
+            <a href="{{ ctx.request.path }}?before-id={{ lastBeforeId }}#recent-posts">
+              Last Page
+            </a>
+          </li>
         </ul>
       {% endif %}
 
@@ -132,7 +154,24 @@
               First Page
             </a>
           </li>
-          {% if recentPosts.length < recentPostsPerPage %}
+          {% if prevBeforeId || secondPage %}
+            <li>
+              {% if secondPage %}
+                <a href="{{ ctx.request.path }}#recent-posts">
+              {% else %}
+                <a href="{{ ctx.request.path }}?before-id={{ prevBeforeId }}#recent-posts">
+              {% endif %}
+                &larr; Previous Page
+              </a>
+            </li>
+          {% else %}
+            <li class="disabled">
+              <a href="{{ ctx.request.url }}">
+                &larr; Previous Page
+              </a>
+            </li>
+          {% endif %}
+          {% if recentPosts.length < recentPostsPerPage || lastPage %}
             <li class="disabled">
               <a href="{{ ctx.request.url }}">
                 Next Page &rarr;
@@ -145,6 +184,11 @@
               </a>
             </li>
           {% endif %}
+            <li>
+            <a href="{{ ctx.request.path }}?before-id={{ lastBeforeId }}#recent-posts">
+              Last Page
+            </a>
+          </li>
         </ul>
       {% endif %}
 
@@ -171,4 +215,4 @@
 {% endblock %}
 
 {% block scripts %}
-{% endblock%}
+{% endblock %}

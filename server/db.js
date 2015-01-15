@@ -291,6 +291,7 @@ WHERE lower(u.uname) = lower($1);
 // `beforeId` is undefined or a number
 exports.findRecentPostsForUserId = wrapTimer(findRecentPostsForUserId);
 function* findRecentPostsForUserId(userId, beforeId) {
+  debug('beforeId: ', beforeId);
   assert(_.isNumber(beforeId) || _.isUndefined(beforeId));
   var sql = m(function() {/*
 SELECT
@@ -308,6 +309,23 @@ LIMIT $2
     userId,
     config.RECENT_POSTS_PER_PAGE,
     beforeId || 1e9
+  ]);
+  return result.rows;
+}
+
+exports.findAllPostsForUserId = wrapTimer(findAllPostsForUserId);
+function* findAllPostsForUserId(userId) {
+  var sql = m(function() {/*
+SELECT
+  p.*,
+  to_json(t.*) "topic"
+FROM posts p
+JOIN topics t ON p.topic_id = t.id
+WHERE p.user_id = $1
+ORDER BY p.id DESC
+  */});
+  var result = yield query(sql, [
+    userId,
   ]);
   return result.rows;
 }
