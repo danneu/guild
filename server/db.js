@@ -296,9 +296,11 @@ function* findRecentPostsForUserId(userId, beforeId) {
   var sql = m(function() {/*
 SELECT
   p.*,
-  to_json(t.*) "topic"
+  to_json(t.*) "topic",
+  to_json(f.*) "forum"
 FROM posts p
 JOIN topics t ON p.topic_id = t.id
+JOIN forums f ON t.forum_id = f.id
 WHERE p.user_id = $1 AND p.id < $3
 ORDER BY p.id DESC
 LIMIT $2
@@ -574,9 +576,11 @@ WHERE id = $1
   return result.rows[0];
 };
 
-// TODO: Sort by latest_pm_at
 exports.findConvosInvolvingUserId = wrapTimer(findConvosInvolvingUserId);
-function* findConvosInvolvingUserId(userId) {
+function* findConvosInvolvingUserId(userId, beforeId) {
+  // beforeId is the id of convo.latest_pm_id since that's how
+  // convos are sorted
+  assert(_.isNumber(beforeId) || _.isUndefined(beforeId));
   var sql = m(function() {/*
 SELECT
   c.*,
@@ -590,15 +594,16 @@ JOIN users u1 ON c.user_id = u1.id
 JOIN users u2 ON cp.user_id = u2.id
 JOIN pms ON c.latest_pm_id = pms.id
 JOIN users u3 ON pms.user_id = u3.id
-WHERE c.id IN (
+WHERE c.latest_pm_id < $2 AND c.id IN (
   SELECT cp.convo_id
   FROM convos_participants cp
   WHERE cp.user_id = $1
 )
 GROUP BY c.id, u1.id, pms.id, u3.id
 ORDER BY c.latest_pm_id DESC
+LIMIT $3
   */});
-  var result = yield query(sql, [userId]);
+  var result = yield query(sql, [userId, beforeId || 1e9, config.CONVOS_PER_PAGE]);
   return result.rows;
 };
 
@@ -811,11 +816,17 @@ RETURNING *
 exports.updateUser = function*(userId, attrs) {
   var sql = m(function() {/*
 UPDATE users
-SET email = COALESCE($2, email)
+SET
+  email = COALESCE($2, email),
+  sig = COALESCE($3, sig),
+  avatar_url = COALESCE($4, avatar_url),
+  hide_sigs = COALESCE($5, hide_sigs)
 WHERE id = $1
 RETURNING *
   */});
-  var result = yield query(sql, [userId, attrs.email]);
+  var result = yield query(sql, [
+    userId, attrs.email, attrs.sig, attrs.avatar_url, attrs.hide_sigs
+  ]);
   return result.rows[0];
 };
 
@@ -1055,4 +1066,9 @@ function* getStats() {
 exports.deleteUser = function*(id) {
   var sql = 'DELETE FROM users WHERE id = $1';
   yield query(sql, [id]);
+};
+
+exports.deleteLegacySig = function*(userId) {
+  var sql = 'UPDATE users SET legacy_sig = NULL WHERE id = $1';
+  yield query(sql, [userId]);
 };

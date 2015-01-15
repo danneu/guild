@@ -1,6 +1,32 @@
 {% extends 'layouts/master.html' %}
 
 {% block embed %}
+
+  <!-- Pagination -->
+
+  {% if ctx.currUser.pms_count > 1 %}
+    <ul class="pager">
+      <li class="{% if !beforeId %} disabled {% endif %}">
+        <a href="{{ ctx.request.path }}">
+          First Page
+        </a>
+      </li>
+      {% if convos.length < perPage %}
+        <li class="disabled">
+          <a href="{{ ctx.request.url }}">
+            Next Page &rarr;
+          </a>
+        </li>
+      {% else %}
+        <li>
+          <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}">
+            Next Page &rarr;
+          </a>
+        </li>
+      {% endif %}
+    </ul>
+  {% endif %}
+
   <div class="panel panel-default" style="border: 0; background-color: #111">
     <div class="panel-body" style="">
       <div class="row">
@@ -53,4 +79,30 @@
       </div>
     </div>
   {% endfor %}
+
+  <!-- Pagination -->
+
+  {% if ctx.currUser.pms_count > 1 %}
+    <ul class="pager">
+      <li class="{% if !beforeId %} disabled {% endif %}">
+        <a href="{{ ctx.request.path }}">
+          First Page
+        </a>
+      </li>
+      {% if convos.length < perPage %}
+        <li class="disabled">
+          <a href="{{ ctx.request.url }}">
+            Next Page &rarr;
+          </a>
+        </li>
+      {% else %}
+        <li>
+          <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}">
+            Next Page &rarr;
+          </a>
+        </li>
+      {% endif %}
+    </ul>
+  {% endif %}
+
 {% endblock %}

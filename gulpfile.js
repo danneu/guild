@@ -29,7 +29,8 @@ gulp.task('build-js', function() {
     'public/vendor/timeago/jquery.timeago.js',
     'public/vendor/markdown/markdown.js',
     'public/vendor/bootstrap-markdown/js/bootstrap-markdown.js',
-    'public/vendor/jquery-appear/jquery.appear.js'
+    'public/vendor/jquery-appear/jquery.appear.js',
+    'public/vendor/bootstrap/js/bootstrap.js'
   ];
   gulp.src(jsPaths)
       .pipe(concat('all.js'))

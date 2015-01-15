@@ -1,6 +1,7 @@
 // Node
 var util = require('util');
 var url = require('url');
+var crypto = require('crypto');
 // 3rd party
 var promissory = require('promissory');
 var assert = require('better-assert');
@@ -16,6 +17,23 @@ var config = require('./config');
 //// This module is a general utility-belt of functions.
 //// Somewhat of a junk drawer.
 ////
+
+exports.futureDate = function(nowDate, opts) {
+  // assert(opts.years || opts.days || opts.minutes ||
+  //        opts.seconds || opts.milliseconds);
+
+  return new Date(nowDate.getTime() +
+                  (opts.years   || 0) * 1000 * 60 * 60 * 24 * 365 +
+                  (opts.days    || 0) * 1000 * 60 * 60 * 24 +
+                  (opts.minutes || 0) * 1000 * 60 +
+                  (opts.seconds || 0) * 1000 +
+                  (opts.milliseconds || 0));
+};
+
+exports.md5 = md5;
+function md5(s) {
+  return crypto.createHash('md5').update(s).digest('hex');
+}
 
 // {{ 'firetruck'|truncate(5) }}  -> 'firet...'
 // {{ 'firetruck'|truncate(6) }}  -> 'firetruck'

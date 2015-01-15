@@ -156,7 +156,7 @@
              style="background-color: #1D1D1D; border-color: #111; border-radius: 0">
           <span class="pull-left">
             <abbr class="timeago" title="{{ post.created_at.toISOString() }}">
-              {{ post.formattedCreatedAt }}
+              {{ post.created_at|formatDate }}
             </abbr>
             {% if post.updated_at && post.updated_at.getTime() - post.created_at.getTime() > 1000 * 60 %}
               &rarr;
@@ -178,9 +178,73 @@
         <div class="panel-body"
              style="background-color: #2E2C2C">
           <!-- Author metadata -->
-          <div class="col-sm-2 clearfix">
-            <a href="{{ post.user.url }}">{{ post.user.uname }}</a>
-            <br>{{ post.user.role }}
+          <div class="col-sm-2 clearfix text-center post-user-meta">
+
+
+            <!-- For small devices -->
+            <div class="visible-xs-block">
+              <div class="media">
+                {% if post.user.avatar_url %}
+                  <a class="media-left" href="{{ post.user.url }}">
+                    <img src="{{ post.user.avatar_url}}" alt="avatar"
+                         style="max-width: 60px">
+                  </a>
+                {% endif %}
+                <div class="media-body">
+                  <h4 class="media-heading">
+                    <a href="{{ post.user.url }}">
+                      {{ post.user.uname }}
+                    </a>
+                  </h4>
+                  <div class="pull-left">{{ post.user.role|capitalize }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- For larger-than-smartphone devices -->
+            <div class="hidden-xs">
+              <div class="user-uname">
+                <a href="{{ post.user.url }}">
+                  {{ post.user.uname }}
+                </a>
+              </div>
+
+              {% if post.user.avatar_url %}
+                <div class="post-avatar"
+                     style="margin-top: 10px;">
+                  <img src="{{ post.user.avatar_url}}">
+                </div>
+              {% endif %}
+
+              <div class="user-role" style="margin-top: 10px;">
+                {{ post.user.role|capitalize }}
+              </div>
+
+              <!-- Online status -->
+
+              {% if post.user.is_ghost %}
+                <span style="color: #000">Invisible</span>
+              {% else %}
+                {% if Date.now() - post.user.last_online_at.getTime() < 1000 * 60 * 15 %}
+                  <span style="color: #3BB878">Online</span>
+                {% else %}
+                  {% if post.user.last_online_at %}
+                    <span style="color: #777">
+                      Online
+                      <abbr class="timeago"
+                            title="{{ post.user.last_online_at.toISOString() }}">
+                        {{ post.user.last_online_at|formatDate }}
+                      </abbr>
+                    </span>
+                  {% else %}
+                    <span style="color: #555">
+                      Offline since relaunch
+                    </span>
+                  {% endif %}
+                {% endif %}
+              {% endif %}
+
+            </div>
           </div> <!-- /.col-sm-2 post-meta -->
           <!-- Post text -->
           <div class="col-sm-10">
@@ -188,20 +252,32 @@
               <i>[HIDDEN]</i>
             {% else %}
               {% if post.legacy_html %}
-                <div class="post-body-html">{{ post.legacy_html|safe }}</div>
+                <div class="post-body-html post-content">{{ post.legacy_html|safe }}</div>
               {% else %}
-                <div class="post-body">{{ post.text }}</div>
+                <div class="post-body post-content">{{ post.text }}</div>
               {% endif %}
             {% endif %}
-            {% if post.user.legacy_sig %}
-              <div class="post-sig"
-                   style="max-height: 300px;
-                          overflow: auto;
-                          margin-top: 50px;
-                          padding: 20px 20px 0 20px;
-                          border-top: 2px solid black">
-                {{ post.user.legacy_sig|safe }}
-              </div>
+
+            <!-- Signature -->
+
+            {% if ctx.currUser && !ctx.currUser.hide_sigs %}
+              {% if post.user.sig %}
+                <div class="post-sig-markdown post-sig"
+                     style="max-height: 300px;
+                            overflow: auto;
+                            margin-top: 50px;
+                            padding: 20px 20px 0 20px;
+                            border-top: 2px solid black">{{ post.user.sig }}</div>
+              {% elif post.user.legacy_sig %}
+                <div class="post-sig post-sig-legacy"
+                     style="max-height: 300px;
+                            overflow: auto;
+                            margin-top: 50px;
+                            padding: 20px 20px 0 20px;
+                            border-top: 2px solid black">
+                  {{ post.user.legacy_sig|safe }}
+                </div>
+              {% endif %}
             {% endif %}
           </div>
         </div> <!-- /.panel-body -->
@@ -289,13 +365,24 @@
 </script>
 
 <script>
+  $('.post-avatar img').on('load', function(e) {
+    console.log('avatar loaded');
+    var h = $(this).height();
+    var w = $(this).width();
+    if (h > 150 || w > 150) {
+      $(this).parent().html('<span style="color: red">Avatar larger than 150x150</span>');
+    }
+  });
+</script>
+
+<script>
   // Render posts only as they appear in the user's browser
-  $('.post-body').appear();
-  $('.post-body').on('appear', function(e) {
-    if (!$(this).attr('data-post-rendered')) {
+  $('.post-body, .post-sig-markdown').appear();
+  $('.post-body, .post-sig-markdown').on('appear', function(e) {
+    if (!$(this).attr('data-rendered')) {
       var $this = $(this);
       $this.html(markdown.toHTML($this.text()));
-      $this.attr('data-post-rendered', true);
+      $this.attr('data-rendered', true);
     }
   });
 </script>
@@ -394,6 +481,7 @@ $(function() {
         $spinner.remove();
         $post_body.append($post_editor);
         $post_editor.markdown({
+          height: 350,
           resize: 'vertical',
           savable: true,
           onSave: function(e) {

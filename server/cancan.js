@@ -17,6 +17,8 @@ function can(user, action, target) {
       if (!user) return false;
       return _.contains(['mod', 'smod', 'admin'], user.role);
     case 'UPDATE_USER_ROLE': // target is user
+      if (!user) return false;
+      if (user.role === 'admin') return true;
       // Staff can change staff below them
       if (_.contains(['banned', 'member'], target.role))
         return _.contains(['mod', 'smod'], user.role);
@@ -103,6 +105,9 @@ function can(user, action, target) {
         return !!_.contains(['mod', 'smod', 'admin'], user.role);
       else
         return true;
+    case 'UNSUBSCRIBE_TOPIC':
+      // A user can unsubscribe from a topic if they're logged in
+      return !!user;
     case 'SUBSCRIBE_TOPIC':  // target is topic
       if (!user) return false;
       // Members and up can subscribe if they can read the topic

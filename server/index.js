@@ -47,9 +47,10 @@ var log = require('./logger');
 var cache = require('./cache')(log);
 
 // Catch and log all errors that bubble up to koa
-app.on('error', function(err){
-  log.error(err, 'Error');
-});
+// app.on('error', function(err) {
+//   log.error(err, 'Error');
+//   console.error('Error:', err, err.stack);
+// });
 
 app.use(function*(next) {
   var start = Date.now();
@@ -173,19 +174,8 @@ app.use(route.post('/me/logout', function *() {
 //
 app.use(route.get('/login', function*() {
   yield this.render('login', {
-    ctx: this
-  });
-}));
-
-//
-// Register new user form
-//
-app.use(route.get('/register', function*() {
-  assert(config.RECAPTCHA_SITEKEY);
-  assert(config.RECAPTCHA_SITESECRET);
-  yield this.render('register', {
     ctx: this,
-    recaptchaSitekey: config.RECAPTCHA_SITEKEY
+    title: 'Login'
   });
 }));
 
@@ -289,7 +279,9 @@ app.post('/users', function*() {
 
   var user = result['user'];
   var session = result['session'];
-  this.cookies.set('sessionId', session.id);
+  this.cookies.set('sessionId', session.id, {
+    expires: belt.futureDate(new Date(), { years: 365 })
+  });
   this.flash = { message: ['success', 'Registered successfully'] };
   return this.response.redirect('/');
 });
@@ -330,7 +322,7 @@ app.post('/sessions', function*() {
   }
 
   // User authenticated
-  var interval = (rememberMe ? '1 day' : '1 year');
+  var interval = (rememberMe ? '1 year' : '1 day');
   var session = yield db.createSession({
     userId: user.id,
     ipAddress: this.request.ip,
@@ -339,7 +331,9 @@ app.post('/sessions', function*() {
 
   this.log.info({ session: session, session_interval: interval },
                 'Created session');
-  this.cookies.set('sessionId', session.id);
+  this.cookies.set('sessionId', session.id, {
+    expires: belt.futureDate(new Date(), rememberMe ? { years: 1 } : { days: 1 })
+  });
   this.flash = { message: ['success', 'Logged in successfully'] };
   this.response.redirect('/');
 });
@@ -357,8 +351,12 @@ app.use(route.get('/users', function*() {
 // Registration form
 //
 app.use(route.get('/register', function*() {
+  assert(config.RECAPTCHA_SITEKEY);
+  assert(config.RECAPTCHA_SITESECRET);
   yield this.render('register', {
-    ctx: this
+    ctx: this,
+    recaptchaSitekey: config.RECAPTCHA_SITEKEY,
+    title: 'Register'
   });
 }));
 
@@ -408,7 +406,7 @@ app.use(route.get('/', function*() {
 app.use(route.delete('/me/subscriptions/:topicId', function*(topicId) {
   this.assert(this.currUser, 404);
   var topic = yield db.findTopic(topicId);
-  this.assertAuthorized(this.currUser, 'SUBSCRIBE_TOPIC', topic);
+  this.assertAuthorized(this.currUser, 'UNSUBSCRIBE_TOPIC', topic);
   yield db.unsubscribeFromTopic(this.currUser.id, topicId);
   // TODO: flash
   topic = pre.presentTopic(topic);
@@ -426,7 +424,8 @@ app.use(route.get('/forgot', function*() {
   if (!config.IS_EMAIL_CONFIGURED)
     return this.body = 'This feature is currently disabled';
   yield this.render('forgot', {
-    ctx: this
+    ctx: this,
+    title: 'Forgot Password'
   });
 }));
 
@@ -483,7 +482,8 @@ app.use(route.get('/reset-password', function*() {
   var resetToken = this.request.query.token
   yield this.render('reset_password', {
     ctx: this,
-    resetToken: resetToken
+    resetToken: resetToken,
+    title: 'Reset Password with Token'
   });
 }));
 
@@ -529,7 +529,9 @@ app.use(route.post('/reset-password', function*() {
     ipAddress: this.request.ip,
     interval: '1 day'  // TODO: Add remember-me button to reset form?
   });
-  this.cookies.set('sessionId', session.id);
+  this.cookies.set('sessionId', session.id, {
+    expires: belt.futureDate(new Date(), { days: 1 })
+  });
 
   this.flash = { message: ['success', 'Your password was updated'] };
   return this.response.redirect('/');
@@ -575,7 +577,8 @@ app.get('/users/:userId/edit', function*() {
   user = pre.presentUser(user);
   yield this.render('edit_user', {
     ctx: this,
-    user: user
+    user: user,
+    title: 'Edit User: ' + user.uname
   });
 });
 
@@ -600,6 +603,16 @@ app.put('/users/:userId/role', function*() {
   this.response.redirect(user.url + '/edit');
 });
 
+// Delete legacy sig
+app.delete('/users/:userId/legacy-sig', function*() {
+  var user = yield db.findUser(this.params.userId);
+  this.assert(user, 404);
+  this.assertAuthorized(this.currUser, 'UPDATE_USER', user);
+  yield db.deleteLegacySig(this.params.userId);
+  this.flash = { message: ['success', 'Legacy sig deleted'] };
+  this.response.redirect('/users/' + this.params.userId + '/edit');
+});
+
 //
 // Update user
 //
@@ -610,22 +623,45 @@ app.put('/users/:userId/role', function*() {
 //
 // At least one of these updates:
 // - email
+// - avatar-url
+// - sig
+// - hide-sigs
 //
 // TODO: This isn't very abstracted yet. Just an email endpoint for now.
 //
 app.put('/users/:userId', function*() {
-  this.request.body.email;
-  this.checkBody('email').optional().isEmail('Invalid email address');
-  debug(this.errors);
+  this.checkBody('email')
+    .optional()
+    .isEmail('Invalid email address');
+  this.checkBody('sig')
+    .optional()
+  this.checkBody('avatar-url')
+    .optional()
+  if (this.request.body['avatar-url'] && this.request.body['avatar-url'].length > 0)
+    this.checkBody('avatar-url')
+      .trim()
+      .isUrl('Must specify a URL for the avatar');
+  this.checkBody('hide-sigs')
+    .optional()
+    .toBoolean();
+
   if (this.errors) {
     this.flash = { message: ['danger', belt.joinErrors(this.errors)] }
-    return this.response.redirect(this.request.path + '/edit');
+    this.response.redirect(this.request.path + '/edit');
+    return;
   }
+
   var user = yield db.findUser(this.params.userId);
   this.assert(user, 404);
   this.assertAuthorized(this.currUser, 'UPDATE_USER', user);
+
   yield db.updateUser(user.id, {
-    email: this.request.body.email || user.email
+    email: this.request.body.email || user.email,
+    sig: this.request.body.sig,
+    avatar_url: this.request.body['avatar-url'],
+    hide_sigs: _.isBoolean(this.request.body['hide-sigs'])
+                 ? this.request.body['hide-sigs']
+                 : user.hide_sigs
   });
   user = pre.presentUser(user);
   this.flash = { message: ['success', 'User updated'] };
@@ -648,7 +684,8 @@ app.use(route.get('/me/subscriptions', function*() {
     ctx: this,
     topics: topics,
     roleplayTopics: roleplayTopics,
-    nonroleplayTopics: nonroleplayTopics
+    nonroleplayTopics: nonroleplayTopics,
+    title: 'My Subscriptions'
   });
 }));
 
@@ -668,7 +705,8 @@ app.use(route.get('/lexus-lounge', function*() {
     ctx: this,
     category: category,
     latestUsers: latestUsers,
-    latestUserLimit: latestUserLimit
+    latestUserLimit: latestUserLimit,
+    title: 'Lexus Lounge — Mod Forum'
   });
 }));
 
@@ -693,7 +731,8 @@ app.get('/forums/:forumId', function*() {
     ctx: this,
     forum: forum,
     currPage: pager.currPage,
-    totalPages: pager.totalPages
+    totalPages: pager.totalPages,
+    title: forum.title
   });
 });
 
@@ -746,18 +785,27 @@ app.post('/topics/:topicId/posts', function*() {
 //
 // Show convos
 //
-app.use(route.get('/me/convos', function*() {
+app.get('/me/convos', function*() {
   if (!config.IS_PM_SYSTEM_ONLINE)
     return this.body = 'PM system currently disabled';
 
+  this.checkQuery('before-id').optional().toInt();  // undefined || Number
+
   this.assert(this.currUser, 404);
-  var convos = yield db.findConvosInvolvingUserId(this.currUser.id);
+  var convos = yield db.findConvosInvolvingUserId(this.currUser.id,
+                                                  this.query['before-id']);
   convos = convos.map(pre.presentConvo);
+  var nextBeforeId = convos.length > 0 ? _.last(convos).latest_pm_id : null;
   yield this.render('me_convos.html', {
     ctx: this,
-    convos: convos
+    convos: convos,
+    title: 'My Private Conversations',
+    // Pagination
+    beforeId: this.query['before-id'],
+    nextBeforeId: nextBeforeId,
+    perPage: config.CONVOS_PER_PAGE
   });
-}));
+});
 
 //
 // Show user
@@ -772,6 +820,12 @@ app.get('/users/:userId', function*() {
   // OPTIMIZE: Merge into single query?
   var recentPosts = yield db.findRecentPostsForUserId(user.id,
                                                       this.query['before-id']);
+  // TODO: Figure out how to do this so I'm not possibly serving empty or
+  //       partial pages since they're being filtered post-query.
+  // Filter out posts that currUser is unauthorized to see
+  recentPosts = recentPosts.filter(function(post) {
+    return cancan.can(this.currUser, 'READ_POST', post);
+  }.bind(this));
   recentPosts = recentPosts.map(pre.presentPost);
   var allPosts = yield db.findAllPostsForUserId(user.id);
 
@@ -806,6 +860,7 @@ app.get('/users/:userId', function*() {
     ctx: this,
     user: user,
     recentPosts: recentPosts,
+    title: 'User: ' + user.uname,
     // Pagination
     nextBeforeId: nextBeforeId,
     prevBeforeId: prevBeforeId,
@@ -924,7 +979,8 @@ app.use(route.get('/convos/new', function*() {
   // TODO: Validation, Error msgs, preserve params
   yield this.render('new_convo', {
     ctx: this,
-    to: this.request.query.to
+    to: this.request.query.to,
+    title: 'New Conversation'
   });
 }));
 
@@ -999,6 +1055,7 @@ app.use(route.get('/convos/:convoId', function*(convoId) {
   yield this.render('show_convo', {
     ctx: this,
     convo: convo,
+    title: 'Convo: ' + convo.title,
     // Pagination
     currPage: page,
     totalPages: totalPages
@@ -1279,6 +1336,7 @@ app.use(route.get('/topics/:topicId/posts/:postType', function*(topicId, postTyp
     ctx: this,
     topic: topic,
     postType: postType,
+    title: 'Topic: ' + topic.title,
     // Pagination
     currPage: page,
     totalPages: totalPages

@@ -19,6 +19,20 @@
 
   {{ paginate.render(currPage, totalPages, forum.url) }}
 
+
+  <!-- New Topic button -->
+
+  {% if ctx.can(ctx.currUser, 'CREATE_TOPIC', forum) %}
+    <a class="btn btn-primary pull-right" href="#new-topic-form">
+      <span class="glyphicon glyphicon-pencil"></span>
+      {% if forum.is_roleplay %}
+        New Roleplay
+      {% else %}
+        New Topic
+      {% endif %}
+    </a>
+  {% endif %}
+
   <!-- Tabs -->
 
   {% if forum.parent_forum  %}
@@ -78,7 +92,13 @@
                   {% endif %}
                   <a href="{{ topic.url }}">{{ topic.title }}</a>
                   <div style="margin-top: 6px;">
-                    by <a href="{{ topic.user.url }}" style="color: #fff">{{ topic.user.uname }}</a>
+                    by <a href="{{ topic.user.url }}" style="color: #fff">
+                      {{ topic.user.uname -}}
+                    </a>,
+                    <abbr class="timeago"
+                          title="{{ topic.created_at.toISOString() }}">
+                      {{ topic.created_at|formatDate }}
+                    </abbr>
                   <div>
                 </h5>
               </div>
@@ -132,7 +152,7 @@
                   class="form-control"
                   placeholder="Click here and begin writing"></textarea>
       </div>
-      <input type="submit" class="btn btn-primary" value="Create Topics"></input>
+      <input type="submit" class="btn btn-primary" value="Create Topic"></input>
     </form>
     {% include 'partials/markdown_cheatsheet.html' %}
   {% endif %}
