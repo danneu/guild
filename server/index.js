@@ -1078,7 +1078,7 @@ app.post('/forums/:forumId/topics', function*() {
   this.assert(forum, 404);
   this.assertAuthorized(this.currUser, 'CREATE_TOPIC', forum);
 
-  var postType = forum.is_roleplay ? 'ic' : 'ooc';
+  var postType = 'ooc';
   var topic = yield db.createTopic({
     userId: this.currUser.id,
     forumId: forumId,
