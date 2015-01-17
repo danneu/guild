@@ -119,7 +119,8 @@ CREATE TYPE post_type AS ENUM ('ic', 'ooc', 'char');
 
 CREATE TABLE posts (
   id         serial PRIMARY KEY,
-  text       text NOT NULL,
+  text       text NULL,
+  markup     text NULL,
   legacy_html text NULL,
   topic_id   int NOT NULL  REFERENCES topics(id)  ON DELETE CASCADE,
   user_id    int NOT NULL  REFERENCES users(id)  ON DELETE CASCADE,
@@ -169,7 +170,8 @@ CREATE TABLE convos (
 
 CREATE TABLE pms (
   id         serial PRIMARY KEY,
-  text       text   NOT NULL,
+  text       text   NULL,
+  markup     text   NULL,
   legacy_html text NULL,
   convo_id   int    NOT NULL  REFERENCES convos(id)  ON DELETE CASCADE,
   user_id    int    NOT NULL  REFERENCES users(id)  ON DELETE CASCADE,
