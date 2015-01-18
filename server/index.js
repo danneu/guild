@@ -181,6 +181,12 @@ app.use(views('../views', {
 // in the koa context
 app.use(require('koa-router')(app));
 
+app.get('/test', function*() {
+  yield this.render('test', {
+    ctx: this
+  });
+});
+
 //
 // Logout
 //
