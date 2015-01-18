@@ -218,3 +218,137 @@ blockquote {
     /* top: 20px; */
     }
 }
+
+/* bbcode   */
+
+.bb-h1:before,
+.bb-h2:before,
+.bb-h3:before {
+    color: #666;
+}
+.bb-h1,
+.bb-h2,
+.bb-h3 {
+  font-family: Georgia, serif;
+}
+
+
+.bb-h1 {
+    /* font-size: 2em; */
+    font-size: 3em;
+    border-bottom: 6px double white;
+    margin-top: 20px;
+}
+.bb-h2 {
+    /* font-size: 1.75em; */
+    font-size: 2.25em;
+    border-bottom: 1px solid white;
+    margin-top: 20px;
+}
+.bb-h3 {
+    /* font-size: 1.50em; */
+    font-size: 1.75em;
+    margin-top: 20px;
+}
+/* .bb-h1:before {content: '# ';} */
+/* .bb-h2:before {content: '## ';} */
+/* .bb-h3:before {content: '### ';} */
+.bb-indent {
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+.hider-panel {
+    border: 1px solid black;
+}
+
+/* The default blockquote footer is small and hugs the text too closely
+   and is hard to see against the slate grey */
+blockquote footer {
+    font-size: 100%;
+    color: #888;
+    margin-top: 10px;
+}
+
+.bb-b {
+    font-weight: bold;
+}
+.bb-i {
+    font-style: italic;
+}
+.bb-u {
+    text-decoration: underline;
+}
+.bb-s {
+    text-decoration: line-through;
+}
+.bb-mark {
+    padding: 0.2em;
+    background-color: #ff0;
+    color: #000;
+}
+
+/* Alignment */
+.bb-center { text-align: center; }
+.bb-left { text-align: left; }
+.bb-right { text-align: right; }
+.bb-justify { text-align: justify; }
+
+.bb-quote {
+    padding-top: 0;
+    margin-bottom: 0;
+}
+
+.bb-table tr.bb-active td,
+.bb-table td.bb-active {background-color: #666 !important;}
+.bb-table tr.bb-success td,
+.bb-table td.bb-success {background-color: #00BC8C !important;}
+.bb-table tr.bb-warning td,
+.bb-table td.bb-warning {background-color: #F39C12 !important;}
+.bb-table tr.bb-danger td,
+.bb-table td.bb-danger {background-color: #E43725 !important;}
+.bb-table tr.bb-info td,
+.bb-table td.bb-info {background-color: #3498DB !important;}
+/* Darken table borders/grid */
+/* .table > tbody > tr > td {border-top: 1px solid #888;} */
+/* .bb-th {border-bottom-color: #888 !important;} */
+
+/*
+    Gives content a border that lines up with the border of Bootstrap's nav-tabs
+    that must be directly above it.
+    This encompasses tab content is a complete border that makes it obvious
+    what will change when a tab is clicked.
+    Ex:
+    <ul class="nav nav-tabs">...</ul>
+    <div class="tabbed-content"></div>
+ */
+.tabbed-content {
+    padding: 20px 10px 10px 10px;
+    border-radius: 0 0 4px 4px;
+    border-left: 1px solid #ddd;
+    border-right: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+}
+
+textarea {
+    background-color: #2E2C2C !important;
+    color: white !important;
+}
+.md-preview {
+    background-color: #2E2C2C !important;
+    color: white !important;
+    padding: 10px;
+}
+
+.bb-color-editor {
+    width: 250px;
+}
+.bb-color-row {
+    line-height: 10px;
+}
+.bb-color-swatch {
+    height: 15px;
+    width: 15px;
+    display: inline-block;
+    border: 1px solid white;
+}

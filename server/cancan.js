@@ -162,14 +162,13 @@ function can(user, action, target) {
       return false;
     case 'UPDATE_PM':  // target is pm with pm.convo and pm.participants
       if (!user) return false;
-      // Can't update legacy PMs
+      // Can't update legacy PMs. TODO: Implement BBCode editing for PMs
+      // once post BBCode system is tested
       if (target.legacy_html) return false;
       // User can update a PM if they own it
       return target.user_id === user.id;
     case 'UPDATE_POST':  // target expected to be a post
       if (!user) return false;
-      // Nobody can update legacy posts
-      if (target.legacy_html) return false;
       // Admin can update any post
       if (user.role === 'admin') return true;
       // TODO: Create rules for other staff roles

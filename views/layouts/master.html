@@ -16,10 +16,11 @@
     <link rel="stylesheet" href="/{{ ctx.dist.css }}">
   {% else %}
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap-theme.min.css">
+    <link href="/vendor/bootstrap/css/bootstrap.css" rel="stylesheet">
+    <link href="/vendor/bootstrap/css/bootstrap-theme.css" rel="stylesheet">
     <!-- Other 3rd party CSS -->
-    <link rel="stylesheet" href="/vendor/bootstrap-markdown/css/bootstrap-markdown.min.css">
+    <link href="/vendor/font-awesome/css/font-awesome.css" rel="stylesheet">
+    <link href="/vendor/bootstrap-markdown/css/bootstrap-markdown.min.css" rel="stylesheet">
     <!-- RPGuild CSS -->
     <link href="/css/bootstrap_overrides.css" rel="stylesheet">
     <link href="/css/general.css" rel="stylesheet">
@@ -148,6 +149,8 @@
     <script src="/vendor/bootstrap-markdown/js/bootstrap-markdown.js"></script>
     <script src="/vendor/jquery-appear/jquery.appear.js"></script>
     <script src="/vendor/bootstrap/js/bootstrap.js"></script>
+    <script src="/vendor/xbbcode/xbbcode/xbbcode.js"></script>
+    <script src="/js/bbcode_editor.js"></script>
   {% endif %}
   <script>
     // Prevent double-clicking on links
@@ -192,26 +195,36 @@
     });
   </script>
   <script>
-    $('.hider-button').click(function(e) {
-       e.stopPropagation();
-       //$(this).next().toggle();
+    //$('.hider-button').click(function(e) {
+    // Bind to any hiders that are created after page load (i.e. hiders
+    // in preview boxes)
+    $(document).ready(function() {
+      $(document).on('click', '.hider-button', function(e) {
+         console.log('click');
+         e.stopPropagation();
+         //$(this).next().toggle();
 
-       var $button = $(this);
-       var hiderName = $button.attr('data-name');
-       var $content = $button.parent().next();
 
-       if ($content.css('display') == 'none') {
-         $content.show();
-         $button.parent().parent().css('border', '1px solid #111')
-         $button.text(hiderName + ' [-]');
-       } else {
-         $content.hide();
-         $button.parent().parent().css('border', 'none')
-         $button.text(hiderName + ' [+]');
-       }
+         var $button = $(this);
+         console.log($button);
+         var hiderName = $button.attr('data-name');
+         var $content = $button.parent().next();
+         console.log('$content', $content);
+         console.log('expr', $content.css('display'));
 
-       return false;
-     })
+         if ($content.css('display') === 'none') {
+           $content.show();
+           $button.parent().parent().css('border', '1px solid #111')
+           $button.text(hiderName + ' [-]');
+         } else {
+           $content.hide();
+           $button.parent().parent().css('border', 'none')
+           $button.text(hiderName + ' [+]');
+         }
+
+         return false;
+       })
+    });
   </script>
   {% block scripts %}{% endblock %}
 </body>

@@ -20,7 +20,11 @@ app.proxy = true;
 app.use(require('koa-static')('public'));
 app.use(require('koa-static')('dist', { maxage: 1000 * 60 * 60 * 24 * 365 }));
 app.use(require('koa-logger')());
-app.use(require('koa-body')());
+app.use(require('koa-body')({
+  // Max payload size allowed in request form body
+  // Defaults to '56kb'
+  formLimit: config.MAX_POST_LENGTH*2
+}));
 app.use(require('koa-methodoverride')('_method'));
 var route = require('koa-route');
 var views = require('koa-views');
@@ -45,6 +49,7 @@ var cancan = require('./cancan');
 var emailer = require('./emailer');
 var log = require('./logger');
 var cache = require('./cache')(log);
+var bbcode = require('./bbcode');
 
 // Catch and log all errors that bubble up to koa
 // app.on('error', function(err) {
@@ -68,7 +73,7 @@ app.use(function*(next) {
 // paths to the context so the view layer can render
 // them.
 //
-// Exaple value of `dist`:
+// Example value of `dist`:
 // { css: 'all-ab42cf1.css', js: 'all-d181a21.js' }'
 var dist;
 co(function*() {
@@ -83,8 +88,10 @@ co(function*() {
     js: manifest['all.js']
   };
 }).then(function() {
+  console.log('dist set', dist);
   log.info({ dist: dist }, 'dist set');
 }, function(err) {
+  console.log('dist failed', dist);
   log.error(err, 'dist failed');
 });
 
@@ -129,6 +136,21 @@ app.use(function*(next) {  // Must become before koa-router
 // {{ 'firetruck'|truncate(5) }}  -> 'firet...'
 // {{ 'firetruck'|truncate(6) }}  -> 'firetruck'
 swig.setFilter('truncate', belt.makeTruncate('…'));
+
+// FIXME: Can't render bbcode on the fly until I speed up
+// slow bbcode like tabs
+swig.setFilter('bbcode', function(markup) {
+  var html, start = Date.now();
+  try {
+    html = bbcode(markup);
+    return html;
+  } catch(ex) {
+    //return 'There was a problem parsing a tag in this BBCode<br><br><pre style="overflow: auto">' + markup + '</pre>';
+    throw ex;
+  } finally {
+    console.log('bbcode render time: ', Date.now() - start, 'ms - Rendered', markup.length, 'chars');
+  }
+});
 
 // commafy(10) -> 10
 // commafy(1000000) -> 1,000,000
@@ -743,15 +765,18 @@ app.get('/forums/:forumId', function*() {
 // Create post
 // Body params:
 // - post-type
-// - text
+// - markup
 //
 app.post('/topics/:topicId/posts', function*() {
   this.checkBody('post-type').isIn(['ic', 'ooc', 'char'], 'Invalid post-type');
-  this.checkBody('text').isLength(config.MIN_POST_LENGTH,
-                                  config.MAX_POST_LENGTH,
-                                  'Post must be between ' +
-                                  config.MIN_POST_LENGTH + ' and ' +
-                                  config.MAX_POST_LENGTH + ' chars long');
+  this.checkBody('markup')
+    .trim()
+    .isLength(config.MIN_POST_LENGTH,
+              config.MAX_POST_LENGTH,
+              'Post must be between ' +
+              config.MIN_POST_LENGTH + ' and ' +
+              config.MAX_POST_LENGTH + ' chars long');
+
   if (this.errors) {
     this.flash = {
       message: ['danger', belt.joinErrors(this.errors)],
@@ -770,13 +795,16 @@ app.post('/topics/:topicId/posts', function*() {
   if (!topic.forum.is_roleplay)
     this.assert(postType === 'ooc', 400);
 
-  var text = this.request.body.text;
+  // Render the bbcode
+  var html = bbcode(this.request.body.markup);
+
   // TODO: Validation
   var post = yield db.createPost({
     userId: this.currUser.id,
     ipAddress: this.request.ip,
     topicId: topic.id,
-    text: text,
+    markup: this.request.body.markup,
+    html: html,
     type: postType,
     isRoleplay: topic.forum.is_roleplay
   });
@@ -867,7 +895,7 @@ app.delete('/users/:id', function*() {
 // Params:
 // - 'to': Comma-delimited string of unames user wants to send to
 // - 'title'
-// - 'text'
+// - 'markup'
 //
 app.use(route.post('/convos', function*() {
   if (!config.IS_PM_SYSTEM_ONLINE)
@@ -880,8 +908,9 @@ app.use(route.post('/convos', function*() {
   this.checkBody('title').isLength(config.MIN_TOPIC_TITLE_LENGTH,
                                    config.MAX_TOPIC_TITLE_LENGTH,
                                    'Title required');
-  this.checkBody('text').isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH,
-                                  'Text required');
+  this.checkBody('markup').isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH,
+                                  'Post text most be ' + config.MIN_POST_LENGTH +
+                                  '-' + config.MAX_POST_LENGTH + ' chars long');
 
   if (this.errors) {
     this.flash = {
@@ -897,7 +926,7 @@ app.use(route.post('/convos', function*() {
 
   var unames = this.request.body.to && this.request.body.to.split(',') || [];
   var title = this.request.body.title;
-  var text = this.request.body.text;
+  var markup = this.request.body.markup;
   // Remove empty (Note: unames contains lowercase unames)
   unames = _.compact(unames.map(function(uname) {
     return uname.trim().toLowerCase();
@@ -929,15 +958,18 @@ app.use(route.post('/convos', function*() {
     return;
   }
 
+  // Render bbcode
+  var html = bbcode(markup);
+
   // If all unames are valid, then we can create a convo
   var convo = yield db.createConvo({
     userId: this.currUser.id,
     toUserIds: _.pluck(users, 'id'),
     title: title,
-    text: text,
+    markup: markup,
+    html: html,
     ipAddress: this.request.ip
   });
-  this.log.info({ convo: convo, text: belt.truncate(text, 100) }, 'Created convo');
   convo = pre.presentConvo(convo);
   this.response.redirect(convo.url);
 }));
@@ -962,14 +994,16 @@ app.use(route.get('/convos/new', function*() {
 //
 // Create PM
 // Body params
-// - text
+// - markup
 //
 app.use(route.post('/convos/:convoId/pms', function*(convoId) {
   if (!config.IS_PM_SYSTEM_ONLINE)
     return this.body = 'PM system currently disabled';
 
   this.assert(this.currUser, 403);
-  this.checkBody('text').isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH);
+  this.checkBody('markup')
+    .isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH);
+
   if (this.errors) {
     this.flash = {
       message: ['danger', belt.joinErrors(this.errors)],
@@ -983,12 +1017,17 @@ app.use(route.post('/convos/:convoId/pms', function*(convoId) {
   this.assert(convo, 404);
   this.assertAuthorized(this.currUser, 'CREATE_PM', convo);
 
-  var text = this.request.body.text;
+  // Render bbcode
+  var html = bbcode(markup);
+
+  var markup = this.request.body.markup;
   var pm = yield db.createPm({
     userId: this.currUser.id,
     ipAddress: this.request.ip,
     convoId: convoId,
-    text: text});
+    markup: markup,
+    html: html
+  });
   this.log.info({ pm: pm }, 'Created PM');
   pm = pre.presentPm(pm);
   this.response.redirect(pm.url);
@@ -1053,7 +1092,7 @@ app.post('/forums/:forumId/topics', function*() {
               'Title must be between ' +
               config.MIN_TOPIC_TITLE_LENGTH + ' and ' +
               config.MAX_TOPIC_TITLE_LENGTH + ' chars');
-  this.checkBody('text')
+  this.checkBody('markup')
     .notEmpty('Post text is required')
     .isLength(config.MIN_POST_LENGTH,
               config.MAX_POST_LENGTH,
@@ -1072,11 +1111,13 @@ app.post('/forums/:forumId/topics', function*() {
 
   var forumId = this.params.forumId;
   var title = this.request.body.title;
-  var text = this.request.body.text;
 
   var forum = yield db.findForum(this.params.forumId);
   this.assert(forum, 404);
   this.assertAuthorized(this.currUser, 'CREATE_TOPIC', forum);
+
+  // Render BBCode to html
+  var html = bbcode(this.request.body.markup);
 
   var postType = 'ooc';
   var topic = yield db.createTopic({
@@ -1084,15 +1125,11 @@ app.post('/forums/:forumId/topics', function*() {
     forumId: forumId,
     ipAddress: this.request.ip,
     title: title,
-    text: text,
+    markup: this.request.body.markup,
+    html: html,
     postType: postType,
     isRoleplay: forum.is_roleplay
   });
-  this.log.info({
-    topic: topic,
-    text: belt.truncate(text, 100),
-    post_type: postType
-  }, 'Created topic');
   topic = pre.presentTopic(topic);
   this.response.redirect(topic.url);
 });
@@ -1106,7 +1143,7 @@ app.get('/posts/:id/raw', function*() {
   var post = yield db.findPostWithTopicAndForum(this.params.id);
   this.assert(post, 404);
   this.assertAuthorized(this.currUser, 'READ_POST', post);
-  this.body = post.text;
+  this.body = post.markup ? post.markup : post.text;
 });
 
 app.get('/pms/:id/raw', function*() {
@@ -1121,14 +1158,14 @@ app.get('/pms/:id/raw', function*() {
 });
 
 //
-// Update post text
+// Update post markup
 // Body params:
-// - text
+// - markup
 //
 // Keep /api/posts/:postId and /api/pms/:pmId in sync
 app.put('/api/posts/:id', function*() {
-  this.checkBody('text').isLength(config.MIN_POST_LENGTH,
-                                  config.MAX_POST_LENGTH);
+  this.checkBody('markup').isLength(config.MIN_POST_LENGTH,
+                                    config.MAX_POST_LENGTH);
   if (this.errors) {
     this.flash = {
       message: ['danger', belt.joinErrors(this.errors)],
@@ -1142,8 +1179,10 @@ app.put('/api/posts/:id', function*() {
   this.assert(post, 404);
   this.assertAuthorized(this.currUser, 'UPDATE_POST', post)
 
-  var text = this.request.body.text;
-  var updatedPost = yield db.updatePost(this.params.id, text);
+  // Render BBCode to html
+  var html = bbcode(this.request.body.markup);
+
+  var updatedPost = yield db.updatePost(this.params.id, this.request.body.markup, html);
   updatedPost = pre.presentPost(updatedPost);
   this.body = JSON.stringify(updatedPost);
 });

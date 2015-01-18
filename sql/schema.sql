@@ -119,9 +119,10 @@ CREATE TYPE post_type AS ENUM ('ic', 'ooc', 'char');
 
 CREATE TABLE posts (
   id         serial PRIMARY KEY,
-  text       text NULL,
+  text       text NULL,  -- Deprecated
   markup     text NULL,
-  legacy_html text NULL,
+  html       text NULL,  -- The rendered post.markup
+  legacy_html text NULL,  -- Deprecated
   topic_id   int NOT NULL  REFERENCES topics(id)  ON DELETE CASCADE,
   user_id    int NOT NULL  REFERENCES users(id)  ON DELETE CASCADE,
   created_at timestamp with time zone NOT NULL  DEFAULT NOW(),
@@ -170,9 +171,10 @@ CREATE TABLE convos (
 
 CREATE TABLE pms (
   id         serial PRIMARY KEY,
-  text       text   NULL,
+  text       text   NULL,  -- Deprecated
   markup     text   NULL,
-  legacy_html text NULL,
+  html       text   NULL,
+  legacy_html text NULL,  -- Deprecated
   convo_id   int    NOT NULL  REFERENCES convos(id)  ON DELETE CASCADE,
   user_id    int    NOT NULL  REFERENCES users(id)  ON DELETE CASCADE,
   ip_address inet   NULL,
