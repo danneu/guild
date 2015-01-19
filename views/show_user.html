@@ -113,7 +113,9 @@
             </abbr>
           </div>
           <div class="panel-body" style="max-height: 100px; overflow: auto">
-            {% if post.legacy_html %}
+            {% if post.html %}
+              <div class="post-body-html">{{ post.html|safe }}</div>
+            {% elif post.legacy_html %}
               <div class="post-body-html">{{ post.legacy_html|safe }}</div>
             {% else %}
               <div class="post-body">{{ post.text }}</div>
