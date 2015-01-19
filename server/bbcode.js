@@ -38,6 +38,7 @@
 
 //"use strict";
 var cheerio = require('cheerio');
+var util = require('util');
 
 var XBBCODE = (function() {
 
@@ -977,5 +978,9 @@ var XBBCODE = (function() {
 
 if (typeof window === 'undefined')
   module.exports = function(markup) {
-    return XBBCODE.process({ text: markup, addInLineBreaks: true }).html;
+    var html, start = Date.now();
+    html = XBBCODE.process({ text: markup, addInLineBreaks: true }).html;
+    var diff = Date.now() - start;
+    console.log(util.format('[bbcode.js] Rendered %s chars of BBCode in %sms', markup.length, diff));
+    return html;
   };

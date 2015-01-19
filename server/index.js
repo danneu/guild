@@ -814,7 +814,6 @@ app.post('/topics/:topicId/posts', function*() {
     type: postType,
     isRoleplay: topic.forum.is_roleplay
   });
-  this.log.info({ post: post }, 'Post created');
   post = pre.presentPost(post);
   this.response.redirect(post.url);
 });
@@ -1034,7 +1033,6 @@ app.use(route.post('/convos/:convoId/pms', function*(convoId) {
     markup: markup,
     html: html
   });
-  this.log.info({ pm: pm }, 'Created PM');
   pm = pre.presentPm(pm);
   this.response.redirect(pm.url);
 }));
