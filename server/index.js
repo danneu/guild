@@ -657,6 +657,7 @@ app.delete('/users/:userId/legacy-sig', function*() {
 // - avatar-url
 // - sig
 // - hide-sigs
+// - is-ghost
 //
 // TODO: This isn't very abstracted yet. Just an email endpoint for now.
 //
@@ -673,6 +674,9 @@ app.put('/users/:userId', function*() {
       .trim()
       .isUrl('Must specify a URL for the avatar');
   this.checkBody('hide-sigs')
+    .optional()
+    .toBoolean();
+  this.checkBody('is-ghost')
     .optional()
     .toBoolean();
 
@@ -692,7 +696,10 @@ app.put('/users/:userId', function*() {
     avatar_url: this.request.body['avatar-url'],
     hide_sigs: _.isBoolean(this.request.body['hide-sigs'])
                  ? this.request.body['hide-sigs']
-                 : user.hide_sigs
+                 : user.hide_sigs,
+    is_ghost: _.isBoolean(this.request.body['is-ghost'])
+                ? this.request.body['is-ghost']
+                : user.is_ghost
   });
   user = pre.presentUser(user);
   this.flash = { message: ['success', 'User updated'] };

@@ -809,12 +809,18 @@ SET
   email = COALESCE($2, email),
   sig = COALESCE($3, sig),
   avatar_url = COALESCE($4, avatar_url),
-  hide_sigs = COALESCE($5, hide_sigs)
+  hide_sigs = COALESCE($5, hide_sigs),
+  is_ghost = COALESCE($6, is_ghost)
 WHERE id = $1
 RETURNING *
   */});
   var result = yield query(sql, [
-    userId, attrs.email, attrs.sig, attrs.avatar_url, attrs.hide_sigs
+    userId,
+    attrs.email,
+    attrs.sig,
+    attrs.avatar_url,
+    attrs.hide_sigs,
+    attrs.is_ghost
   ]);
   return result.rows[0];
 };
