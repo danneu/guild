@@ -1,51 +1,34 @@
 /*
-
-       Keep in sync with /public/vendor/xbbcode/xbbcode/xbbcode.js
-       TODO: Unify into a single file that's compatible on browser and in node
        TODO: Patch xbbcode.js so the library itself is compat with node
-
- */
-/*
-  Copyright (C) 2011 Patrick Gillespie, http://patorjk.com/
-
-  Permission is hereby granted, free of charge, to any person obtaining a copy
-  of this software and associated documentation files (the "Software"), to deal
-  in the Software without restriction, including without limitation the rights
-  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-  copies of the Software, and to permit persons to whom the Software is
-  furnished to do so, subject to the following conditions:
-
-  The above copyright notice and this permission notice shall be included in
-  all copies or substantial portions of the Software.
-
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-  THE SOFTWARE.
 */
 
-/*
-  Extendible BBCode Parser v1.0.0
-  By Patrick Gillespie (patorjk@gmail.com)
-  Website: http://patorjk.com/
-
-  This module allows you to parse BBCode and to extend to the mark-up language
-  to add in your own tags.
-*/
-
-//"use strict";
-var cheerio = require('cheerio');
-var util = require('util');
+var cheerio, util;
+if (typeof window === 'undefined') {
+  cheerio = require('cheerio');
+  util = require('util');
+}
 
 var XBBCODE = (function() {
 
+  ////
+  //// Here are some nasty global variables that let me add in some stateful
+  //// hacks until I have time to find better ways to do these things.
+  ////
+  //
   // Global tabIdx cursor so that [tab] context knows when it's first
   // in the array of [tabs] children.
-  tabIdx = 0;
-  isFirstTableRow = true;
+  var tabIdx = 0;
+  // Only true for the first [row] parsed within a [table]
+  // This lets me wrap the first [row] with a <thead>
+  var isFirstTableRow = true;
+  // Global array of errors that will be concat'd to the errorQueue array at the
+  // end. I use this to implement tag validation.
+  var tagErrs = [];
+  // A map of tagName -> Bool. openTag logic should set it to true if it
+  // encounters validation error. closeTag logic should always set it back to false
+  // right before it returns.
+  // This allows openTag and closeTag to communicate an error state.
+  var hasError = {};
 
   function generateUuid() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -114,6 +97,62 @@ var XBBCODE = (function() {
    *    tag names, just make sure the tag name gets escaped properly (if needed).
    * --------------------------------------------------------------------------- */
 
+  // Extracting BBCode implementations makes it simpler to create aliases
+  // like color & colour -> colorSpec
+  var colorSpec = {
+    openTag: function(params,content) {
+
+      // Ensure they gave us a colorCode
+      if (!params) {
+        tagErrs.push('You have a COLOR tag that does not specify a color');
+        hasError.color = true;
+        return '&#91;color&#93;';
+      }
+
+      // Ensure there's actually content
+      if (content.trim().length === 0) {
+        tagErrs.push('You have a COLOR tag with no contents');
+        hasError.color = true;
+        return '&#91;color'+params+'&#93;';
+      }
+
+      var colorCode = (params.substr(1)).toLowerCase();
+
+      // Ensure colorCode is actually a color
+      // TODO: Look up why library sets lastIndex to 0. Roll with it for now.
+      colorNamePattern.lastIndex = 0;
+      colorCodePattern.lastIndex = 0;
+      if (!colorNamePattern.test(colorCode) && !colorCodePattern.test(colorCode)) {
+        hasError.color = true;
+        tagErrs.push('You have a COLOR tag with an invalid color: '+
+                     '[color'+ params +']');
+        return '&#91;color'+params+'&#93;';
+      }
+
+      // If colorCode is a hex value, prefix it with # if it's missing
+      colorCodePattern.lastIndex = 0;
+      if (colorCodePattern.test(colorCode) && colorCode.substr(0,1) !== "#") {
+        colorCode = "#" + colorCode;
+      }
+
+      return '<font color="' + colorCode + '">';
+    },
+    closeTag: function(params,content) {
+      var ret = hasError.color ? '&#91;/color&#93;' : '</font>';
+      hasError.color = false;
+      return ret;
+    }
+  };
+
+  var centerSpec = {
+    openTag: function(params,content) {
+      return '<div class="bb-center">';
+    },
+    closeTag: function(params,content) {
+      return '</div>';
+    }
+  };
+
   tags = {
     //
     // Custom BBCode for the Guild
@@ -124,7 +163,10 @@ var XBBCODE = (function() {
         return '<div class="hider-panel">'+
           '<div class="hider-heading">'+
           '<button type="button" class="btn btn-default btn-xs hider-button" data-name="'+title+'">'+
-          title + ' [+]'+
+          // title + ' [+]'+
+          // Must use html entity code for brackets so i dont trip
+          // the "there appears to be misaligned tags" err.
+          title + ' &#91;+&#93;'+
           '</button>'+
           '</div>'+
           '<div class="hider-body" style="display: none">';
@@ -184,7 +226,8 @@ var XBBCODE = (function() {
       },
       closeTag: function(params, content) {
         return '</div>';
-      }
+      },
+      restrictChildrenTo: []
     },
     "h2": {
       openTag: function(params, content) {
@@ -192,7 +235,8 @@ var XBBCODE = (function() {
       },
       closeTag: function(params, content) {
         return '</div>';
-      }
+      },
+      restrictChildrenTo: []
     },
     "h3": {
       openTag: function(params, content) {
@@ -200,16 +244,32 @@ var XBBCODE = (function() {
       },
       closeTag: function(params, content) {
         return '</div>';
-      }
+      },
+      restrictChildrenTo: []
     },
     "tabs": {
       restrictChildrenTo: ["tab"],
       openTag: function(params, content) {
         var html = '<div role="tabpanel" style="white-space: normal">';
         html = html + '<ul class="nav nav-tabs" role="tablist">';
-        var $ = cheerio.load(content);
-        $('div[data-title]').each(function(idx) {
+
+        // This is what we're gonna loop through
+        // We just build it differently on server vs the client
+        var $coll;
+
+        if (typeof window === 'undefined') {
+          // In Node, $ won't exist
+          var $ = cheerio.load(content);
+          $coll = $('div[data-title]');
+        } else {
+          // In JS, $ will exist
+          $coll = $('<div></div>').append(content).find('div[data-title]');
+        }
+
+        // var $ = cheerio.load(content);
+        // $('div[data-title]').each(function(idx) {
         //$('<div></div>').append(content).find('div[data-title]').each(function(idx) {
+        $coll.each(function(idx) {
           var title = $(this).attr('data-title');
           var id = $(this).attr('id');
           if (idx===0) {
@@ -260,14 +320,8 @@ var XBBCODE = (function() {
         return '';
       }
     },
-    "center": {
-      openTag: function(params,content) {
-        return '<div class="bb-center">';
-      },
-      closeTag: function(params,content) {
-        return '</div>';
-      }
-    },
+    "center": centerSpec,
+    "centre": centerSpec,
     // "code": {
     //   openTag: function(params,content) {
     //     return '<pre>';
@@ -277,28 +331,8 @@ var XBBCODE = (function() {
     //   },
     //   noParse: true
     // },
-    "color": {
-      openTag: function(params,content) {
-
-        var colorCode = (params.substr(1)).toLowerCase() || "black";
-        colorNamePattern.lastIndex = 0;
-        colorCodePattern.lastIndex = 0;
-        if ( !colorNamePattern.test( colorCode ) ) {
-          if ( !colorCodePattern.test( colorCode ) ) {
-            colorCode = "black";
-          } else {
-            if (colorCode.substr(0,1) !== "#") {
-              colorCode = "#" + colorCode;
-            }
-          }
-        }
-
-        return '<font color="' + colorCode + '">';
-      },
-      closeTag: function(params,content) {
-        return '</font>';
-      }
-    },
+    "color": colorSpec,
+    "colour": colorSpec,
     // "email": {
     //   openTag: function(params,content) {
 
@@ -397,8 +431,6 @@ var XBBCODE = (function() {
     //         }
     //       }
     //     }
-
-
     //     return '<span class="xbbcode-size-36" style="color:' + colorCode + '">';
     //   },
     //   closeTag: function(params,content) {
@@ -550,38 +582,39 @@ var XBBCODE = (function() {
         isFirstTableRow = true;
         return '</table></div>';
       },
-      restrictChildrenTo: ["tbody","thead", "tfoot", "tr"]
+      // restrictChildrenTo: ["tbody","thead", "tfoot", "tr"]
+      restrictChildrenTo: ["row"]
     },
-    "tbody": {
-      openTag: function(params,content) {
-        return '<tbody>';
-      },
-      closeTag: function(params,content) {
-        return '</tbody>';
-      },
-      restrictChildrenTo: ["tr"],
-      restrictParentsTo: ["table"]
-    },
-    "tfoot": {
-      openTag: function(params,content) {
-        return '<tfoot class="bb-tfoot">';
-      },
-      closeTag: function(params,content) {
-        return '</tfoot>';
-      },
-      restrictChildrenTo: ["tr"],
-      restrictParentsTo: ["table"]
-    },
-    "thead": {
-      openTag: function(params,content) {
-        return '<thead class="bb-thead">';
-      },
-      closeTag: function(params,content) {
-        return '</thead>';
-      },
-      restrictChildrenTo: ["tr"],
-      restrictParentsTo: ["table"]
-    },
+    // "tbody": {
+    //   openTag: function(params,content) {
+    //     return '<tbody>';
+    //   },
+    //   closeTag: function(params,content) {
+    //     return '</tbody>';
+    //   },
+    //   restrictChildrenTo: ["tr"],
+    //   restrictParentsTo: ["table"]
+    // },
+    // "tfoot": {
+    //   openTag: function(params,content) {
+    //     return '<tfoot class="bb-tfoot">';
+    //   },
+    //   closeTag: function(params,content) {
+    //     return '</tfoot>';
+    //   },
+    //   restrictChildrenTo: ["tr"],
+    //   restrictParentsTo: ["table"]
+    // },
+    // "thead": {
+    //   openTag: function(params,content) {
+    //     return '<thead class="bb-thead">';
+    //   },
+    //   closeTag: function(params,content) {
+    //     return '</thead>';
+    //   },
+    //   restrictChildrenTo: ["tr"],
+    //   restrictParentsTo: ["table"]
+    // },
     "cell": {
       openTag: function(params,content) {
         if (isFirstTableRow)
@@ -607,17 +640,17 @@ var XBBCODE = (function() {
           return '</th>';
         return '</td>';
       },
-      restrictParentsTo: ["tr"]
+      restrictParentsTo: ["row"]
     },
-    "th": {
-      openTag: function(params,content) {
-        return '<th class="bb-th">';
-      },
-      closeTag: function(params,content) {
-        return '</th>';
-      },
-      restrictParentsTo: ["tr"]
-    },
+    // "th": {
+    //   openTag: function(params,content) {
+    //     return '<th class="bb-th">';
+    //   },
+    //   closeTag: function(params,content) {
+    //     return '</th>';
+    //   },
+    //   restrictParentsTo: ["tr"]
+    // },
     "row": {
       openTag: function(params,content) {
         if (isFirstTableRow) {
@@ -648,8 +681,8 @@ var XBBCODE = (function() {
         isFirstTableRow = false;
         return html;
       },
-      restrictChildrenTo: ["td","th"],
-      restrictParentsTo: ["table","tbody","tfoot","thead"]
+      restrictChildrenTo: ["cell"],
+      restrictParentsTo: ["table"]
     },
     "u": {
       openTag: function(params,content) {
@@ -709,9 +742,7 @@ var XBBCODE = (function() {
   // create tag list and lookup fields
   function initTags() {
     tagList = [];
-    var prop,
-    ii,
-    len;
+    var prop, ii, len;
     for (prop in tags) {
       if (tags.hasOwnProperty(prop)) {
         if (prop === "*") {
@@ -906,7 +937,7 @@ var XBBCODE = (function() {
   // API, Expose all available tags
   me.tags = function() {
     return tags;
-  }
+  };
 
   // API
   me.addTags = function(newtags) {
@@ -915,7 +946,7 @@ var XBBCODE = (function() {
       tags[tag] = newtags[tag];
     }
     initTags();
-  }
+  };
 
   me.process = function(config) {
 
@@ -951,7 +982,7 @@ var XBBCODE = (function() {
 
     errQueue = checkParentChildRestrictions("bbcode", config.text, -1, "", "", config.text);
 
-    ret.html = parse(config);;
+    ret.html = parse(config);
 
     if ( ret.html.indexOf("[") !== -1 || ret.html.indexOf("]") !== -1) {
       errQueue.push("Some tags appear to be misaligned.");
@@ -967,6 +998,11 @@ var XBBCODE = (function() {
     ret.html = ret.html.replace("&#91;", "["); // put ['s back in
     ret.html = ret.html.replace("&#93;", "]"); // put ['s back in
 
+    // concat tagErrs into errQueue at the last second
+    // and then reset it for next run.
+    errQueue = errQueue.concat(tagErrs);
+    tagErrs = [];
+
     ret.error = errQueue.length !== 0;
     ret.errorQueue = errQueue;
 
@@ -976,11 +1012,45 @@ var XBBCODE = (function() {
   return me;
 })();
 
-if (typeof window === 'undefined')
+if (typeof window === 'undefined') {
+  // We're on the server, so export module
   module.exports = function(markup) {
-    var html, start = Date.now();
-    html = XBBCODE.process({ text: markup, addInLineBreaks: true }).html;
+    var result, start = Date.now();
+    result = XBBCODE.process({ text: markup, addInLineBreaks: true });
     var diff = Date.now() - start;
     console.log(util.format('[bbcode.js] Rendered %s chars of BBCode in %sms', markup.length, diff));
-    return html;
+    console.log('[bbcode.js] result.error:', result.error);
+    console.log('[bbcode.js] result.errorQueue',result.errorQueue);
+    return result.html;
   };
+} else {
+  // We're on the client so export to window
+  window.bbcode = function(markup) {
+    var result;
+    result = XBBCODE.process({ text: markup, addInLineBreaks: true });
+    return result.html;
+  };
+}
+
+
+/*
+  Copyright (C) 2011 Patrick Gillespie, http://patorjk.com/
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+  THE SOFTWARE.
+*/
