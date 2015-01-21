@@ -115,6 +115,39 @@
         </form>
       {% endif %}
 
+      <!-- Ghost mode checkbox -->
+
+      <form action="{{ user.url }}" method="post" class="form-horizontal">
+        <input type="hidden" name="_method" value="put">
+        <div class="panel panel-default no-select"
+             style="border-color: #000">
+          <div class="panel-heading">Ghost Mode</div>
+          <!-- PANEL BODY -->
+          <div class="panel-body">
+            <p>When you're in ghost-mode, you will not appear in the list of online users. Also, the site will indicate that you're Invisible instead of announcing you as Online or Offline.</p>
+            <p>Recommendation: Keep it off unless you feel it's necessary. It makes things feel more alive.</p>
+            <div class="checkbox">
+              <label>
+                <input id="is-ghost-input"
+                       name="is-ghost"
+                       type="checkbox"
+                       {% if user.is_ghost %}
+                         checked
+                       {% endif %}
+                       >
+                Enable Ghost Mode
+              </label>
+            </div>
+          </div> <!-- /.panel-body -->
+          <!-- PANEL FOOTER -->
+          <div class="panel-footer" style="border-color: #000">
+            <div class="text-right">
+              <input type="submit" value="Save" class="btn btn-primary">
+            </div>
+          </div> <!-- /.panel-footer -->
+        </div> <!-- /.panel -->
+      </form>
+
       <!-- Hide sigs checkbox -->
 
       <form action="{{ user.url }}" method="post" class="form-horizontal">

@@ -148,7 +148,7 @@
       <div class="form-group">
         <textarea rows=10
                   id="reply-input"
-                  name="text"
+                  name="markup"
                   class="form-control"
                   placeholder="Click here and begin writing"></textarea>
       </div>
@@ -170,9 +170,7 @@
   </script>
   <script>
     $(function() {
-      $('#reply-input').markdown({
-        resize: 'vertical'
-      });
+      $('#reply-input').bbcode();
     });
   </script>
 {% endblock %}

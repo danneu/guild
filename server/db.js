@@ -345,14 +345,15 @@ exports.createConvo = function*(args) {
   assert(_.isNumber(args.userId));
   assert(_.isUndefined(args.toUserIds) || _.isArray(args.toUserIds));
   assert(_.isString(args.title));
-  assert(_.isString(args.text));
+  assert(_.isString(args.markup));
+  assert(_.isString(args.html));
   var convoSql = m(function() {/*
 INSERT INTO convos (user_id, title) VALUES ($1, $2) RETURNING *
   */});
   var pmSql = m(function() {/*
 INSERT INTO pms
-  (convo_id, user_id, ip_address, text, idx)
-VALUES ($1, $2, $3, $4, 0)
+  (convo_id, user_id, ip_address, markup, html, idx)
+VALUES ($1, $2, $3, $4, $5, 0)
 RETURNING *
 */});
   var participantSql = m(function() {/*
@@ -370,7 +371,9 @@ VALUES ($1, $2)
       return client.queryPromise(participantSql, [convo.id, toUserId]);
     }).concat([
       client.queryPromise(participantSql, [convo.id, args.userId]),
-      client.queryPromise(pmSql, [convo.id, args.userId, args.ipAddress, args.text])
+      client.queryPromise(pmSql, [
+        convo.id, args.userId, args.ipAddress, args.markup, args.html
+      ])
     ]);
 
     convo.pms_count++;  // This is a stale copy so we need to manually inc
@@ -494,15 +497,16 @@ RETURNING *
 };
 
 // Keep updatePost and UpdatePm in sync
-exports.updatePost = function*(postId, text) {
-  assert(_.isString(text));
+exports.updatePost = function*(postId, markup, html) {
+  assert(_.isString(markup));
+  assert(_.isString(html));
   var sql = m(function() {/*
 UPDATE posts
-SET text = $2, updated_at = NOW()
+SET markup = $2, html = $3, updated_at = NOW()
 WHERE id = $1
 RETURNING *
   */});
-  var result = yield query(sql, [postId, text]);
+  var result = yield query(sql, [postId, markup, html]);
   return result.rows[0];
 };
 exports.updatePm = function*(id, text) {
@@ -712,17 +716,19 @@ GROUP BY pms.id, c.id
 exports.createPm = function*(props) {
   assert(_.isNumber(props.userId));
   assert(props.convoId);
-  assert(_.isString(props.text));
+  assert(_.isString(props.markup));
+  assert(_.isString(props.html));
   var sql = m(function() {/*
-INSERT INTO pms (user_id, ip_address, convo_id, text)
-VALUES ($1, $2::inet, $3, $4)
+INSERT INTO pms (user_id, ip_address, convo_id, markup, html)
+VALUES ($1, $2::inet, $3, $4, $5)
 RETURNING *
   */});
   var result = yield query(sql, [
     props.userId,
     props.ipAddress,
     props.convoId,
-    props.text
+    props.markup,
+    props.html
   ]);
   return result.rows[0];
 };
@@ -730,23 +736,24 @@ RETURNING *
 // Args:
 // - userId      Required Number/String
 // - ipAddress   Optional String
-// - text        Required String
+// - markup      Required String
 // - topicId     Required Number/String
 // - type        Required String, ic | ooc | char
 // - isRoleplay  Required Boolean
 exports.createPost = function*(args) {
   assert(_.isNumber(args.userId));
   assert(_.isString(args.ipAddress));
-  assert(_.isString(args.text));
+  assert(_.isString(args.markup));
+  assert(_.isString(args.html));
   assert(args.topicId);
   assert(_.isBoolean(args.isRoleplay));
   assert(_.contains(['ic', 'ooc', 'char'], args.type));
   var sql = m(function() {/*
-INSERT INTO posts (user_id, ip_address, topic_id, text, type, is_roleplay)
-VALUES ($1, $2::inet, $3, $4, $5, $6)
+INSERT INTO posts (user_id, ip_address, topic_id, markup, html, type, is_roleplay)
+VALUES ($1, $2::inet, $3, $4, $5, $6, $7)
 RETURNING *
   */});
-  var result = yield query(sql, [args.userId, args.ipAddress, args.topicId, args.text, args.type, args.isRoleplay]);
+  var result = yield query(sql, [args.userId, args.ipAddress, args.topicId, args.markup, args.html, args.type, args.isRoleplay]);
   return result.rows[0];
 };
 
@@ -755,7 +762,7 @@ RETURNING *
 // - forumId    Required Number/String
 // - ipAddress  Optional String
 // - title      Required String
-// - text       Required String
+// - markup     Required String
 // - postType   Required String, ic | ooc | char
 // - isRoleplay Required Boolean
 //
@@ -765,7 +772,8 @@ exports.createTopic = function*(props) {
   assert(props.forumId);
   assert(_.isString(props.ipAddress));
   assert(_.isString(props.title));
-  assert(_.isString(props.text));
+  assert(_.isString(props.markup));
+  assert(_.isString(props.html));
   assert(_.isBoolean(props.isRoleplay));
   assert(_.contains(['ic', 'ooc', 'char'], props.postType));
   var topicSql = m(function() {/*
@@ -774,8 +782,8 @@ VALUES ($1, $2, $3, $4)
 RETURNING *
   */});
   var postSql = m(function() {/*
-INSERT INTO posts (topic_id, user_id, ip_address, text, type, is_roleplay, idx)
-VALUES ($1, $2, $3::inet, $4, $5, $6, 0)
+INSERT INTO posts (topic_id, user_id, ip_address, markup, html, type, is_roleplay, idx)
+VALUES ($1, $2, $3::inet, $4, $5, $6, $7, 0)
 RETURNING *
   */});
 
@@ -786,7 +794,7 @@ RETURNING *
     var topic = topicResult.rows[0];
     yield client.queryPromise(postSql, [
       topic.id, props.userId, props.ipAddress,
-      props.text, props.postType, props.isRoleplay
+      props.markup, props.html, props.postType, props.isRoleplay
     ]);
     return topic;
   });
@@ -801,12 +809,18 @@ SET
   email = COALESCE($2, email),
   sig = COALESCE($3, sig),
   avatar_url = COALESCE($4, avatar_url),
-  hide_sigs = COALESCE($5, hide_sigs)
+  hide_sigs = COALESCE($5, hide_sigs),
+  is_ghost = COALESCE($6, is_ghost)
 WHERE id = $1
 RETURNING *
   */});
   var result = yield query(sql, [
-    userId, attrs.email, attrs.sig, attrs.avatar_url, attrs.hide_sigs
+    userId,
+    attrs.email,
+    attrs.sig,
+    attrs.avatar_url,
+    attrs.hide_sigs,
+    attrs.is_ghost
   ]);
   return result.rows[0];
 };

@@ -251,8 +251,15 @@
             {% if post.is_hidden %}
               <i>[HIDDEN]</i>
             {% else %}
-              {% if post.legacy_html %}
-                <div class="post-body-html post-content">{{ post.legacy_html|safe }}</div>
+              {% if post.html %}
+                <div class="post-body-html">
+                  {{ post.html|safe }}
+                </div>
+              {% elif post.legacy_html %}
+                <div class="post-body-html post-content">
+                  {#{{ post.legacy_html|safe }}#}
+                  {{ post.text|bbcode|safe }}
+                </div>
               {% else %}
                 <div class="post-body post-content">{{ post.text }}</div>
               {% endif %}
@@ -297,6 +304,7 @@
             <a href=""
                class="btn btn-default btn-xs pull-right post-reply-btn"
                post-id="{{ post.id }}"
+               post-uname="{{ post.user.uname }}"
                style="margin-left: 5px"
                >Reply</a>
           {% endif %}
@@ -335,20 +343,22 @@
 
   {% if ctx.can(ctx.currUser, 'CREATE_POST', topic) %}
     <a name="new-reply-form"></a>
-    <h2 style="margin-top: 100px;">New Reply</h2>
-    <form id="reply-form" role="form" method="post"
-          action="{{ topic.url }}/posts">
+    <h2>New Reply</h2>
+    <ul>
+      <li><span class="label label-info">Tip</span> Before submitting your post, it's wise to copy it somewhere so that you don't lose it in the event of server error.</li>
+      <li><span class="label label-warning">Warning</span> The BBCode parser is new and undoubtedly riddled with bugs, so please take it easy on the formatting for now. Particularly avoid nesting the more complex tags like hiders, tabs, and tables. I can't guarantee that complex, nested formatting concoctions will work in the future as I address issues with the parser. For example, [tabs] within [tabs] are broken. I want to support crazy formatting eventually, but lemme work out the kinks first.</li>
+    </ul>
+    <form method="post" action="{{ topic.url }}/posts">
       <input type="hidden" name="post-type" value="{{ postType }}">
-      <div class="form-group">
-        <textarea rows=10
-                  id="reply-input"
-                  name="text"
-                  class="form-control"
-                  placeholder="Click here and begin writing"></textarea>
-      </div>
+      <textarea id="markup-input"
+                placeholder="Click here and begin writing"
+                name="markup"
+                rows=10
+                class="form-control"
+                ></textarea>
+
       <input type="submit" class="btn btn-primary" value="Post Reply"></input>
     </form>
-    {% include 'partials/markdown_cheatsheet.html' %}
   {% endif %}
 
 {% endblock %}
@@ -356,6 +366,9 @@
 {% block scripts %}
 
 <script>
+
+    // Prevent <input> submit buttons from being submitted more than once
+
     $('input[type="submit"]').on('click', function(e) {
       var $this = $(this);
       if ($this.data('already-clicked'))
@@ -365,6 +378,9 @@
 </script>
 
 <script>
+
+  // Hide avatars that are larger than 150x150
+
   $('.post-avatar img').on('load', function(e) {
     console.log('avatar loaded');
     var h = $(this).height();
@@ -376,18 +392,8 @@
 </script>
 
 <script>
-  // Render posts only as they appear in the user's browser
-  $('.post-body, .post-sig-markdown').appear();
-  $('.post-body, .post-sig-markdown').on('appear', function(e) {
-    if (!$(this).attr('data-rendered')) {
-      var $this = $(this);
-      $this.html(markdown.toHTML($this.text()));
-      $this.attr('data-rendered', true);
-    }
-  });
-</script>
-<script>
 // Prevent double-submit on new-reply form
+
 $('#new-reply').submit(function() {
   $(this).submit(function() {
       return false;
@@ -400,12 +406,10 @@ $('#new-reply').submit(function() {
 </script>
 
   <script>
-    // Config bootstrap-markdown editor to allow user to resize it
-    // (Makes a resize icon appear on bottom-right of New Post editor)
+    // Turn the new post editor into a bbcode editor
+
     $(function() {
-      $('#reply-input').markdown({
-        resize: 'vertical'
-      });
+      $('#markup-input').bbcode();
     });
   </script>
 
@@ -419,18 +423,17 @@ $(function() {
     $reply_btn = $(this);
     $reply_btn.addClass('disabled').html('Loading...');
     var post_id = $reply_btn.attr('post-id');
-    // Get this post's text
-    //var post_text = $('#post-' + post_id).find('.post-body').text()
-    //-prev-var post_url = '/api/posts/' + post_id;
+    var uname = $reply_btn.attr('post-uname');
     var post_url = '/posts/' + post_id + '/raw';
     $.get(post_url, function(markup) {
       console.log('returned')
       $reply_btn.removeClass('disabled').html('Reply');
-      // var quote_markup = _.map(markup.split('\n'), function(line) { return '> ' + line }).join('\n')
-      var quote_markup = markup.split('\n').map(function(line) {
-        return '> ' + line;
-      }).join('\n')
-      var $reply_textarea = $('#reply-form textarea');
+
+      var quote_markup = '[quote=' + uname + ']\n' +
+        markup.trim()  +
+        '\n[/quote]\n';
+
+      var $reply_textarea = $('#markup-input');
       var prev_content = $('textarea').val().trim();
       // Only add \n\n padding if there was already content in textarea
       var padding = (function() {
@@ -466,23 +469,25 @@ $(function() {
     // });
     // $('#post-' + post_id + ' .post-body').html('<p>lol</p>');
     //-prev- var post_url = '/api/posts/' + post_id;
-    var $post_body = $('#post-' + post_id + ' .post-body');
+    var $post_body = $('#post-' + post_id + ' .post-body-html');
     var prev_body = $post_body.html();
     var $spinner = $('<span><img src="/img/spinner.gif"> Loading edit form...</span>');
+
+    // Replace post body with a spinner to indicate we're doing something
     $post_body.html($spinner);
+
     $cancel_btn = $('<button style="margin-left: 5px;" class="btn btn-default post-edit-cancel-btn">Cancel</button>');
 
     $.ajax({
       url: '/posts/' + post_id + '/raw',
       dataType: 'html',
+      // This is going to be post.markup || post.text
       success: function(post_text) {
-        console.log(post_text);
         var $post_editor = $('<div class="post-editor"></div>');
         $spinner.remove();
         $post_body.append($post_editor);
-        $post_editor.markdown({
-          height: 350,
-          resize: 'vertical',
+
+        $post_editor.bbcode({
           savable: true,
           onSave: function(e) {
             //
@@ -497,15 +502,13 @@ $(function() {
               dataType: 'json',
               type: 'POST',
               headers: { 'X-HTTP-Method-Override': 'PUT' },
-              data: { text: text_to_save },
+              data: { markup: text_to_save },
               success: function(updated_post) {
-                console.log('updated post: ' + JSON.stringify(updated_post, null, '  '))
-                $post_body.html(markdown.toHTML(updated_post.text));
+                $post_body.html(bbcode(updated_post.markup));
                 $post_edit_btn.removeClass('disabled');
                 // Set the post's .edited-marker to ' edited'
                 var $edited_marker = $('#post-' + post_id + ' .edited-marker')
                 $edited_marker.html(' edited');
-                console.log($edited_marker)
               }
             })
           }

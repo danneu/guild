@@ -59,7 +59,11 @@
         </div> <!-- /.col-sm-2 post-meta -->
         <!-- Post text -->
         <div class="col-sm-10">
-          {% if post.legacy_html %}
+          {% if post.html %}
+            <div class="post-body-html">
+              {{ post.html|safe }}
+            </div>
+          {% elif post.legacy_html %}
             <div class="post-body-html">{{ post.legacy_html|safe }}</div>
           {% else %}
             <div class="post-body">{{ post.text }}</div>

@@ -5,7 +5,11 @@ var minifyCSS = require('gulp-minify-css');
 var uglifyJS = require('gulp-uglify');
 
 gulp.task('copy-fonts', function() {
-  gulp.src('./public/vendor/bootstrap/fonts/**')
+  var fontPaths = [
+    './public/vendor/bootstrap/fonts/**',
+    './public/vendor/font-awesome/fonts/**'
+  ];
+  gulp.src(fontPaths)
       .pipe(gulp.dest('./dist/fonts/'));
 });
 
@@ -13,6 +17,7 @@ gulp.task('build-css', ['copy-fonts'], function() {
   var cssPaths = [
     './public/vendor/bootstrap/css/bootstrap.css',
     './public/vendor/bootstrap/css/bootstrap-theme.css',
+    './public/vendor/font-awesome/css/font-awesome.css',
     './public/vendor/bootstrap-markdown/css/bootstrap-markdown.min.css',
     './public/css/bootstrap_overrides.css',
     './public/css/general.css'
@@ -30,7 +35,9 @@ gulp.task('build-js', function() {
     'public/vendor/markdown/markdown.js',
     'public/vendor/bootstrap-markdown/js/bootstrap-markdown.js',
     'public/vendor/jquery-appear/jquery.appear.js',
-    'public/vendor/bootstrap/js/bootstrap.js'
+    'public/vendor/bootstrap/js/bootstrap.js',
+    'public/vendor/xbbcode/xbbcode/xbbcode.js',
+    'public/js/bbcode_editor.js'
   ];
   gulp.src(jsPaths)
       .pipe(concat('all.js'))
@@ -38,6 +45,10 @@ gulp.task('build-js', function() {
       .pipe(gulp.dest('./dist/'));
 });
 
+//
+// Note: I usually have to run `gulp build-assets` twice for it
+// to work. Need to look into why.
+//
 gulp.task('build-assets', ['build-css', 'build-js'], function() {
   gulp.src(['dist/all.css', 'dist/all.js'])
   .pipe(rev())
