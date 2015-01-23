@@ -1067,3 +1067,13 @@ exports.deleteLegacySig = function*(userId) {
   var sql = 'UPDATE users SET legacy_sig = NULL WHERE id = $1';
   yield query(sql, [userId]);
 };
+
+exports.findStaffUsers = function*() {
+  var sql = m(function(){/*
+SELECT u.*
+FROM users u
+WHERE u.role IN ('mod', 'smod', 'admin')
+  */});
+  var result = yield query(sql);
+  return result.rows;
+};

@@ -1383,5 +1383,21 @@ app.use(route.get('/topics/:topicId', function*(topicId) {
     this.response.redirect(this.request.path + '/posts/ooc');
 }));
 
+//
+// Staff list
+//
+// For now, just load staff upon first request, once per boot
+var staffUsers;
+app.get('/staff', function*() {
+  if (!staffUsers)
+    staffUsers = (yield db.findStaffUsers()).map(pre.presentUser);
+  yield this.render('staff', {
+    ctx: this,
+    mods: _.filter(staffUsers, { role: 'mod' }),
+    smods: _.filter(staffUsers, { role: 'smod' }),
+    admins: _.filter(staffUsers, { role: 'admin' })
+  });
+});
+
 app.listen(config.PORT);
 console.log('Listening on ' + config.PORT);
