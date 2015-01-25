@@ -803,6 +803,7 @@ RETURNING *
 // Generic user-update route. Intended to be paired with
 // the generic PUT /users/:userId route.
 exports.updateUser = function*(userId, attrs) {
+  debug('[updateUser] attrs', attrs);
   var sql = m(function() {/*
 UPDATE users
 SET
@@ -810,7 +811,8 @@ SET
   sig = COALESCE($3, sig),
   avatar_url = COALESCE($4, avatar_url),
   hide_sigs = COALESCE($5, hide_sigs),
-  is_ghost = COALESCE($6, is_ghost)
+  is_ghost = COALESCE($6, is_ghost),
+  sig_html = COALESCE($7, sig_html)
 WHERE id = $1
 RETURNING *
   */});
@@ -820,7 +822,8 @@ RETURNING *
     attrs.sig,
     attrs.avatar_url,
     attrs.hide_sigs,
-    attrs.is_ghost
+    attrs.is_ghost,
+    attrs.sig_html
   ]);
   return result.rows[0];
 };

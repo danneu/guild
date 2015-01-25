@@ -655,12 +655,9 @@ app.delete('/users/:userId/legacy-sig', function*() {
 // At least one of these updates:
 // - email
 // - avatar-url
-// - sig
+// - sig (which will pre-render sig_html field)
 // - hide-sigs
 // - is-ghost
-//
-// TODO: This isn't very abstracted yet. Just an email endpoint for now.
-//
 app.put('/users/:userId', function*() {
   this.checkBody('email')
     .optional()
@@ -690,9 +687,19 @@ app.put('/users/:userId', function*() {
   this.assert(user, 404);
   this.assertAuthorized(this.currUser, 'UPDATE_USER', user);
 
+  var sig_html;
+  // User is only updating their sig if `sig` is a string.
+  // If it's a blank string, then user is trying to clear their sig
+  if (_.isString(this.request.body.sig))
+    if (this.request.body.sig.trim().length > 0)
+      sig_html = bbcode(this.request.body.sig);
+    else
+      sig_html = '';
+
   yield db.updateUser(user.id, {
     email: this.request.body.email || user.email,
     sig: this.request.body.sig,
+    sig_html: sig_html,
     avatar_url: this.request.body['avatar-url'],
     hide_sigs: _.isBoolean(this.request.body['hide-sigs'])
                  ? this.request.body['hide-sigs']
