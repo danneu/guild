@@ -181,14 +181,15 @@ var w;
       btnClass: 'btn btn-primary btn-sm',
       btnText: 'Preview',
       callback: function(e) {
-        console.log('cb');
         if (e.$isPreview === false) {
           e.showPreview();
           e.enableButtons('bb-preview');
+          e.$editor.find('.bbcode-editor-mode').css('display', 'inline-block');
         } else {
           e.hidePreview();
           e.$editor.find('.bbcode-errors ul').html('');
           e.$editor.find('.bbcode-errors p').html('Click "Preview" to check for errors');
+          e.$editor.find('.bbcode-editor-mode').hide();
         }
       }
     }
@@ -260,14 +261,16 @@ var w;
            data: [buttons['bb-preview']]}
         ]
       ],
-      footer: '<div class="bbcode-errors">'+
-              '<p>Click the "Preview" button to check for errors</p>'+
-              '<ul style="color: red;"></ul>'+
+      footer: '<div class="bbcode-editor-mode">You are in Preview Mode</div>'+
+              '<div class="bbcode-errors">'+
+              '  <p>Click the "Preview" button to check for errors</p>'+
+              '  <ul style="color: red;"></ul>'+
               '</div>'
     };
 
     opts = $.extend(defaults, opts);
 
+    // Activate the editor
     $this.markdown(opts);
 
     // Hook up color button
