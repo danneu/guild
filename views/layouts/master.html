@@ -182,8 +182,20 @@
     });
   </script>
   <script>
-    // Activate all cheatsheet toggles
+    // Activate cheatsheet toggle
+    var isCheatsheetRendered = false;
     $('#cheatsheet-toggle-btn').on('click', function() {
+      // Only render the BBCode demos on first click and never again
+      if (!isCheatsheetRendered) {
+        console.log('rendering cheatsheet');
+        $('#bbcode-cheatsheet .bbcode').each(function() {
+          $(this).html(XBBCODE.process({
+            text: $(this).text(),
+            addInLineBreaks: true
+          }).html);
+        });
+        isCheatsheetRendered = true;
+      }
       $('#cheatsheet-body').toggle();
     });
   </script>
