@@ -247,59 +247,66 @@ var XBBCODE = (function() {
       },
       restrictChildrenTo: []
     },
-    "tabs": {
-      restrictChildrenTo: ["tab"],
-      openTag: function(params, content) {
-        var html = '<div role="tabpanel" style="white-space: normal">';
-        html = html + '<ul class="nav nav-tabs" role="tablist">';
 
-        // This is what we're gonna loop through
-        // We just build it differently on server vs the client
-        var $coll;
+    ////
+    //// Tabs are temporarily disabled until fixed
+    ////
 
-        if (typeof window === 'undefined') {
-          // In Node, $ won't exist
-          var $ = cheerio.load(content);
-          $coll = $('div[data-title]');
-        } else {
-          // In JS, $ will exist
-          $coll = $('<div></div>').append(content).find('div[data-title]');
-        }
+    // "tabs": {
+    //   restrictChildrenTo: ["tab"],
+    //   openTag: function(params, content) {
+    //     var html = '<div role="tabpanel" style="white-space: normal">';
+    //     html = html + '<ul class="nav nav-tabs" role="tablist">';
 
-        // var $ = cheerio.load(content);
-        // $('div[data-title]').each(function(idx) {
-        //$('<div></div>').append(content).find('div[data-title]').each(function(idx) {
-        $coll.each(function(idx) {
-          var title = $(this).attr('data-title');
-          var id = $(this).attr('id');
-          if (idx===0) {
-            $(this).addClass('active');
-          }
-          html = html + '<li'+ (idx===0 ? ' class="active"' : '') +'><a href="#'+id+'" data-toggle="tab">' + title + '</a></li>';
-        });
-        html = html + '</ul>';
-        html = html + '<div class="tab-content tabbed-content">';
-        return html;
-      },
-      closeTag: function(params, content) {
-        tabIdx = 0;
-        return '</div></div>';
-      }
-    },
-    "tab": {
-      restrictParentsTo: ['tabs'],
-      openTag: function(params, content) {
-        var title = params ? params.slice(1) : 'Tab';
-        var uuid = generateUuid();
-        return '<div role="tabpanel" style="white-space: pre-line" class="tab-pane' + (tabIdx++===0 ? ' active' : '') +'" id="'+uuid+'" data-title="' + title + '">';
-      },
-      closeTag: function(params, content) {
-        return '</div>';
-      }
-    },
+    //     // This is what we're gonna loop through
+    //     // We just build it differently on server vs the client
+    //     var $coll;
+
+    //     if (typeof window === 'undefined') {
+    //       // In Node, $ won't exist
+    //       var $ = cheerio.load(content);
+    //       $coll = $('div[data-title]');
+    //     } else {
+    //       // In JS, $ will exist
+    //       $coll = $('<div></div>').append(content).find('div[data-title]');
+    //     }
+
+    //     // var $ = cheerio.load(content);
+    //     // $('div[data-title]').each(function(idx) {
+    //     //$('<div></div>').append(content).find('div[data-title]').each(function(idx) {
+    //     $coll.each(function(idx) {
+    //       var title = $(this).attr('data-title');
+    //       var id = $(this).attr('id');
+    //       if (idx===0) {
+    //         $(this).addClass('active');
+    //       }
+    //       html = html + '<li'+ (idx===0 ? ' class="active"' : '') +'><a href="#'+id+'" data-toggle="tab">' + title + '</a></li>';
+    //     });
+    //     html = html + '</ul>';
+    //     html = html + '<div class="tab-content tabbed-content">';
+    //     return html;
+    //   },
+    //   closeTag: function(params, content) {
+    //     tabIdx = 0;
+    //     return '</div></div>';
+    //   }
+    // },
+
+    // "tab": {
+    //   restrictParentsTo: ['tabs'],
+    //   openTag: function(params, content) {
+    //     var title = params ? params.slice(1) : 'Tab';
+    //     var uuid = generateUuid();
+    //     return '<div role="tabpanel" style="white-space: pre-line" class="tab-pane' + (tabIdx++===0 ? ' active' : '') +'" id="'+uuid+'" data-title="' + title + '">';
+    //   },
+    //   closeTag: function(params, content) {
+    //     return '</div>';
+    //   }
+    // },
     //
     // BBCode that shipped with XBBCODE library
     //
+
     "b": {
       openTag: function(params,content) {
         return '<span class="bb-b">';
