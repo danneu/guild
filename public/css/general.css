@@ -232,6 +232,19 @@ blockquote {
   font-family: Georgia, serif;
 }
 
+/* Ensure h1, h2, and h3 cannot be nested */
+.bb-h1 .bb-h1,
+.bb-h1 .bb-h2,
+.bb-h1 .bb-h3,
+.bb-h2 .bb-h1,
+.bb-h2 .bb-h2,
+.bb-h2 .bb-h3,
+.bb-h3 .bb-h1,
+.bb-h3 .bb-h2,
+.bb-h3 .bb-h3 {
+    display: none;
+}
+
 
 .bb-h1 {
     /* font-size: 2em; */
