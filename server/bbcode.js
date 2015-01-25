@@ -226,8 +226,7 @@ var XBBCODE = (function() {
       },
       closeTag: function(params, content) {
         return '</div>';
-      },
-      restrictChildrenTo: []
+      }
     },
     "h2": {
       openTag: function(params, content) {
@@ -235,8 +234,7 @@ var XBBCODE = (function() {
       },
       closeTag: function(params, content) {
         return '</div>';
-      },
-      restrictChildrenTo: []
+      }
     },
     "h3": {
       openTag: function(params, content) {
@@ -244,8 +242,7 @@ var XBBCODE = (function() {
       },
       closeTag: function(params, content) {
         return '</div>';
-      },
-      restrictChildrenTo: []
+      }
     },
 
     ////
