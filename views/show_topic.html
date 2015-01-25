@@ -1,8 +1,8 @@
 {% extends 'layouts/master.html' %}
 {% import './macros/paginate.html' as paginate %}
+{% import './macros/macros.html' as macros %}
 
 {% block embed %}
-
 
   <!-- Breadcrumbs -->
 
@@ -222,27 +222,7 @@
 
               <!-- Online status -->
 
-              {% if post.user.is_ghost %}
-                <span style="color: #000">Invisible</span>
-              {% else %}
-                {% if Date.now() - post.user.last_online_at.getTime() < 1000 * 60 * 15 %}
-                  <span style="color: #3BB878">Online</span>
-                {% else %}
-                  {% if post.user.last_online_at %}
-                    <span style="color: #777">
-                      Online
-                      <abbr class="timeago"
-                            title="{{ post.user.last_online_at.toISOString() }}">
-                        {{ post.user.last_online_at|formatDate }}
-                      </abbr>
-                    </span>
-                  {% else %}
-                    <span style="color: #555">
-                      Offline since relaunch
-                    </span>
-                  {% endif %}
-                {% endif %}
-              {% endif %}
+              {{ macros.onlineStatus(post.user) }}
 
             </div>
           </div> <!-- /.col-sm-2 post-meta -->
@@ -518,9 +498,11 @@ $(function() {
         // .markdown() escapes html entities.
         $post_body.find('textarea').val(post_text)
 
-        $('#post-' + post_id + ' .md-footer').append(
-          $cancel_btn
+
+        $cancel_btn.insertAfter(
+          $('#post-' + post_id + ' .md-footer button[data-handler="cmdSave"]')
         );
+
         $($cancel_btn).click(function() {
           $post_body.html(prev_body);
           $post_edit_btn.removeClass('disabled');
