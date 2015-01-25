@@ -232,7 +232,7 @@
               <i>[HIDDEN]</i>
             {% else %}
               {% if post.html %}
-                <div class="post-body-html">
+                <div class="post-body-html post-content">
                   {{ post.html|safe }}
                 </div>
               {% elif post.legacy_html %}
@@ -444,12 +444,7 @@ $(function() {
     $post_edit_btn = $(this);
     $post_edit_btn.addClass('disabled');
     var post_id = $(this).attr('post-id');
-    // $('#post-' + post_id + ' .post-editor').markdown({
-    //   savabe: true
-    // });
-    // $('#post-' + post_id + ' .post-body').html('<p>lol</p>');
-    //-prev- var post_url = '/api/posts/' + post_id;
-    var $post_body = $('#post-' + post_id + ' .post-body-html');
+    var $post_body = $('#post-' + post_id + ' .post-content');
     var prev_body = $post_body.html();
     var $spinner = $('<span><img src="/img/spinner.gif"> Loading edit form...</span>');
 
@@ -497,7 +492,6 @@ $(function() {
         // Gotta set the text before the .markdown() call or else
         // .markdown() escapes html entities.
         $post_body.find('textarea').val(post_text)
-
 
         $cancel_btn.insertAfter(
           $('#post-' + post_id + ' .md-footer button[data-handler="cmdSave"]')
