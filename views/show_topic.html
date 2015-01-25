@@ -295,8 +295,10 @@
     <a name="new-reply-form"></a>
     <h2>New Reply</h2>
     <ul>
-      <li><span class="label label-info">Tip</span> Before submitting your post, it's wise to copy it somewhere so that you don't lose it in the event of server error.</li>
+      <li><span class="label label-info">Important</span> The forum now uses BBCode for formatting. Your old posts will use the old formatting system UNTIL you edit them. Once you edit an old post, the system will assume you've converted it to BBCode.</li>
       <li><span class="label label-warning">Warning</span> The BBCode parser is new and may have bugs. I recommend avoiding complex/nested BBCode until I work out the kinks.</li>
+      <li>Before submitting your post, it's wise to copy it somewhere so that you don't lose it in the event of server error.</li>
+      <li>Check out the BBCode Cheatsheet below the editor. It's pretty basic for now, but I will add more BBCode over time. Check the cheatsheet every once in a while for updates.</li>
     </ul>
     <form method="post" action="{{ topic.url }}/posts">
       <input type="hidden" name="post-type" value="{{ postType }}">
