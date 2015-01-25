@@ -31,6 +31,7 @@ gulp.task('build-css', ['copy-fonts'], function() {
 gulp.task('build-js', function() {
   var jsPaths = [
     'public/vendor/jquery/jquery-2.1.3.min.js',
+    'public/vendor/jquery-hotkeys/jquery.hotkeys.js',
     'public/vendor/timeago/jquery.timeago.js',
     'public/vendor/markdown/markdown.js',
     'public/vendor/bootstrap-markdown/js/bootstrap-markdown.js',

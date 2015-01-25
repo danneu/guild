@@ -5,6 +5,7 @@ var w;
     'bb-b': {
       name: 'bb-b',
       title: 'Bold',
+      hotkey: 'Ctrl+B',
       icon: 'fa fa-bold',
       callback: function(e) {
         var tag = 'b';
@@ -24,6 +25,7 @@ var w;
     'bb-i': {
       name: 'bb-i',
       title: 'Italic',
+      hotkey: 'Ctrl+I',
       icon: 'fa fa-italic',
       callback: function(e) {
         var selected = e.getSelection();
@@ -77,7 +79,8 @@ var w;
     },
     'bb-url': {
       name: 'bb-url',
-      title: 'URL',
+      title: 'URL/Link',
+      hotkey: 'Ctrl+L',
       icon: 'fa fa-chain',
       callback: function(e) {
         var tag = 'url';
@@ -97,6 +100,7 @@ var w;
     'bb-img': {
       name: 'bb-img',
       title: 'Image',
+      hotkey: 'Ctrl+G',
       icon: 'fa fa-image',
       callback: function(e) {
         var tag = 'img';
@@ -116,6 +120,7 @@ var w;
     'bb-quote': {
       name: 'bb-quote',
       title: 'Quote',
+      hotkey: 'Ctrl+Q',
       icon: 'fa fa-quote-left',
       callback: function(e) {
         var tag = 'quote';
@@ -176,7 +181,7 @@ var w;
     'bb-preview': {
       name: 'bb-preview',
       toggle: true,
-      title: 'Preview2',
+      title: 'Preview',
       icon: 'fa fa-search',
       btnClass: 'btn btn-primary btn-sm',
       btnText: 'Preview',
@@ -245,9 +250,10 @@ var w;
 
         return result.html;
       },
-      hiddenButtons: ['cmdBold', 'cmdItalic', 'cmdHeading',
-                      'cmdUrl', 'cmdImage', 'cmdPreview',
-                      'cmdList', 'cmdList0', 'cmdCode', 'cmdQuote'],
+      buttons: [[]],
+      // hiddenButtons: ['cmdBold', 'cmdItalic', 'cmdHeading',
+      //                 'cmdUrl', 'cmdImage', 'cmdPreview',
+      //                 'cmdList', 'cmdList0', 'cmdCode', 'cmdQuote'],
       additionalButtons: [
         [
           {name: 'bbcode1',
