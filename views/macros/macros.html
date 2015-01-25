@@ -3,20 +3,6 @@
   {% if user.is_ghost %}
     {% if ctx.can(ctx.currUser, 'READ_USER_ONLINE_STATUS', user) %}
       <span style="color: #000">Invisible</span>
-    {% else %}
-      {% if user.last_visibly_online_at %}
-        <span style="color: #777">
-          Online
-          <abbr class="timeago"
-                title="{{ user.last_visibly_online_at.toISOString() }}">
-            {{ user.last_visibly_online_at|formatDate }}
-          </abbr>
-        </span>
-      {% else %}
-        <span style="color: #555">
-          Offline since relaunch
-        </span>
-      {% endif %}
     {% endif %}
   {% else %}
     {% if Date.now() - user.last_online_at.getTime() < 1000 * 60 * 15 %}
