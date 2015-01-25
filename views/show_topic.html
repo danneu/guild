@@ -300,7 +300,7 @@
       <li>Before submitting your post, it's wise to copy it somewhere so that you don't lose it in the event of server error.</li>
       <li>Check out the BBCode Cheatsheet below the editor. It's pretty basic for now, but I will add more BBCode over time. Check the cheatsheet every once in a while for updates.</li>
     </ul>
-    <form method="post" action="{{ topic.url }}/posts">
+    <form method="post" action="{{ topic.url }}/posts" id="new-post">
       <input type="hidden" name="post-type" value="{{ postType }}">
       <textarea id="markup-input"
                 placeholder="Click here and begin writing"
@@ -444,7 +444,7 @@ $(function() {
             '<p style="color: salmon">'+
             'This post uses the old formatting system (Markdown) before we had BBCode. If you click "Save", then the forum will assume that you\'ve converted this post to BBCode. If you don\'t want that to happen, then click "Cancel".'+
             '</p><p style="color: salmon">'+
-            'For example, <code>[Click Me](http://example.com)</code> (Old system) is now <code>[url=Click Me]http://example.com[/url]</code> (BBCode)'+
+            'For example, <code>[Click Me](http://example.com)</code> (Old system) is now <code>[url=http://example.com]Click Me[/url]</code> (BBCode)'+
             '</p>'
           );
         }
