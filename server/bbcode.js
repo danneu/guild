@@ -8,6 +8,45 @@ if (typeof window === 'undefined') {
   util = require('util');
 }
 
+// Keep in sync with BBCode cheatsheet
+var smilies = [
+  'airquote',
+  'airquotes',
+  'arghfist',
+  'bow',
+  'brow',
+  'btw',
+  'cool',
+  'dreamy',
+  'drool',
+  'gray',
+  'confused',
+  'nat',
+  'hehe',
+  'lol',
+  'hmm',
+  'golfclap',
+  'ou',
+  'newlol',
+  'punch',
+  'rock',
+  'respek',
+  'rollin',
+  'rolleyes',
+  'sick',
+  'sun',
+  'toot',
+  'usa',
+  'wub',
+  'what',
+  'zzz'
+];
+var smilieRegExp = new RegExp(':(' + smilies.join('|') + ')', 'ig');
+
+function replaceSmilies(text) {
+  return text.replace(smilieRegExp, '<img src="/smilies/$1.gif">');
+}
+
 var XBBCODE = (function() {
 
   ////
@@ -1001,6 +1040,9 @@ var XBBCODE = (function() {
 
     ret.html = ret.html.replace("&#91;", "["); // put ['s back in
     ret.html = ret.html.replace("&#93;", "]"); // put ['s back in
+
+    // Replace smilie codes with <img>s
+    ret.html = replaceSmilies(ret.html);
 
     // concat tagErrs into errQueue at the last second
     // and then reset it for next run.
