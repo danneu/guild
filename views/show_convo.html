@@ -184,12 +184,19 @@
       });
   </script>
   <script>
-    $(function() {
-      $('#reply-input').bbcode();
-      $('.post-body').each(function() {
+    // Render posts only as they appear in the user's browser
+    $('.post-body, .post-sig-markdown').appear();
+    $('.post-body, .post-sig-markdown').on('appear', function(e) {
+      if (!$(this).attr('data-rendered')) {
         var $this = $(this);
         $this.html(markdown.toHTML($this.text()));
-      });
+        $this.attr('data-rendered', true);
+      }
+    });
+  </script>
+  <script>
+    $(function() {
+      $('#reply-input').bbcode();
     });
   </script>
 
