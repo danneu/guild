@@ -410,3 +410,8 @@ textarea {
     display: none;
     margin-left: 10px;
 }
+
+/* Popover font color is white by default. We need it to be dark. */
+.popover {
+    color: #000;
+}
