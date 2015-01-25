@@ -307,8 +307,9 @@ var w;
     content = content + '</div>';
 
     $M.$editor.find('button[title="Font Color"]').popover({
-      placement: 'auto top',
+      placement: 'auto right',
       content: content,
+      container: 'body',
       html: true
     }).on('shown.bs.popover', function() {
       var self = this;
