@@ -965,7 +965,7 @@ app.use(route.post('/convos', function*() {
                                    config.MAX_TOPIC_TITLE_LENGTH,
                                    'Title required');
   this.checkBody('markup').isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH,
-                                  'Post text most be ' + config.MIN_POST_LENGTH +
+                                  'Post text must be ' + config.MIN_POST_LENGTH +
                                   '-' + config.MAX_POST_LENGTH + ' chars long');
 
   if (this.errors) {
