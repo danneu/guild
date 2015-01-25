@@ -326,7 +326,7 @@
     <h2>New Reply</h2>
     <ul>
       <li><span class="label label-info">Tip</span> Before submitting your post, it's wise to copy it somewhere so that you don't lose it in the event of server error.</li>
-      <li><span class="label label-warning">Warning</span> The BBCode parser is new and undoubtedly riddled with bugs, so please take it easy on the formatting for now. Particularly avoid nesting the more complex tags like hiders and tables. I want to support crazy formatting eventually, but lemme work out the kinks first.</li>
+      <li><span class="label label-warning">Warning</span> The BBCode parser is new and may have bugs. I recommend avoiding complex/nested BBCode until I work out the kinks.</li>
     </ul>
     <form method="post" action="{{ topic.url }}/posts">
       <input type="hidden" name="post-type" value="{{ postType }}">
