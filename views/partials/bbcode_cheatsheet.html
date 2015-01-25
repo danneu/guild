@@ -54,11 +54,16 @@
     ] %}
 
     <h3>Smilies</h3>
-    {% for smilie in smilies %}
-      <span class="label label-default" style="margin-right: 5px;">
-        :{{smilie}} <img src="/smilies/{{ smilie }}.gif">
-      </span>
-    {% endfor %}
+    <div>
+      {% for smilie in smilies %}
+        <div class="smilie-box">
+          <span class="label label-default">
+            :{{smilie}}
+            <img src="/smilies/{{ smilie }}.gif">
+          </span>
+        </div>
+      {% endfor %}
+    </div>
 
     <!-- Basics -->
 

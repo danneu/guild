@@ -415,3 +415,8 @@ textarea {
 .popover {
     color: #000;
 }
+
+/* Make the smilies wrap */
+#bbcode-cheatsheet .smilie-box {
+    display: inline-block;
+}
