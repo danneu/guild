@@ -376,6 +376,16 @@ app.use(route.get('/users', function*() {
 }));
 
 //
+// BBCode Cheatsheet
+//
+app.get('/bbcode', function*() {
+  yield this.render('bbcode_cheatsheet', {
+    ctx: this,
+    title: 'BBCode Cheatsheet'
+  });
+});
+
+//
 // Registration form
 //
 app.use(route.get('/register', function*() {
