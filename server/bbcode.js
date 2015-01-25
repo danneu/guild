@@ -10,8 +10,8 @@ if (typeof window === 'undefined') {
 
 // Keep in sync with BBCode cheatsheet
 var smilies = [
-  'airquote',
   'airquotes',
+  'airquote',
   'arghfist',
   'bow',
   'brow',
