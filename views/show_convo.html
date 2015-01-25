@@ -1,5 +1,6 @@
 {% extends 'layouts/master.html' %}
 {% import './macros/paginate.html' as paginate %}
+{% import './macros/macros.html' as macros %}
 
 {% block embed %}
   <ol class="breadcrumb">
@@ -55,7 +56,8 @@
         <!-- Author metadata -->
         <div class="col-sm-2 clearfix">
           <a href="{{ post.user.url }}">{{ post.user.uname }}</a>
-          <br>{{ post.user.role }}
+          <br>{{ post.user.role }}<br>
+          {{ macros.onlineStatus(post.user) }}
         </div> <!-- /.col-sm-2 post-meta -->
         <!-- Post text -->
         <div class="col-sm-10">
