@@ -38,6 +38,7 @@ CREATE TABLE users (
   pms_count      int       NOT NULL  DEFAULT 0,
   sig            text      NOT NULL  DEFAULT '',
   legacy_sig     text      NULL,
+  sig_html       text      NOT NULL  DEFAULT '',
   avatar_url     text      NOT NULL DEFAULT '',
   hide_sigs      boolean   NOT NULL  DEFAULT false
 );
