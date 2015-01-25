@@ -24,3 +24,52 @@
     {% endif %}
   {% endif %}
 {% endmacro %}
+
+{% macro renderPost(post) %}
+  {% if post.is_hidden %}
+    <i>[HIDDEN]</i>
+  {% else %}
+    {% if post.html %}
+      <div class="post-body-html post-content">{{- post.html|safe -}}</div>
+    {% elif post.legacy_html %}
+      <div class="post-body-html post-content">{{- post.legacy_html|safe -}}</div>
+    {% else %}
+      <div class="post-body post-content">{{- post.text -}}</div>
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro renderSig(user) %}
+  {% if ctx.currUser && !ctx.currUser.hide_sigs %}
+    <!-- User has sig html-->
+    {% if post.user.sig_html %}
+      <div class="post-sig-legacy post-sig"
+           style="max-height: 300px;
+                  overflow: auto;
+                  margin-top: 50px;
+                  padding: 20px 20px 0 20px;
+                  border-top: 2px solid black">
+        {{- post.user.sig_html|safe -}}
+      </div>
+    <!-- User has old Markdown sig that needs conversion to BBCode -->
+    {% elif post.user.sig %}
+      <div class="post-sig-markdown post-sig"
+           style="max-height: 300px;
+                  overflow: auto;
+                  margin-top: 50px;
+                  padding: 20px 20px 0 20px;
+                  border-top: 2px solid black">
+        {{- post.user.sig -}}
+      </div>
+    {% elif post.user.legacy_sig %}
+      <div class="post-sig post-sig-legacy"
+           style="max-height: 300px;
+                  overflow: auto;
+                  margin-top: 50px;
+                  padding: 20px 20px 0 20px;
+                  border-top: 2px solid black">
+        {{- post.user.legacy_sig|safe -}}
+      </div>
+    {% endif %}
+  {% endif %}
+{% endmacro %}

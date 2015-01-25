@@ -496,7 +496,7 @@ RETURNING *
   return result.rows[0];
 };
 
-// Keep updatePost and UpdatePm in sync
+// Keep updatePost and updatePm in sync
 exports.updatePost = function*(postId, markup, html) {
   assert(_.isString(markup));
   assert(_.isString(html));
@@ -509,15 +509,18 @@ RETURNING *
   var result = yield query(sql, [postId, markup, html]);
   return result.rows[0];
 };
-exports.updatePm = function*(id, text) {
-  assert(_.isString(text));
+
+// Keep updatePost and updatePm in sync
+exports.updatePm = function*(id, markup, html) {
+  assert(_.isString(markup));
+  assert(_.isString(html));
   var sql = m(function() {/*
 UPDATE pms
-SET text = $2, updated_at = NOW()
+SET markup = $2, html = $3, updated_at = NOW()
 WHERE id = $1
 RETURNING *
   */});
-  var result = yield query(sql, [id, text]);
+  var result = yield query(sql, [id, markup, html]);
   return result.rows[0];
 };
 
