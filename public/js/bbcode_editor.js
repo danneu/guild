@@ -256,7 +256,10 @@ var w;
           {name: 'bbcode2',
            data: [buttons['bb-url'], buttons['bb-img']]},
           {name: 'bbcode3',
-           data: [buttons['bb-quote'], buttons['bb-hider'], buttons['bb-tabs']]},
+           data: [buttons['bb-quote'],
+                  buttons['bb-hider']
+                  //,buttons['bb-tabs']
+                 ]},
           {name: 'bbcode4',
            data: [buttons['bb-preview']]}
         ]
