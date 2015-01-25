@@ -36,7 +36,7 @@ gulp.task('build-js', function() {
     'public/vendor/bootstrap-markdown/js/bootstrap-markdown.js',
     'public/vendor/jquery-appear/jquery.appear.js',
     'public/vendor/bootstrap/js/bootstrap.js',
-    'public/vendor/xbbcode/xbbcode/xbbcode.js',
+    'public/vendor/xbbcode/xbbcode/bbcode.js', // Symlinked to server/bbcode.js
     'public/js/bbcode_editor.js'
   ];
   gulp.src(jsPaths)
