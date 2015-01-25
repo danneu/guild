@@ -30,7 +30,7 @@ exports.flash = function(cookieName) {
   return function *(next) {
     var data;
     if (this.cookies.get(cookieName)) {
-      data = JSON.parse(this.cookies.get(cookieName));
+      data = JSON.parse(decodeURIComponent(this.cookies.get(cookieName)));
     } else {
       data = {};
     }
@@ -41,7 +41,7 @@ exports.flash = function(cookieName) {
         return data;
       },
       set: function(val) {
-        this.cookies.set(cookieName, JSON.stringify(val));
+        this.cookies.set(cookieName, encodeURIComponent(JSON.stringify(val)));
       }
     });
 
