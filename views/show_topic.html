@@ -206,26 +206,7 @@
 
             <!-- For larger-than-smartphone devices -->
             <div class="hidden-xs">
-              <div class="user-uname">
-                <a href="{{ post.user.url }}">
-                  {{ post.user.uname }}
-                </a>
-              </div>
-
-              {% if post.user.avatar_url %}
-                <div class="post-avatar"
-                     style="margin-top: 10px;">
-                  <img src="{{ post.user.avatar_url}}">
-                </div>
-              {% endif %}
-
-              <div class="user-role" style="margin-top: 10px;">
-                {{ post.user.role|capitalize }}
-              </div>
-
-              <!-- Online status -->
-              {{ macros.onlineStatus(post.user) }}
-
+              {{ macros.renderUserbitLarge(post.user) }}
             </div> <!-- /.hidden-xs -->
 
           </div> <!-- /.col-sm-2 post-meta -->

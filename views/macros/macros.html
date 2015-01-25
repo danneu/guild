@@ -73,3 +73,33 @@
     {% endif %}
   {% endif %}
 {% endmacro %}
+
+{% macro renderUserbitLarge(user)  %}
+  <div class="user-uname">
+    <a href="{{ post.user.url }}">
+      {{ user.uname }}
+    </a>
+  </div>
+
+  {% if user.avatar_url %}
+    <div class="post-avatar"
+         style="margin-top: 10px;">
+      <img src="{{ post.user.avatar_url}}">
+    </div>
+  {% endif %}
+
+  <div class="user-role" style="margin-top: 10px;">
+    {% if user.id === 10 %}
+      <img src="/bling/10-sora/legacy.gif">
+      <img src="/bling/10-sora/member.gif">
+      <br>
+      <img src="/bling/10-sora/forever.gif">
+    {% else %}
+      {{ user.role|capitalize }}
+    {% endif %}
+  </div>
+
+  <!-- Online status -->
+
+  {{ onlineStatus(user) }}
+{% endmacro %}
