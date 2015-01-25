@@ -466,6 +466,11 @@ $(function() {
         // .markdown() escapes html entities.
         $post_body.find('textarea').val(post_text)
 
+        // Scroll to editor over 500ms so user can re-orient themselves
+        $('body').animate({
+            scrollTop: $post_body.offset().top
+        }, 500);
+
         $cancel_btn.insertAfter(
           $('#post-' + post_id + ' .md-footer button[data-handler="cmdSave"]')
         );
