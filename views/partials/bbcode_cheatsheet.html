@@ -17,6 +17,49 @@
     </ul>
     <hr>
 
+    <!-- Smilies -->
+
+    {# Keep in sync with bbcode.js #}
+    {% set smilies = [
+      'airquote',
+      'airquotes',
+      'arghfist',
+      'bow',
+      'brow',
+      'btw',
+      'cool',
+      'dreamy',
+      'drool',
+      'gray',
+      'confused',
+      'nat',
+      'hehe',
+      'lol',
+      'hmm',
+      'golfclap',
+      'ou',
+      'newlol',
+      'punch',
+      'rock',
+      'respek',
+      'rollin',
+      'rolleyes',
+      'sick',
+      'sun',
+      'toot',
+      'usa',
+      'wub',
+      'what',
+      'zzz'
+    ] %}
+
+    <h3>Smilies</h3>
+    {% for smilie in smilies %}
+      <span class="label label-default" style="margin-right: 5px;">
+        :{{smilie}} <img src="/smilies/{{ smilie }}.gif">
+      </span>
+    {% endfor %}
+
     <!-- Basics -->
 
     <h3>Basics</h3>
