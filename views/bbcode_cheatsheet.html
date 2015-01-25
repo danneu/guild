@@ -1,0 +1,23 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li>
+      <a href="/">Home</a>
+    </li>
+  </ol>
+
+  <div class="page-header" style="border-color: #000">
+    <h3>BBCode Cheatsheet</h3>
+  </div>
+
+  <p><span class="label label-info">Tip</span> This cheatsheet also appears under every "New Post", "New PM", and "New Topic" editor.</p>
+
+  {% include 'partials/bbcode_cheatsheet.html' %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  $('#cheatsheet-toggle-btn').click();
+</script>
+{% endblock %}
