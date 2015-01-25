@@ -1064,14 +1064,13 @@ app.use(route.post('/convos/:convoId/pms', function*(convoId) {
   this.assertAuthorized(this.currUser, 'CREATE_PM', convo);
 
   // Render bbcode
-  var html = bbcode(markup);
+  var html = bbcode(this.request.body.markup);
 
-  var markup = this.request.body.markup;
   var pm = yield db.createPm({
     userId: this.currUser.id,
     ipAddress: this.request.ip,
     convoId: convoId,
-    markup: markup,
+    markup: this.request.body.markup,
     html: html
   });
   pm = pre.presentPm(pm);
@@ -1199,7 +1198,7 @@ app.get('/pms/:id/raw', function*() {
   var pm = yield db.findPmWithConvo(this.params.id);
   this.assert(pm, 404);
   this.assertAuthorized(this.currUser, 'READ_PM', pm);
-  this.body = pm.text;
+  this.body = pm.markup ? pm.markup : pm.text;
 });
 
 //
@@ -1236,8 +1235,8 @@ app.put('/api/pms/:id', function*() {
   if (!config.IS_PM_SYSTEM_ONLINE)
     return this.body = 'PM system currently disabled';
 
-  this.checkBody('text').isLength(config.MIN_POST_LENGTH,
-                                  config.MAX_POST_LENGTH);
+  this.checkBody('markup').isLength(config.MIN_POST_LENGTH,
+                                    config.MAX_POST_LENGTH);
   if (this.errors) {
     this.flash = {
       message: ['danger', belt.joinErrors(this.errors)],
@@ -1247,14 +1246,24 @@ app.put('/api/pms/:id', function*() {
     return;
   }
 
+  // Users that aren't logged in can't read any PMs, so just short-circuit
+  // if user is a guest so we don't even incur DB query.
   this.assert(this.currUser, 404);
+
   var pm = yield db.findPmWithConvo(this.params.id);
+
+  // 404 if there is no PM with this ID
   this.assert(pm, 404);
+
+  // Ensure user is allowed to update this PM
   this.assertAuthorized(this.currUser, 'UPDATE_PM', pm)
 
-  var text = this.request.body.text;
-  var updatedPm = yield db.updatePm(this.params.id, text);
+  // Render BBCode to html
+  var html = bbcode(this.request.body.markup);
+
+  var updatedPm = yield db.updatePm(this.params.id, this.request.body.markup, html);
   updatedPm = pre.presentPm(updatedPm);
+  console.log('updatedPm', updatedPm);
 
   this.body = JSON.stringify(updatedPm);
 });
