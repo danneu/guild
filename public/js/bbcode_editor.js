@@ -175,7 +175,7 @@ var w;
     },
     'bb-preview': {
       name: 'bb-preview',
-      // toggle: true,
+      toggle: true,
       title: 'Preview2',
       icon: 'fa fa-search',
       btnClass: 'btn btn-primary btn-sm',
