@@ -94,6 +94,7 @@
       <img src="/bling/10-sora/member.gif">
       <br>
       <img src="/bling/10-sora/forever.gif">
+    {% elif user.role === 'member' %}
     {% else %}
       {{ user.role|capitalize }}
     {% endif %}
