@@ -420,3 +420,6 @@ textarea {
 #bbcode-cheatsheet .smilie-box {
     display: inline-block;
 }
+.user-stats {
+    color: #a86;
+}

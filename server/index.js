@@ -137,6 +137,12 @@ app.use(function*(next) {  // Must become before koa-router
 // {{ 'firetruck'|truncate(6) }}  -> 'firetruck'
 swig.setFilter('truncate', belt.makeTruncate('…'));
 
+// Returns distance from now to date in days. 0 or more.
+function daysAgo(date) {
+  return Math.floor((Date.now() - date.getTime()) / (1000*60*60*24));
+}
+swig.setFilter('daysAgo', daysAgo);
+
 // FIXME: Can't render bbcode on the fly until I speed up
 // slow bbcode like tabs
 swig.setFilter('bbcode', function(markup) {

@@ -99,6 +99,10 @@
     {% endif %}
   </div>
 
+  <div class="user-stats">
+    {{ user.posts_count }} posts in {{ user.created_at|daysAgo}} days
+  </div>
+
   <!-- Online status -->
 
   {{ onlineStatus(user) }}
