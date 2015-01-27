@@ -261,6 +261,7 @@ $(function() {
     $.ajax({
       url: '/pms/' + post_id + '/raw',
       dataType: 'html',
+      cache: false,
       success: function(post_text) {
         console.log(post_text);
         var $post_editor = $('<div class="post-editor"></div>');

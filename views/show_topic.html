@@ -412,6 +412,7 @@ $(function() {
     $.ajax({
       url: '/posts/' + post_id + '/raw',
       dataType: 'html',
+      cache: false,
       // This is going to be post.markup || post.text
       success: function(post_text) {
         var $post_editor = $('<div class="post-editor"></div>');

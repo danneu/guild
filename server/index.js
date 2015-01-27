@@ -1176,6 +1176,7 @@ app.get('/posts/:id/raw', function*() {
   var post = yield db.findPostWithTopicAndForum(this.params.id);
   this.assert(post, 404);
   this.assertAuthorized(this.currUser, 'READ_POST', post);
+  this.set('Cache-Control', 'no-cache');
   this.body = post.markup ? post.markup : post.text;
 });
 
@@ -1187,6 +1188,7 @@ app.get('/pms/:id/raw', function*() {
   var pm = yield db.findPmWithConvo(this.params.id);
   this.assert(pm, 404);
   this.assertAuthorized(this.currUser, 'READ_PM', pm);
+  this.set('Cache-Control', 'no-cache');
   this.body = pm.markup ? pm.markup : pm.text;
 });
 
