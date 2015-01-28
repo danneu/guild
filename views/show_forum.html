@@ -91,6 +91,8 @@
                     <span class="label label-primary">Sticky</span>
                   {% endif %}
                   <a href="{{ topic.url }}">{{ topic.title }}</a>
+                </h5>
+                <p class="list-group-item-text">
                   <div style="margin-top: 6px;">
                     by <a href="{{ topic.user.url }}" style="color: #fff">
                       {{ topic.user.uname -}}
@@ -99,8 +101,8 @@
                           title="{{ topic.created_at.toISOString() }}">
                       {{ topic.created_at|formatDate }}
                     </abbr>
-                  <div>
-                </h5>
+                  </div>
+                </p>
               </div>
               <div class="col-xs-1"></div>
               <div class="col-xs-2">{{ topic.posts_count|commafy }}</div>
