@@ -21,6 +21,7 @@ var smilies = [
   'drool',
   'gray',
   'confused',
+  'magnum',
   'nat',
   'hehe',
   'lol',
