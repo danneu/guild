@@ -314,7 +314,7 @@ app.post('/users', function*() {
   var user = result['user'];
   var session = result['session'];
   this.cookies.set('sessionId', session.id, {
-    expires: belt.futureDate(new Date(), { years: 365 })
+    expires: belt.futureDate(new Date(), { years: 1 })
   });
   this.flash = { message: ['success', 'Registered successfully'] };
   return this.response.redirect('/');
