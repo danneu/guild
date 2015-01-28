@@ -86,8 +86,31 @@
 
     </div><!-- /row -->
 
+  <!-- BIO -->
+
   <div class="row">
-    <div class="col-xs-6">
+    <div class="col-sm-12">
+      <h3>
+        Bio
+        {% if ctx.can(ctx.currUser, 'UPDATE_USER', user) %}
+          <button type="button"
+                  class="btn btn-xs btn-default"
+                  id="edit-bio"
+                  data-user-id="{{ user.id }}">Edit</button>
+        {% endif %}
+      </h3>
+      <div class="user-bio well">
+        {% if user.bio_html %}
+          {{ user.bio_html|safe }}
+        {% else %}
+          User has no bio, yet
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-sm-12">
 
       <!-- Most recent posts -->
 
@@ -181,7 +204,52 @@
 
   </div> <!-- /.row -->
 
+  <!-- These exist for storing values for ajax interaction -->
+  <div id="bio-markup" style="display: none">{{ user.bio_markup }}</div>
+  <div id="bio-html" style="display: none">{{ user.bio_html }}</div>
+
 {% endblock %}
 
 {% block scripts %}
-{% endblock%}
+  <script>
+    $('#edit-bio').on('click', function() {
+      console.log('click');
+      var userId = $(this).attr('data-user-id');
+      var $cancelBtn = $('<button style="margin-left: 5px;" class="btn btn-default post-edit-cancel-btn">Cancel</button>');
+      var $editor = $('<div class="editor">'+$('#bio-markup').text()+'</div>');
+      $('.user-bio').html(
+        "<p>Write whatever you want in your bio. Everyone can see it, even people not logged in.</p>"+
+        "<p>Ideas: Introduce yourself, keep a list of roleplays you're involved in, describe what kind of roleplays/partners you're looking for, provide off-site contact info, share some hilarious jokes, share art, share dank memes, etc.</p>"+
+        "<p>Must be no more than {{ ctx.config.MAX_BIO_LENGTH }} chars</p>"
+      );
+      $('.user-bio').append($editor);
+      $editor.bbcode({
+        savable: true,
+        onSave: function(e) {
+          console.log('Saving');
+          var newBioMarkup = e.getContent();
+          $.ajax({
+            url: '/api/users/' + userId + '/bio',
+            dataType: 'json',
+            type: 'POST',
+            headers: { 'X-HTTP-Method-Override': 'PUT' },
+            data: { markup: newBioMarkup },
+            success: function(updatedUser) {
+              $('.user-bio').html(updatedUser.bio_html || 'User has no bio, yet');
+              $('#bio-markup').text(updatedUser.bio_markup);
+              $('#bio-html').text(updatedUser.bio_html);
+            }
+          });
+        }
+      });
+
+      $cancelBtn.insertAfter(
+        $('.user-bio .md-footer button[data-handler="cmdSave"]')
+      );
+
+      $cancelBtn.on('click', function() {
+        $('.user-bio').html($('#bio-html').text() || 'User has no bio, yet');
+      });
+    });
+  </script>
+{% endblock %}

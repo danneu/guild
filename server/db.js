@@ -195,6 +195,18 @@ GROUP BY t.id, f.id, ts.user_id
   return result.rows[0];
 };
 
+exports.updateUserBio = function*(userId, bioMarkup, bioHtml) {
+  assert(_.isString(bioMarkup));
+  var sql = m(function() {/*
+    UPDATE users
+    SET bio_markup = $2, bio_html = $3
+    WHERE id = $1
+    RETURNING *
+  */});
+  var result = yield query(sql, [userId, bioMarkup, bioHtml]);
+  return result.rows[0];
+};
+
 exports.findTopic = wrapTimer(findTopic);
 function* findTopic(topicId) {
   var sql = m(function() {/*
