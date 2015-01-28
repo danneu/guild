@@ -66,6 +66,29 @@
         {% endif %}
       </ul>
 
+    </div><!-- col-6 -->
+
+    <!-- PM button -->
+
+    <div class="col-xs-6">
+      {% if ctx.can(ctx.currUser, 'CREATE_CONVO') %}
+        <a class="btn btn-primary btn-block pull-right"
+           href="/convos/new?to={{ encodeURI(user.uname) }}">
+          <span class="glyphicon glyphicon-envelope"></span>
+          {% if ctx.currUser.id === user.id %}
+            Start Private Convo with yourself
+          {% else %}
+            Start Private Convo with {{ user.uname }}
+          {% endif %}
+        </a>
+      {% endif %}
+    </div> <!-- /.col-6 -->
+
+    </div><!-- /row -->
+
+  <div class="row">
+    <div class="col-xs-6">
+
       <!-- Most recent posts -->
 
       <a name="recent-posts"></a>
@@ -155,21 +178,6 @@
 
     </div> <!-- /.col-6 -->
 
-    <!-- Right side -->
-
-    <div class="col-xs-6">
-      {% if ctx.can(ctx.currUser, 'CREATE_CONVO') %}
-        <a class="btn btn-primary btn-block pull-right"
-           href="/convos/new?to={{ encodeURI(user.uname) }}">
-          <span class="glyphicon glyphicon-envelope"></span>
-          {% if ctx.currUser.id === user.id %}
-            Start Private Convo with yourself
-          {% else %}
-            Start Private Convo with {{ user.uname }}
-          {% endif %}
-        </a>
-      {% endif %}
-    </div> <!-- /.col-6 -->
 
   </div> <!-- /.row -->
 
