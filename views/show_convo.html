@@ -131,6 +131,7 @@
         <a href=""
            class="btn btn-default btn-xs pull-right post-reply-btn"
            post-id="{{ post.id }}"
+           post-uname="{{ post.user.uname }}"
            style="margin-left: 5px"
            {% if !ctx.can(ctx.currUser, 'CREATE_PM', convo) %}disabled{% endif %}
            >Reply</a>
@@ -210,17 +211,16 @@ $(function() {
     $reply_btn = $(this);
     $reply_btn.addClass('disabled').html('Loading...');
     var post_id = $reply_btn.attr('post-id');
-    // Get this post's text
-    //var post_text = $('#post-' + post_id).find('.post-body').text()
-    //-prev-var post_url = '/api/posts/' + post_id;
+    var uname = $reply_btn.attr('post-uname');
     var post_url = '/pms/' + post_id + '/raw';
     $.get(post_url, function(markup) {
       console.log('returned')
       $reply_btn.removeClass('disabled').html('Reply');
-      // var quote_markup = _.map(markup.split('\n'), function(line) { return '> ' + line }).join('\n')
-      var quote_markup = markup.split('\n').map(function(line) {
-        return '> ' + line;
-      }).join('\n')
+
+      var quote_markup = '[quote=' + uname + ']\n' +
+        markup.trim()  +
+        '\n[/quote]\n';
+
       var $reply_textarea = $('#reply-form textarea');
       var prev_content = $('textarea').val().trim();
       // Only add \n\n padding if there was already content in textarea
