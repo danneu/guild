@@ -1,6 +1,28 @@
 {% extends 'layouts/master.html' %}
 
 {% block embed %}
+
+  {% if staffRep %}
+  <div class="well">
+    <p>
+      Staff Representative Account:
+      <a href="{{ staffRep.url }}">{{ staffRep.uname }}</a>
+    </p>
+    <p class="text-muted">
+      When a user registers, they receive the welcome PM from this user.
+      Be sure to log into the rep account periodically. Users may have responded
+      to the welcome PM or contacted the rep account for help.
+    </p>
+    <p class="text-warning">TODO: Allow mods to click a button right here that lets them log in as the rep account.</p>
+  </div>
+  {% else %}
+    <div class="alert alert-warning">
+      <p>
+        <strong>Notice:</strong> <code>STAFF_REPRESENTATIVE_ID</code> is not set, so new users will not receive the welcome PM
+      </p>
+    </div>
+  {% endif %}
+
   <div class="row">
     <div class="col-sm-12">
       <div class="list-group">

@@ -313,9 +313,24 @@ app.post('/users', function*() {
 
   var user = result['user'];
   var session = result['session'];
+
+  // Log in the user
   this.cookies.set('sessionId', session.id, {
     expires: belt.futureDate(new Date(), { years: 1 })
   });
+
+  // Send user the introductory PM
+
+  if (config.STAFF_REPRESENTATIVE_ID) {
+    yield db.createConvo({
+      userId: config.STAFF_REPRESENTATIVE_ID,
+      toUserIds: [user.id],
+      title: 'RPGuild Welcome Package',
+      markup: belt.welcomePm.markup,
+      html: belt.welcomePm.html
+    });
+  }
+
   this.flash = { message: ['success', 'Registered successfully'] };
   return this.response.redirect('/');
 });
@@ -793,8 +808,15 @@ app.use(route.get('/me/subscriptions', function*() {
 //
 // Lexus lounge (Mod forum)
 //
+// The user that STAFF_REPRESENTATIVE_ID points to.
+// Loaded once upon boot since env vars require reboot to update.
+var staffRep;
 app.use(route.get('/lexus-lounge', function*() {
   this.assertAuthorized(this.currUser, 'LEXUS_LOUNGE');
+  if (!staffRep && config.STAFF_REPRESENTATIVE_ID) {
+    staffRep = yield db.findUser(config.STAFF_REPRESENTATIVE_ID);
+    staffRep = pre.presentUser(staffRep);
+  }
   var category = yield db.findModCategory();
   var forums = yield db.findForums([category.id]);
   category.forums = forums;
@@ -807,7 +829,8 @@ app.use(route.get('/lexus-lounge', function*() {
     category: category,
     latestUsers: latestUsers,
     latestUserLimit: latestUserLimit,
-    title: 'Lexus Lounge — Mod Forum'
+    title: 'Lexus Lounge — Mod Forum',
+    staffRep: staffRep
   });
 }));
 
