@@ -76,7 +76,7 @@
       </div><!-- /.list-group-item -->
       {% for topic in forum.topics %}
         {% if ctx.can(ctx.currUser, 'READ_TOPIC', topic) %}
-          <div class="list-group-item"
+          <div class="list-group-item topic-item"
                style="background-color: #3d3a3a; border: 1px solid #111; color: #fff;">
             <div class="row">
               <div class="col-xs-6">
