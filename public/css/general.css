@@ -424,6 +424,13 @@ textarea {
     color: #a86;
 }
 
+/* .topic-item is each list-group-item on show_forum */
+/* Darken their timeagos */
+.topic-item abbr,
+.forum-item abbr {
+    color: #999;
+}
+
 .top-link {
     color: #999;
 }
