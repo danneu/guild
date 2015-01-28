@@ -660,6 +660,46 @@ app.delete('/users/:userId/legacy-sig', function*() {
   this.response.redirect('/users/' + this.params.userId + '/edit');
 });
 
+// Change user's bio_markup via ajax
+// Params:
+// - markup: String
+app.put('/api/users/:userId/bio', function*() {
+  debug(this.request.body);
+  // Validation markup
+  this.checkBody('markup')
+    .trim()
+    //// FIXME: Why does isLength always fail despite the optional()?
+    // .isLength(0, config.MAX_BIO_LENGTH,
+    //           'Bio must be 0-' + config.MAX_BIO_LENGTH + ' chars');
+
+  if (this.request.body.markup.length > config.MAX_BIO_LENGTH)
+    this.errors.push('Bio must be 0-' + config.MAX_BIO_LENGTH + ' chars');
+
+  // Return 400 with validation errors, if any
+  this.assert(!this.errors, 400, belt.joinErrors(this.errors));
+
+  var user = yield db.findUser(this.params.userId);
+
+  // 404 if user with this id does not exist
+  this.assert(user, 404);
+
+  // Ensure currUser has permission to update user
+  this.assertAuthorized(this.currUser, 'UPDATE_USER', user);
+
+  // Validation succeeded
+  // Render markup to html
+  var html = '';
+  if (this.request.body.markup.length > 0)
+    html = bbcode(this.request.body.markup);
+
+  // Save markup and html
+  var updatedUser = yield db.updateUserBio(
+    user.id, this.request.body.markup, html
+  );
+
+  this.body = JSON.stringify(updatedUser);
+});
+
 //
 // Update user
 //

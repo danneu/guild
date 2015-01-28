@@ -14,6 +14,7 @@ exports.MIN_POST_LENGTH = parseInt(process.env.MIN_POST_LENGTH, 10) || 3;
 exports.MAX_POST_LENGTH = parseInt(process.env.MAX_POST_LENGTH, 10) || 65535;
 exports.MIN_UNAME_LENGTH = parseInt(process.env.MIN_UNAME_LENGTH, 10) || 2;
 exports.MAX_UNAME_LENGTH = parseInt(process.env.MAX_UNAME_LENGTH, 10) || 15;
+exports.MAX_BIO_LENGTH = parseInt(process.env.MAX_BIO_LENGTH) || 3000;
 
 // Determines the link in password reset token email
 exports.HOST = process.env.HOST || ('http://localhost:' + exports.PORT);
