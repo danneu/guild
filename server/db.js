@@ -1111,12 +1111,30 @@ ORDER BY uname
   return result.rows;
 }
 
+var getMaxTopicId = function*() {
+  var result = yield query('SELECT MAX(id) "max_id" FROM topics');
+  return result.rows[0].max_id;
+};
+
+var getMaxPostId = function*() {
+  var result = yield query('SELECT MAX(id) "max_id" FROM posts');
+  return result.rows[0].max_id;
+};
+
+var getMaxUserId = function*() {
+  var result = yield query('SELECT MAX(id) "max_id" FROM users');
+  return result.rows[0].max_id;
+};
+
 exports.getStats = wrapTimer(getStats);
 function* getStats() {
   var results = yield {
-    topicsCount: getApproxCount('topics'),
-    usersCount: getApproxCount('users'),
-    postsCount: getApproxCount('posts'),
+    // I switched the getApproxCount fns out for MaxId fns because
+    // the vacuuming threshold was too high and the stats were never getting
+    // updated
+    topicsCount: getMaxTopicId(), //getApproxCount('topics'),
+    usersCount: getMaxUserId(), //getApproxCount('users'),
+    postsCount: getMaxPostId(), //getApproxCount('posts'),
     latestUser: exports.getLatestUser(),
     onlineUsers: exports.getOnlineUsers()
   };
