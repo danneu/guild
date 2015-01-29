@@ -826,6 +826,33 @@ app.post('/topics/:topicId/posts', function*() {
 });
 
 //
+// Search users
+//
+app.get('/search/users', function*() {
+  this.checkQuery('text').optional().toString(); // undefined || String
+  this.checkQuery('before-id').optional().toInt();  // undefined || Number
+
+  var usersList = null;
+  if (this.query['before-id'] != null) 
+    usersList = yield db.findUsersContainingStringWithId(this.query['text'], this.query['before-id']);
+  else
+    usersList = yield db.findAllUsers();
+
+  var nextBeforeId = _.last(usersList) != null ? _.last(usersList).id : null;
+
+  yield this.render('search_users', {
+    ctx: this,
+    text: this.query['text'],
+    title: 'Search Users',
+    usersList: usersList,
+    // Pagination
+    beforeId: this.query['before-id'],
+    nextBeforeId: nextBeforeId,
+    usersPerPage: config.USERS_PER_PAGE
+  });
+});
+
+//
 // Show convos
 //
 app.get('/me/convos', function*() {

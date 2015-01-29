@@ -561,6 +561,53 @@ WHERE id = $1
   return result.rows[0];
 };
 
+exports.findUsersContainingString = wrapTimer(findUsersContainingString);
+function* findUsersContainingString(searchTerm) {
+  // searchTerm is the term that the user searched for
+  assert(_.isString(searchTerm) || _.isUndefined(searchTerm));
+    var sql = m(function() {/*
+  SELECT *
+  FROM users
+  WHERE
+  lower(uname) LIKE '%' || lower($1::text) || '%'
+  ORDER BY id DESC
+  LIMIT $2::bigint
+    */});
+  var result = yield query(sql, [searchTerm, config.USERS_PER_PAGE]);
+  return result.rows;
+}
+
+exports.findAllUsers = wrapTimer(findAllUsers);
+function* findAllUsers() {
+    var sql = m(function() {/*
+  SELECT *
+  FROM users
+  WHERE
+  lower(uname) LIKE '%' || lower($1::text) || '%'
+  ORDER BY id DESC
+  LIMIT $1::bigint
+    */});
+  var result = yield query(sql, [config.USERS_PER_PAGE]);
+  return result.rows;
+}
+
+exports.findUsersContainingStringWithId = wrapTimer(findUsersContainingStringWithId);
+function* findUsersContainingStringWithId(searchTerm, beforeId) {
+  // searchTerm is the term that the user searched for
+  assert(_.isString(searchTerm) || _.isUndefined(searchTerm));
+  var sql = m(function() {/*
+SELECT *
+FROM users
+WHERE
+lower(uname) LIKE '%' || lower($1::text) || '%'
+AND id < $2
+ORDER BY id DESC
+LIMIT $3::bigint
+  */});
+  var result = yield query(sql, [searchTerm, beforeId, config.USERS_PER_PAGE]);
+  return result.rows;
+}
+
 exports.findConvosInvolvingUserId = wrapTimer(findConvosInvolvingUserId);
 function* findConvosInvolvingUserId(userId, beforeId) {
   // beforeId is the id of convo.latest_pm_id since that's how
