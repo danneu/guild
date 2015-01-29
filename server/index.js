@@ -972,6 +972,27 @@ app.get('/users/:userId', function*() {
   });
 });
 
+app.get('/showthread.php', function*() {
+  this.flash = {
+    message: ['info', 'Sorry, that page does not exist anymore.']
+  };
+  this.response.redirect('/');
+});
+
+app.get('/printthread.php', function*() {
+  this.flash = {
+    message: ['info', 'Sorry, that page does not exist anymore.']
+  };
+  this.response.redirect('/');
+});
+
+app.get('/private.php', function*() {
+  this.flash = {
+    message: ['info', 'Sorry, that page does not exist anymore.']
+  };
+  this.response.redirect('/');
+});
+
 //
 // Delete user
 //
