@@ -40,6 +40,7 @@ var swig = require('swig');
 var co = require('co');
 var bunyan = require('bunyan');
 var uuid = require('node-uuid');
+var coParallel = require('co-parallel');
 // 1st party
 var db = require('./db');
 var pre = require('./presenters');
@@ -1081,15 +1082,26 @@ app.use(route.post('/convos', function*() {
   var html = bbcode(markup);
 
   // If all unames are valid, then we can create a convo
+  var toUserIds = _.pluck(users, 'id');
   var convo = yield db.createConvo({
     userId: this.currUser.id,
-    toUserIds: _.pluck(users, 'id'),
+    toUserIds: toUserIds,
     title: title,
     markup: markup,
     html: html,
     ipAddress: this.request.ip
   });
   convo = pre.presentConvo(convo);
+
+  // Create CONVO notification for each recipient
+  yield coParallel(toUserIds.map(function*(toUserId) {
+    yield db.createConvoNotification({
+      from_user_id: ctx.currUser.id,
+      to_user_id: toUserId,
+      convo_id: convo.id
+    });
+  }), 5);
+
   this.response.redirect(convo.url);
 }));
 
@@ -1115,9 +1127,11 @@ app.use(route.get('/convos/new', function*() {
 // Body params
 // - markup
 //
-app.use(route.post('/convos/:convoId/pms', function*(convoId) {
+app.post('/convos/:convoId/pms', function*() {
   if (!config.IS_PM_SYSTEM_ONLINE)
     return this.body = 'PM system currently disabled';
+
+  var ctx = this;
 
   this.assert(this.currUser, 403);
   this.checkBody('markup')
@@ -1128,11 +1142,11 @@ app.use(route.post('/convos/:convoId/pms', function*(convoId) {
       message: ['danger', belt.joinErrors(this.errors)],
       params: this.request.body
     };
-    this.response.redirect('/convos/' + convoId);
+    this.response.redirect('/convos/' + this.params.convoId);
     return;
   }
 
-  var convo = yield db.findConvo(convoId);
+  var convo = yield db.findConvo(this.params.convoId);
   this.assert(convo, 404);
   this.assertAuthorized(this.currUser, 'CREATE_PM', convo);
 
@@ -1142,13 +1156,30 @@ app.use(route.post('/convos/:convoId/pms', function*(convoId) {
   var pm = yield db.createPm({
     userId: this.currUser.id,
     ipAddress: this.request.ip,
-    convoId: convoId,
+    convoId: this.params.convoId,
     markup: this.request.body.markup,
     html: html
   });
   pm = pre.presentPm(pm);
+
+  // Get only userIds of the *other* participants
+  // Don't want to create notification for ourself
+  var toUserIds = (yield db.findParticipantIds(this.params.convoId)).filter(function(userId) {
+    return userId !== ctx.currUser.id;
+  });
+
+  // Upsert notifications table
+  // TODO: config.MAX_CONVO_PARTICIPANTS instead of hard-coded 5
+  yield coParallel(toUserIds.map(function*(toUserId) {
+    yield db.createPmNotification({
+      from_user_id: ctx.currUser.id,
+      to_user_id: toUserId,
+      convo_id: ctx.params.convoId
+    });
+  }), 5);
+
   this.response.redirect(pm.url);
-}));
+});
 
 //
 // Show convo
@@ -1180,6 +1211,15 @@ app.use(route.get('/convos/:convoId', function*(convoId) {
     return this.response.redirect(redirectUrl);
   }
 
+  // 0 or 1
+  var count = yield db.deleteConvoNotification(this.currUser.id, convoId);
+
+  // Update the stale user's counts so that the notification count is reduced
+  // appropriately when the page loads. Otherwise, the counts won't be updated
+  // til next request.
+  this.currUser.notifications_count -= count;
+  this.currUser.convo_notifications_count -= count;
+
   var pms = yield db.findPmsByConvoId(convoId, page);
   convo.pms = pms;
   convo = pre.presentConvo(convo);
@@ -1192,6 +1232,29 @@ app.use(route.get('/convos/:convoId', function*(convoId) {
     totalPages: totalPages
   });
 }));
+
+// Delete all notifications
+app.delete('/me/notifications', function*() {
+  // Ensure a user is logged in
+  this.assert(this.currUser, 404);
+  yield db.clearNotifications(this.currUser.id);
+  this.flash = {
+    message: ['success', 'Notifications cleared']
+  };
+  var redirectTo = this.request.body['redirect-to'] || '/';
+  this.response.redirect(redirectTo);
+});
+
+// Delete only convo notifications
+app.delete('/me/notifications/convos', function*() {
+  // Ensure a user is logged in
+  this.assert(this.currUser, 404);
+  yield db.clearConvoNotifications(this.currUser.id);
+  this.flash = {
+    message: ['success', 'PM notifications cleared']
+  };
+  this.response.redirect('/me/convos');
+});
 
 //
 // Create topic

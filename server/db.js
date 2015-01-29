@@ -379,7 +379,7 @@ VALUES ($1, $2)
     var convo = result.rows[0];
 
     // Run these in parallel
-    yield args.toUserIds.map(function(toUserId) {
+    var results = yield args.toUserIds.map(function(toUserId) {
       return client.queryPromise(participantSql, [convo.id, toUserId]);
     }).concat([
       client.queryPromise(participantSql, [convo.id, args.userId]),
@@ -388,6 +388,8 @@ VALUES ($1, $2)
       ])
     ]);
 
+    // Assoc firstPm to the returned convo
+    convo.firstPm = results[2].rows[0];
     convo.pms_count++;  // This is a stale copy so we need to manually inc
     return convo;
   });
@@ -1112,4 +1114,126 @@ WHERE u.role IN ('mod', 'smod', 'admin')
   */});
   var result = yield query(sql);
   return result.rows;
+};
+
+// Users receive this when someone starts a convo with them
+exports.createConvoNotification = wrapOptionalClient(createConvoNotification);
+function* createConvoNotification(client, opts) {
+  assert(_.isNumber(opts.from_user_id));
+  assert(_.isNumber(opts.to_user_id));
+  assert(opts.convo_id);
+  var sql = m(function(){/*
+INSERT INTO notifications (type, from_user_id, to_user_id, convo_id, count)
+VALUES ('CONVO', $1, $2, $3, 1)
+RETURNING *
+  */});
+  var result = yield client.queryPromise(sql, [
+    opts.from_user_id, opts.to_user_id, opts.convo_id
+  ]);
+  return result.rows;
+};
+
+// Tries to create a convo notification.
+// If to_user_id already has a convo notification for this convo, then
+// increment the count
+exports.createPmNotification = createPmNotification;
+function* createPmNotification(opts) {
+  debug('[createPmNotification] opts: ', opts);
+  assert(_.isNumber(opts.from_user_id));
+  assert(_.isNumber(opts.to_user_id));
+  assert(opts.convo_id);
+  return yield withTransaction(function*(client) {
+    try {
+      yield exports.createConvoNotification({
+        from_user_id: opts.from_user_id,
+        to_user_id: opts.to_user_id,
+        convo_id: opts.convo_id
+      })
+    } catch(ex) {
+      // Unique constraint violation
+      if (ex.code === '23505') {
+        var sql = m(function() {/*
+          UPDATE notifications
+          SET count = COALESCE(count, 0) + 1
+          WHERE convo_id = $1 AND to_user_id = $2
+        */});
+        yield client.queryPromise(sql, [opts.convo_id, opts.to_user_id]);
+        return;
+      }
+      // Else throw
+      throw ex;
+    }
+  });
+};
+
+exports.findParticipantIds = function*(convoId) {
+  var sql = m(function() {/*
+    SELECT user_id
+    FROM convos_participants
+    WHERE convo_id = $1
+  */});
+  var result = yield query(sql, [convoId]);
+  return _.pluck(result.rows, 'user_id')
+};
+
+exports.findNotificationsForUserId = function*(toUserId) {
+  var sql = m(function() {/*
+    SELECT *
+    FROM notifications
+    WHERE to_user_id = $1
+  */});
+  var result = yield query(sql, [toUserId]);
+  return result.rows;
+};
+
+// Returns how many rows deleted
+exports.deleteConvoNotification = function*(toUserId, convoId) {
+  var sql = m(function() {/*
+    DELETE FROM notifications
+    WHERE type = 'CONVO' AND to_user_id = $1 AND convo_id = $2
+  */});
+  var result = yield query(sql, [toUserId, convoId]);
+  return result.rowCount;
+};
+
+// Deletes all rows in notifications table for user,
+// and also resets the counter caches
+exports.clearNotifications = function*(toUserId) {
+  var sql1 = m(function() {/*
+    DELETE FROM notifications
+    WHERE to_user_id = $1
+  */});
+
+  // TODO: Remove
+  // Resetting notification count manually until I can ensure
+  // notification system doesn't create negative notification counts
+
+  var sql2 = m(function() {/*
+    UPDATE users
+    SET
+      notifications_count = 0,
+      convo_notifications_count = 0
+    WHERE id = $1
+  */});
+  yield query(sql1, [toUserId])
+  yield query(sql2, [toUserId])
+};
+
+exports.clearConvoNotifications = function*(toUserId) {
+  var sql1 = m(function() {/*
+    DELETE FROM notifications
+    WHERE to_user_id = $1 AND type = 'CONVO'
+  */});
+
+  // TODO: Remove
+  // Resetting notification count manually until I can ensure
+  // notification system doesn't create negative notification counts
+
+  var sql2 = m(function() {/*
+    UPDATE users
+    SET convo_notifications_count = 0
+    WHERE id = $1
+  */});
+  yield query(sql1, [toUserId]);
+  yield query(sql2, [toUserId]);
 };

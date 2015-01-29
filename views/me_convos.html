@@ -2,6 +2,15 @@
 
 {% block embed %}
 
+  {% if ctx.currUser.convo_notifications_count > 0 %}
+    <form action="/me/notifications/convos" method="post" class="pull-right">
+      <input type="hidden" name="_method" value="delete">
+      <input type="submit"
+             value="Clear {{ ctx.currUser.convo_notifications_count }} Notification{% if ctx.currUser.convo_notifications_count > 1 %}s{% endif %}"
+             class="btn btn-default btn-xs">
+    </form>
+  {% endif %}
+
   <!-- Pagination -->
 
   {% if ctx.currUser.pms_count > 1 %}

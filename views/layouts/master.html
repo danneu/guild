@@ -93,7 +93,13 @@
                  class="btn btn-default navbar-btn">
                 <span class="glyphicon glyphicon-envelope"></span>
                 PMs
-                <div class="badge">{{ ctx.currUser.pms_count|commafy }}</div>
+                {# Doing !==0 instead of >0 so user can see any bugs where
+                   notification count goes negative #}
+                {% if ctx.currUser.convo_notifications_count !== 0 %}
+                <div class="badge">
+                  {{ ctx.currUser.convo_notifications_count|commafy }}
+                </div>
+                {% endif %}
               </a>
               <a href="/me/subscriptions"
                  class="btn btn-default navbar-btn">

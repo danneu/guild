@@ -12,6 +12,7 @@ CREATE INDEX posts_id_user_id_idx           ON posts (id, user_id);
 CREATE INDEX users_created_at_desc          ON users (created_at DESC);
 CREATE UNIQUE INDEX cp_uniq_convoId_userId ON convos_participants (convo_id, user_id);
 CREATE INDEX convos_id_latestPmId_DESC ON convos (id, latest_pm_id DESC);
+CREATE INDEX ON notifications (to_user_id);
 
 ------------------------------------------------------------
 ------------------------------------------------------------
@@ -92,6 +93,39 @@ CREATE TRIGGER update_user_posts_count_trigger
     AFTER INSERT OR DELETE ON posts
     FOR EACH ROW
     EXECUTE PROCEDURE update_user_posts_count();
+
+------------------------------------------------------------
+------------------------------------------------------------
+-- Update users.notifications_count when user receives/deleted
+-- notifications
+
+CREATE OR REPLACE function update_user_notifications_count() RETURNS trigger AS
+$$
+  var q, delta = 0, convoDelta = 0;
+  var notification = OLD || NEW;
+  var toUserId = notification.to_user_id;
+  if (TG_OP === 'INSERT') {
+    delta++;
+    if (notification.type === 'CONVO')
+      convoDelta++;
+  }
+  if (TG_OP === 'DELETE') {
+    delta--;
+    if (notification.type === 'CONVO')
+      convoDelta--;
+  }
+  q = 'UPDATE users                                                   '+
+      'SET notifications_count = notifications_count + $2,            '+
+      '    convo_notifications_count = convo_notifications_count + $3 '+
+      'WHERE id = $1                                                  ';
+  plv8.execute(q, [toUserId, delta, convoDelta]);
+$$ LANGUAGE 'plv8';
+
+DROP TRIGGER IF EXISTS update_user_notifications_count_trigger ON notifications;
+CREATE TRIGGER update_user_notifications_count_trigger
+  AFTER INSERT OR DELETE ON notifications
+  FOR EACH ROW
+  EXECUTE PROCEDURE update_user_notifications_count();
 
 ------------------------------------------------------------
 ------------------------------------------------------------

@@ -13,6 +13,8 @@ DROP TYPE IF EXISTS post_type;
 DROP TABLE IF EXISTS topic_subscriptions CASCADE;
 DROP VIEW IF EXISTS active_reset_tokens;
 DROP TABLE IF EXISTS reset_tokens CASCADE;
+DROP TABLE IF EXISTS notifications CASCADE;
+DROP TYPE IF EXISTS notification_type;
 
 --
 -- Only put things in this file that should be present for the
@@ -43,7 +45,10 @@ CREATE TABLE users (
   hide_sigs      boolean   NOT NULL  DEFAULT false,
   -- Bio
   bio_markup     text      NULL,
-  bio_html       text      NULL
+  bio_html       text      NULL,
+  -- Notifications
+  notifications_count int NOT NULL  DEFAULT 0,
+  convo_notifications_count int NOT NULL  DEFAULT 0
 );
 
 CREATE UNIQUE INDEX unique_username ON users USING btree (lower(uname));
@@ -197,6 +202,27 @@ CREATE TABLE convos_participants (
   convo_id int NOT NULL  REFERENCES convos(id) ON DELETE CASCADE,
   user_id  int NOT NULL  REFERENCES users(id) ON DELETE CASCADE,
   UNIQUE (user_id, convo_id)
+);
+
+--
+-- Notifications
+--
+
+CREATE TYPE notification_type AS ENUM ('PM', 'MENTION', 'CONVO');
+
+CREATE TABLE notifications (
+  id           serial PRIMARY KEY,
+  type         notification_type NOT NULL,
+  from_user_id int NOT NULL  REFERENCES users(id),
+  to_user_id   int NOT NULL  REFERENCES users(id),
+  created_at   timestamp with time zone NOT NULL  DEFAULT NOW(),
+  count        int NULL,
+  --
+  convo_id int NULL  REFERENCES convos(id) ON DELETE CASCADE,
+  pm_id    int NULL  REFERENCES pms(id) ON DELETE CASCADE,
+  topic_id int NULL  REFERENCES topics(id) ON DELETE CASCADE,
+  post_id  int NULL  REFERENCES posts(id) ON DELETE CASCADE,
+  UNIQUE (to_user_id, convo_id)
 );
 
 ------------------------------------------------------------
