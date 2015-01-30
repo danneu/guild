@@ -176,10 +176,19 @@
 
         <!-- Panel body -->
         <div class="panel-body"
-             style="background-color: #2E2C2C">
+             style="background-color: #2E2C2C; position: relative; overflow: hidden;">
+
+          <!-- Ribbon -->
+          {% if post.user_id === topic.user_id %}
+            {% if topic.is_roleplay %}
+              <div class="corner-ribbon top-right">GM</div>
+            {% else %}
+              <div class="corner-ribbon top-right">OP</div>
+            {% endif %}
+          {% endif %}
+
           <!-- Author metadata -->
           <div class="col-sm-2 clearfix text-center post-user-meta">
-
 
             <!-- For small devices -->
             <div class="visible-xs-block">
