@@ -1595,6 +1595,7 @@ app.post('/posts/:postId/:status', function*() {
 
 //
 // Post permalink
+// (Show post)
 //
 // Calculates pagination offset and redirects to
 // canonical topic page since the page a post falls on depends on
@@ -1603,16 +1604,17 @@ app.post('/posts/:postId/:status', function*() {
 // - Keep this in sync with /pms/:pmId
 //
 app.get('/posts/:postId', function*() {
-  var postId = this.params.postId;
-  var post = yield db.findPostWithTopicAndForum(postId);
+  var post = yield db.findPostWithTopicAndForum(this.params.postId);
   this.assert(post, 404);
   this.assertAuthorized(this.currUser, 'READ_POST', post);
   post = pre.presentPost(post);
+
+  // Determine the topic url and page for this post
   var redirectUrl;
   if (post.idx < config.POSTS_PER_PAGE)
-    redirectUrl = post.topic.url + '/posts/' + post.type + '#post-' + post.id
+    redirectUrl = post.topic.url + '/' + post.type + '#post-' + post.id
   else
-    redirectUrl = post.topic.url + '/posts/' + post.type +
+    redirectUrl = post.topic.url + '/' + post.type +
                   '?page=' +
                   Math.ceil((post.idx + 1) / config.POSTS_PER_PAGE) +
                   '#post-' + post.id;
@@ -1646,9 +1648,9 @@ app.get('/pms/:id', function*() {
 //
 // Canonical show topic
 //
-app.use(route.get('/topics/:topicId/posts/:postType', function*(topicId, postType) {
-  debug('[GET /topics/:topicId/posts/:postType]');
-  this.assert(_.contains(['ic', 'ooc', 'char'], postType), 404);
+
+app.get('/topics/:topicId/:postType', function*() {
+  this.assert(_.contains(['ic', 'ooc', 'char'], this.params.postType), 404);
   this.checkQuery('page').optional().toInt();
   this.assert(!this.errors, 400, belt.joinErrors(this.errors))
 
@@ -1662,19 +1664,20 @@ app.use(route.get('/topics/:topicId/posts/:postType', function*(topicId, postTyp
   // Only incur the topic_subscriptions join if currUser exists
   var topic;
   if (this.currUser) {
-    topic = yield db.findTopicWithIsSubscribed(this.currUser.id, topicId);
+    topic = yield db.findTopicWithIsSubscribed(this.currUser.id,
+                                               this.params.topicId);
   } else {
-    topic = yield db.findTopic(topicId);
+    topic = yield db.findTopic(this.params.topicId);
   }
   this.assert(topic, 404);
 
   // If user tried to go to ic/char tabs on a non-rp, then 404
   if (!topic.is_roleplay)
-    this.assert(!_.contains(['ic', 'char'], postType), 404);
+    this.assert(!_.contains(['ic', 'char'], this.params.postType), 404);
 
   this.assertAuthorized(this.currUser, 'READ_TOPIC', topic);
 
-  var totalItems = topic[postType + '_posts_count'];
+  var totalItems = topic[this.params.postType + '_posts_count'];
   var totalPages = belt.calcTotalPostPages(totalItems);
 
   // Don't need this page when post pages are pre-calc'd in the database
@@ -1687,19 +1690,28 @@ app.use(route.get('/topics/:topicId/posts/:postType', function*(topicId, postTyp
     return this.response.redirect(redirectUrl);
   }
 
-  var posts = yield db.findPostsByTopicId(topicId, postType, page);
+  var posts = yield db.findPostsByTopicId(this.params.topicId,
+                                          this.params.postType,
+                                          page);
   topic.posts = posts;
   topic = pre.presentTopic(topic);
   yield this.render('show_topic', {
     ctx: this,
     topic: topic,
-    postType: postType,
+    postType: this.params.postType,
     title: 'Topic: ' + topic.title,
     // Pagination
     currPage: page,
     totalPages: totalPages
   });
-}));
+});
+
+// Legacy URL
+// Redirect to the new, shorter topic URL
+app.get('/topics/:topicId/posts/:postType', function*() {
+  var redirectUrl = '/topics/' + this.params.topicId + '/' + this.params.postType;
+  this.response.redirect(redirectUrl);
+});
 
 //
 // Redirect topic to canonical url

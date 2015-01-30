@@ -115,17 +115,17 @@
   <ul class="nav nav-tabs">
     {% if topic.forum.is_roleplay %}
       <li class="{% if ctx.request.path.endsWith('/ic') %}active{% endif %}">
-        <a href="{{ topic.url }}/posts/ic">
+        <a href="{{ topic.url }}/ic">
           IC <span class="badge">{{ topic.ic_posts_count|commafy }}</span>
         </a>
       </li>
       <li class="{% if ctx.request.path.endsWith('/ooc') %}active{% endif %}">
-        <a href="{{ topic.url }}/posts/ooc">
+        <a href="{{ topic.url }}/ooc">
           OOC <span class="badge">{{ topic.ooc_posts_count|commafy }}</span>
         </a>
       </li>
       <li class="{% if ctx.request.path.endsWith('/char') %}active{% endif %}">
-        <a href="{{ topic.url }}/posts/char">
+        <a href="{{ topic.url }}/char">
           Characters <span class="badge">{{ topic.char_posts_count|commafy }}</span>
         </a>
       </li>
