@@ -395,11 +395,11 @@ app.post('/sessions', function*() {
 //
 // Show users
 //
-app.use(route.get('/users', function*() {
+app.get('/users', function*() {
   yield this.render('users', {
     ctx: this
   });
-}));
+});
 
 //
 // BBCode Cheatsheet
@@ -414,7 +414,7 @@ app.get('/bbcode', function*() {
 //
 // Registration form
 //
-app.use(route.get('/register', function*() {
+app.get('/register', function*() {
   assert(config.RECAPTCHA_SITEKEY);
   assert(config.RECAPTCHA_SITESECRET);
   yield this.render('register', {
@@ -422,7 +422,7 @@ app.use(route.get('/register', function*() {
     recaptchaSitekey: config.RECAPTCHA_SITEKEY,
     title: 'Register'
   });
-}));
+});
 
 //
 // Homepage
@@ -467,7 +467,10 @@ app.use(route.get('/', function*() {
 //
 // Remove subcription
 //
-app.use(route.delete('/me/subscriptions/:topicId', function*(topicId) {
+app.delete('/me/subscriptions/:topicSlug', function*() {
+  var topicId = belt.extractId(this.params.topicSlug);
+  this.assert(topicId, 404);
+
   this.assert(this.currUser, 404);
   var topic = yield db.findTopic(topicId);
   this.assertAuthorized(this.currUser, 'UNSUBSCRIBE_TOPIC', topic);
@@ -479,7 +482,7 @@ app.use(route.delete('/me/subscriptions/:topicId', function*(topicId) {
     return this.response.redirect(topic.url);
 
   this.response.redirect('/me/subscriptions');
-}));
+});
 
 //
 // Forgot password page
@@ -493,6 +496,8 @@ app.use(route.get('/forgot', function*() {
   });
 }));
 
+//
+//
 // - Required param: email
 app.use(route.post('/forgot', function*() {
   if (!config.IS_EMAIL_CONFIGURED)
@@ -609,7 +614,7 @@ app.use(route.post('/reset-password', function*() {
 //
 // Body params:
 // - topic-id
-app.use(route.post('/me/subscriptions', function*() {
+app.post('/me/subscriptions', function*() {
   this.assert(this.currUser, 404);
 
   // Ensure user doesn't have 100 subscriptions
@@ -631,7 +636,7 @@ app.use(route.post('/me/subscriptions', function*() {
     return this.response.redirect(topic.url);
 
   this.response.redirect('/me/subscriptions');
-}));
+});
 
 //
 // Edit user
@@ -671,20 +676,19 @@ app.put('/users/:slug/role', function*() {
 });
 
 // Delete legacy sig
-app.delete('/users/:userId/legacy-sig', function*() {
-  var user = yield db.findUser(this.params.userId);
+app.delete('/users/:slug/legacy-sig', function*() {
+  var user = yield db.findUserBySlug(this.params.slug);
   this.assert(user, 404);
   this.assertAuthorized(this.currUser, 'UPDATE_USER', user);
-  yield db.deleteLegacySig(this.params.userId);
+  yield db.deleteLegacySig(user.id);
   this.flash = { message: ['success', 'Legacy sig deleted'] };
-  this.response.redirect('/users/' + this.params.userId + '/edit');
+  this.response.redirect('/users/' + this.params.slug + '/edit');
 });
 
 // Change user's bio_markup via ajax
 // Params:
 // - markup: String
-app.put('/api/users/:userId/bio', function*() {
-  debug(this.request.body);
+app.put('/api/users/:id/bio', function*() {
   // Validation markup
   this.checkBody('markup')
     .trim()
@@ -698,9 +702,7 @@ app.put('/api/users/:userId/bio', function*() {
   // Return 400 with validation errors, if any
   this.assert(!this.errors, 400, belt.joinErrors(this.errors));
 
-  var user = yield db.findUser(this.params.userId);
-
-  // 404 if user with this id does not exist
+  var user = yield db.findUserById(this.params.id);
   this.assert(user, 404);
 
   // Ensure currUser has permission to update user
@@ -795,7 +797,7 @@ app.put('/users/:slug', function*() {
 //
 // Show subscriptions
 //
-app.use(route.get('/me/subscriptions', function*() {
+app.get('/me/subscriptions', function*() {
   this.assert(this.currUser, 404);
   var topics = yield db.findSubscribedTopicsForUserId(this.currUser.id);
   topics = topics.map(pre.presentTopic);
@@ -811,7 +813,7 @@ app.use(route.get('/me/subscriptions', function*() {
     nonroleplayTopics: nonroleplayTopics,
     title: 'My Subscriptions'
   });
-}));
+});
 
 //
 // Lexus lounge (Mod forum)
@@ -819,7 +821,7 @@ app.use(route.get('/me/subscriptions', function*() {
 // The user that STAFF_REPRESENTATIVE_ID points to.
 // Loaded once upon boot since env vars require reboot to update.
 var staffRep;
-app.use(route.get('/lexus-lounge', function*() {
+app.get('/lexus-lounge', function*() {
   this.assertAuthorized(this.currUser, 'LEXUS_LOUNGE');
   if (!staffRep && config.STAFF_REPRESENTATIVE_ID) {
     staffRep = yield db.findUser(config.STAFF_REPRESENTATIVE_ID);
@@ -840,23 +842,35 @@ app.use(route.get('/lexus-lounge', function*() {
     title: 'Lexus Lounge — Mod Forum',
     staffRep: staffRep
   });
-}));
+});
 
 //
 // Canonical show forum
 //
-app.get('/forums/:forumId', function*() {
+app.get('/forums/:forumSlug', function*() {
+  var forumId = belt.extractId(this.params.forumSlug);
+  this.assert(forumId, 404);
+
   this.checkQuery('page').optional().toInt();
   this.assert(!this.errors, 400, belt.joinErrors(this.errors))
 
-  var forum = yield db.findForum(this.params.forumId);
-  if (!forum) return;
+  var forum = yield db.findForum(forumId);
+  this.assert(forum, 404);
+
+  forum = pre.presentForum(forum);
+
+  // Redirect to canonical slug
+  var expectedSlug = belt.slugify(forum.id, forum.title);
+  if (this.params.forumSlug !== expectedSlug) {
+    this.response.redirect(forum.url + this.request.search);
+    return;
+  }
 
   this.assertAuthorized(this.currUser, 'READ_FORUM', forum);
 
   var pager = belt.calcPager(this.request.query.page, 25, forum.topics_count);
 
-  var topics = yield db.findTopicsByForumId(this.params.forumId, pager.limit, pager.offset);
+  var topics = yield db.findTopicsByForumId(forumId, pager.limit, pager.offset);
   forum.topics = topics;
   forum = pre.presentForum(forum);
   yield this.render('show_forum', {
@@ -874,7 +888,10 @@ app.get('/forums/:forumId', function*() {
 // - post-type
 // - markup
 //
-app.post('/topics/:topicId/posts', function*() {
+app.post('/topics/:topicSlug/posts', function*() {
+  var topicId = belt.extractId(this.params.topicSlug);
+  this.assert(topicId, 404);
+
   this.checkBody('post-type').isIn(['ic', 'ooc', 'char'], 'Invalid post-type');
   this.checkBody('markup')
     .trim()
@@ -894,7 +911,7 @@ app.post('/topics/:topicId/posts', function*() {
   }
 
   var postType = this.request.body['post-type'];
-  var topic = yield db.findTopic(this.params.topicId);
+  var topic = yield db.findTopic(topicId);
   this.assert(topic, 404);
   this.assertAuthorized(this.currUser, 'CREATE_POST', topic);
 
@@ -1286,13 +1303,15 @@ app.delete('/me/notifications/convos', function*() {
 // - title
 // - markup
 //
-app.post('/forums/:forumId/topics', function*() {
+app.post('/forums/:slug/topics', function*() {
+  var forumId = belt.extractId(this.params.slug);
+  this.assert(forumId, 404);
 
   // Ensure user is logged in
   this.assert(this.currUser, 403);
 
   // Load forum
-  var forum = yield db.findForumById(this.params.forumId);
+  var forum = yield db.findForumById(forumId);
 
   // Ensure forum exists
   this.assert(forum, 404);
@@ -1349,7 +1368,7 @@ app.post('/forums/:forumId/topics', function*() {
   // Create topic
   var topic = yield db.createTopic({
     userId: this.currUser.id,
-    forumId: this.params.forumId,
+    forumId: forumId,
     ipAddress: this.request.ip,
     title: this.request.body.title,
     markup: this.request.body.markup,
@@ -1561,7 +1580,9 @@ app.put('/api/pms/:id', function*() {
 // Params
 // - status (Required) String, one of STATUS_WHITELIST
 //
-app.use(route.put('/topics/:topicId/status', function*(topicId) {
+app.put('/topics/:topicSlug/status', function*() {
+  var topicId = belt.extractId(this.params.topicSlug);
+  this.assert(topicId, 404);
   var STATUS_WHITELIST = ['stick', 'unstick', 'hide', 'unhide', 'close', 'open'];
   var status = this.request.body.status;
   this.assert(_.contains(STATUS_WHITELIST, status), 400, 'Invalid status');
@@ -1573,7 +1594,7 @@ app.use(route.put('/topics/:topicId/status', function*(topicId) {
   this.flash = { message: ['success', 'Topic updated'] };
   topic = pre.presentTopic(topic);
   this.response.redirect(topic.url);
-}));
+});
 
 // Update post state
 app.post('/posts/:postId/:status', function*() {
@@ -1649,10 +1670,12 @@ app.get('/pms/:id', function*() {
 // Canonical show topic
 //
 
-app.get('/topics/:topicId/:postType', function*() {
+app.get('/topics/:slug/:postType', function*() {
   this.assert(_.contains(['ic', 'ooc', 'char'], this.params.postType), 404);
   this.checkQuery('page').optional().toInt();
   this.assert(!this.errors, 400, belt.joinErrors(this.errors))
+  var topicId = belt.extractId(this.params.slug);
+  this.assert(topicId, 404);
 
   // If ?page=1 was given, then redirect without param
   // since page 1 is already the canonical destination of a topic url
@@ -1664,12 +1687,20 @@ app.get('/topics/:topicId/:postType', function*() {
   // Only incur the topic_subscriptions join if currUser exists
   var topic;
   if (this.currUser) {
-    topic = yield db.findTopicWithIsSubscribed(this.currUser.id,
-                                               this.params.topicId);
+    topic = yield db.findTopicWithIsSubscribed(this.currUser.id, topicId);
   } else {
-    topic = yield db.findTopic(this.params.topicId);
+    topic = yield db.findTopic(topicId);
   }
   this.assert(topic, 404);
+
+  topic = pre.presentTopic(topic);
+
+  // Redirect to canonical slug
+  var expectedSlug = belt.slugify(topic.id, topic.title);
+  if (this.params.slug !== expectedSlug) {
+    this.response.redirect(topic.url + this.request.search);
+    return;
+  }
 
   // If user tried to go to ic/char tabs on a non-rp, then 404
   if (!topic.is_roleplay)
@@ -1690,11 +1721,8 @@ app.get('/topics/:topicId/:postType', function*() {
     return this.response.redirect(redirectUrl);
   }
 
-  var posts = yield db.findPostsByTopicId(this.params.topicId,
-                                          this.params.postType,
-                                          page);
-  topic.posts = posts;
-  topic = pre.presentTopic(topic);
+  var posts = yield db.findPostsByTopicId(topicId, this.params.postType, page);
+  topic.posts = posts.map(pre.presentPost);
   yield this.render('show_topic', {
     ctx: this,
     topic: topic,
@@ -1722,20 +1750,31 @@ app.get('/topics/:topicId/posts/:postType', function*() {
 // Else it is a non-roleplay
 //   Go to OOC tab
 //
-app.use(route.get('/topics/:topicId', function*(topicId) {
-  debug('[GET /topics/:topicId]');
+app.get('/topics/:slug', function*() {
+  var topicId = belt.extractId(this.params.slug);
+  this.assert(topicId, 404);
+
   var topic = yield db.findTopic(topicId);
   this.assert(topic, 404);
   this.assertAuthorized(this.currUser, 'READ_TOPIC', topic);
 
+  topic = pre.presentTopic(topic);
+
+  // Redirect to canonical slug
+  var expectedSlug = belt.slugify(topic.id, topic.title);
+  if (this.params.slug !== expectedSlug) {
+    this.response.redirect(topic.url + this.request.search);
+    return;
+  }
+
   if (topic.forum.is_roleplay)
     if (topic.ic_posts_count > 0)
-      this.response.redirect(this.request.path + '/posts/ic');
+      this.response.redirect(this.request.path + '/ic');
     else
-      this.response.redirect(this.request.path + '/posts/ooc');
+      this.response.redirect(this.request.path + '/ooc');
   else
-    this.response.redirect(this.request.path + '/posts/ooc');
-}));
+    this.response.redirect(this.request.path + '/ooc');
+});
 
 //
 // Staff list

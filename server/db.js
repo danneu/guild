@@ -255,7 +255,7 @@ RETURNING *
   return result.rows[0];
 };
 
-exports.findUser = function*(id) {
+exports.findUserById = exports.findUser = function*(id) {
   var sql = 'SELECT * FROM users WHERE id = $1';
   var result = yield query(sql, [id]);
   return result.rows[0];
