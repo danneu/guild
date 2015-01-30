@@ -1284,49 +1284,74 @@ app.delete('/me/notifications/convos', function*() {
 // Body params:
 // - forum-id
 // - title
-// - text
+// - markup
 //
 app.post('/forums/:forumId/topics', function*() {
+
+  // Ensure user is logged in
+  this.assert(this.currUser, 403);
+
+  // Load forum
+  var forum = yield db.findForumById(this.params.forumId);
+
+  // Ensure forum exists
+  this.assert(forum, 404);
+  forum = pre.presentForum(forum);
+
+  // Check user authorization
+  this.assertAuthorized(this.currUser, 'CREATE_TOPIC', forum);
+
+  // Validate params
+
   this.checkBody('title')
-    .notEmpty('Topic title is required')
+    .notEmpty('Title is required')
     .isLength(config.MIN_TOPIC_TITLE_LENGTH,
               config.MAX_TOPIC_TITLE_LENGTH,
               'Title must be between ' +
               config.MIN_TOPIC_TITLE_LENGTH + ' and ' +
               config.MAX_TOPIC_TITLE_LENGTH + ' chars');
   this.checkBody('markup')
-    .notEmpty('Post text is required')
+    .notEmpty('Post is required')
     .isLength(config.MIN_POST_LENGTH,
               config.MAX_POST_LENGTH,
-              'Post text must be between ' +
+              'Post must be between ' +
               config.MIN_POST_LENGTH + ' and ' +
               config.MAX_POST_LENGTH + ' chars');
+  this.checkBody('forum-id')
+    .notEmpty()
+    .toInt();
+
+  if (forum.is_roleplay)
+    this.checkBody('post-type')
+      .notEmpty()
+      .toLowercase()
+      .isIn(['ooc', 'ic'], 'post-type must be "ooc" or "ic"')
+
+  // Validation failure
 
   if (this.errors) {
     this.flash = {
       message: ['danger', belt.joinErrors(this.errors)],
       params: this.request.body
     };
-    this.response.redirect('/forums/' + this.params.forumId);
+    this.response.redirect(forum.url);
     return;
   }
 
-  var forumId = this.params.forumId;
-  var title = this.request.body.title;
-
-  var forum = yield db.findForum(this.params.forumId);
-  this.assert(forum, 404);
-  this.assertAuthorized(this.currUser, 'CREATE_TOPIC', forum);
+  // Validation succeeded
 
   // Render BBCode to html
   var html = bbcode(this.request.body.markup);
 
-  var postType = 'ooc';
+  // post-type is always ooc for non-RPs
+  var postType = forum.is_roleplay ? this.request.body['post-type'] : 'ooc';
+
+  // Create topic
   var topic = yield db.createTopic({
     userId: this.currUser.id,
-    forumId: forumId,
+    forumId: this.params.forumId,
     ipAddress: this.request.ip,
-    title: title,
+    title: this.request.body.title,
     markup: this.request.body.markup,
     html: html,
     postType: postType,
@@ -1679,6 +1704,12 @@ app.use(route.get('/topics/:topicId/posts/:postType', function*(topicId, postTyp
 //
 // Redirect topic to canonical url
 //
+// If roleplay (so guaranteed to have a OOC post OR a IC post)
+//   If it has an IC post, go to IC tab
+//   Else it must have an OOC post, so go to OOC tab
+// Else it is a non-roleplay
+//   Go to OOC tab
+//
 app.use(route.get('/topics/:topicId', function*(topicId) {
   debug('[GET /topics/:topicId]');
   var topic = yield db.findTopic(topicId);
@@ -1686,7 +1717,10 @@ app.use(route.get('/topics/:topicId', function*(topicId) {
   this.assertAuthorized(this.currUser, 'READ_TOPIC', topic);
 
   if (topic.forum.is_roleplay)
-    this.response.redirect(this.request.path + '/posts/ic');
+    if (topic.ic_posts_count > 0)
+      this.response.redirect(this.request.path + '/posts/ic');
+    else
+      this.response.redirect(this.request.path + '/posts/ooc');
   else
     this.response.redirect(this.request.path + '/posts/ooc');
 }));

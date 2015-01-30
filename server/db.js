@@ -877,6 +877,7 @@ RETURNING *
   return result.rows[0];
 };
 
+exports.findForumById = wrapTimer(findForum);
 exports.findForum = wrapTimer(findForum);
 function* findForum(forumId) {
   var sql = m(function() {/*

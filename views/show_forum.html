@@ -149,7 +149,21 @@
       </div>
       <div class="form-group">
         {% if forum.is_roleplay %}
-          First OOC Post:
+          <div style="margin-bottom: 5px;">
+            First Post:
+            <div class="btn-group" data-toggle="buttons">
+              <label class="btn btn-primary active">
+                <input type="radio" name="post-type"
+                       value="ic"
+                       id="option2" autocomplete="off" checked> IC
+              </label>
+              <label class="btn btn-primary">
+                <input type="radio" name="post-type"
+                       value="ooc"
+                       id="option1" autocomplete="off"> OOC
+              </label>
+            </div>
+          </div>
         {% endif %}
         <textarea rows=10
                   id="reply-input"
