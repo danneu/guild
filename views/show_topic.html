@@ -367,7 +367,7 @@ $(function() {
       console.log('returned')
       $reply_btn.removeClass('disabled').html('Reply');
 
-      var quote_markup = '[quote=' + uname + ']\n' +
+      var quote_markup = '[quote=@' + uname + ']\n' +
         markup.trim()  +
         '\n[/quote]\n';
 
@@ -452,7 +452,7 @@ $(function() {
               headers: { 'X-HTTP-Method-Override': 'PUT' },
               data: { markup: text_to_save },
               success: function(updated_post) {
-                $post_body.html(bbcode(updated_post.markup));
+                $post_body.html(updated_post.html);
                 $post_edit_btn.removeClass('disabled');
                 // Set the post's .edited-marker to ' edited'
                 var $edited_marker = $('#post-' + post_id + ' .edited-marker')

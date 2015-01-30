@@ -434,3 +434,13 @@ textarea {
 .top-link {
     color: #999;
 }
+
+.bb-mention {
+    background-color: #222;
+    padding: 1px 3px;
+    margin: 0 1px;
+    border: 1px solid #444;
+}
+.bb-mention:hover {
+    text-decoration: none;
+}

@@ -5,6 +5,8 @@
   "scripts": {
     "start": "node --harmony --expose-gc ./server",
     "start-dev": "env $(cat .env | xargs) nodemon --harmony --expose-gc ./server | bunyan",
+    "start-sandbox": "env $(cat .env | xargs) node --harmony --expose-gc ./server/sandbox | bunyan",
+    "start-sandbox-nodemon": "env $(cat .env | xargs) nodemon --harmony --expose-gc ./server/sandbox | bunyan",
     "reset-db": "node --harmony ./server/reset_db"
   },
   "repository": {
@@ -39,6 +41,7 @@
     "nodemailer-ses-transport": "^1.2.0",
     "pg": "^4.1.1",
     "promissory": "^1.0.1",
+    "regex-trie": "^1.0.4",
     "swig": "^1.4.2"
   },
   "devDependencies": {

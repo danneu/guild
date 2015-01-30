@@ -261,6 +261,17 @@ exports.findUser = function*(id) {
   return result.rows[0];
 };
 
+exports.findUserBySlug = function*(slug) {
+  assert(_.isString(slug));
+  var sql = m(function() {/*
+SELECT *
+FROM users u
+WHERE lower(u.slug) = lower($1)
+  */});
+  var result = yield query(sql, [slug]);
+  return result.rows[0];
+};
+
 exports.findUserByUnameOrEmail = wrapTimer(findUserByUnameOrEmail);
 function *findUserByUnameOrEmail(unameOrEmail) {
   assert(_.isString(unameOrEmail));
@@ -939,16 +950,19 @@ function *createUserWithSession(props) {
   assert(_.isString(props.email));
 
   var digest = yield belt.hashPassword(props.password);
+  var slug = belt.slugifyUname(props.uname);
   var sql = m(function () {/*
-INSERT INTO users (uname, digest, email)
-VALUES ($1, $2, $3)
+INSERT INTO users (uname, digest, email, slug)
+VALUES ($1, $2, $3, $4)
 RETURNING *;
    */});
 
   return yield withTransaction(function*(client) {
     var user, session;
     try {
-      user = (yield client.queryPromise(sql, [props.uname, digest, props.email])).rows[0];
+      user = (yield client.queryPromise(sql, [
+        props.uname, digest, props.email, slug
+      ])).rows[0];
     } catch(ex) {
       if (ex.code === '23505')
         if (/unique_username/.test(ex.toString()))
@@ -1236,4 +1250,11 @@ exports.clearConvoNotifications = function*(toUserId) {
   */});
   yield query(sql1, [toUserId]);
   yield query(sql2, [toUserId]);
+};
+
+// Returns [String]
+exports.findAllUnames = function*() {
+  var sql = 'SELECT uname FROM users ORDER BY uname';
+  var result = yield query(sql);
+  return _.pluck(result.rows, 'uname');
 };

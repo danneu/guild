@@ -35,6 +35,7 @@ CREATE TABLE users (
   last_online_at timestamp with time zone NULL,
   is_ghost       boolean   NOT NULL  DEFAULT false,
   role           role_type NOT NULL  DEFAULT 'member',
+  slug           text      NULL,
   -- Cache
   posts_count    int       NOT NULL  DEFAULT 0,
   pms_count      int       NOT NULL  DEFAULT 0,
@@ -53,6 +54,7 @@ CREATE TABLE users (
 
 CREATE UNIQUE INDEX unique_username ON users USING btree (lower(uname));
 CREATE UNIQUE INDEX unique_email ON users USING btree (lower(email));
+CREATE UNIQUE INDEX unique_slug ON users USING btree (lower(slug));
 
 CREATE TABLE reset_tokens (
   user_id int  NOT NULL  REFERENCES users(id)  ON DELETE CASCADE,
@@ -208,7 +210,7 @@ CREATE TABLE convos_participants (
 -- Notifications
 --
 
-CREATE TYPE notification_type AS ENUM ('PM', 'MENTION', 'CONVO');
+CREATE TYPE notification_type AS ENUM ('MENTION', 'CONVO');
 
 CREATE TABLE notifications (
   id           serial PRIMARY KEY,

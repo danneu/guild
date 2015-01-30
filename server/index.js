@@ -44,13 +44,14 @@ var coParallel = require('co-parallel');
 // 1st party
 var db = require('./db');
 var pre = require('./presenters');
-var belt = require('./belt');
 var middleware = require('./middleware');
 var cancan = require('./cancan');
 var emailer = require('./emailer');
 var log = require('./logger');
-var cache = require('./cache')(log);
+var cache = require('./cache')();
+var belt = require('./belt');
 var bbcode = require('./bbcode');
+var welcomePm = require('./welcome_pm');
 
 // Catch and log all errors that bubble up to koa
 // app.on('error', function(err) {
@@ -235,6 +236,9 @@ app.post('/users', function*() {
               'Username must be ' + config.MIN_UNAME_LENGTH +
               '-' + config.MAX_UNAME_LENGTH + ' characters')
     .match(/^[a-z0-9 ]+$/i, 'Username must only contain a-z, 0-9, and spaces')
+    .match(/[a-z]/i, 'Username must contain at least one letter (a-z)')
+    .notMatch(/^[-]/, 'Username must not start with hyphens')
+    .notMatch(/[-]$/, 'Username must not end with hyphens')
     .notMatch(/[ ]{2,}/, 'Username contains consecutive spaces');
   this.checkBody('email')
     .notEmpty('Email required')
@@ -327,8 +331,8 @@ app.post('/users', function*() {
       userId: config.STAFF_REPRESENTATIVE_ID,
       toUserIds: [user.id],
       title: 'RPGuild Welcome Package',
-      markup: belt.welcomePm.markup,
-      html: belt.welcomePm.html
+      markup: welcomePm.markup,
+      html: welcomePm.html
     });
   }
 
@@ -940,10 +944,25 @@ app.get('/me/convos', function*() {
 //
 // Show user
 //
-app.get('/users/:userId', function*() {
+// Legacy URLs look like /users/42
+// We want to redirect those URLs to /users/some-username
+// The purpose of this effort is to not break old URLs, but rather
+// redirect them to the new URLs
+app.get('/users/:userIdOrSlug', function*() {
+  // If param is all numbers, then assume it's a user-id.
+  // Note: There are some users in the database with only digits in their name
+  // which is not possible anymore since unames require at least one a-z letter.
+  var user;
+  if (/^\d+$/.test(this.params.userIdOrSlug)) {
+    user = yield db.findUser(this.params.userIdOrSlug);
+    this.assert(user, 404);
+    this.response.redirect('/users/' + user.slug);
+    return;
+  }
+
   this.checkQuery('before-id').optional().toInt();  // will be undefined or number
-  var userId = this.params.userId;
-  var user = yield db.findUser(userId);
+  var userId = this.params.userIdOrSlug;
+  var user = yield db.findUserBySlug(userId);
   // Ensure user exists
   this.assert(user, 404);
   user = pre.presentUser(user);

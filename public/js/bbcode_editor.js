@@ -156,6 +156,24 @@ var w;
         }
       }
     },
+    'bb-mention': {
+      name: 'bb-mention',
+      title: 'Mention User',
+      icon: 'fa fa-at',
+      callback: function(e) {
+        var tag = 'img';
+        var selected = e.getSelection();
+        if (selected.length === 0) {
+          e.replaceSelection('[@Username]');
+          e.setSelection(selected.start+2, selected.start+10);
+        } else {
+          var chunk = '[@' + selected.text.trim() + ']';
+          e.replaceSelection(chunk);
+          var cursor = selected.start;
+          e.setSelection(cursor, cursor+chunk.length);
+        }
+      }
+    },
     'bb-tabs': {
       name: 'bb-tabs',
       title: 'Tabs',
@@ -263,7 +281,8 @@ var w;
            data: [buttons['bb-url'], buttons['bb-img']]},
           {name: 'bbcode3',
            data: [buttons['bb-quote'],
-                  buttons['bb-hider']
+                  buttons['bb-hider'],
+                  buttons['bb-mention']
                   //,buttons['bb-tabs']
                  ]},
           {name: 'bbcode4',

@@ -54,7 +54,7 @@ function presentForum(forum) {
 
 exports.presentUser = presentUser;
 function presentUser(user) {
-  user.url = '/users/' + user.id;
+  user.url = '/users/' + user.slug;
 
   // Fix embedded
   if (_.isString(user.created_at))
