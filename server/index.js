@@ -636,9 +636,9 @@ app.use(route.post('/me/subscriptions', function*() {
 //
 // Edit user
 //
-app.get('/users/:userId/edit', function*() {
+app.get('/users/:slug/edit', function*() {
   this.assert(this.currUser, 404);
-  var user = yield db.findUser(this.params.userId);
+  var user = yield db.findUserBySlug(this.params.slug);
   this.assert(user, 404);
   this.assertAuthorized(this.currUser, 'UPDATE_USER', user);
   user = pre.presentUser(user);
@@ -656,12 +656,12 @@ app.get('/users/:userId/edit', function*() {
 //
 // Update user role
 //
-app.put('/users/:userId/role', function*() {
-  this.checkBody('role').isIn(['banned', 'member', 'mod', 'smod', 'admin'],
-                              'Invalid role');
+app.put('/users/:slug/role', function*() {
+  this.checkBody('role')
+    .isIn(['banned', 'member', 'mod', 'smod', 'admin'], 'Invalid role');
   this.assert(!this.errors, 400, belt.joinErrors(this.errors));
   // TODO: Authorize role param against role of both parties
-  var user = yield db.findUser(this.params.userId);
+  var user = yield db.findUserBySlug(this.params.slug);
   this.assert(user, 404);
   this.assertAuthorized(this.currUser, 'UPDATE_USER_ROLE', user);
   yield db.updateUserRole(user.id, this.request.body.role);
@@ -734,7 +734,9 @@ app.put('/api/users/:userId/bio', function*() {
 // - sig (which will pre-render sig_html field)
 // - hide-sigs
 // - is-ghost
-app.put('/users/:userId', function*() {
+app.put('/users/:slug', function*() {
+  debug('BEFORE', this.request.body);
+
   this.checkBody('email')
     .optional()
     .isEmail('Invalid email address');
@@ -746,12 +748,13 @@ app.put('/users/:userId', function*() {
     this.checkBody('avatar-url')
       .trim()
       .isUrl('Must specify a URL for the avatar');
-  this.checkBody('hide-sigs')
-    .optional()
-    .toBoolean();
-  this.checkBody('is-ghost')
-    .optional()
-    .toBoolean();
+  // Coerce checkboxes to bool only if they are defined
+  if (!_.isUndefined(this.request.body['hide-sigs']))
+    this.checkBody('hide-sigs').toBoolean();
+  if (!_.isUndefined(this.request.body['is-ghost']))
+    this.checkBody('is-ghost').toBoolean();
+
+  debug('AFTER', this.request.body);
 
   if (this.errors) {
     this.flash = { message: ['danger', belt.joinErrors(this.errors)] }
@@ -759,7 +762,7 @@ app.put('/users/:userId', function*() {
     return;
   }
 
-  var user = yield db.findUser(this.params.userId);
+  var user = yield db.findUserBySlug(this.params.slug);
   this.assert(user, 404);
   this.assertAuthorized(this.currUser, 'UPDATE_USER', user);
 
