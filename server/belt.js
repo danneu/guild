@@ -222,7 +222,9 @@ var slugify = exports.slugify = function() {
   function slugifyString(x) {
     return x.toString()
       .trim()
-      // Ditch anything that's not alphanumeric, hyphens, or spaces
+      // Remove apostrophes
+      .replace(/'/g, '')
+      // Hyphenize anything that's not alphanumeric, hyphens, or spaces
       .replace(/[^a-z0-9- ]/ig, '-')
       // Replace spaces with hyphens
       .replace(/ /g, '-')
