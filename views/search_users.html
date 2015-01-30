@@ -3,7 +3,7 @@
 {% block embed %}
   <ol class="breadcrumb">
     <li><a href="/">Home</a></li>
-    <li>{{ Search Users }}</li>
+    <li>Search Users</li>
   </ol>
 
   <div class="page-header">
@@ -16,6 +16,11 @@
     <div class="col-xs-6">
 
       
+      <!-- Search bar -->
+      <form name="search-bar">
+        <input type=text name="text" placeholder="Search users" style="background-color: #222020; border-color: #000000"></input>
+        <input type=submit value="Search" style="background-color: #222020; border-color: #000000"></input>
+      </form>
 
       <!-- Search results -->
       <a name="search-results"></a>
@@ -23,7 +28,7 @@
 
       <!-- Pagination -->
 
-      {% if usersList.length-1 > 1 %}
+      {% if usersList.length-1 > 1 || beforeId %}
         <ul class="pager">
           <li>
             <a href="{{ ctx.request.path }}#search-results">
@@ -38,7 +43,11 @@
             </li>
           {% else %}
             <li>
-              <a href="{{ ctx.request.path }}?text={{ text }}?before-id={{ nextBeforeId }}#search-results">
+              {% if text == null %}
+              <a href="{{ ctx.request.path }}?text={{ text }}&?before-id={{ nextBeforeId }}#search-results">
+              {% else %}
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#search-results">
+              {% endif %}
                 Next Page &rarr;
               </a>
             </li>
@@ -48,7 +57,7 @@
 
       <!-- Users list -->
 
-      {% if usersList.length-1 === 0 %}
+      {% if usersList.length === 0 %}
         <div class="well">
           No users found
         </div>
@@ -57,13 +66,15 @@
       {% for user in usersList %} <!-- TODO: -->
         <div class="panel panel-default">
           <div class="panel-heading">
-            In
             <a href="/users/{{ user.id }}" style="color: #ffc300">
               {{ user.uname }}
             </a>
-            <abbr class="timeago" title="{{ user.created_at.toISOString() }}">
-              {{ user.created_at|formatDate }}
+            {% if user.last_online_at != null %}
+            Last Online:
+            <abbr class="timeago" title="{{ user.last_online_at.toISOString() }}">
+              {{ user.last_online_at|formatDate }}
             </abbr>
+            {% endif %}
             {% if user.oldguild_uname != null %}
               Oldguild: {{ user.oldguild_uname }}
             {% endif %}
@@ -74,7 +85,7 @@
 
       <!-- Pagination -->
 
-      {% if usersList.length-1 > 1 %}
+      {% if usersList.length-1 > 1 || beforeId %}
         <ul class="pager">
           <li>
             <a href="{{ ctx.request.path }}#search-results">
@@ -89,7 +100,11 @@
             </li>
           {% else %}
             <li>
-              <a href="{{ ctx.request.path }}?text={{ text }}?before-id={{ nextBeforeId }}#search-results">
+              {% if text == null %}
+              <a href="{{ ctx.request.path }}?text={{ text }}&?before-id={{ nextBeforeId }}#search-results">
+              {% else %}
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#search-results">
+              {% endif %}
                 Next Page &rarr;
               </a>
             </li>

@@ -597,12 +597,22 @@ function* findAllUsers() {
     var sql = m(function() {/*
   SELECT *
   FROM users
-  WHERE
-  lower(uname) LIKE '%' || lower($1::text) || '%'
   ORDER BY id DESC
   LIMIT $1::bigint
     */});
   var result = yield query(sql, [config.USERS_PER_PAGE]);
+  return result.rows;
+}
+exports.findAllUsersWithId = wrapTimer(findAllUsersWithId);
+function* findAllUsersWithId(beforeId) {
+    var sql = m(function() {/*
+  SELECT *
+  FROM users
+  WHERE id < $2
+  ORDER BY id DESC
+  LIMIT $1::bigint
+    */});
+  var result = yield query(sql, [config.USERS_PER_PAGE, beforeId]);
   return result.rows;
 }
 

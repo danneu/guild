@@ -26,7 +26,7 @@ exports.FROM_EMAIL = process.env.FROM_EMAIL;
 // How many posts/PMs to display per page in topics/convos
 exports.POSTS_PER_PAGE = parseInt(process.env.POSTS_PER_PAGE, 10) || 20;
 // How many users to display per page in user search
-exports.USERS_PER_PAGE = parseInt(process.env.USERS_PER_PAGE, 10) || 50;
+exports.USERS_PER_PAGE = parseInt(process.env.USERS_PER_PAGE, 10) || 3;
 // How many recent posts to display on user profile
 exports.RECENT_POSTS_PER_PAGE = parseInt(process.env.RECENT_POSTS_PER_PAGE, 10) || 5;
 exports.CONVOS_PER_PAGE = parseInt(process.env.CONVOS_PER_PAGE, 10) || 10;

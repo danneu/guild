@@ -8,7 +8,14 @@ VALUES
 (4, 'admin', 'admin@example.com',  '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'admin'),
 (5, 'mod', 'mod@example.com',  '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'mod'),
 (6, 'smod', 'smod@example.com',  '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'smod'),
-(7, 'banned', 'banned@example.com',  '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'banned')
+(7, 'banned', 'banned@example.com',  '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'banned'),
+(8, 'aa', 'aa@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'member'),
+(9, 'ab', 'ab@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'member'),
+(10, 'ac', 'ac@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'member'),
+(11, 'ad', 'ad@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'member'),
+(12, 'ae', 'ae@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'member'),
+(13, 'af', 'af@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'member'),
+(14, 'ag', 'ag@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'member')
 ;
 SELECT setval('users_id_seq'::regclass, (SELECT MAX(id) FROM users));
 
