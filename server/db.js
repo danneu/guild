@@ -400,7 +400,7 @@ VALUES ($1, $2)
     ]);
 
     // Assoc firstPm to the returned convo
-    convo.firstPm = results[2].rows[0];
+    convo.firstPm = _.last(results).rows[0];
     convo.pms_count++;  // This is a stale copy so we need to manually inc
     return convo;
   });
