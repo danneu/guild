@@ -1,0 +1,38 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="{{ pm.convo.url }}">{{ post.convo.title }}</a></li>
+  </ol>
+
+  <div class="page-header" style="border-color: #000">
+    <h3>Edit PM</h3>
+  </div>
+
+  <form action="{{ pm.url }}" method="POST">
+    <input name="_method" type="hidden" value="PUT">
+
+    <div class="form-group">
+      <label for="pm-markup"></label>
+      <textarea name="markup" id="pm-markup" class="form-control" rows="10">
+       {{- pm.markup || pm.text -}}
+      </textarea>
+    </div>
+
+    <!-- Submit button: Saves and redirects to pm -->
+    <button type="submit" class="btn btn-primary">Save PM</button>
+
+    <!-- Cancel button: Goes back to post-->
+    <a href="{{ pm.url }}" style="margin-left: 20px;">Cancel</a>
+  </form>
+
+  {% include 'partials/bbcode_cheatsheet.html' %}
+
+{% endblock %}
+
+{% block scripts %}
+  <script type="text/javascript">
+    $('#post-markup').bbcode();
+  </script>
+{% endblock %}

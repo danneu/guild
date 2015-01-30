@@ -151,6 +151,8 @@ function presentPost(post) {
     post.user = presentUser(post.user);
   if (post.topic)
     post.topic = presentTopic(post.topic);
+  if (post.forum)
+    post.forum = presentForum(post.forum);
   return post;
 }
 

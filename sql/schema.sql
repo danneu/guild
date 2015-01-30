@@ -35,7 +35,7 @@ CREATE TABLE users (
   last_online_at timestamp with time zone NULL,
   is_ghost       boolean   NOT NULL  DEFAULT false,
   role           role_type NOT NULL  DEFAULT 'member',
-  slug           text      NULL,
+  slug           text      NOT NULL,
   -- Cache
   posts_count    int       NOT NULL  DEFAULT 0,
   pms_count      int       NOT NULL  DEFAULT 0,

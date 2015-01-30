@@ -1333,6 +1333,109 @@ app.post('/forums/:forumId/topics', function*() {
   this.response.redirect(topic.url);
 });
 
+// Edit post form
+// - The "Edit" button on posts links here so that people without
+// javascript or poor support for javascript will land on a basic edit-post
+// form that does not depend on javascript.
+app.get('/posts/:id/edit', function*() {
+  // Short-circuit if user isn't logged in
+  this.assert(this.currUser, 403);
+
+  // Load the post
+  var post = yield db.findPostById(this.params.id);
+
+  // 404 if it doesn't exist
+  this.assert(post, 404);
+  post = pre.presentPost(post);
+
+  // Ensure current user is authorized to edit the post
+  this.assertAuthorized(this.currUser, 'UPDATE_POST', post);
+
+  yield this.render('edit_post', {
+    ctx: this,
+    post: post
+  });
+});
+
+// See and keep in sync with GET /posts/:id/edit
+app.get('/pms/:id/edit', function*() {
+  // Short-circuit if user isn't logged in
+  this.assert(this.currUser, 403);
+
+  // Load the resource
+  var pm = yield db.findPmById(this.params.id);
+
+  // 404 if it doesn't exist
+  this.assert(pm, 404);
+  pm = pre.presentPm(pm);
+
+  // Ensure current user is authorized to edit it
+  this.assertAuthorized(this.currUser, 'UPDATE_PM', pm);
+
+  yield this.render('edit_pm', {
+    ctx: this,
+    pm: pm
+  });
+});
+
+//
+// Update post markup (via from submission)
+// This is for the /posts/:id/edit basic form made
+// for people on devices where the Edit button doesn't work.
+//
+// Params: markup
+app.put('/posts/:id', function*() {
+  this.checkBody('markup').isLength(config.MIN_POST_LENGTH,
+                                    config.MAX_POST_LENGTH);
+  if (this.errors) {
+    this.flash = {
+      message: ['danger', belt.joinErrors(this.errors)],
+      params: this.request.body
+    };
+    this.response.redirect(this.request.path + '/edit');
+    return;
+  }
+
+  var post = yield db.findPostById(this.params.id);
+  this.assert(post, 404);
+  this.assertAuthorized(this.currUser, 'UPDATE_POST', post)
+
+  // Render BBCode to html
+  var html = bbcode(this.request.body.markup);
+
+  var updatedPost = yield db.updatePost(this.params.id, this.request.body.markup, html);
+  updatedPost = pre.presentPost(updatedPost);
+
+  this.response.redirect(updatedPost.url);
+});
+
+// See and keep in sync with PUT /posts/:id
+// Params: markup
+app.put('/pms/:id', function*() {
+  this.checkBody('markup').isLength(config.MIN_POST_LENGTH,
+                                    config.MAX_POST_LENGTH);
+  if (this.errors) {
+    this.flash = {
+      message: ['danger', belt.joinErrors(this.errors)],
+      params: this.request.body
+    };
+    this.response.redirect(this.request.path + '/edit');
+    return;
+  }
+
+  var pm = yield db.findPmById(this.params.id);
+  this.assert(pm, 404);
+  this.assertAuthorized(this.currUser, 'UPDATE_PM', pm)
+
+  // Render BBCode to html
+  var html = bbcode(this.request.body.markup);
+
+  var updatedPm = yield db.updatePm(this.params.id, this.request.body.markup, html);
+  updatedPm = pre.presentPm(updatedPm);
+
+  this.response.redirect(updatedPm.url);
+});
+
 //
 // Post markdown view
 //
@@ -1471,7 +1574,8 @@ app.post('/posts/:postId/:status', function*() {
 // mods can.
 // - Keep this in sync with /pms/:pmId
 //
-app.use(route.get('/posts/:postId', function*(postId) {
+app.get('/posts/:postId', function*() {
+  var postId = this.params.postId;
   var post = yield db.findPostWithTopicAndForum(postId);
   this.assert(post, 404);
   this.assertAuthorized(this.currUser, 'READ_POST', post);
@@ -1485,15 +1589,16 @@ app.use(route.get('/posts/:postId', function*(postId) {
                   Math.ceil((post.idx + 1) / config.POSTS_PER_PAGE) +
                   '#post-' + post.id;
   this.response.redirect(redirectUrl);
-}));
+});
 
 // PM permalink
 // Keep this in sync with /posts/:postId
-app.use(route.get('/pms/:id', function*(id) {
+app.get('/pms/:id', function*() {
   if (!config.IS_PM_SYSTEM_ONLINE)
     return this.body = 'PM system currently disabled';
 
   this.assert(this.currUser, 404);
+  var id = this.params.id;
   var pm = yield db.findPmWithConvo(id);
   this.assert(pm, 404);
   this.assertAuthorized(this.currUser, 'READ_PM', pm);
@@ -1508,7 +1613,7 @@ app.use(route.get('/pms/:id', function*(id) {
                   Math.max(1, Math.ceil((pm.idx + 1) / config.POSTS_PER_PAGE)) +
                   '#post-' + pm.id;
   this.response.redirect(redirectUrl);
-}));
+});
 
 //
 // Canonical show topic

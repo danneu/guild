@@ -137,7 +137,7 @@
            >Reply</a>
         <!-- Edit button -->
         {% if ctx.can(ctx.currUser, 'UPDATE_PM', post) %}
-          <a href="/"
+          <a href="{{ post.url }}/edit"
              class="btn btn-default btn-xs pull-right post-edit-btn"
              style="margin-left: 5px;"
              post-id={{ post.id }}

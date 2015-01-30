@@ -568,22 +568,32 @@ WHERE p.id = $1
 };
 
 // Keep findPost and findPm in sync
+exports.findPostById = wrapTimer(findPost);
 exports.findPost = wrapTimer(findPost);
 function* findPost(postId) {
   var sql = m(function() {/*
-SELECT *
-FROM posts
-WHERE id = $1
+SELECT
+  p.*,
+  to_json(t.*) "topic",
+  to_json(f.*) "forum"
+FROM posts p
+JOIN topics t ON p.topic_id = t.id
+JOIN forums f ON t.forum_id = f.id
+WHERE p.id = $1
   */});
   var result = yield query(sql, [postId]);
   return result.rows[0];
 };
+exports.findPmById = wrapTimer(findPm);
 exports.findPm = wrapTimer(findPm);
 function* findPm(id) {
   var sql = m(function() {/*
-SELECT *
+SELECT
+  pms.*,
+  to_json(c.*) "convo"
 FROM pms
-WHERE id = $1
+JOIN convos c ON pms.convo_id = c.id
+WHERE pms.id = $1
   */});
   var result = yield query(sql, [id]);
   return result.rows[0];
