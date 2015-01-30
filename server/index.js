@@ -898,17 +898,21 @@ app.get('/search/users', function*() {
   var usersList;
   if (this.query['before-id']) {
     if (this.query['text']) {
-      this.checkQuery('text').isLength(1, 15, 'Search text must be 1-15 chars');
+      //this.checkQuery('text').notEmpty().isLength(1, 15, 'Search text must be 1-15 chars');
       usersList = yield db.findUsersContainingStringWithId(this.query['text'], this.query['before-id']);
     }else {
       usersList = yield db.findAllUsersWithId(this.query['before-id']);
     }
   }else if (this.query['text']) {
-    this.checkQuery('text').isLength(1, 15, 'Search text must be 1-15 chars');
+    //this.checkQuery('text').notEmpty().isLength(1, 15, 'Search text must be 1-15 chars');
     usersList = yield db.findUsersContainingString(this.query['text']);
   }else {
     usersList = yield db.findAllUsers();
   }
+
+  var testBool = this.query['text'] ? true : false;
+  console.log(testBool +" - '" + this.query['text'] + "'");
+  console.log(this.query['before-id']);
 
   if (this.errors) {
   this.flash = {
@@ -920,11 +924,10 @@ app.get('/search/users', function*() {
   }
 
   var nextBeforeId = _.last(usersList) != null ? _.last(usersList).id : null;
-  console.log(usersList.length);
 
   yield this.render('search_users', {
     ctx: this,
-    text: this.query['text'] != null ? this.query['text'] : "null",
+    term: this.query['text'],
     title: 'Search Users',
     usersList: usersList,
     // Pagination

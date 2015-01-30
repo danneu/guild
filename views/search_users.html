@@ -17,10 +17,12 @@
 
       
       <!-- Search bar -->
-      <form name="search-bar">
-        <input type=text name="text" placeholder="Search users" style="background-color: #222020; border-color: #000000"></input>
-        <input type=submit value="Search" style="background-color: #222020; border-color: #000000"></input>
-      </form>
+      <span><form name="search-bar" class="form-inline">
+        <div class="form-group">
+        <input type="text" name="text" placeholder="Search users" class="form-control"></input>
+        <input type="submit" value="Search" class="btn btn-primary"></input>
+      </div>
+      </form></span>
 
       <!-- Search results -->
       <a name="search-results"></a>
@@ -43,8 +45,8 @@
             </li>
           {% else %}
             <li>
-              {% if text == null %}
-              <a href="{{ ctx.request.path }}?text={{ text }}&?before-id={{ nextBeforeId }}#search-results">
+              {% if term %}
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}&?text={{ term }}#search-results">
               {% else %}
               <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#search-results">
               {% endif %}
@@ -100,8 +102,8 @@
             </li>
           {% else %}
             <li>
-              {% if text == null %}
-              <a href="{{ ctx.request.path }}?text={{ text }}&?before-id={{ nextBeforeId }}#search-results">
+              {% if term.length > 0 %}
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}&?text={{ term }}#search-results">
               {% else %}
               <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#search-results">
               {% endif %}
