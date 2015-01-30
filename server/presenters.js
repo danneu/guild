@@ -64,10 +64,6 @@ function presentUser(user) {
   if (_.isString(user.last_online_at))
     user.last_online_at = new Date(user.last_online_at);
 
-  user.formattedCreatedAt = formatDate(user.created_at);
-  if (user.last_online_at)
-    user.formattedLastOnlineAt = formatDate(user.last_online_at);
-
   return user;
 }
 
@@ -124,7 +120,6 @@ exports.presentConvo = presentConvo;
 function presentConvo(convo) {
   if (_.isString(convo.created_at))
     convo.created_at = new Date(convo.created_at);
-  convo.formattedCreatedAt = formatDate(convo.created_at);
   convo.url = '/convos/' + convo.id;
   if (convo.user)
     convo.user = presentUser(convo.user);

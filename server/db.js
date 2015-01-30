@@ -606,11 +606,18 @@ function* findConvosInvolvingUserId(userId, beforeId) {
   assert(_.isNumber(beforeId) || _.isUndefined(beforeId));
   var sql = m(function() {/*
 SELECT
-  c.*,
-  to_json(u1.*) "user",
-  to_json(array_agg(u2.*)) "participants",
-  to_json(pms.*) "latest_pm",
-  to_json(u3.*) "latest_user"
+  c.id,
+  c.title,
+  c.created_at,
+  c.latest_pm_id,
+  u1.uname "user.uname",
+  u1.slug "user.slug",
+  json_agg(u2.uname) "participant_unames",
+  json_agg(u2.slug) "participant_slugs",
+  pms.id "latest_pm.id",
+  pms.created_at "latest_pm.created_at",
+  u3.uname "latest_user.uname",
+  u3.slug "latest_user.slug"
 FROM convos c
 JOIN convos_participants cp ON c.id = cp.convo_id
 JOIN users u1 ON c.user_id = u1.id
@@ -627,7 +634,39 @@ ORDER BY c.latest_pm_id DESC
 LIMIT $3
   */});
   var result = yield query(sql, [userId, beforeId || 1e9, config.CONVOS_PER_PAGE]);
-  return result.rows;
+  return result.rows.map(function(row) {
+    row.user = {
+      uname: row['user.uname'],
+      slug: row['user.slug']
+    };
+    delete row['user.uname'];
+    delete row['user.slug'];
+
+    row.participants = row['participant_unames'].map(function(uname, idx) {
+      return {
+        uname: uname,
+        slug: row['participant_slugs'][idx]
+      };
+    });
+    delete row['participant_unames'];
+    delete row['participant_slugs'];
+
+    row.latest_pm = {
+      id: row['latest_pm.id'],
+      created_at: row['latest_pm.created_at']
+    };
+    delete row['latest_pm.id'];
+    delete row['latest_pm.created_at'];
+
+    row.latest_user = {
+      uname: row['latest_user.uname'],
+      slug: row['latest_user.slug']
+    };
+    delete row['latest_user.uname'];
+    delete row['latest_user.slug'];
+
+    return row;
+  });
 };
 
 exports.findConvo = wrapTimer(findConvo);
