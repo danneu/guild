@@ -650,7 +650,7 @@ app.get('/users/:slug/edit', function*() {
   yield this.render('edit_user', {
     ctx: this,
     user: user,
-    title: 'Edit User: ' + user.uname
+    title: 'Edit ' + user.uname
   });
 });
 
@@ -1005,7 +1005,7 @@ app.get('/users/:userIdOrSlug', function*() {
     ctx: this,
     user: user,
     recentPosts: recentPosts,
-    title: 'User: ' + user.uname,
+    title: user.uname,
     // Pagination
     nextBeforeId: nextBeforeId,
     recentPostsPerPage: config.RECENT_POSTS_PER_PAGE
@@ -1265,7 +1265,7 @@ app.use(route.get('/convos/:convoId', function*(convoId) {
   yield this.render('show_convo', {
     ctx: this,
     convo: convo,
-    title: 'Convo: ' + convo.title,
+    title: convo.title,
     // Pagination
     currPage: page,
     totalPages: totalPages
@@ -1727,7 +1727,7 @@ app.get('/topics/:slug/:postType', function*() {
     ctx: this,
     topic: topic,
     postType: this.params.postType,
-    title: 'Topic: ' + topic.title,
+    title: topic.title,
     // Pagination
     currPage: page,
     totalPages: totalPages
