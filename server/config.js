@@ -1,6 +1,6 @@
 exports.PORT = parseInt(process.env.PORT, 10) || 3000;
 // Format: postgres://<user>:<pass>@<host>:<port>/<dbname>
-exports.DATABASE_URL = process.env.DATABASE_URL || 'postgres://themaster99:pokemon99@localhost:5432/guild';
+exports.DATABASE_URL = process.env.DATABASE_URL || 'postgres://localhost:5432/guild';
 // 'development' | 'production'
 exports.NODE_ENV = process.env.NODE_ENV || 'development';
 
