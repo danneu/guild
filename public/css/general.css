@@ -434,3 +434,36 @@ textarea {
 .top-link {
     color: #999;
 }
+
+.bb-mention {
+    background-color: #222;
+    padding: 1px 3px;
+    margin: 0 1px;
+    border: 1px solid #444;
+}
+.bb-mention:hover {
+    text-decoration: none;
+}
+
+
+/* CORNER RIBBON */
+
+.corner-ribbon {
+    width: 200px;
+    background-color: #39d;
+    position: absolute;
+    top: 10px;
+    left: -83px;
+    text-align: center;
+    line-height: 20px;
+    letter-spacing: 1px;
+    color: #f0f0f0;
+    transform: rotate(-45deg);
+    -webkit-transform: rotate(-45deg);
+}
+.corner-ribbon.top-right {
+    right: -83px;
+    left: auto;
+    transform: rotate(45deg);
+    -webkit-transform: rotate(45deg);
+}

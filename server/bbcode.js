@@ -2,10 +2,86 @@
        TODO: Patch xbbcode.js so the library itself is compat with node
 */
 
-var cheerio, util;
-if (typeof window === 'undefined') {
-  cheerio = require('cheerio');
+// Boolean representing whether or not this file is being executed on the
+// server or not. If false, we're on the browser.
+var isServer = typeof window === 'undefined';
+var isBrowser = typeof window !== 'undefined';
+
+var cheerio, util, cache;
+if (isServer) {
+  // Node
   util = require('util');
+  // 3rd party
+  cheerio = require('cheerio');
+  // 1st party
+  cache = require('./cache')();
+}
+
+// Keep in sync with BBCode cheatsheet
+var smilies = [
+  'airquotes',
+  'airquote',
+  'arghfist',
+  'bow',
+  'brow',
+  'btw',
+  'cool',
+  'dreamy',
+  'drool',
+  'gray',
+  'confused',
+  'magnum',
+  'nat',
+  'hehe',
+  'lol',
+  'hmm',
+  'golfclap',
+  'ou',
+  'newlol',
+  'punch',
+  'rock',
+  'respek',
+  'rollin',
+  'rolleyes',
+  'sick',
+  'sun',
+  'toot',
+  'usa',
+  'wub',
+  'what',
+  'zzz'
+];
+var smilieRegExp = new RegExp(':(' + smilies.join('|') + ')', 'ig');
+
+function replaceSmilies(text) {
+  return text.replace(smilieRegExp, '<img src="/smilies/$1.gif">');
+}
+
+// Replace unames
+
+
+function replaceMentions(text) {
+  function slugifyUname(uname) {
+      return uname.trim().toLowerCase().replace(/ /g, '-');
+  }
+  return text.replace(/\[@([a-z0-9 ]+)\]/ig, function(_, p1) {
+    var uname = p1.trim();
+    var path = '/users/' + slugifyUname(uname);
+    if (isBrowser) {
+      // If we're on the browser, just render anchor every time
+      // TODO: Only render mentions in browser is uname exists in DB
+      return '<a class="bb-mention" href="'+path+'">@' + uname + '</a>';
+    } else {
+      // If we're on the server, then only render anchor if uname exists in DB.
+      console.log('Cache:', cache);
+      var trie = cache.get('uname-regex-trie');
+      if (trie.contains(uname)) {
+        return '<a class="bb-mention" href="'+path+'">@' + uname + '</a>';
+      } else {
+        return '[@' + uname + ']';
+      }
+    }
+  });
 }
 
 // Keep in sync with BBCode cheatsheet
@@ -541,8 +617,16 @@ var XBBCODE = (function() {
       closeTag: function(params,content) {
         var html = '';
         if (params) {
-          var uname = params.slice(1);
-          html = html + '<footer>' + params.slice(1) + '</footer>';
+          // params starts with '=' unless user messed up.
+          // e.g. '=@Mahz' or '=some guy'
+          if (params.slice(1).charAt(0) === '@' && params.slice(1).length > 1) {
+            // This is a @uname mention
+            var uname = params.slice(2);
+            html += '<footer>&#91;@' + uname + '&#93;</footer>';
+          } else {
+            var source = params.slice(1);
+            html += '<footer>' + source + '</footer>';
+          }
         }
         html = html + '</blockquote>';
         return html;
@@ -1039,8 +1123,16 @@ var XBBCODE = (function() {
       ret.html = '<div style="white-space:pre-line;">' + ret.html + '</div>';
     }
 
-    ret.html = ret.html.replace("&#91;", "["); // put ['s back in
-    ret.html = ret.html.replace("&#93;", "]"); // put ['s back in
+    // ret.html = ret.html.replace("&#91;", "["); // put ['s back in
+    // ret.html = ret.html.replace("&#93;", "]"); // put ['s back in
+    // Needed to patch above 2 lines of library code to replace all instances
+    ret.html = ret.html.replace(/&#91;/g, '[').replace(/&#93;/g, ']');
+
+    // Replace smilie codes with <img>s
+    ret.html = replaceSmilies(ret.html);
+
+    // Replace [@Mentions] with a link
+    ret.html = replaceMentions(ret.html);
 
     // Replace smilie codes with <img>s
     ret.html = replaceSmilies(ret.html);

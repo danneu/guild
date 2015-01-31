@@ -8,13 +8,24 @@
 
   <div class="page-header">
     <h1>
-      <a href="/users/{{ user.id }}">{{ user.uname }}</a>
+      <a href="{{ user.url }}">{{ user.uname }}</a>
       <small>{{ user.role|capitalize}}</small>
       {% if ctx.can(ctx.currUser, 'UPDATE_USER', user) %}
-        <a href="/users/{{ user.id }}/edit" class="btn btn-default btn-xs">
+        <a href="{{ user.url }}/edit" class="btn btn-default btn-xs">
           Edit
         </a>
       {% endif %}
+
+      {% if ctx.currUser && ctx.currUser.id === user.id && ctx.currUser.notifications_count !== 0 %}
+        <form action="/me/notifications" method="post" style="display: inline-block">
+          <input type="hidden" name="_method" value="delete">
+          <input type="hidden" name="redirect-to" value="{{ ctx.request.url }}">
+          <input type="submit"
+                 value="Clear {{ ctx.currUser.notifications_count }} Notification{% if ctx.currUser.notifications_count !== 1 %}s{% endif %}"
+                 class="btn btn-default btn-xs">
+        </form>
+      {% endif %}
+
       {% if ctx.can(ctx.currUser, 'DELETE_USER', user) %}
         <form action="/users/{{ user.id }}" method="post" class="pull-right">
           <input type="hidden" name="_method" value="delete">

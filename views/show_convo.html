@@ -137,7 +137,7 @@
            >Reply</a>
         <!-- Edit button -->
         {% if ctx.can(ctx.currUser, 'UPDATE_PM', post) %}
-          <a href="/"
+          <a href="{{ post.url }}/edit"
              class="btn btn-default btn-xs pull-right post-edit-btn"
              style="margin-left: 5px;"
              post-id={{ post.id }}
@@ -155,8 +155,6 @@
   <h2>New Reply</h2>
 
   <ul>
-    <li><span class="label label-info">Important</span> The forum now uses BBCode for formatting. Your old posts will use the old formatting system UNTIL you edit them. Once you edit an old post, the system will assume you've converted it to BBCode.</li>
-    <li><span class="label label-warning">Warning</span> The BBCode parser is new and may have bugs. I recommend avoiding complex/nested BBCode until I work out the kinks.</li>
     <li>Before submitting your post, it's wise to copy it somewhere so that you don't lose it in the event of server error.</li>
     <li>Check out the BBCode Cheatsheet below the editor. It's pretty basic for now, but I will add more BBCode over time. Check the cheatsheet every once in a while for updates.</li>
   </ul>
@@ -217,7 +215,7 @@ $(function() {
       console.log('returned')
       $reply_btn.removeClass('disabled').html('Reply');
 
-      var quote_markup = '[quote=' + uname + ']\n' +
+      var quote_markup = '[quote=@' + uname + ']\n' +
         markup.trim()  +
         '\n[/quote]\n';
 
@@ -297,8 +295,7 @@ $(function() {
               headers: { 'X-HTTP-Method-Override': 'PUT' },
               data: { markup: text_to_save },
               success: function(updated_post) {
-                console.log(updated_post);
-                $post_body.html(bbcode(updated_post.markup));
+                $post_body.html(updated_post.html);
                 $post_edit_btn.removeClass('disabled');
                 // Set the post's .edited-marker to ' edited'
                 var $edited_marker = $('#post-' + post_id + ' .edited-marker')

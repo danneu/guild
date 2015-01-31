@@ -12,3 +12,8 @@ body {
 .panel-default>.panel-heading {
     background-image: none;
 }
+
+/* Customize the hover look of links. by default the hover color is blue  */
+a:hover {
+    color: #cc9c00;
+}

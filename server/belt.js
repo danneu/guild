@@ -3,13 +3,14 @@ var util = require('util');
 var url = require('url');
 var crypto = require('crypto');
 // 3rd party
+var debug = require('debug')('app:belt');
 var promissory = require('promissory');
 var assert = require('better-assert');
 var _bcrypt = require('bcryptjs');
 var request = require('co-request');
-var debug = require('debug')('app:belt');
 var _ = require('lodash');
 var uuid = require('node-uuid');
+var m = require('multiline');
 // 1st party
 var config = require('./config');
 
@@ -196,4 +197,47 @@ exports.isDBClient = function(obj) {
          _.contains(keys, 'readyForQuery') &&
          _.contains(keys, 'hasExecuted') &&
          _.contains(keys, 'queryQueue');
+};
+
+exports.slugifyUname = function(uname) {
+  var slug = uname
+    .trim()
+    .toLowerCase()
+    .replace(/ /g, '-');
+
+  return slug;
+};
+
+var MAX_SLUG_LENGTH = 80;
+var slugify = exports.slugify = function() {
+  var args = Array.prototype.slice.call(arguments, 0);
+
+  return slugifyString(
+    args.map(function(x) { return x.toString(); })
+      .join('-')
+      .slice(0, MAX_SLUG_LENGTH)
+  );
+
+  // Slugifies one string
+  function slugifyString(x) {
+    return x.toString()
+      .trim()
+      // Remove apostrophes
+      .replace(/'/g, '')
+      // Hyphenize anything that's not alphanumeric, hyphens, or spaces
+      .replace(/[^a-z0-9- ]/ig, '-')
+      // Replace spaces with hyphens
+      .replace(/ /g, '-')
+      // Consolidate consecutive hyphens
+      .replace(/-{2,}/g, '-')
+      // Remove prefix and suffix hyphens
+      .replace(/^[-]+|[-]+$/, '')
+      .toLowerCase();
+  }
+};
+
+// Returns Int | null
+var extractId = exports.extractId = function(slug) {
+  var n = parseInt(slug, 10);
+  return _.isNaN(n) ? null : n;
 };

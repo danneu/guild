@@ -2,6 +2,13 @@
 
 {% block embed %}
 
+  <form action="/me/notifications/convos" method="post" class="pull-right">
+    <input type="hidden" name="_method" value="delete">
+    <input type="submit"
+           value="Clear PM Notifications"
+           class="btn btn-default btn-xs">
+  </form>
+
   <!-- Pagination -->
 
   {% if ctx.currUser.pms_count > 1 %}

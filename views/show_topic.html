@@ -115,17 +115,17 @@
   <ul class="nav nav-tabs">
     {% if topic.forum.is_roleplay %}
       <li class="{% if ctx.request.path.endsWith('/ic') %}active{% endif %}">
-        <a href="{{ topic.url }}/posts/ic">
+        <a href="{{ topic.url }}/ic">
           IC <span class="badge">{{ topic.ic_posts_count|commafy }}</span>
         </a>
       </li>
       <li class="{% if ctx.request.path.endsWith('/ooc') %}active{% endif %}">
-        <a href="{{ topic.url }}/posts/ooc">
+        <a href="{{ topic.url }}/ooc">
           OOC <span class="badge">{{ topic.ooc_posts_count|commafy }}</span>
         </a>
       </li>
       <li class="{% if ctx.request.path.endsWith('/char') %}active{% endif %}">
-        <a href="{{ topic.url }}/posts/char">
+        <a href="{{ topic.url }}/char">
           Characters <span class="badge">{{ topic.char_posts_count|commafy }}</span>
         </a>
       </li>
@@ -176,10 +176,19 @@
 
         <!-- Panel body -->
         <div class="panel-body"
-             style="background-color: #2E2C2C">
+             style="background-color: #2E2C2C; position: relative; overflow: hidden;">
+
+          <!-- Ribbon -->
+          {% if post.user_id === topic.user_id %}
+            {% if topic.is_roleplay %}
+              <div class="corner-ribbon top-right">GM</div>
+            {% else %}
+              <div class="corner-ribbon top-right">OP</div>
+            {% endif %}
+          {% endif %}
+
           <!-- Author metadata -->
           <div class="col-sm-2 clearfix text-center post-user-meta">
-
 
             <!-- For small devices -->
             <div class="visible-xs-block">
@@ -241,7 +250,7 @@
           {% endif %}
           <!-- Edit button -->
           {% if ctx.can(ctx.currUser, 'UPDATE_POST', post) %}
-            <a href="/"
+            <a href="{{ post.url }}/edit"
                class="btn btn-default btn-xs pull-right post-edit-btn"
                style="margin-left: 5px;"
                post-id={{ post.id }}
@@ -278,8 +287,6 @@
     <a name="new-reply-form"></a>
     <h2>New Reply</h2>
     <ul>
-      <li><span class="label label-info">Important</span> The forum now uses BBCode for formatting. Your old posts will use the old formatting system UNTIL you edit them. Once you edit an old post, the system will assume you've converted it to BBCode.</li>
-      <li><span class="label label-warning">Warning</span> The BBCode parser is new and may have bugs. I recommend avoiding complex/nested BBCode until I work out the kinks.</li>
       <li>Before submitting your post, it's wise to copy it somewhere so that you don't lose it in the event of server error.</li>
       <li>Check out the BBCode Cheatsheet below the editor. It's pretty basic for now, but I will add more BBCode over time. Check the cheatsheet every once in a while for updates.</li>
     </ul>
@@ -367,7 +374,7 @@ $(function() {
       console.log('returned')
       $reply_btn.removeClass('disabled').html('Reply');
 
-      var quote_markup = '[quote=' + uname + ']\n' +
+      var quote_markup = '[quote=@' + uname + ']\n' +
         markup.trim()  +
         '\n[/quote]\n';
 
@@ -452,7 +459,7 @@ $(function() {
               headers: { 'X-HTTP-Method-Override': 'PUT' },
               data: { markup: text_to_save },
               success: function(updated_post) {
-                $post_body.html(bbcode(updated_post.markup));
+                $post_body.html(updated_post.html);
                 $post_edit_btn.removeClass('disabled');
                 // Set the post's .edited-marker to ' edited'
                 var $edited_marker = $('#post-' + post_id + ' .edited-marker')

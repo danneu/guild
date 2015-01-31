@@ -71,11 +71,10 @@
         </div>
         <div id="navbar" class="navbar-collapse collapse">
           <ul class="nav navbar-nav">
-            <li><a href="http://widget02.mibbit.com/?settings=c2129339a43d8c49d86c34fa8dff7610&server=irc.foonetic.net&channel=%23Roleplayerguild">Chat (IRC)</a></li>
+            <li><a href="http://widget02.mibbit.com/?settings=c2129339a43d8c49d86c34fa8dff7610&server=irc.foonetic.net&channel=%23Roleplayerguild">Chat</a></li>
             <li><a href="https://www.facebook.com/groups/343860060223/">Facebook</a></li>
             <li><a href="/staff">Staff</a></li>
             <li><a href="/search/users">Search Users</a></li>
-            <li><a href="/bbcode">BBCode Cheatsheet</a></li>
           </ul>
 
           <!-- If user is logged in, show logout button -->
@@ -94,7 +93,13 @@
                  class="btn btn-default navbar-btn">
                 <span class="glyphicon glyphicon-envelope"></span>
                 PMs
-                <div class="badge">{{ ctx.currUser.pms_count|commafy }}</div>
+                {# Doing !==0 instead of >0 so user can see any bugs where
+                   notification count goes negative #}
+                {% if ctx.currUser.convo_notifications_count !== 0 %}
+                <div class="badge">
+                  {{ ctx.currUser.convo_notifications_count|commafy }}
+                </div>
+                {% endif %}
               </a>
               <a href="/me/subscriptions"
                  class="btn btn-default navbar-btn">
@@ -145,6 +150,7 @@
     <!-- Footer -->
     <div class="text-center" style="margin-top: 100px;">
       &copy; 2007-2015 &mdash; Source on <a href="https://github.com/danneu/guild">Github</a>
+      <div><a href="/bbcode">BBCode Cheatsheet</a></div>
     </div>
 
   </div> <!-- /container -->

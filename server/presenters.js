@@ -3,6 +3,8 @@ var util = require('util');
 // 3rd party
 var _ = require('lodash');
 var debug = require('debug')('app:presenters');
+// 1st party
+var belt = require('./belt');
 
 // Util ////////////////////////////////////////////////////
 
@@ -33,7 +35,7 @@ function numWithCommas(n) {
 
 exports.presentForum = presentForum;
 function presentForum(forum) {
-  forum.url = '/forums/' + forum.id;
+  forum.url = '/forums/' + belt.slugify(forum.id, forum.title);
 
   if (forum.parent_forum)
     forum.parent_forum = presentForum(forum.parent_forum);
@@ -54,7 +56,7 @@ function presentForum(forum) {
 
 exports.presentUser = presentUser;
 function presentUser(user) {
-  user.url = '/users/' + user.id;
+  user.url = '/users/' + user.slug;
 
   // Fix embedded
   if (_.isString(user.created_at))
@@ -72,6 +74,7 @@ function presentUser(user) {
 exports.presentTopic = presentTopic;
 function presentTopic(topic) {
   topic.url = '/topics/' + topic.id;
+  topic.url = '/topics/' + belt.slugify(topic.id, topic.title);
 
   // created_at will be string when embedded in query result via to_json
   if (_.isString(topic.created_at))
@@ -151,6 +154,8 @@ function presentPost(post) {
     post.user = presentUser(post.user);
   if (post.topic)
     post.topic = presentTopic(post.topic);
+  if (post.forum)
+    post.forum = presentForum(post.forum);
   return post;
 }
 
