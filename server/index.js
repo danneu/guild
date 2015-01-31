@@ -910,10 +910,6 @@ app.get('/search/users', function*() {
     usersList = yield db.findAllUsers();
   }
 
-  var testBool = this.query['text'] ? true : false;
-  console.log(testBool +" - '" + this.query['text'] + "'");
-  console.log(this.query['before-id']);
-
   if (this.errors) {
   this.flash = {
     message: ['danger', belt.joinErrors(this.errors)],

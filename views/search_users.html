@@ -46,7 +46,7 @@
           {% else %}
             <li>
               {% if term %}
-              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}&?text={{ term }}#search-results">
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}&text={{ term }}#search-results">
               {% else %}
               <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#search-results">
               {% endif %}
@@ -65,7 +65,7 @@
         </div>
       {% endif %}
 
-      {% for user in usersList %} <!-- TODO: -->
+      {% for user in usersList %}
         <div class="panel panel-default">
           <div class="panel-heading">
             <a href="/users/{{ user.id }}" style="color: #ffc300">
@@ -103,7 +103,7 @@
           {% else %}
             <li>
               {% if term.length > 0 %}
-              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}&?text={{ term }}#search-results">
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}&text={{ term }}#search-results">
               {% else %}
               <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#search-results">
               {% endif %}
