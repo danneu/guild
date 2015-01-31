@@ -195,6 +195,18 @@ GROUP BY t.id, f.id, ts.user_id
   return result.rows[0];
 };
 
+exports.updateUserBio = function*(userId, bioMarkup, bioHtml) {
+  assert(_.isString(bioMarkup));
+  var sql = m(function() {/*
+    UPDATE users
+    SET bio_markup = $2, bio_html = $3
+    WHERE id = $1
+    RETURNING *
+  */});
+  var result = yield query(sql, [userId, bioMarkup, bioHtml]);
+  return result.rows[0];
+};
+
 exports.findTopic = wrapTimer(findTopic);
 function* findTopic(topicId) {
   var sql = m(function() {/*
@@ -496,7 +508,7 @@ RETURNING *
   return result.rows[0];
 };
 
-// Keep updatePost and UpdatePm in sync
+// Keep updatePost and updatePm in sync
 exports.updatePost = function*(postId, markup, html) {
   assert(_.isString(markup));
   assert(_.isString(html));
@@ -509,15 +521,18 @@ RETURNING *
   var result = yield query(sql, [postId, markup, html]);
   return result.rows[0];
 };
-exports.updatePm = function*(id, text) {
-  assert(_.isString(text));
+
+// Keep updatePost and updatePm in sync
+exports.updatePm = function*(id, markup, html) {
+  assert(_.isString(markup));
+  assert(_.isString(html));
   var sql = m(function() {/*
 UPDATE pms
-SET text = $2, updated_at = NOW()
+SET markup = $2, html = $3, updated_at = NOW()
 WHERE id = $1
 RETURNING *
   */});
-  var result = yield query(sql, [id, text]);
+  var result = yield query(sql, [id, markup, html]);
   return result.rows[0];
 };
 
@@ -560,6 +575,63 @@ WHERE id = $1
   var result = yield query(sql, [id]);
   return result.rows[0];
 };
+
+exports.findUsersContainingString = wrapTimer(findUsersContainingString);
+function* findUsersContainingString(searchTerm) {
+  // searchTerm is the term that the user searched for
+  assert(_.isString(searchTerm) || _.isUndefined(searchTerm));
+    var sql = m(function() {/*
+  SELECT *
+  FROM users
+  WHERE
+  lower(uname) LIKE '%' || lower($1::text) || '%'
+  ORDER BY id DESC
+  LIMIT $2::bigint
+    */});
+  var result = yield query(sql, [searchTerm, config.USERS_PER_PAGE]);
+  return result.rows;
+}
+
+exports.findAllUsers = wrapTimer(findAllUsers);
+function* findAllUsers() {
+    var sql = m(function() {/*
+  SELECT *
+  FROM users
+  ORDER BY id DESC
+  LIMIT $1::bigint
+    */});
+  var result = yield query(sql, [config.USERS_PER_PAGE]);
+  return result.rows;
+}
+exports.findAllUsersWithId = wrapTimer(findAllUsersWithId);
+function* findAllUsersWithId(beforeId) {
+    var sql = m(function() {/*
+  SELECT *
+  FROM users
+  WHERE id < $2
+  ORDER BY id DESC
+  LIMIT $1::bigint
+    */});
+  var result = yield query(sql, [config.USERS_PER_PAGE, beforeId]);
+  return result.rows;
+}
+
+exports.findUsersContainingStringWithId = wrapTimer(findUsersContainingStringWithId);
+function* findUsersContainingStringWithId(searchTerm, beforeId) {
+  // searchTerm is the term that the user searched for
+  assert(_.isString(searchTerm) || _.isUndefined(searchTerm));
+  var sql = m(function() {/*
+SELECT *
+FROM users
+WHERE
+lower(uname) LIKE '%' || lower($1::text) || '%'
+AND id < $2
+ORDER BY id DESC
+LIMIT $3::bigint
+  */});
+  var result = yield query(sql, [searchTerm, beforeId, config.USERS_PER_PAGE]);
+  return result.rows;
+}
 
 exports.findConvosInvolvingUserId = wrapTimer(findConvosInvolvingUserId);
 function* findConvosInvolvingUserId(userId, beforeId) {
@@ -803,6 +875,7 @@ RETURNING *
 // Generic user-update route. Intended to be paired with
 // the generic PUT /users/:userId route.
 exports.updateUser = function*(userId, attrs) {
+  debug('[updateUser] attrs', attrs);
   var sql = m(function() {/*
 UPDATE users
 SET
@@ -810,7 +883,8 @@ SET
   sig = COALESCE($3, sig),
   avatar_url = COALESCE($4, avatar_url),
   hide_sigs = COALESCE($5, hide_sigs),
-  is_ghost = COALESCE($6, is_ghost)
+  is_ghost = COALESCE($6, is_ghost),
+  sig_html = COALESCE($7, sig_html)
 WHERE id = $1
 RETURNING *
   */});
@@ -820,7 +894,8 @@ RETURNING *
     attrs.sig,
     attrs.avatar_url,
     attrs.hide_sigs,
-    attrs.is_ghost
+    attrs.is_ghost,
+    attrs.sig_html
   ]);
   return result.rows[0];
 };
@@ -1046,12 +1121,30 @@ ORDER BY uname
   return result.rows;
 }
 
+var getMaxTopicId = function*() {
+  var result = yield query('SELECT MAX(id) "max_id" FROM topics');
+  return result.rows[0].max_id;
+};
+
+var getMaxPostId = function*() {
+  var result = yield query('SELECT MAX(id) "max_id" FROM posts');
+  return result.rows[0].max_id;
+};
+
+var getMaxUserId = function*() {
+  var result = yield query('SELECT MAX(id) "max_id" FROM users');
+  return result.rows[0].max_id;
+};
+
 exports.getStats = wrapTimer(getStats);
 function* getStats() {
   var results = yield {
-    topicsCount: getApproxCount('topics'),
-    usersCount: getApproxCount('users'),
-    postsCount: getApproxCount('posts'),
+    // I switched the getApproxCount fns out for MaxId fns because
+    // the vacuuming threshold was too high and the stats were never getting
+    // updated
+    topicsCount: getMaxTopicId(), //getApproxCount('topics'),
+    usersCount: getMaxUserId(), //getApproxCount('users'),
+    postsCount: getMaxPostId(), //getApproxCount('posts'),
     latestUser: exports.getLatestUser(),
     onlineUsers: exports.getOnlineUsers()
   };
@@ -1066,4 +1159,14 @@ exports.deleteUser = function*(id) {
 exports.deleteLegacySig = function*(userId) {
   var sql = 'UPDATE users SET legacy_sig = NULL WHERE id = $1';
   yield query(sql, [userId]);
+};
+
+exports.findStaffUsers = function*() {
+  var sql = m(function(){/*
+SELECT u.*
+FROM users u
+WHERE u.role IN ('mod', 'smod', 'admin')
+  */});
+  var result = yield query(sql);
+  return result.rows;
 };

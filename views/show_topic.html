@@ -1,8 +1,8 @@
 {% extends 'layouts/master.html' %}
 {% import './macros/paginate.html' as paginate %}
+{% import './macros/macros.html' as macros %}
 
 {% block embed %}
-
 
   <!-- Breadcrumbs -->
 
@@ -196,97 +196,28 @@
                       {{ post.user.uname }}
                     </a>
                   </h4>
-                  <div class="pull-left">{{ post.user.role|capitalize }}</div>
+                  <div class="pull-left">
+                    {{ post.user.role|capitalize }}<br>
+                    {{ macros.onlineStatus(post.user) }}
+                  </div>
                 </div>
               </div>
             </div>
 
             <!-- For larger-than-smartphone devices -->
             <div class="hidden-xs">
-              <div class="user-uname">
-                <a href="{{ post.user.url }}">
-                  {{ post.user.uname }}
-                </a>
-              </div>
+              {{ macros.renderUserbitLarge(post.user) }}
+            </div> <!-- /.hidden-xs -->
 
-              {% if post.user.avatar_url %}
-                <div class="post-avatar"
-                     style="margin-top: 10px;">
-                  <img src="{{ post.user.avatar_url}}">
-                </div>
-              {% endif %}
-
-              <div class="user-role" style="margin-top: 10px;">
-                {{ post.user.role|capitalize }}
-              </div>
-
-              <!-- Online status -->
-
-              {% if post.user.is_ghost %}
-                <span style="color: #000">Invisible</span>
-              {% else %}
-                {% if Date.now() - post.user.last_online_at.getTime() < 1000 * 60 * 15 %}
-                  <span style="color: #3BB878">Online</span>
-                {% else %}
-                  {% if post.user.last_online_at %}
-                    <span style="color: #777">
-                      Online
-                      <abbr class="timeago"
-                            title="{{ post.user.last_online_at.toISOString() }}">
-                        {{ post.user.last_online_at|formatDate }}
-                      </abbr>
-                    </span>
-                  {% else %}
-                    <span style="color: #555">
-                      Offline since relaunch
-                    </span>
-                  {% endif %}
-                {% endif %}
-              {% endif %}
-
-            </div>
           </div> <!-- /.col-sm-2 post-meta -->
-          <!-- Post text -->
+
           <div class="col-sm-10">
-            {% if post.is_hidden %}
-              <i>[HIDDEN]</i>
-            {% else %}
-              {% if post.html %}
-                <div class="post-body-html">
-                  {{ post.html|safe }}
-                </div>
-              {% elif post.legacy_html %}
-                <div class="post-body-html post-content">
-                  {#{{ post.legacy_html|safe }}#}
-                  {{ post.text|bbcode|safe }}
-                </div>
-              {% else %}
-                <div class="post-body post-content">{{ post.text }}</div>
-              {% endif %}
-            {% endif %}
-
+            <!-- Post text -->
+            {{- macros.renderPost(post) -}}
             <!-- Signature -->
-
-            {% if ctx.currUser && !ctx.currUser.hide_sigs %}
-              {% if post.user.sig %}
-                <div class="post-sig-markdown post-sig"
-                     style="max-height: 300px;
-                            overflow: auto;
-                            margin-top: 50px;
-                            padding: 20px 20px 0 20px;
-                            border-top: 2px solid black">{{ post.user.sig }}</div>
-              {% elif post.user.legacy_sig %}
-                <div class="post-sig post-sig-legacy"
-                     style="max-height: 300px;
-                            overflow: auto;
-                            margin-top: 50px;
-                            padding: 20px 20px 0 20px;
-                            border-top: 2px solid black">
-                  {{ post.user.legacy_sig|safe }}
-                </div>
-              {% endif %}
-            {% endif %}
+            {{- macros.renderSig(post.user) -}}
           </div>
+
         </div> <!-- /.panel-body -->
 
         <!-- Panel footer -->
@@ -337,6 +268,8 @@
     {% endif %} <!-- can READ_POST check -->
   {% endfor %}
 
+  <a href="#" class="top-link">&uarr; Top</a>
+
   {{ paginate.render(currPage, totalPages, ctx.request.path) }}
 
   <!-- New post form -->
@@ -345,10 +278,12 @@
     <a name="new-reply-form"></a>
     <h2>New Reply</h2>
     <ul>
-      <li><span class="label label-info">Tip</span> Before submitting your post, it's wise to copy it somewhere so that you don't lose it in the event of server error.</li>
-      <li><span class="label label-warning">Warning</span> The BBCode parser is new and undoubtedly riddled with bugs, so please take it easy on the formatting for now. Particularly avoid nesting the more complex tags like hiders, tabs, and tables. I can't guarantee that complex, nested formatting concoctions will work in the future as I address issues with the parser. For example, [tabs] within [tabs] are broken. I want to support crazy formatting eventually, but lemme work out the kinks first.</li>
+      <li><span class="label label-info">Important</span> The forum now uses BBCode for formatting. Your old posts will use the old formatting system UNTIL you edit them. Once you edit an old post, the system will assume you've converted it to BBCode.</li>
+      <li><span class="label label-warning">Warning</span> The BBCode parser is new and may have bugs. I recommend avoiding complex/nested BBCode until I work out the kinks.</li>
+      <li>Before submitting your post, it's wise to copy it somewhere so that you don't lose it in the event of server error.</li>
+      <li>Check out the BBCode Cheatsheet below the editor. It's pretty basic for now, but I will add more BBCode over time. Check the cheatsheet every once in a while for updates.</li>
     </ul>
-    <form method="post" action="{{ topic.url }}/posts">
+    <form method="post" action="{{ topic.url }}/posts" id="new-post">
       <input type="hidden" name="post-type" value="{{ postType }}">
       <textarea id="markup-input"
                 placeholder="Click here and begin writing"
@@ -359,6 +294,9 @@
 
       <input type="submit" class="btn btn-primary" value="Post Reply"></input>
     </form>
+
+    {% include 'partials/bbcode_cheatsheet.html' %}
+
   {% endif %}
 
 {% endblock %}
@@ -442,7 +380,7 @@ $(function() {
         }
         return '\n\n'
       })();
-      $reply_textarea.focus().val('').val(prev_content + padding + quote_markup + '\n\n');
+      $reply_textarea.focus().val('').val(prev_content + padding + quote_markup + '\n');
       $reply_textarea.scrollTop($reply_textarea[0].scrollHeight);
 
       $('html, body').animate({
@@ -464,12 +402,7 @@ $(function() {
     $post_edit_btn = $(this);
     $post_edit_btn.addClass('disabled');
     var post_id = $(this).attr('post-id');
-    // $('#post-' + post_id + ' .post-editor').markdown({
-    //   savabe: true
-    // });
-    // $('#post-' + post_id + ' .post-body').html('<p>lol</p>');
-    //-prev- var post_url = '/api/posts/' + post_id;
-    var $post_body = $('#post-' + post_id + ' .post-body-html');
+    var $post_body = $('#post-' + post_id + ' .post-content');
     var prev_body = $post_body.html();
     var $spinner = $('<span><img src="/img/spinner.gif"> Loading edit form...</span>');
 
@@ -481,10 +414,25 @@ $(function() {
     $.ajax({
       url: '/posts/' + post_id + '/raw',
       dataType: 'html',
+      cache: false,
       // This is going to be post.markup || post.text
       success: function(post_text) {
         var $post_editor = $('<div class="post-editor"></div>');
         $spinner.remove();
+
+        // Warn about Markdown->BBCode conversion on Markdown posts.
+        // A post is a Markdown post if its post-body is wrapped with
+        // .post-body instead of .post-body-html
+        if ($('#post-' + post_id + ' .post-body')[0]) {
+          $post_body.append(
+            '<p style="color: salmon">'+
+            'This post uses the old formatting system (Markdown) before we had BBCode. If you click "Save", then the forum will assume that you\'ve converted this post to BBCode. If you don\'t want that to happen, then click "Cancel".'+
+            '</p><p style="color: salmon">'+
+            'For example, <code>[Click Me](http://example.com)</code> (Old system) is now <code>[url=http://example.com]Click Me[/url]</code> (BBCode)'+
+            '</p>'
+          );
+        }
+
         $post_body.append($post_editor);
 
         $post_editor.bbcode({
@@ -518,9 +466,15 @@ $(function() {
         // .markdown() escapes html entities.
         $post_body.find('textarea').val(post_text)
 
-        $('#post-' + post_id + ' .md-footer').append(
-          $cancel_btn
+        // Scroll to editor over 500ms so user can re-orient themselves
+        $('body').animate({
+            scrollTop: $post_body.offset().top
+        }, 500);
+
+        $cancel_btn.insertAfter(
+          $('#post-' + post_id + ' .md-footer button[data-handler="cmdSave"]')
         );
+
         $($cancel_btn).click(function() {
           $post_body.html(prev_body);
           $post_edit_btn.removeClass('disabled');
@@ -532,4 +486,15 @@ $(function() {
   });
 });
   </script>
+<script>
+  // Render posts only as they appear in the user's browser
+  $('.post-body, .post-sig-markdown').appear();
+  $('.post-body, .post-sig-markdown').on('appear', function(e) {
+    if (!$(this).attr('data-rendered')) {
+      var $this = $(this);
+      $this.html(markdown.toHTML($this.text()));
+      $this.attr('data-rendered', true);
+    }
+  });
+</script>
 {% endblock%}

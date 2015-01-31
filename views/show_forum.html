@@ -76,7 +76,7 @@
       </div><!-- /.list-group-item -->
       {% for topic in forum.topics %}
         {% if ctx.can(ctx.currUser, 'READ_TOPIC', topic) %}
-          <div class="list-group-item"
+          <div class="list-group-item topic-item"
                style="background-color: #3d3a3a; border: 1px solid #111; color: #fff;">
             <div class="row">
               <div class="col-xs-6">
@@ -91,6 +91,8 @@
                     <span class="label label-primary">Sticky</span>
                   {% endif %}
                   <a href="{{ topic.url }}">{{ topic.title }}</a>
+                </h5>
+                <p class="list-group-item-text">
                   <div style="margin-top: 6px;">
                     by <a href="{{ topic.user.url }}" style="color: #fff">
                       {{ topic.user.uname -}}
@@ -99,8 +101,8 @@
                           title="{{ topic.created_at.toISOString() }}">
                       {{ topic.created_at|formatDate }}
                     </abbr>
-                  <div>
-                </h5>
+                  </div>
+                </p>
               </div>
               <div class="col-xs-1"></div>
               <div class="col-xs-2">{{ topic.posts_count|commafy }}</div>
@@ -146,6 +148,9 @@
                class="form-control">
       </div>
       <div class="form-group">
+        {% if forum.is_roleplay %}
+          First OOC Post:
+        {% endif %}
         <textarea rows=10
                   id="reply-input"
                   name="markup"
@@ -154,7 +159,9 @@
       </div>
       <input type="submit" class="btn btn-primary" value="Create Topic"></input>
     </form>
-    {% include 'partials/markdown_cheatsheet.html' %}
+
+    {% include 'partials/bbcode_cheatsheet.html' %}
+
   {% endif %}
 
 {% endblock %}

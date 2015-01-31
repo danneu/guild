@@ -5,11 +5,12 @@ var w;
     'bb-b': {
       name: 'bb-b',
       title: 'Bold',
+      hotkey: 'Ctrl+B',
       icon: 'fa fa-bold',
       callback: function(e) {
         var tag = 'b';
         var selected = e.getSelection();
-        if (selected.length == 0) {
+        if (selected.length === 0) {
           e.replaceSelection('['+tag+'][/'+tag+']');
           var newPos = selected.end + tag.length + 2;
           e.setSelection(newPos, newPos);
@@ -24,10 +25,11 @@ var w;
     'bb-i': {
       name: 'bb-i',
       title: 'Italic',
+      hotkey: 'Ctrl+I',
       icon: 'fa fa-italic',
       callback: function(e) {
         var selected = e.getSelection();
-        if (selected.length == 0) {
+        if (selected.length === 0) {
           e.replaceSelection('[i][/i]');
           e.setSelection(selected.end + 3, selected.end + 3);
         } else {
@@ -45,7 +47,7 @@ var w;
       icon: 'fa fa-underline',
       callback: function(e) {
         var selected = e.getSelection();
-        if (selected.length == 0) {
+        if (selected.length === 0) {
           e.replaceSelection('[u][/u]');
           e.setSelection(selected.end + 3, selected.end + 3);
         } else {
@@ -63,7 +65,7 @@ var w;
       icon: 'fa fa-strikethrough',
       callback: function(e) {
         var selected = e.getSelection();
-        if (selected.length == 0) {
+        if (selected.length === 0) {
           e.replaceSelection('[s][/s]');
           e.setSelection(selected.end + 3, selected.end + 3);
         } else {
@@ -77,12 +79,13 @@ var w;
     },
     'bb-url': {
       name: 'bb-url',
-      title: 'URL',
+      title: 'URL/Link',
+      hotkey: 'Ctrl+L',
       icon: 'fa fa-chain',
       callback: function(e) {
         var tag = 'url';
         var selected = e.getSelection();
-        if (selected.length == 0) {
+        if (selected.length === 0) {
           e.replaceSelection('['+tag+'][/'+tag+']');
           var newPos = selected.end + tag.length + 2;
           e.setSelection(newPos, newPos);
@@ -97,11 +100,12 @@ var w;
     'bb-img': {
       name: 'bb-img',
       title: 'Image',
+      hotkey: 'Ctrl+G',
       icon: 'fa fa-image',
       callback: function(e) {
         var tag = 'img';
         var selected = e.getSelection();
-        if (selected.length == 0) {
+        if (selected.length === 0) {
           e.replaceSelection('['+tag+'][/'+tag+']');
           var newPos = selected.end + tag.length + 2;
           e.setSelection(newPos, newPos);
@@ -116,11 +120,12 @@ var w;
     'bb-quote': {
       name: 'bb-quote',
       title: 'Quote',
+      hotkey: 'Ctrl+Q',
       icon: 'fa fa-quote-left',
       callback: function(e) {
         var tag = 'quote';
         var selected = e.getSelection();
-        if (selected.length == 0) {
+        if (selected.length === 0) {
           e.replaceSelection('['+tag+'][/'+tag+']');
           var newPos = selected.end + tag.length + 2;
           e.setSelection(newPos, newPos);
@@ -138,7 +143,7 @@ var w;
       icon: 'fa fa-eye-slash',
       callback: function(e) {
         var selected = e.getSelection();
-        if (selected.length == 0) {
+        if (selected.length === 0) {
           e.replaceSelection('\n[hider=My Hider]\n\n[/hider]\n');
           var newPos = selected.end + 18;
           e.setSelection(newPos, newPos);
@@ -173,6 +178,26 @@ var w;
         console.log('Clicked');
       }
     },
+    'bb-preview': {
+      name: 'bb-preview',
+      toggle: true,
+      title: 'Preview',
+      icon: 'fa fa-search',
+      btnClass: 'btn btn-primary btn-sm',
+      btnText: 'Preview',
+      callback: function(e) {
+        if (e.$isPreview === false) {
+          e.showPreview();
+          e.enableButtons('bb-preview');
+          e.$editor.find('.bbcode-editor-mode').css('display', 'inline-block');
+        } else {
+          e.hidePreview();
+          e.$editor.find('.bbcode-errors ul').html('');
+          e.$editor.find('.bbcode-errors p').html('Click "Preview" to check for errors');
+          e.$editor.find('.bbcode-editor-mode').hide();
+        }
+      }
+    }
   };
 
   $.fn.bbcode = function(opts) {
@@ -201,16 +226,34 @@ var w;
         $M = e;
       },
       onPreview: function(e) {
-        if (!e.isDirty())
-          return e.getContent();
-        return XBBCODE.process({
+        // if (!e.isDirty())
+        //   return e.getContent();
+
+        var result = XBBCODE.process({
           text: e.getContent(),
           addInLineBreaks: true
-        }).html;
+        });
+
+        // Display errs in editor footer if there are any
+        e.$editor.find('.bbcode-errors p').html('Errors: ');
+
+        if (result.error) {
+          var html = '';
+          html = html + result.errorQueue.map(function(msg) {
+            return '<li>' + msg + '</li>';
+          }).join('');
+          e.$editor.find('.bbcode-errors ul').html(html);
+        } else {
+          e.$editor.find('.bbcode-errors ul').html('');
+          e.$editor.find('.bbcode-errors p').append(' <span class="label label-success">None</span>');
+        }
+
+        return result.html;
       },
-      hiddenButtons: ['cmdBold', 'cmdItalic', 'cmdHeading',
-                      'cmdUrl', 'cmdImage',
-                      'cmdList', 'cmdList0', 'cmdCode', 'cmdQuote'],
+      buttons: [[]],
+      // hiddenButtons: ['cmdBold', 'cmdItalic', 'cmdHeading',
+      //                 'cmdUrl', 'cmdImage', 'cmdPreview',
+      //                 'cmdList', 'cmdList0', 'cmdCode', 'cmdQuote'],
       additionalButtons: [
         [
           {name: 'bbcode1',
@@ -219,13 +262,24 @@ var w;
           {name: 'bbcode2',
            data: [buttons['bb-url'], buttons['bb-img']]},
           {name: 'bbcode3',
-           data: [buttons['bb-quote'], buttons['bb-hider'], buttons['bb-tabs']]}
+           data: [buttons['bb-quote'],
+                  buttons['bb-hider']
+                  //,buttons['bb-tabs']
+                 ]},
+          {name: 'bbcode4',
+           data: [buttons['bb-preview']]}
         ]
-      ]
+      ],
+      footer: '<div class="bbcode-editor-mode">You are in Preview Mode</div>'+
+              '<div class="bbcode-errors">'+
+              '  <p>Click the "Preview" button to check for errors</p>'+
+              '  <ul style="color: red;"></ul>'+
+              '</div>'
     };
 
     opts = $.extend(defaults, opts);
 
+    // Activate the editor
     $this.markdown(opts);
 
     // Hook up color button
@@ -259,8 +313,9 @@ var w;
     content = content + '</div>';
 
     $M.$editor.find('button[title="Font Color"]').popover({
-      placement: 'auto bottom',
+      placement: 'auto top',
       content: content,
+      container: 'body',
       html: true
     }).on('shown.bs.popover', function() {
       var self = this;

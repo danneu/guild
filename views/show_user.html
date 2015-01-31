@@ -31,21 +31,24 @@
 
       <!-- Stats list -->
       <ul>
-        <li>Last Seen:
           {% if user.is_ghost %}
-            [User enabled ghost mode]
-          {% else %}
-            {% if user.last_online_at %}
-              {% if user.last_online_at.getTime() >= Date.now() - (1000 * 60 * 15) %}
-                <span style="color: #3BB878">Online now</span>
-              {% else %}
-                <abbr class="timeago" title="{{ user.last_online_at.toISOString() }}">
-                  {{ user.last_online_at|formatDate }}
-                </abbr>
-              {% endif %}
-            {% else %}
-              Hasn't logged in since relaunch
+            {% if ctx.can(ctx.currUser, 'READ_USER_ONLINE_STATUS', user) %}
+              <li>Last Seen: <span style="color: #000">Invisible</span></li>
             {% endif %}
+          {% else %}
+            <li>Last Seen:
+              {% if user.last_online_at %}
+                {% if user.last_online_at.getTime() >= Date.now() - (1000 * 60 * 15) %}
+                  <span style="color: #3BB878">Online now</span>
+                {% else %}
+                  <abbr class="timeago" title="{{ user.last_online_at.toISOString() }}">
+                    {{ user.last_online_at|formatDate }}
+                  </abbr>
+                {% endif %}
+              {% else %}
+                Hasn't logged in since relaunch
+              {% endif %}
+            </li>
           {% endif %}
         </li>
         {% if user.oldguild_uname %}
@@ -62,6 +65,52 @@
           <li>PMs sent: {{ user.pms_count }}</li>
         {% endif %}
       </ul>
+
+    </div><!-- col-6 -->
+
+    <!-- PM button -->
+
+    <div class="col-xs-6">
+      {% if ctx.can(ctx.currUser, 'CREATE_CONVO') %}
+        <a class="btn btn-primary btn-block pull-right"
+           href="/convos/new?to={{ encodeURI(user.uname) }}">
+          <span class="glyphicon glyphicon-envelope"></span>
+          {% if ctx.currUser.id === user.id %}
+            Start Private Convo with yourself
+          {% else %}
+            Start Private Convo with {{ user.uname }}
+          {% endif %}
+        </a>
+      {% endif %}
+    </div> <!-- /.col-6 -->
+
+    </div><!-- /row -->
+
+  <!-- BIO -->
+
+  <div class="row">
+    <div class="col-sm-12">
+      <h3>
+        Bio
+        {% if ctx.can(ctx.currUser, 'UPDATE_USER', user) %}
+          <button type="button"
+                  class="btn btn-xs btn-default"
+                  id="edit-bio"
+                  data-user-id="{{ user.id }}">Edit</button>
+        {% endif %}
+      </h3>
+      <div class="user-bio well">
+        {% if user.bio_html %}
+          {{ user.bio_html|safe }}
+        {% else %}
+          User has no bio, yet
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-sm-12">
 
       <!-- Most recent posts -->
 
@@ -152,25 +201,55 @@
 
     </div> <!-- /.col-6 -->
 
-    <!-- Right side -->
-
-    <div class="col-xs-6">
-      {% if ctx.can(ctx.currUser, 'CREATE_CONVO') %}
-        <a class="btn btn-primary btn-block pull-right"
-           href="/convos/new?to={{ encodeURI(user.uname) }}">
-          <span class="glyphicon glyphicon-envelope"></span>
-          {% if ctx.currUser.id === user.id %}
-            Start Private Convo with yourself
-          {% else %}
-            Start Private Convo with {{ user.uname }}
-          {% endif %}
-        </a>
-      {% endif %}
-    </div> <!-- /.col-6 -->
 
   </div> <!-- /.row -->
+
+  <!-- These exist for storing values for ajax interaction -->
+  <div id="bio-markup" style="display: none">{{ user.bio_markup }}</div>
+  <div id="bio-html" style="display: none">{{ user.bio_html }}</div>
 
 {% endblock %}
 
 {% block scripts %}
-{% endblock%}
+  <script>
+    $('#edit-bio').on('click', function() {
+      console.log('click');
+      var userId = $(this).attr('data-user-id');
+      var $cancelBtn = $('<button style="margin-left: 5px;" class="btn btn-default post-edit-cancel-btn">Cancel</button>');
+      var $editor = $('<div class="editor">'+$('#bio-markup').text()+'</div>');
+      $('.user-bio').html(
+        "<p>Write whatever you want in your bio. Everyone can see it, even people not logged in.</p>"+
+        "<p>Ideas: Introduce yourself, keep a list of roleplays you're involved in, describe what kind of roleplays/partners you're looking for, provide off-site contact info, share some hilarious jokes, share art, share dank memes, etc.</p>"+
+        "<p>Must be no more than {{ ctx.config.MAX_BIO_LENGTH }} chars</p>"
+      );
+      $('.user-bio').append($editor);
+      $editor.bbcode({
+        savable: true,
+        onSave: function(e) {
+          console.log('Saving');
+          var newBioMarkup = e.getContent();
+          $.ajax({
+            url: '/api/users/' + userId + '/bio',
+            dataType: 'json',
+            type: 'POST',
+            headers: { 'X-HTTP-Method-Override': 'PUT' },
+            data: { markup: newBioMarkup },
+            success: function(updatedUser) {
+              $('.user-bio').html(updatedUser.bio_html || 'User has no bio, yet');
+              $('#bio-markup').text(updatedUser.bio_markup);
+              $('#bio-html').text(updatedUser.bio_html);
+            }
+          });
+        }
+      });
+
+      $cancelBtn.insertAfter(
+        $('.user-bio .md-footer button[data-handler="cmdSave"]')
+      );
+
+      $cancelBtn.on('click', function() {
+        $('.user-bio').html($('#bio-html').text() || 'User has no bio, yet');
+      });
+    });
+  </script>
+{% endblock %}

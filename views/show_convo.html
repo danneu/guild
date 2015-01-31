@@ -1,5 +1,6 @@
 {% extends 'layouts/master.html' %}
 {% import './macros/paginate.html' as paginate %}
+{% import './macros/macros.html' as macros %}
 
 {% block embed %}
   <ol class="breadcrumb">
@@ -50,25 +51,70 @@
       </div> <!-- /.panel-heading -->
 
       <!-- Panel body -->
-      <div class="panel-body"
-           style="background-color: #2E2C2C">
+      <div class="panel-body" style="background-color: #2E2C2C">
+
         <!-- Author metadata -->
-        <div class="col-sm-2 clearfix">
-          <a href="{{ post.user.url }}">{{ post.user.uname }}</a>
-          <br>{{ post.user.role }}
+        <div class="col-sm-2 clearfix text-center post-user-meta">
+
+
+            <!-- For small devices -->
+            <div class="visible-xs-block">
+              <div class="media">
+                {% if post.user.avatar_url %}
+                  <a class="media-left" href="{{ post.user.url }}">
+                    <img src="{{ post.user.avatar_url}}" alt="avatar"
+                         style="max-width: 60px">
+                  </a>
+                {% endif %}
+                <div class="media-body">
+                  <h4 class="media-heading">
+                    <a href="{{ post.user.url }}">
+                      {{ post.user.uname }}
+                    </a>
+                  </h4>
+                  <div class="pull-left">
+                    {{ post.user.role|capitalize }}<br>
+                    {{ macros.onlineStatus(post.user) }}
+                  </div>
+                </div>
+              </div>
+            </div> <!-- /small devices -->
+
+            <!-- For larger-than-smartphone devices -->
+            <div class="hidden-xs">
+              <div class="user-uname">
+                <a href="{{ post.user.url }}">
+                  {{ post.user.uname }}
+                </a>
+              </div>
+
+              {% if post.user.avatar_url %}
+                <div class="post-avatar"
+                     style="margin-top: 10px;">
+                  <img src="{{ post.user.avatar_url}}">
+                </div>
+              {% endif %}
+
+              <div class="user-role" style="margin-top: 10px;">
+                {{ post.user.role|capitalize }}
+              </div>
+
+              <!-- Online status -->
+
+              {{ macros.onlineStatus(post.user) }}
+
+            </div> <!-- /.hidden-xs -->
+
         </div> <!-- /.col-sm-2 post-meta -->
+
         <!-- Post text -->
         <div class="col-sm-10">
-          {% if post.html %}
-            <div class="post-body-html">
-              {{ post.html|safe }}
-            </div>
-          {% elif post.legacy_html %}
-            <div class="post-body-html">{{ post.legacy_html|safe }}</div>
-          {% else %}
-            <div class="post-body">{{ post.text }}</div>
-          {% endif %}
+          <!-- Post text -->
+          {{- macros.renderPost(post) -}}
+          <!-- Signature -->
+          {{- macros.renderSig(post.user) -}}
         </div>
+
       </div> <!-- /.panel-body -->
 
       <!-- Panel footer -->
@@ -85,6 +131,7 @@
         <a href=""
            class="btn btn-default btn-xs pull-right post-reply-btn"
            post-id="{{ post.id }}"
+           post-uname="{{ post.user.uname }}"
            style="margin-left: 5px"
            {% if !ctx.can(ctx.currUser, 'CREATE_PM', convo) %}disabled{% endif %}
            >Reply</a>
@@ -107,23 +154,24 @@
 
   <h2>New Reply</h2>
 
-  <style>
-    #reply-form {
-      color: black;
-    }
-  </style>
-  <form id="reply-form" role="form" method="post"
-        action="{{ convo.url }}/pms">
+  <ul>
+    <li><span class="label label-info">Important</span> The forum now uses BBCode for formatting. Your old posts will use the old formatting system UNTIL you edit them. Once you edit an old post, the system will assume you've converted it to BBCode.</li>
+    <li><span class="label label-warning">Warning</span> The BBCode parser is new and may have bugs. I recommend avoiding complex/nested BBCode until I work out the kinks.</li>
+    <li>Before submitting your post, it's wise to copy it somewhere so that you don't lose it in the event of server error.</li>
+    <li>Check out the BBCode Cheatsheet below the editor. It's pretty basic for now, but I will add more BBCode over time. Check the cheatsheet every once in a while for updates.</li>
+  </ul>
+  <form id="reply-form" role="form" method="post" action="{{ convo.url }}/pms">
     <div class="form-group">
       <textarea rows=10
                 id="reply-input"
-                name="text"
+                name="markup"
                 class="form-control"
                 placeholder="Click here and begin writing"></textarea>
     </div>
     <input type="submit" class="btn btn-primary" value="Post Reply"></input>
   </form>
-  {% include 'partials/markdown_cheatsheet.html' %}
+
+  {% include 'partials/bbcode_cheatsheet.html' %}
 
 {% endblock %}
 
@@ -137,14 +185,19 @@
       });
   </script>
   <script>
-    $(function() {
-      $('#reply-input').markdown({
-        resize: 'vertical'
-      });
-      $('.post-body').each(function() {
+    // Render posts only as they appear in the user's browser
+    $('.post-body, .post-sig-markdown').appear();
+    $('.post-body, .post-sig-markdown').on('appear', function(e) {
+      if (!$(this).attr('data-rendered')) {
         var $this = $(this);
         $this.html(markdown.toHTML($this.text()));
-      });
+        $this.attr('data-rendered', true);
+      }
+    });
+  </script>
+  <script>
+    $(function() {
+      $('#reply-input').bbcode();
     });
   </script>
 
@@ -158,17 +211,16 @@ $(function() {
     $reply_btn = $(this);
     $reply_btn.addClass('disabled').html('Loading...');
     var post_id = $reply_btn.attr('post-id');
-    // Get this post's text
-    //var post_text = $('#post-' + post_id).find('.post-body').text()
-    //-prev-var post_url = '/api/posts/' + post_id;
+    var uname = $reply_btn.attr('post-uname');
     var post_url = '/pms/' + post_id + '/raw';
     $.get(post_url, function(markup) {
       console.log('returned')
       $reply_btn.removeClass('disabled').html('Reply');
-      // var quote_markup = _.map(markup.split('\n'), function(line) { return '> ' + line }).join('\n')
-      var quote_markup = markup.split('\n').map(function(line) {
-        return '> ' + line;
-      }).join('\n')
+
+      var quote_markup = '[quote=' + uname + ']\n' +
+        markup.trim()  +
+        '\n[/quote]\n';
+
       var $reply_textarea = $('#reply-form textarea');
       var prev_content = $('textarea').val().trim();
       // Only add \n\n padding if there was already content in textarea
@@ -178,7 +230,7 @@ $(function() {
         }
         return '\n\n'
       })();
-      $reply_textarea.focus().val('').val(prev_content + padding + quote_markup + '\n\n');
+      $reply_textarea.focus().val('').val(prev_content + padding + quote_markup + '\n');
       $reply_textarea.scrollTop($reply_textarea[0].scrollHeight);
 
       $('html, body').animate({
@@ -200,7 +252,7 @@ $(function() {
     $post_edit_btn = $(this);
     $post_edit_btn.addClass('disabled');
     var post_id = $(this).attr('post-id');
-    var $post_body = $('#post-' + post_id + ' .post-body');
+    var $post_body = $('#post-' + post_id + ' .post-content');
     var prev_body = $post_body.html();
     var $spinner = $('<span><img src="/img/spinner.gif"> Loading edit form...</span>');
     $post_body.html($spinner);
@@ -209,14 +261,26 @@ $(function() {
     $.ajax({
       url: '/pms/' + post_id + '/raw',
       dataType: 'html',
+      cache: false,
       success: function(post_text) {
         console.log(post_text);
         var $post_editor = $('<div class="post-editor"></div>');
         $spinner.remove();
+
+        // Warn about Markdown->BBCode conversion on Markdown posts.
+        // A post is a Markdown post if its post-body is wrapped with
+        // .post-body instead of .post-body-html
+        if ($('#post-' + post_id + ' .post-body')[0]) {
+          $post_body.append(
+            '<p style="color: salmon">'+
+            'This PM uses the old formatting system (Markdown) before we had BBCode. If you click "Save", then the forum will assume that you\'ve converted this PM to BBCode. If you don\'t want that to happen, then click "Cancel".'+
+            '</p><p style="color: salmon">'+
+            'For example, <code>[Click Me](http://example.com)</code> (Old system) is now <code>[url=http://example.com]Click Me[/url]</code> (BBCode)'+
+            '</p>'
+          );
+        }
         $post_body.append($post_editor);
-        $post_editor.markdown({
-          height: 350,
-          resize: 'vertical',
+        $post_editor.bbcode({
           savable: true,
           onSave: function(e) {
             //
@@ -231,15 +295,14 @@ $(function() {
               dataType: 'json',
               type: 'POST',
               headers: { 'X-HTTP-Method-Override': 'PUT' },
-              data: { text: text_to_save },
+              data: { markup: text_to_save },
               success: function(updated_post) {
-                console.log('updated post: ' + JSON.stringify(updated_post, null, '  '))
-                $post_body.html(markdown.toHTML(updated_post.text));
+                console.log(updated_post);
+                $post_body.html(bbcode(updated_post.markup));
                 $post_edit_btn.removeClass('disabled');
                 // Set the post's .edited-marker to ' edited'
                 var $edited_marker = $('#post-' + post_id + ' .edited-marker')
                 $edited_marker.html(' edited');
-                console.log($edited_marker)
               }
             })
           }
@@ -249,9 +312,15 @@ $(function() {
         // .markdown() escapes html entities.
         $post_body.find('textarea').val(post_text)
 
-        $('#post-' + post_id + ' .md-footer').append(
-          $cancel_btn
+        // Scroll to editor over 500ms so user can re-orient themselves
+        $('body').animate({
+            scrollTop: $post_body.offset().top
+        }, 500);
+
+        $cancel_btn.insertAfter(
+          $('#post-' + post_id + ' .md-footer button[data-handler="cmdSave"]')
         );
+
         $($cancel_btn).click(function() {
           $post_body.html(prev_body);
           $post_edit_btn.removeClass('disabled');

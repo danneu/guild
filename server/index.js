@@ -137,6 +137,12 @@ app.use(function*(next) {  // Must become before koa-router
 // {{ 'firetruck'|truncate(6) }}  -> 'firetruck'
 swig.setFilter('truncate', belt.makeTruncate('…'));
 
+// Returns distance from now to date in days. 0 or more.
+function daysAgo(date) {
+  return Math.floor((Date.now() - date.getTime()) / (1000*60*60*24));
+}
+swig.setFilter('daysAgo', daysAgo);
+
 // FIXME: Can't render bbcode on the fly until I speed up
 // slow bbcode like tabs
 swig.setFilter('bbcode', function(markup) {
@@ -308,7 +314,7 @@ app.post('/users', function*() {
   var user = result['user'];
   var session = result['session'];
   this.cookies.set('sessionId', session.id, {
-    expires: belt.futureDate(new Date(), { years: 365 })
+    expires: belt.futureDate(new Date(), { years: 1 })
   });
   this.flash = { message: ['success', 'Registered successfully'] };
   return this.response.redirect('/');
@@ -374,6 +380,16 @@ app.use(route.get('/users', function*() {
     ctx: this
   });
 }));
+
+//
+// BBCode Cheatsheet
+//
+app.get('/bbcode', function*() {
+  yield this.render('bbcode_cheatsheet', {
+    ctx: this,
+    title: 'BBCode Cheatsheet'
+  });
+});
 
 //
 // Registration form
@@ -644,6 +660,46 @@ app.delete('/users/:userId/legacy-sig', function*() {
   this.response.redirect('/users/' + this.params.userId + '/edit');
 });
 
+// Change user's bio_markup via ajax
+// Params:
+// - markup: String
+app.put('/api/users/:userId/bio', function*() {
+  debug(this.request.body);
+  // Validation markup
+  this.checkBody('markup')
+    .trim()
+    //// FIXME: Why does isLength always fail despite the optional()?
+    // .isLength(0, config.MAX_BIO_LENGTH,
+    //           'Bio must be 0-' + config.MAX_BIO_LENGTH + ' chars');
+
+  if (this.request.body.markup.length > config.MAX_BIO_LENGTH)
+    this.errors.push('Bio must be 0-' + config.MAX_BIO_LENGTH + ' chars');
+
+  // Return 400 with validation errors, if any
+  this.assert(!this.errors, 400, belt.joinErrors(this.errors));
+
+  var user = yield db.findUser(this.params.userId);
+
+  // 404 if user with this id does not exist
+  this.assert(user, 404);
+
+  // Ensure currUser has permission to update user
+  this.assertAuthorized(this.currUser, 'UPDATE_USER', user);
+
+  // Validation succeeded
+  // Render markup to html
+  var html = '';
+  if (this.request.body.markup.length > 0)
+    html = bbcode(this.request.body.markup);
+
+  // Save markup and html
+  var updatedUser = yield db.updateUserBio(
+    user.id, this.request.body.markup, html
+  );
+
+  this.body = JSON.stringify(updatedUser);
+});
+
 //
 // Update user
 //
@@ -655,12 +711,9 @@ app.delete('/users/:userId/legacy-sig', function*() {
 // At least one of these updates:
 // - email
 // - avatar-url
-// - sig
+// - sig (which will pre-render sig_html field)
 // - hide-sigs
 // - is-ghost
-//
-// TODO: This isn't very abstracted yet. Just an email endpoint for now.
-//
 app.put('/users/:userId', function*() {
   this.checkBody('email')
     .optional()
@@ -690,9 +743,19 @@ app.put('/users/:userId', function*() {
   this.assert(user, 404);
   this.assertAuthorized(this.currUser, 'UPDATE_USER', user);
 
+  var sig_html;
+  // User is only updating their sig if `sig` is a string.
+  // If it's a blank string, then user is trying to clear their sig
+  if (_.isString(this.request.body.sig))
+    if (this.request.body.sig.trim().length > 0)
+      sig_html = bbcode(this.request.body.sig);
+    else
+      sig_html = '';
+
   yield db.updateUser(user.id, {
     email: this.request.body.email || user.email,
     sig: this.request.body.sig,
+    sig_html: sig_html,
     avatar_url: this.request.body['avatar-url'],
     hide_sigs: _.isBoolean(this.request.body['hide-sigs'])
                  ? this.request.body['hide-sigs']
@@ -826,6 +889,51 @@ app.post('/topics/:topicId/posts', function*() {
 });
 
 //
+// Search users
+//
+app.get('/search/users', function*() {
+  this.checkQuery('text').optional().toString(); // undefined || String
+  this.checkQuery('before-id').optional().toInt();  // undefined || Number
+
+  var usersList;
+  if (this.query['before-id']) {
+    if (this.query['text']) {
+      //this.checkQuery('text').notEmpty().isLength(1, 15, 'Search text must be 1-15 chars');
+      usersList = yield db.findUsersContainingStringWithId(this.query['text'], this.query['before-id']);
+    }else {
+      usersList = yield db.findAllUsersWithId(this.query['before-id']);
+    }
+  }else if (this.query['text']) {
+    //this.checkQuery('text').notEmpty().isLength(1, 15, 'Search text must be 1-15 chars');
+    usersList = yield db.findUsersContainingString(this.query['text']);
+  }else {
+    usersList = yield db.findAllUsers();
+  }
+
+  if (this.errors) {
+  this.flash = {
+    message: ['danger', belt.joinErrors(this.errors)],
+    params: this.request.body
+  };
+  this.response.redirect('/search/users');
+  return;
+  }
+
+  var nextBeforeId = _.last(usersList) != null ? _.last(usersList).id : null;
+
+  yield this.render('search_users', {
+    ctx: this,
+    term: this.query['text'],
+    title: 'Search Users',
+    usersList: usersList,
+    // Pagination
+    beforeId: this.query['before-id'],
+    nextBeforeId: nextBeforeId,
+    usersPerPage: config.USERS_PER_PAGE
+  });
+});
+
+//
 // Show convos
 //
 app.get('/me/convos', function*() {
@@ -921,7 +1029,7 @@ app.use(route.post('/convos', function*() {
                                    config.MAX_TOPIC_TITLE_LENGTH,
                                    'Title required');
   this.checkBody('markup').isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH,
-                                  'Post text most be ' + config.MIN_POST_LENGTH +
+                                  'Post text must be ' + config.MIN_POST_LENGTH +
                                   '-' + config.MAX_POST_LENGTH + ' chars long');
 
   if (this.errors) {
@@ -1030,14 +1138,13 @@ app.use(route.post('/convos/:convoId/pms', function*(convoId) {
   this.assertAuthorized(this.currUser, 'CREATE_PM', convo);
 
   // Render bbcode
-  var html = bbcode(markup);
+  var html = bbcode(this.request.body.markup);
 
-  var markup = this.request.body.markup;
   var pm = yield db.createPm({
     userId: this.currUser.id,
     ipAddress: this.request.ip,
     convoId: convoId,
-    markup: markup,
+    markup: this.request.body.markup,
     html: html
   });
   pm = pre.presentPm(pm);
@@ -1154,6 +1261,7 @@ app.get('/posts/:id/raw', function*() {
   var post = yield db.findPostWithTopicAndForum(this.params.id);
   this.assert(post, 404);
   this.assertAuthorized(this.currUser, 'READ_POST', post);
+  this.set('Cache-Control', 'no-cache');
   this.body = post.markup ? post.markup : post.text;
 });
 
@@ -1165,7 +1273,8 @@ app.get('/pms/:id/raw', function*() {
   var pm = yield db.findPmWithConvo(this.params.id);
   this.assert(pm, 404);
   this.assertAuthorized(this.currUser, 'READ_PM', pm);
-  this.body = pm.text;
+  this.set('Cache-Control', 'no-cache');
+  this.body = pm.markup ? pm.markup : pm.text;
 });
 
 //
@@ -1202,8 +1311,8 @@ app.put('/api/pms/:id', function*() {
   if (!config.IS_PM_SYSTEM_ONLINE)
     return this.body = 'PM system currently disabled';
 
-  this.checkBody('text').isLength(config.MIN_POST_LENGTH,
-                                  config.MAX_POST_LENGTH);
+  this.checkBody('markup').isLength(config.MIN_POST_LENGTH,
+                                    config.MAX_POST_LENGTH);
   if (this.errors) {
     this.flash = {
       message: ['danger', belt.joinErrors(this.errors)],
@@ -1213,14 +1322,24 @@ app.put('/api/pms/:id', function*() {
     return;
   }
 
+  // Users that aren't logged in can't read any PMs, so just short-circuit
+  // if user is a guest so we don't even incur DB query.
   this.assert(this.currUser, 404);
+
   var pm = yield db.findPmWithConvo(this.params.id);
+
+  // 404 if there is no PM with this ID
   this.assert(pm, 404);
+
+  // Ensure user is allowed to update this PM
   this.assertAuthorized(this.currUser, 'UPDATE_PM', pm)
 
-  var text = this.request.body.text;
-  var updatedPm = yield db.updatePm(this.params.id, text);
+  // Render BBCode to html
+  var html = bbcode(this.request.body.markup);
+
+  var updatedPm = yield db.updatePm(this.params.id, this.request.body.markup, html);
   updatedPm = pre.presentPm(updatedPm);
+  console.log('updatedPm', updatedPm);
 
   this.body = JSON.stringify(updatedPm);
 });
@@ -1382,6 +1501,22 @@ app.use(route.get('/topics/:topicId', function*(topicId) {
   else
     this.response.redirect(this.request.path + '/posts/ooc');
 }));
+
+//
+// Staff list
+//
+// For now, just load staff upon first request, once per boot
+var staffUsers;
+app.get('/staff', function*() {
+  if (!staffUsers)
+    staffUsers = (yield db.findStaffUsers()).map(pre.presentUser);
+  yield this.render('staff', {
+    ctx: this,
+    mods: _.filter(staffUsers, { role: 'mod' }),
+    smods: _.filter(staffUsers, { role: 'smod' }),
+    admins: _.filter(staffUsers, { role: 'admin' })
+  });
+});
 
 app.listen(config.PORT);
 console.log('Listening on ' + config.PORT);

@@ -1,0 +1,110 @@
+
+{% macro onlineStatus(user) %}
+  {% if user.is_ghost %}
+    {% if ctx.can(ctx.currUser, 'READ_USER_ONLINE_STATUS', user) %}
+      <span style="color: #000">Invisible</span>
+    {% endif %}
+  {% else %}
+    {% if Date.now() - user.last_online_at.getTime() < 1000 * 60 * 15 %}
+      <span style="color: #3BB878">Online</span>
+    {% else %}
+      {% if user.last_online_at %}
+        <span style="color: #777">
+          Online
+          <abbr class="timeago"
+                title="{{ user.last_online_at.toISOString() }}">
+            {{ user.last_online_at|formatDate }}
+          </abbr>
+        </span>
+      {% else %}
+        <span style="color: #555">
+          Offline since relaunch
+        </span>
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro renderPost(post) %}
+  {% if post.is_hidden %}
+    <i>[HIDDEN]</i>
+  {% else %}
+    {% if post.html %}
+      <div class="post-body-html post-content">{{- post.html|safe -}}</div>
+    {% elif post.legacy_html %}
+      <div class="post-body-html post-content">{{- post.legacy_html|safe -}}</div>
+    {% else %}
+      <div class="post-body post-content">{{- post.text -}}</div>
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro renderSig(user) %}
+  {% if ctx.currUser && !ctx.currUser.hide_sigs %}
+    <!-- User has sig html-->
+    {% if post.user.sig_html %}
+      <div class="post-sig-legacy post-sig"
+           style="max-height: 300px;
+                  overflow: auto;
+                  margin-top: 50px;
+                  padding: 20px 20px 0 20px;
+                  border-top: 2px solid black">
+        {{- post.user.sig_html|safe -}}
+      </div>
+    <!-- User has old Markdown sig that needs conversion to BBCode -->
+    {% elif post.user.sig %}
+      <div class="post-sig-markdown post-sig"
+           style="max-height: 300px;
+                  overflow: auto;
+                  margin-top: 50px;
+                  padding: 20px 20px 0 20px;
+                  border-top: 2px solid black">
+        {{- post.user.sig -}}
+      </div>
+    {% elif post.user.legacy_sig %}
+      <div class="post-sig post-sig-legacy"
+           style="max-height: 300px;
+                  overflow: auto;
+                  margin-top: 50px;
+                  padding: 20px 20px 0 20px;
+                  border-top: 2px solid black">
+        {{- post.user.legacy_sig|safe -}}
+      </div>
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro renderUserbitLarge(user)  %}
+  <div class="user-uname">
+    <a href="{{ post.user.url }}">
+      {{ user.uname }}
+    </a>
+  </div>
+
+  {% if user.avatar_url %}
+    <div class="post-avatar"
+         style="margin-top: 10px;">
+      <img src="{{ post.user.avatar_url}}">
+    </div>
+  {% endif %}
+
+  <div class="user-role" style="margin-top: 10px;">
+    {% if user.id === 10 %}
+      <img src="/bling/10-sora/legacy.gif">
+      <img src="/bling/10-sora/member.gif">
+      <br>
+      <img src="/bling/10-sora/forever.gif">
+    {% elif user.role === 'member' %}
+    {% else %}
+      {{ user.role|capitalize }}
+    {% endif %}
+  </div>
+
+  <div class="user-stats">
+    {{ user.posts_count }} posts in {{ user.created_at|daysAgo}} days
+  </div>
+
+  <!-- Online status -->
+
+  {{ onlineStatus(user) }}
+{% endmacro %}

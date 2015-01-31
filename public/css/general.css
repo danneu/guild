@@ -232,6 +232,19 @@ blockquote {
   font-family: Georgia, serif;
 }
 
+/* Ensure h1, h2, and h3 cannot be nested */
+.bb-h1 .bb-h1,
+.bb-h1 .bb-h2,
+.bb-h1 .bb-h3,
+.bb-h2 .bb-h1,
+.bb-h2 .bb-h2,
+.bb-h2 .bb-h3,
+.bb-h3 .bb-h1,
+.bb-h3 .bb-h2,
+.bb-h3 .bb-h3 {
+    display: none;
+}
+
 
 .bb-h1 {
     /* font-size: 2em; */
@@ -351,4 +364,73 @@ textarea {
     width: 15px;
     display: inline-block;
     border: 1px solid white;
+}
+
+
+/* For some reason since I added bbcode I need to add a gutter back
+   in below the editor else the Submit button is flush against it.
+ */
+.md-editor {
+    margin-bottom: 10px;
+}
+
+/* Invert the colors of fullscreen mode. By default it's black on white. */
+.md-editor.md-fullscreen-mode {
+    background: #2E2C2C !important;
+}
+.md-editor.md-fullscreen-mode .md-input,
+.md-editor.md-fullscreen-mode .md-preview {
+    background: #2E2C2C !important;
+}
+.md-editor.md-fullscreen-mode .md-input:focus,
+.md-editor.md-fullscreen-mode .md-input:hover {
+    background: #2E2C2C !important;
+}
+
+/* In fullscreen-mode, make the button text white */
+.md-editor.md-fullscreen-mode .btn {
+    color: #fff;
+}
+
+.md-editor.md-fullscreen-mode .btn.active,
+.md-editor.md-fullscreen-mode .btn:active {
+    background: #ccc;
+    color: #000
+}
+.md-editor.md-fullscreen-mode .btn:focus,
+.md-editor.md-fullscreen-mode .btn:hover {
+    background: #ccc;
+    color: #000;
+}
+
+.bbcode-errors {
+    margin-top: 5px;
+}
+.bbcode-editor-mode {
+    display: none;
+    margin-left: 10px;
+}
+
+/* Popover font color is white by default. We need it to be dark. */
+.popover {
+    color: #000;
+}
+
+/* Make the smilies wrap */
+#bbcode-cheatsheet .smilie-box {
+    display: inline-block;
+}
+.user-stats {
+    color: #a86;
+}
+
+/* .topic-item is each list-group-item on show_forum */
+/* Darken their timeagos */
+.topic-item abbr,
+.forum-item abbr {
+    color: #999;
+}
+
+.top-link {
+    color: #999;
 }
