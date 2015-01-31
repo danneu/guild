@@ -84,6 +84,46 @@ function replaceMentions(text) {
   });
 }
 
+// Keep in sync with BBCode cheatsheet
+var smilies = [
+  'airquotes',
+  'airquote',
+  'arghfist',
+  'bow',
+  'brow',
+  'btw',
+  'cool',
+  'dreamy',
+  'drool',
+  'gray',
+  'confused',
+  'magnum',
+  'nat',
+  'hehe',
+  'lol',
+  'hmm',
+  'golfclap',
+  'ou',
+  'newlol',
+  'punch',
+  'rock',
+  'respek',
+  'rollin',
+  'rolleyes',
+  'sick',
+  'sun',
+  'toot',
+  'usa',
+  'wub',
+  'what',
+  'zzz'
+];
+var smilieRegExp = new RegExp(':(' + smilies.join('|') + ')', 'ig');
+
+function replaceSmilies(text) {
+  return text.replace(smilieRegExp, '<img src="/smilies/$1.gif">');
+}
+
 var XBBCODE = (function() {
 
   ////
@@ -1093,6 +1133,9 @@ var XBBCODE = (function() {
 
     // Replace [@Mentions] with a link
     ret.html = replaceMentions(ret.html);
+
+    // Replace smilie codes with <img>s
+    ret.html = replaceSmilies(ret.html);
 
     // concat tagErrs into errQueue at the last second
     // and then reset it for next run.
