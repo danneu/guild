@@ -40,7 +40,7 @@
 {% endmacro %}
 
 {% macro renderSig(user) %}
-  {% if ctx.currUser && !ctx.currUser.hide_sigs %}
+  {% if ctx.currUser && !ctx.currUser.hide_sigs && !post.is_hidden %}
     <!-- User has sig html-->
     {% if post.user.sig_html %}
       <div class="post-sig-legacy post-sig"
