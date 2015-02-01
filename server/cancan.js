@@ -89,6 +89,8 @@ function can(user, action, target) {
     case 'READ_USER_IP': // target is a user
       if (!user) return false;
       // Staff can only see down-chain
+      if (user.role === 'admin')
+        return true;
       if (user.role === 'smod')
         return _.contains(['mod', 'member', 'banned'], target.role);
       if (user.role === 'mod')
