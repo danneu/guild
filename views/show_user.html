@@ -120,8 +120,12 @@
     </div>
   </div>
 
-  <div class="row">
-    <div class="col-sm-12">
+  <!-- User profile tabs -->
+  <ul class="nav nav-tabs">
+    <li class="active"><a href="{{ ctx.request.url }}">Recent Posts</a></li>
+  </ul>
+  <!-- /tabs -->
+
 
       <!-- Most recent posts -->
 
@@ -210,10 +214,6 @@
         </ul>
       {% endif %}
 
-    </div> <!-- /.col-6 -->
-
-
-  </div> <!-- /.row -->
 
   <!-- These exist for storing values for ajax interaction -->
   <div id="bio-markup" style="display: none">{{ user.bio_markup }}</div>
