@@ -467,3 +467,9 @@ textarea {
     transform: rotate(45deg);
     -webkit-transform: rotate(45deg);
 }
+
+/* hide/unhide btn. it's on the left of post footer. give it some space*/
+.hide-btn,
+.unhide-btn {
+    margin-left: 10px;
+}

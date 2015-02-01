@@ -261,14 +261,14 @@
             {% if ctx.can(ctx.currUser, 'UNHIDE_POST', post) %}
               <form action="{{ post.url}}/unhide" method="post">
                 <input type="submit" value="Unhide"
-                       class="btn btn-default btn-xs pull-right">
+                       class="btn btn-default btn-xs hide-btn">
               </form>
             {% endif %}
           {% else %}
             {% if ctx.can(ctx.currUser, 'HIDE_POST', post) %}
               <form action="{{ post.url}}/hide" method="post">
                 <input type="submit" value="Hide"
-                       class="btn btn-default btn-xs pull-right">
+                       class="btn btn-default btn-xs unhide-btn">
               </form>
             {% endif %}
           {% endif %}
