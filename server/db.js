@@ -610,6 +610,7 @@ SELECT
   c.title,
   c.created_at,
   c.latest_pm_id,
+  c.pms_count,
   u1.uname "user.uname",
   u1.slug "user.slug",
   json_agg(u2.uname) "participant_unames",
