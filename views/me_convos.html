@@ -55,7 +55,7 @@
                 {{ convo.user.uname -}}
               </a>,
               <abbr class="timeago" title="{{ convo.created_at.toISOString() }}">
-                {{ convo.formattedCreatedAt }}
+                {{ convo.created_at|formatDate }}
               </abbr>
             </div>
             <div>
