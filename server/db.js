@@ -79,28 +79,26 @@ function *query(sql, params) {
 //   });
 //
 function* withTransaction(runner) {
-  while (true) {
-    var connResult = yield pg.connectPromise(config.DATABASE_URL);
-    var client = connResult[0];
-    var done = connResult[1];
+  var connResult = yield pg.connectPromise(config.DATABASE_URL);
+  var client = connResult[0];
+  var done = connResult[1];
 
+  try {
+    yield client.queryPromise('BEGIN');
+    var result = yield runner(client);
+    yield client.queryPromise('COMMIT');
+    done();
+
+    return result;
+  } catch(ex) {
     try {
-      yield client.queryPromise('BEGIN');
-      var result = yield runner(client);
-      yield client.queryPromise('COMMIT');
-      done();
-
-      return result;
+      yield client.queryPromise('ROLLBACK');
+      done();  // Release the rolled back conn
     } catch(ex) {
-      try {
-        yield client.queryPromise('ROLLBACK');
-        done();  // Release the rolled back conn
-      } catch(ex) {
-        done(ex);  // Kill the botched conn
-      }
-
-      throw ex;
+      done(ex);  // Kill the botched conn
     }
+
+    throw ex;
   }
 }
 
