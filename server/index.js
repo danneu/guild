@@ -101,6 +101,20 @@ app.use(function*(next) {
   yield next;
 });
 
+// Remove trailing slashes from url path
+app.use(function*(next) {
+  // If path has more than one character and ends in a slash, then redirect to
+  // the same path without that slash. Note: homepage is "/" which is why
+  // we check for more than 1 char.
+  if (/.+\/$/.test(this.request.path)) {
+    var newPath = this.request.path.slice(0, this.request.path.length-1);
+    debug(newPath);
+    this.response.redirect(newPath + this.request.search);
+  }
+
+  yield next;
+});
+
 // TODO: Since app.proxy === true (we trust X-Proxy-* headers), we want to
 // reject all requests that hit origin. app.proxy should only be turned on
 // when app is behind trusted proxy like Cloudflare.
