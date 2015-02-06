@@ -68,7 +68,7 @@
         <li>
           Joined:
           <abbr class="timeago" title="{{ user.created_at.toISOString() }}">
-            {{ user.formattedCreatedAt }}
+            {{ user.created_at|formatDate }}
           </abbr>
         </li>
         <li>Posts: {{ user.posts_count }}</li>
