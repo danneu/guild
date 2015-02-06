@@ -76,7 +76,7 @@
 
 {% macro renderUserbitLarge(user)  %}
   <div class="user-uname">
-    <a href="{{ post.user.url }}">
+    <a href="{{ user.url }}">
       {{ user.uname }}
     </a>
   </div>
@@ -84,7 +84,7 @@
   {% if user.avatar_url %}
     <div class="post-avatar"
          style="margin-top: 10px;">
-      <img src="{{ post.user.avatar_url}}">
+      <img src="{{ user.avatar_url}}">
     </div>
   {% endif %}
 
