@@ -1,28 +1,33 @@
-{% macro render(currPage, totalPages, baseUrl) %}
+{#
+  urlFragment is an optional hash fragment like #tabs that can be
+  used so that clicking a pagination button auto-scrolls user
+  to <a name="urlFragment"></a> that's expected to exist on destination page
+#}
+{% macro render(currPage, totalPages, baseUrl, urlFragment) %}
   {% if totalPages > 1 %}
     <ul class="pager">
       <li {% if currPage === 1 %} class="disabled" {% endif %}>
-        <a href="{{ baseUrl }}?page=1">First</a>
+        <a href="{{ baseUrl }}?page=1{{ urlFragment }}">First</a>
       </li>
 
       <li {% if currPage === 1 %} class="disabled" {% endif %}>
-        <a href="{{ baseUrl + '?page=' + Math.max(currPage-1, 1) }}">
+        <a href="{{ baseUrl + '?page=' + Math.max(currPage-1, 1) }}{{ urlFragment}}">
           &larr; Prev Page
         </a>
       </li>
 
-      <a style="color: white;" href="{{ baseUrl + '?page=' + currPage }}">
+      <a style="color: white;" href="{{ baseUrl + '?page=' + currPage }}{{ urlFragment }}">
         Page {{ currPage|commafy }} of {{ totalPages|commafy -}}
       </a>
 
       <li {% if currPage === totalPages %} class="disabled" {% endif %}>
-        <a href="{{ baseUrl + '?page=' + Math.min(currPage+1, totalPages) }}">
+        <a href="{{ baseUrl + '?page=' + Math.min(currPage+1, totalPages) }}{{ urlFragment }}">
           Next Page &rarr;
         </a>
       </li>
 
       <li {% if currPage === totalPages %} class="disabled" {% endif %}>
-        <a href="{{ baseUrl }}?page={{ totalPages }}">Last</a>
+        <a href="{{ baseUrl }}?page={{ totalPages }}{{ urlFragment }}">Last</a>
       </li>
 
     </ul>
