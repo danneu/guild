@@ -3,7 +3,7 @@
     "node": "0.11.x"
   },
   "scripts": {
-    "start": "node --harmony --expose-gc ./server",
+    "start": "node --harmony --max-old-space-size=200 ./server",
     "start-dev": "env $(cat .env | xargs) nodemon --harmony --expose-gc ./server | bunyan",
     "start-sandbox": "env $(cat .env | xargs) node --harmony --expose-gc ./server/sandbox | bunyan",
     "start-sandbox-nodemon": "env $(cat .env | xargs) nodemon --harmony --expose-gc ./server/sandbox | bunyan",
