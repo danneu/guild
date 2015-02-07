@@ -1307,3 +1307,25 @@ exports.findAllUnames = function*() {
   var result = yield query(sql);
   return _.pluck(result.rows, 'uname');
 };
+
+exports.findTopicById = function*(topicId) {
+  assert(topicId);
+  var sql = 'SELECT * FROM topics WHERE id = $1';
+  var result = yield query(sql, [topicId]);
+  return result.rows[0];
+};
+
+// props:
+// - title Required String
+exports.updateTopic = function*(topicId, props) {
+  assert(topicId);
+  assert(_.isString(props.title));
+  var sql = m(function() {/*
+    UPDATE topics
+    SET title = $2
+    WHERE id = $1
+    RETURNING *
+  */});
+  var result = yield query(sql, [topicId, props.title]);
+  return result.rows[0];
+};

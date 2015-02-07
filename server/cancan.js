@@ -10,6 +10,14 @@ var assert = require('better-assert');
 exports.can = can;
 function can(user, action, target) {
   switch(action) {
+    case 'UPDATE_TOPIC_TITLE': // target is topic
+      if (!user) return false;
+      // Banned users can't update their old topics
+      if (user.role === 'banned') return false;
+      // Staff can edit all topic titles
+      if (_.contains(['mod', 'smod', 'admin'], user.role)) return true;
+      // Topic owner can edit their own titles
+      return user.id === target.user_id;
     case 'READ_USER_ONLINE_STATUS': // target is user
       // Guests and members can see status if target isn't in invisible mode.
       if (!user) return !target.is_ghost;
@@ -185,6 +193,7 @@ function can(user, action, target) {
       // Users can only read convos they're participants of
       return !!_.findWhere(target.participants, { id: user.id });
     default:
+      debug('Unsupported cancan action: ' + action);
       return false;
   }
 }

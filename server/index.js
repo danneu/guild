@@ -1674,6 +1674,70 @@ app.get('/pms/:id', function*() {
 });
 
 //
+// Show topic edit forum
+// For now it's just used to edit topic title
+// Ensure this comes before /topics/:slug/:xxx so that "edit" is not
+// considered the second param
+//
+app.get('/topics/:slug/edit', function*() {
+  this.assert(this.currUser, 403);
+  var topicId = belt.extractId(this.params.slug);
+  this.assert(topicId, 404);
+  var topic = yield db.findTopicById(topicId);
+  this.assert(topic, 404);
+  topic = pre.presentTopic(topic);
+  this.assertAuthorized(this.currUser, 'UPDATE_TOPIC_TITLE', topic);
+
+  yield this.render('edit_topic', {
+    ctx: this,
+    topic: topic
+  });
+});
+
+// Update topic
+// Params:
+// - title Required
+app.put('/topics/:slug/edit', function*() {
+  // Authorization
+  this.assert(this.currUser, 403);
+  var topicId = belt.extractId(this.params.slug);
+  this.assert(topicId, 404);
+  var topic = yield db.findTopicById(topicId);
+  this.assert(topic, 404);
+  topic = pre.presentTopic(topic);
+  this.assertAuthorized(this.currUser, 'UPDATE_TOPIC_TITLE', topic);
+
+  // Parameter validation
+  this.checkBody('title')
+    .notEmpty('Title required')
+    .isLength(config.MIN_TOPIC_TITLE_LENGTH,
+              config.MAX_TOPIC_TITLE_LENGTH,
+              'Title must be ' +
+              config.MIN_TOPIC_TITLE_LENGTH + ' - ' +
+              config.MAX_TOPIC_TITLE_LENGTH + ' chars long');
+  if (this.errors) {
+    this.flash = {
+      message: ['danger', belt.joinErrors(this.errors)],
+      params: this.request.body
+    };
+    this.response.redirect(topic.url + '/edit');
+    return;
+  }
+
+  // Validation succeeded, so update topic
+  var topic2 = yield db.updateTopic(topic.id, {
+    title: this.request.body.title
+  });
+  topic2 = pre.presentTopic(topic2);
+
+  this.flash = {
+    message: ['success', 'Topic title updated']
+  };
+
+  this.response.redirect(topic2.url);
+});
+
+//
 // Canonical show topic
 //
 

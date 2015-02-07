@@ -1,0 +1,54 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="{{ topic.url }}">{{ topic.title }}</a></li>
+    <li class="active">Edit Topic</li>
+  </ol>
+
+
+  <div class="page-header" style="border-color: #000">
+    <h3>Edit {{ topic.title }}</h3>
+  </div>
+
+  <form action="{{ topics.url }}" method="post">
+    <input name="_method" type="hidden" value="put">
+
+    <div class="panel panel-default no-select" style="border-color: #000">
+      <!--
+          PANEL BODY
+          -->
+      <div class="panel-body">
+
+        <div class="form-group">
+          <label for="title-input">
+            Title:
+          </label>
+          <input id="title-input" type="text" name="title"
+                 class="form-control"
+                 value="{{ topic.title }}">
+        </div>
+
+      </div> <!-- /.panel-body -->
+      <!--
+          PANEL FOOTER
+          -->
+      <div class="panel-footer" style="border-color: #000">
+        <div class="text-right">
+          <a href="{{ topic.url }}" class="btn btn-default">Cancel</a>
+          <input id="topic-submit" type="submit" value="Update Topic"
+                 class="btn btn-primary">
+        </div>
+      </div> <!-- /.panel-footer -->
+    </div> <!-- /.panel -->
+  </form>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Focus title-input, but put cursor at end of value
+  $('#title-input').val($('#title-input').val()).focus();
+</script>
+{% endblock %}

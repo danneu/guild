@@ -25,6 +25,12 @@
       {% if topic.is_closed %}
         <span class="label label-default">Closed</span>
       {% endif %}
+
+      {% if ctx.can(ctx.currUser, 'UPDATE_TOPIC_TITLE', topic) %}
+        <small class="pull-right">
+          <a href="{{ topic.url }}/edit">Edit</a>
+        </small>
+      {% endif %}
     </h2>
 
     <!-- Topic state buttons -->
