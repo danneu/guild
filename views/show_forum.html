@@ -191,7 +191,9 @@
   </script>
   <script>
     $(function() {
-      $('#reply-input').bbcode();
+      $('#reply-input').bbcode({
+        charLimit: {{ ctx.config.MAX_POST_LENGTH }}
+      });
     });
   </script>
 {% endblock %}
