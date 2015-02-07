@@ -64,7 +64,7 @@ function replaceMentions(text) {
   function slugifyUname(uname) {
       return uname.trim().toLowerCase().replace(/ /g, '-');
   }
-  return text.replace(/\[@([a-z0-9 ]+)\]/ig, function(_, p1) {
+  return text.replace(/\[@([a-z0-9_\- ]+)\]/ig, function(_, p1) {
     var uname = p1.trim();
     var path = '/users/' + slugifyUname(uname);
     if (isBrowser) {
