@@ -107,4 +107,14 @@
   <!-- Online status -->
 
   {{ onlineStatus(user) }}
+
+  <!-- User gylphs -->
+
+  {% if user.bio_markup %}
+    <div class="user-glyphs">
+      <a href="{{ user.url }}#bio">
+        <img src="/img/bio1.gif" width="22" height="12">
+      </a>
+    </div>
+  {% endif %}
 {% endmacro %}
