@@ -1,6 +1,12 @@
 var w;
 (function( $ ){
 
+  // commafy(10) -> 10
+  // commafy(1000000) -> 1,000,000
+  function commafy(n) {
+    return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+
   var buttons = {
     'bb-b': {
       name: 'bb-b',
@@ -221,6 +227,13 @@ var w;
   $.fn.bbcode = function(opts) {
     var $this = $(this);
 
+    opts = opts || {};
+
+    if (!opts.charLimit)
+      console.error('charLimit not set on editor');
+
+    var charLimit = parseInt(opts.charLimit);
+
     // The Markdown editor instance will be stored in $M so I can access
     // its state easily from anywhere in this module.
     // I assign it in the editor's "show" event when it loads which seems to
@@ -239,6 +252,10 @@ var w;
       resize: 'vertical',
       height: 350,
       iconlibrary: 'fa',
+      onChange: function(e) {
+        var count = e.getContent().length;
+        e.$editor.find('.char-count .current').text(commafy(count));
+      },
       onShow: function(e) {
         console.log('show');
         $M = e;
@@ -291,6 +308,10 @@ var w;
       ],
       footer: '<div class="bbcode-editor-mode">You are in Preview Mode</div>'+
               '<div class="bbcode-errors">'+
+              '  <div class="char-count text-right text-muted">'+
+              '    <span class="current">--</span>'+
+              '    / <span class="limit">'+ (charLimit ? commafy(charLimit) : '--') +'</span> chars'+
+              '  </div>'+
               '  <p>Click the "Preview" button to check for errors</p>'+
               '  <ul style="color: red;"></ul>'+
               '</div>'

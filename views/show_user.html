@@ -236,6 +236,7 @@
       );
       $('.user-bio').append($editor);
       $editor.bbcode({
+        charLimit: {{ ctx.config.MAX_BIO_LENGTH }},
         savable: true,
         onSave: function(e) {
           console.log('Saving');

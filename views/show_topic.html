@@ -295,6 +295,7 @@
     <ul>
       <li>Before submitting your post, it's wise to copy it somewhere so that you don't lose it in the event of server error.</li>
       <li>Check out the BBCode Cheatsheet below the editor. It's pretty basic for now, but I will add more BBCode over time. Check the cheatsheet every once in a while for updates.</li>
+      <li>Post limit: {{ ctx.config.MAX_POST_LENGTH|commafy }} chars</li>
     </ul>
     <form method="post" action="{{ topic.url }}/posts" id="new-post">
       <input type="hidden" name="post-type" value="{{ postType }}">
@@ -360,7 +361,9 @@ $('#new-reply').submit(function() {
     // Turn the new post editor into a bbcode editor
 
     $(function() {
-      $('#markup-input').bbcode();
+      $('#markup-input').bbcode({
+        charLimit: {{ ctx.config.MAX_POST_LENGTH }}
+      });
     });
   </script>
 
@@ -450,6 +453,7 @@ $(function() {
 
         $post_editor.bbcode({
           savable: true,
+          charLimit: {{ ctx.config.MAX_POST_LENGTH }},
           onSave: function(e) {
             //
             $success_btn = $post_body.find('.btn-success');

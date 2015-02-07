@@ -51,6 +51,7 @@
 
             <div class="form-group">
                 <label class="control-label" for="text-input">Message:</label>
+                <p>{{ ctx.config.MAX_POST_LENGTH|commafy }} char limit</p>
                 <textarea id="text-input"
                           rows="10"
                           placeholder="Click here and begin writing"
@@ -89,6 +90,8 @@
   </script>
 <script>
   $('#to-input').focus();
-  $('#text-input').bbcode();
+  $('#text-input').bbcode({
+    charLimit: {{ ctx.config.MAX_POST_LENGTH }}
+  });
 </script>
 {% endblock %}

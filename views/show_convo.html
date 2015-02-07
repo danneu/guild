@@ -157,6 +157,7 @@
   <ul>
     <li>Before submitting your post, it's wise to copy it somewhere so that you don't lose it in the event of server error.</li>
     <li>Check out the BBCode Cheatsheet below the editor. It's pretty basic for now, but I will add more BBCode over time. Check the cheatsheet every once in a while for updates.</li>
+    <li>Post limit: {{ ctx.config.MAX_POST_LENGTH|commafy }} chars</li>
   </ul>
   <form id="reply-form" role="form" method="post" action="{{ convo.url }}/pms">
     <div class="form-group">
@@ -195,7 +196,9 @@
   </script>
   <script>
     $(function() {
-      $('#reply-input').bbcode();
+      $('#reply-input').bbcode({
+        charLimit: {{ ctx.config.MAX_POST_LENGTH }}
+      });
     });
   </script>
 
@@ -279,6 +282,7 @@ $(function() {
         }
         $post_body.append($post_editor);
         $post_editor.bbcode({
+          charLimit: {{ ctx.config.MAX_POST_LENGTH }},
           savable: true,
           onSave: function(e) {
             //
