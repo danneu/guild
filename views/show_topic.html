@@ -238,6 +238,22 @@
         <!-- Panel footer -->
         <div class="panel-footer clearfix"
              style="background-color: #2E2C2C; border-radius: 0; border: 0">
+          <!-- Hide button -->
+          {% if post.is_hidden %}
+            {% if ctx.can(ctx.currUser, 'UNHIDE_POST', post) %}
+              <form action="{{ post.url}}/unhide" method="post">
+                <input type="submit" value="Unhide"
+                       class="btn btn-default btn-xs hide-btn pull-left">
+              </form>
+            {% endif %}
+          {% else %}
+            {% if ctx.can(ctx.currUser, 'HIDE_POST', post) %}
+              <form action="{{ post.url}}/hide" method="post">
+                <input type="submit" value="Hide"
+                       class="btn btn-default btn-xs unhide-btn pull-left">
+              </form>
+            {% endif %}
+          {% endif %}
           <!-- IP address -->
           {% if ctx.can(ctx.currUser, 'READ_USER_IP', post.user) %}
             <div class="pull-left"
@@ -261,22 +277,6 @@
                style="margin-left: 5px;"
                post-id={{ post.id }}
               >Edit</a>
-          {% endif %}
-          <!-- Hide button -->
-          {% if post.is_hidden %}
-            {% if ctx.can(ctx.currUser, 'UNHIDE_POST', post) %}
-              <form action="{{ post.url}}/unhide" method="post">
-                <input type="submit" value="Unhide"
-                       class="btn btn-default btn-xs hide-btn">
-              </form>
-            {% endif %}
-          {% else %}
-            {% if ctx.can(ctx.currUser, 'HIDE_POST', post) %}
-              <form action="{{ post.url}}/hide" method="post">
-                <input type="submit" value="Hide"
-                       class="btn btn-default btn-xs unhide-btn">
-              </form>
-            {% endif %}
           {% endif %}
         </div> <!-- /.panel-footer -->
       </div> <!-- /.panel -->
