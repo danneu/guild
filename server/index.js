@@ -31,7 +31,6 @@ var debug = require('debug')('app:index');
 var assert = require('better-assert');
 var swig = require('swig');
 var co = require('co');
-var bunyan = require('bunyan');
 var uuid = require('node-uuid');
 var coParallel = require('co-parallel');
 // 1st party
@@ -40,7 +39,6 @@ var pre = require('./presenters');
 var middleware = require('./middleware');
 var cancan = require('./cancan');
 var emailer = require('./emailer');
-var log = require('./logger');
 var cache = require('./cache')();
 var belt = require('./belt');
 var bbcode = require('./bbcode');
