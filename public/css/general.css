@@ -497,3 +497,11 @@ textarea {
     width: 100%;
     z-index: 1;
 }
+
+#tagline {
+    color: #888;
+    font-size: 1.5em;
+    text-align: center;
+    margin-top: 0px;
+    position: relative;
+}
