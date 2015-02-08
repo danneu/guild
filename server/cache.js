@@ -75,7 +75,13 @@ module.exports = function() {
 
   // Every 10 seconds
   cache.every(1000 * 10, function*() {
-    var result = yield db.getForumViewerCounts();
+    var result;
+    try {
+      result = yield db.getForumViewerCounts();
+    } catch(ex) {
+      console.error('Error', ex, ex.stack);
+      result = { users: [], guests: [] };
+    }
     // Map of ForumId->Int (includes all ForumIds in database)
     this.set('forum-viewer-counts', result);
   });
