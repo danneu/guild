@@ -10,7 +10,7 @@ exports.RECAPTCHA_SITESECRET = process.env.RECAPTCHA_SITESECRET;
 // Various configurable forum settings
 exports.MIN_TOPIC_TITLE_LENGTH = parseInt(process.env.MIN_TOPIC_TITLE_LENGTH, 10) || 3;
 exports.MAX_TOPIC_TITLE_LENGTH = parseInt(process.env.MAX_TOPIC_TITLE_LENGTH, 10) || 150;
-exports.MIN_POST_LENGTH = parseInt(process.env.MIN_POST_LENGTH, 10) || 3;
+exports.MIN_POST_LENGTH = parseInt(process.env.MIN_POST_LENGTH, 10) || 1;
 exports.MAX_POST_LENGTH = parseInt(process.env.MAX_POST_LENGTH, 10) || 150000;
 exports.MIN_UNAME_LENGTH = parseInt(process.env.MIN_UNAME_LENGTH, 10) || 2;
 exports.MAX_UNAME_LENGTH = parseInt(process.env.MAX_UNAME_LENGTH, 10) || 15;
