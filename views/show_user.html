@@ -73,7 +73,7 @@
         </li>
         <li>Posts: {{ user.posts_count }}</li>
         {% if ctx.can(ctx.currUser, 'READ_USER_PM_SENT_COUNT', user) %}
-          <li>PMs sent: {{ user.pms_count }}</li>
+          <li>PMs: {{ user.pms_count }}</li>
         {% endif %}
       </ul>
 
