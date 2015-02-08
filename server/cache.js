@@ -67,7 +67,9 @@ module.exports = function() {
   cache.every(1000 * 60 * 5, function*() {
     var trie = new RegexTrie();
     var unames = yield db.findAllUnames();
-    trie.add(unames);
+    trie.add(unames.map(function(uname) {
+      return uname.toLowerCase();
+    }));
     this.set('uname-regex-trie', trie);
   });
 

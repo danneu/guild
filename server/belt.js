@@ -56,7 +56,6 @@ exports.truncate = exports.makeTruncate('...');
 exports.truncateStringVals = function(obj) {
   var out = {};
   for (var k in obj) {
-    console.log(k)
     if (obj.hasOwnProperty(k)) {
       var v = obj[k];
       if (_.isString(v))
@@ -240,4 +239,97 @@ var slugify = exports.slugify = function() {
 var extractId = exports.extractId = function(slug) {
   var n = parseInt(slug, 10);
   return _.isNaN(n) ? null : n;
+};
+
+////////////////////////////////////////////////////////////
+
+// Returns Array of uniq lowecase unames that were quote-mentioned in the string
+// A [@Mention] is only extracted if it's not nested inside a quote.
+exports.extractMentions = function(str, unameToReject) {
+  var start = Date.now();
+  debug('[extractMentions]');
+  var unames = {};
+  var re = /\[(quote)[^\]]*\]|\[(\/quote)\]|\[@([a-z0-9_\- ]+)\]/gi;
+  var quoteStack = [];
+
+  // Stop matching if we've hit notification limit for the post
+  var limitRemaining = config.MENTIONS_PER_POST;
+  assert(_.isNumber(limitRemaining));
+
+  while(true) {
+    var match = re.exec(str);
+    if (limitRemaining > 0 && match) {
+      // match[1] is undefined or 'quote'
+      // match[2] is undefined or '/quote'
+      // match[3] is undefined or uname
+      if (match[1]) {  // Open quote
+        quoteStack.push('quote');
+      } else if (match[2]) {  // Close quote
+        quoteStack.pop();
+      } else if (match[3]) {  // uname
+        var uname = match[3].toLowerCase();
+        if (quoteStack.length === 0 && uname !== unameToReject.toLowerCase()) {
+          unames[uname] = true;
+          limitRemaining--;
+          debug('limitRemaining: %s', limitRemaining);
+        }
+      }
+    } else {
+      break;
+    }
+  }
+
+  var ret = Object.keys(unames);
+
+  var diff = Date.now() - start;
+  debug('[PERF] extractMentions executed in %s ms', diff);
+
+  return ret;
+};
+
+// Returns array of uniq lowercase unames that were quote-mentioned
+// i.e. [quote=@some user]
+// Only top-level quote-mentions considered
+exports.extractQuoteMentions = function(str, unameToReject) {
+  var start = Date.now();
+  debug('[extractQuoteMentions]');
+  var unames = {};
+  var re = /\[(quote)=?@?([a-z0-9_\- ]+)\]|\[(\/quote)\]/gi;
+  var quoteStack = [];
+
+  // Stop matching if we've hit notification limit for the post
+  var limitRemaining = config.MENTIONS_PER_POST;
+  assert(_.isNumber(limitRemaining));
+
+  while(true) {
+    var match = re.exec(str);
+    if (limitRemaining > 0 && match) {
+      // match[1] is undefined or 'quote'
+      // match[2] is undefined or uname
+      // match[3] is undefined or /uname
+      if (match[2]) {  // Uname
+        var uname = match[2].toLowerCase();
+        if (quoteStack.length === 0 && uname !== unameToReject.toLowerCase()) {
+          unames[uname] = true;
+          limitRemaining--;
+          debug('limitRemaining: %s', limitRemaining);
+        }
+      }
+      if (match[1]) {  // Open quote
+        quoteStack.push('quote');
+      }
+      if (match[3]) {  // Close quote
+        quoteStack.pop();
+      }
+    } else {
+      break;
+    }
+  }
+
+  var ret = Object.keys(unames);
+
+  var diff = Date.now() - start;
+  debug('[PERF] extractMentions executed in %s ms', diff);
+
+  return ret;
 };

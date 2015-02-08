@@ -906,14 +906,13 @@ app.post('/topics/:topicSlug/posts', function*() {
               config.MAX_POST_LENGTH,
               'Post must be between ' +
               config.MIN_POST_LENGTH + ' and ' +
-              config.MAX_POST_LENGTH + ' chars long');
+              config.MAX_POST_LENGTH + ' chars long. Yours was ' +
+              this.request.body.markup.length);
 
   if (this.errors) {
-    this.flash = {
-      message: ['danger', belt.joinErrors(this.errors)],
-      params: this.request.body
-    };
-    this.response.redirect('back');
+    // Can't store post in flash params because cookie limit is like 4kb
+    this.body = belt.joinErrors(this.errors) +
+      ' -- Press the back button and try again.';
     return;
   }
 
@@ -929,7 +928,6 @@ app.post('/topics/:topicSlug/posts', function*() {
   // Render the bbcode
   var html = bbcode(this.request.body.markup);
 
-  // TODO: Validation
   var post = yield db.createPost({
     userId: this.currUser.id,
     ipAddress: this.request.ip,
@@ -940,6 +938,33 @@ app.post('/topics/:topicSlug/posts', function*() {
     isRoleplay: topic.forum.is_roleplay
   });
   post = pre.presentPost(post);
+
+  // Send MENTION and QUOTE notifications
+  var results = yield [
+    db.parseAndCreateMentionNotifications({
+      fromUser: this.currUser,
+      markup: this.request.body.markup,
+      post_id: post.id,
+      topic_id: post.topic_id
+    }),
+    db.parseAndCreateQuoteNotifications({
+      fromUser: this.currUser,
+      markup: this.request.body.markup,
+      post_id: post.id,
+      topic_id: post.topic_id
+    })
+  ];
+
+  var mentionNotificationsCount = results[0].length;
+  var quoteNotificationsCount = results[1].length;
+
+  this.flash = {
+    message: [
+      'success',
+      util.format('Post created. Mentions sent: %s, Quotes sent: %s',
+                  mentionNotificationsCount, quoteNotificationsCount)]
+  };
+
   this.response.redirect(post.url);
 });
 
@@ -1646,6 +1671,17 @@ app.get('/posts/:postId', function*() {
                   '?page=' +
                   Math.ceil((post.idx + 1) / config.POSTS_PER_PAGE) +
                   '#post-' + post.id;
+
+  if (this.currUser) {
+    // Delete notifications related to this post
+    var notificationsDeletedCount = yield db.deleteNotificationsForPostId(
+      this.currUser.id,
+      this.params.postId
+    );
+    // Update the stale user
+    this.currUser.notifications_count -= notificationsDeletedCount;
+  }
+
   this.response.redirect(redirectUrl);
 });
 
@@ -1860,6 +1896,21 @@ app.get('/staff', function*() {
     mods: _.filter(staffUsers, { role: 'mod' }),
     smods: _.filter(staffUsers, { role: 'smod' }),
     admins: _.filter(staffUsers, { role: 'admin' })
+  });
+});
+
+//
+// GET /me/notifications
+// List currUser's notifications
+//
+app.get('/me/notifications', function*() {
+  this.assert(this.currUser, 404);
+  var notifications = yield db.findReceivedNotificationsForUserId(this.currUser.id);
+  notifications = notifications.map(pre.presentNotification);
+
+  yield this.render('me_notifications', {
+    ctx: this,
+    notifications: notifications
   });
 });
 

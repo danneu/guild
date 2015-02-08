@@ -101,24 +101,28 @@ CREATE TRIGGER update_user_posts_count_trigger
 
 CREATE OR REPLACE function update_user_notifications_count() RETURNS trigger AS
 $$
-  var q, delta = 0, convoDelta = 0;
+  var q, delta = 0, convoDelta = 0, mentionDelta = 0, quoteDelta = 0;
   var notification = OLD || NEW;
   var toUserId = notification.to_user_id;
   if (TG_OP === 'INSERT') {
     delta++;
-    if (notification.type === 'CONVO')
-      convoDelta++;
+    if (notification.type === 'CONVO') convoDelta++;
+    if (notification.type === 'MENTION') mentionDelta++;
+    if (notification.type === 'QUOTE') quoteDelta++;
   }
   if (TG_OP === 'DELETE') {
     delta--;
-    if (notification.type === 'CONVO')
-      convoDelta--;
+    if (notification.type === 'CONVO') convoDelta--;
+    if (notification.type === 'MENTION') mentionDelta--;
+    if (notification.type === 'QUOTE') quoteDelta--;
   }
-  q = 'UPDATE users                                                   '+
-      'SET notifications_count = notifications_count + $2,            '+
-      '    convo_notifications_count = convo_notifications_count + $3 '+
-      'WHERE id = $1                                                  ';
-  plv8.execute(q, [toUserId, delta, convoDelta]);
+  q = 'UPDATE users                                                          '+
+      'SET notifications_count = notifications_count + $2,                   '+
+      '    convo_notifications_count = convo_notifications_count + $3,       '+
+      '    mention_notifications_count = mention_notifications_count + $4,   '+
+      '    quote_notifications_count = quote_notifications_count + $5        '+
+      'WHERE id = $1                                                         ';
+  plv8.execute(q, [toUserId, delta, convoDelta, mentionDelta, quoteDelta]);
 $$ LANGUAGE 'plv8';
 
 DROP TRIGGER IF EXISTS update_user_notifications_count_trigger ON notifications;

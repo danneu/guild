@@ -1,0 +1,71 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li>Notifications</li>
+  </ol>
+
+  <div class="page-header" style="border-color: #000">
+    <form action="/me/notifications" method="post" class="pull-right">
+      <input type="hidden" name="_method" value="delete">
+      <input type="submit" value="Clear All Notifications"
+             class="btn btn-default btn-xs">
+    </form>
+    <h3>My Notifications</h3>
+  </div>
+
+  {% if notifications.length === 0 %}
+    <div class="well">
+      You have no notifications, yet.
+    </div>
+  {% endif %}
+
+  <ul>
+    {% for n in notifications %}
+      <li>
+        <abbr class="timeago" title="{{ n.created_at.toISOString() }}">
+          {{ n.created_at|formatDate }}
+        </abbr>
+        {% if n.type === 'MENTION' %}
+          <p>
+            <a href="/users/{{ n.from_user.slug }}">{{ n.from_user.uname }}</a>
+            mentioned you in a topic: <a href="{{ n.post.url }}">{{ n.topic.title }}</a>
+          </p>
+          <div class="panel panel-default">
+            <div class="panel-body" style="max-height: 100px; overflow: auto;">
+              {{ n.post.html|safe }}
+            </div>
+          </div>
+        {% elif n.type === 'QUOTE' %}
+          <p>
+            <a href="/users/{{ n.from_user.slug }}">{{ n.from_user.uname }}</a>
+            quoted you in a topic: <a href="{{ n.post.url }}">{{ n.topic.title }}</a>
+          </p>
+          <div class="panel panel-default">
+            <div class="panel-body" style="max-height: 100px; overflow: auto;">
+              {{ n.post.html|safe }}
+            </div>
+          </div>
+        {% elif n.type === 'PM' %}
+          <p>
+            Private conversation
+            <a href="{{ n.convo.url }}">{{ n.convo.title }}</a>
+            has {{ n.count }} unread
+            {% if n.count === 1 %} message {% else %} messages {% endif %}
+          </p>
+        {% elif n.type === 'CONVO' %}
+          <p>
+            <a href="/users/{{ n.from_user.slug }}">{{ n.from_user.uname }}</a>
+            started a new private convo with you:
+            <a href="/convos/{{ n.convo_id }}">{{ n.convo_title }}</a>
+          </p>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}

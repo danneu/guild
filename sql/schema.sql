@@ -48,8 +48,10 @@ CREATE TABLE users (
   bio_markup     text      NULL,
   bio_html       text      NULL,
   -- Notifications
-  notifications_count int NOT NULL  DEFAULT 0,
-  convo_notifications_count int NOT NULL  DEFAULT 0
+  notifications_count         int NOT NULL  DEFAULT 0,
+  convo_notifications_count   int NOT NULL  DEFAULT 0
+  mention_notifications_count int NOT NULL  DEFAULT 0,
+  quote_notifications_count   int NOT NULL  DEFAULT 0
 );
 
 CREATE UNIQUE INDEX unique_username ON users USING btree (lower(uname));
@@ -210,7 +212,7 @@ CREATE TABLE convos_participants (
 -- Notifications
 --
 
-CREATE TYPE notification_type AS ENUM ('MENTION', 'CONVO');
+CREATE TYPE notification_type AS ENUM ('MENTION', 'QUOTE', 'CONVO');
 
 CREATE TABLE notifications (
   id           serial PRIMARY KEY,

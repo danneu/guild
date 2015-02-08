@@ -112,6 +112,16 @@
                   Mod
                 </a>
               {% endif %}
+
+              <a href="/me/notifications" class="btn btn-default navbar-btn">
+                <span class="glyphicon glyphicon-bell"></span>
+                {% if ctx.currUser.notifications_count > 0 %}
+                  <div class="badge">
+                    {{ ctx.currUser.notifications_count|commafy }}
+                  </div>
+                {% endif %}
+              </a>
+
               <a href="/users/{{ ctx.currUser.id }}"
                  class="btn btn-default navbar-btn">
                 <span class="glyphicon glyphicon-user"></span>

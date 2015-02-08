@@ -16,6 +16,12 @@ exports.MIN_UNAME_LENGTH = parseInt(process.env.MIN_UNAME_LENGTH, 10) || 2;
 exports.MAX_UNAME_LENGTH = parseInt(process.env.MAX_UNAME_LENGTH, 10) || 15;
 exports.MAX_BIO_LENGTH = parseInt(process.env.MAX_BIO_LENGTH) || 3000;
 
+// These are limits on the number of notifications a user can generate from a
+// single post. If the limit of MENTIONS_PER_POST is 10 and a user mentions 15
+// people, then only the first 10 will trigger notifications.
+exports.MENTIONS_PER_POST = parseInt(process.env.MENTIONS_PER_POST) || 10;
+exports.QUOTES_PER_POST = parseInt(process.env.QUOTES_PER_POST) || 10;
+
 // Determines the link in password reset token email
 exports.HOST = process.env.HOST || ('http://localhost:' + exports.PORT);
 // Required for sending emails

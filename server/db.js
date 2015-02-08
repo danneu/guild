@@ -8,6 +8,7 @@ var m = require('multiline');
 var _ = require('lodash');
 var assert = require('better-assert');
 var debug = require('debug')('app:db');
+var coParallel = require('co-parallel');
 // 1st party
 var config = require('./config');
 var belt = require('./belt');
@@ -345,6 +346,8 @@ WHERE id = $1
   return result.rows[0] || null;
 }
 
+// Returns an array of Users
+// (Case insensitive uname lookup)
 exports.findUsersByUnames = wrapTimer(findUsersByUnames);
 function* findUsersByUnames(unames) {
   assert(_.isArray(unames));
@@ -1328,4 +1331,158 @@ exports.updateTopic = function*(topicId, props) {
   */});
   var result = yield query(sql, [topicId, props.title]);
   return result.rows[0];
+};
+
+////////////////////////////////////////////////////////////
+
+exports.createMentionNotification = function*(opts) {
+  assert(opts.from_user_id);
+  assert(opts.to_user_id);
+  assert(opts.post_id);
+  assert(opts.topic_id);
+  var sql = m(function() {/*
+    INSERT INTO notifications
+    (type, from_user_id, to_user_id, topic_id, post_id)
+    VALUES ('MENTION', $1, $2, $3, $4)
+    RETURNING *
+  */});
+  var result = yield query(sql, [
+    opts.from_user_id,  // $1
+    opts.to_user_id,  // $2
+    opts.topic_id, // $3
+    opts.post_id // $4
+  ]);
+  return result.rows[0];
+};
+
+exports.parseAndCreateMentionNotifications = function*(props) {
+  debug('[parseAndCreateMentionNotifications] Started...');
+  assert(props.fromUser.id);
+  assert(props.fromUser.uname);
+  assert(props.markup);
+  assert(props.post_id);
+  assert(props.topic_id);
+
+  // Array of lowercase unames that don't include fromUser
+  var mentionedUnames = belt.extractMentions(props.markup, props.fromUser.uname);
+  mentionedUnames = _.take(mentionedUnames, config.MENTIONS_PER_POST);
+
+  // Ensure these are users
+  var mentionedUsers = yield exports.findUsersByUnames(mentionedUnames);
+
+  var thunks = mentionedUsers.map(function(toUser) {
+    return exports.createMentionNotification({
+      from_user_id: props.fromUser.id,
+      to_user_id:   toUser.id,
+      post_id:      props.post_id,
+      topic_id:     props.topic_id
+    });
+  });
+
+  var results = yield coParallel(thunks, 5);
+
+  return results;
+};
+
+exports.createQuoteNotification = function*(opts) {
+  assert(opts.from_user_id);
+  assert(opts.to_user_id);
+  assert(opts.post_id);
+  assert(opts.topic_id);
+  var sql = m(function() {/*
+    INSERT INTO notifications
+    (type, from_user_id, to_user_id, topic_id, post_id)
+    VALUES ('QUOTE', $1, $2, $3, $4)
+    RETURNING *
+  */});
+  var result = yield query(sql, [
+    opts.from_user_id,  // $1
+    opts.to_user_id,  // $2
+    opts.topic_id, // $3
+    opts.post_id // $4
+  ]);
+  return result.rows[0];
+};
+
+// Keep in sync with db.parseAndCreateMentionNotifications
+exports.parseAndCreateQuoteNotifications = function*(props) {
+  debug('[parseAndCreateQuoteNotifications] Started...');
+  assert(props.fromUser.id);
+  assert(props.fromUser.uname);
+  assert(props.markup);
+  assert(props.post_id);
+  assert(props.topic_id);
+
+  // Array of lowercase unames that don't include fromUser
+  var mentionedUnames = belt.extractQuoteMentions(props.markup, props.fromUser.uname);
+  mentionedUnames = _.take(mentionedUnames, config.QUOTES_PER_POST);
+
+  // Ensure these are users
+  var mentionedUsers = yield exports.findUsersByUnames(mentionedUnames);
+
+  var thunks = mentionedUsers.map(function(toUser) {
+    return exports.createQuoteNotification({
+      from_user_id: props.fromUser.id,
+      to_user_id:   toUser.id,
+      post_id:      props.post_id,
+      topic_id:     props.topic_id
+    });
+  });
+
+  var results = yield coParallel(thunks, 5);
+
+  return results;
+};
+
+exports.findReceivedNotificationsForUserId = function*(toUserId) {
+  var sql = m(function() {/*
+SELECT
+	n.*,
+	to_json(u.*) "from_user",
+  CASE
+    WHEN n.convo_id IS NOT NULL
+    THEN
+			json_build_object (
+				'id', n.convo_id,
+				'title', c.title
+			)
+  END "convo",
+  CASE
+    WHEN n.topic_id IS NOT NULL
+    THEN
+			json_build_object (
+				'id', n.topic_id,
+				'title', t.title
+			)
+  END "topic",
+  CASE
+    WHEN n.post_id IS NOT NULL
+    THEN
+			json_build_object (
+				'id', n.post_id,
+        'html', p.html
+			)
+  END "post"
+FROM notifications n
+JOIN users u ON n.from_user_id = u.id
+LEFT OUTER JOIN convos c ON n.convo_id = c.id
+LEFT OUTER JOIN topics t ON n.topic_id = t.id
+LEFT OUTER JOIN posts p ON n.post_id = p.id
+WHERE n.to_user_id = $1
+ORDER BY n.id DESC
+  */});
+  var result = yield query(sql, [toUserId]);
+  return result.rows;
+};
+
+// Returns how many rows deleted
+exports.deleteNotificationsForPostId = function*(toUserId, postId) {
+  assert(toUserId);
+  assert(postId);
+  var sql = m(function() {/*
+    DELETE FROM notifications
+    WHERE to_user_id = $1 AND post_id = $2
+  */});
+  var result = yield query(sql, [toUserId, postId]);
+  return result.rowCount;
 };

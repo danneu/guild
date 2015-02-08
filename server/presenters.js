@@ -69,13 +69,11 @@ function presentUser(user) {
 
 exports.presentTopic = presentTopic;
 function presentTopic(topic) {
-  topic.url = '/topics/' + topic.id;
   topic.url = '/topics/' + belt.slugify(topic.id, topic.title);
 
   // created_at will be string when embedded in query result via to_json
   if (_.isString(topic.created_at))
     topic.created_at = new Date(topic.created_at);
-  topic.formattedCreatedAt = formatDate(topic.created_at);
 
   // Subs
   topic.subscriptionUrl = '/me/subscriptions/' + topic.id;
@@ -138,7 +136,6 @@ exports.presentPost = presentPost;
 function presentPost(post) {
   if (_.isString(post.created_at))
     post.created_at = new Date(post.created_at);
-  post.formattedCreatedAt = formatDate(post.created_at);
   // updated_at is null if post hasn't been edited
   if (_.isString(post.updated_at))
     post.updated_at = new Date(post.updated_at);
@@ -166,3 +163,14 @@ function presentPm(pm) {
     pm.convo = presentConvo(pm.convo);
   return pm;
 }
+
+exports.presentNotification = function(n) {
+  if (n.topic)
+    n.topic = exports.presentTopic(n.topic);
+  if (n.convo)
+    n.convo = exports.presentConvo(n.convo);
+  if (n.post)
+    n.post = exports.presentPost(n.post);
+
+  return n;
+};
