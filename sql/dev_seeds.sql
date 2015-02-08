@@ -1,14 +1,14 @@
 ---- Users
-INSERT INTO users (id, uname, email, digest, role)
+INSERT INTO users (id, uname, slug, email, digest, role)
 VALUES
 -- The password for seed users is 'secret'
-(1, 'foo', 'foo@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'member'),
-(2, 'bar', 'bar@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'member'),
-(3, 'fuz', 'fuz@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'member'),
-(4, 'admin', 'admin@example.com',  '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'admin'),
-(5, 'mod', 'mod@example.com',  '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'mod'),
-(6, 'smod', 'smod@example.com',  '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'smod'),
-(7, 'banned', 'banned@example.com',  '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'banned')
+(1, 'foo', 'foo', 'foo@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'member'),
+(2, 'bar', 'bar', 'bar@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'member'),
+(3, 'fuz', 'fuz', 'fuz@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'member'),
+(4, 'admin', 'admin', 'admin@example.com',  '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'admin'),
+(5, 'mod', 'mod', 'mod@example.com',  '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'mod'),
+(6, 'smod', 'smod', 'smod@example.com',  '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'smod'),
+(7, 'banned', 'banned', 'banned@example.com',  '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'banned')
 ;
 SELECT setval('users_id_seq'::regclass, (SELECT MAX(id) FROM users));
 
@@ -31,14 +31,13 @@ VALUES
 SELECT setval('convos_id_seq'::regclass, (SELECT MAX(id) FROM convos));
 
 --- Pms
-INSERT INTO pms (convo_id, user_id, text)
+INSERT INTO pms (convo_id, user_id, markup, html)
 VALUES
-(1, 1, 'hey, self'),
-(2, 1, 'hey, bar'),
-(2, 2, 'hey, foo'),
-(3, 1, 'hey, guys'),
-(3, 2, 'hey, guys'),
-(3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys'), (3, 3, 'hey, guys')
+(1, 1, 'hey, self', 'hey, self'),
+(2, 1, 'hey, bar', 'hey, bar'),
+(2, 2, 'hey, foo', 'hey, foo'),
+(3, 1, 'hey, guys', 'hey, guys'),
+(3, 2, 'hey, guys', 'hey, guys')
 ;
 SELECT setval('pms_id_seq'::regclass, (SELECT MAX(id) FROM pms));
 
@@ -104,12 +103,12 @@ VALUES
 ,(4, 3, 'The Flob''s Journey', 1, false, false, false, true)  -- free-rp
 ;
 ---- Posts
-INSERT INTO posts (id, topic_id, user_id, text, ip_address, type, is_roleplay)
+INSERT INTO posts (id, topic_id, user_id, text, html, ip_address, type, is_roleplay)
 VALUES
-(1, 1, 1, 'First post', '1.2.3.4', 'ooc', false)
-,(2, 2, 1, 'First post', '1.2.3.4', 'ooc', false)
-,(3, 3, 1, 'First post', '1.2.3.4', 'ooc', false)
-,(4, 4, 1, 'First IC post', '1.2.3.4', 'ic', true);
+(1, 1, 1, 'First post', 'First post', '1.2.3.4', 'ooc', false)
+,(2, 2, 1, 'First post', 'First post', '1.2.3.4', 'ooc', false)
+,(3, 3, 1, 'First post', 'First post', '1.2.3.4', 'ooc', false)
+,(4, 4, 1, 'First IC post', 'First IC post', '1.2.3.4', 'ic', true);
 SELECT setval('topics_id_seq'::regclass, (SELECT MAX(id) FROM topics));
 SELECT setval('posts_id_seq'::regclass, (SELECT MAX(id) FROM posts));
 

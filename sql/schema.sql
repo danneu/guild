@@ -49,7 +49,7 @@ CREATE TABLE users (
   bio_html       text      NULL,
   -- Notifications
   notifications_count         int NOT NULL  DEFAULT 0,
-  convo_notifications_count   int NOT NULL  DEFAULT 0
+  convo_notifications_count   int NOT NULL  DEFAULT 0,
   mention_notifications_count int NOT NULL  DEFAULT 0,
   quote_notifications_count   int NOT NULL  DEFAULT 0
 );
