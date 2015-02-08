@@ -26,16 +26,12 @@
 {% endmacro %}
 
 {% macro renderPost(post) %}
-  {% if post.is_hidden %}
-    <i>[HIDDEN]</i>
+  {% if post.html %}
+    <div class="post-body-html post-content">{{- post.html|safe -}}</div>
+  {% elif post.legacy_html %}
+    <div class="post-body-html post-content">{{- post.legacy_html|safe -}}</div>
   {% else %}
-    {% if post.html %}
-      <div class="post-body-html post-content">{{- post.html|safe -}}</div>
-    {% elif post.legacy_html %}
-      <div class="post-body-html post-content">{{- post.legacy_html|safe -}}</div>
-    {% else %}
-      <div class="post-body post-content">{{- post.text -}}</div>
-    {% endif %}
+    <div class="post-body post-content">{{- post.text -}}</div>
   {% endif %}
 {% endmacro %}
 
