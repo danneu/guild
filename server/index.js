@@ -52,16 +52,16 @@ var welcomePm = require('./welcome_pm');
 //   console.error('Error:', err, err.stack);
 // });
 
-app.use(function*(next) {
-  var start = Date.now();
-  this.log = log.child({ req_id: uuid.v1() });  // time-based uuid
-  this.log.info({ req: this.request }, '--> %s %s', this.method, this.path);
-  yield next;
-  var diff = Date.now() - start;
-  this.log.info({ ms: diff, res: this.response },
-                '<-- %s %s %s %s',
-                this.method, this.path, this.status, diff + 'ms');
-});
+// app.use(function*(next) {
+//   var start = Date.now();
+//   this.log = log.child({ req_id: uuid.v1() });  // time-based uuid
+//   this.log.info({ req: this.request }, '--> %s %s', this.method, this.path);
+//   yield next;
+//   var diff = Date.now() - start;
+//   this.log.info({ ms: diff, res: this.response },
+//                 '<-- %s %s %s %s',
+//                 this.method, this.path, this.status, diff + 'ms');
+// });
 
 // Upon app boot, check for compiled assets
 // in the `dist` folder. If found, attach their
@@ -84,10 +84,10 @@ co(function*() {
   };
 }).then(function() {
   console.log('dist set', dist);
-  log.info({ dist: dist }, 'dist set');
+  //log.info({ dist: dist }, 'dist set');
 }, function(err) {
-  console.log('dist failed', dist);
-  log.error(err, 'dist failed');
+  console.error('dist failed', dist);
+  //log.error(err, 'dist failed');
 });
 
 app.use(function*(next) {
@@ -131,8 +131,10 @@ app.use(function*(next) {  // Must become before koa-router
   this.can = cancan.can;
   this.assertAuthorized = function(user, action, target) {
     var canResult = cancan.can(user, action, target);
-    ctx.log.info('[assertAuthorized] Can %s %s: %s',
-                 (user && user.uname) || '<Guest>', action, canResult);
+    // ctx.log.info('[assertAuthorized] Can %s %s: %s',
+    //              (user && user.uname) || '<Guest>', action, canResult);
+    console.log(util.format('[assertAuthorized] Can %s %s: %s',
+                            (user && user.uname) || '<Guest>', action, canResult));
     ctx.assert(canResult, 403);
   };
   yield next;
@@ -231,7 +233,7 @@ app.use(route.get('/login', function*() {
 // - g-recaptcha-response
 
 app.post('/users', function*() {
-  this.log.info({ body: this.request.body }, 'Submitting registration creds');
+  // this.log.info({ body: this.request.body }, 'Submitting registration creds');
 
   // Validation
 
@@ -368,7 +370,7 @@ app.post('/sessions', function*() {
   // Check if user with this uname or email exists
   var user = yield db.findUserByUnameOrEmail(unameOrEmail);
   if (!user) {
-    this.log.info('Invalid creds');
+    //this.log.info('Invalid creds');
     this.flash = { message: ['danger', 'Invalid creds'] };
     this.response.redirect('/login');
     return;
@@ -376,7 +378,7 @@ app.post('/sessions', function*() {
 
   // Check if provided password matches digest
   if (! (yield belt.checkPassword(password, user.digest))) {
-    this.log.info('Invalid creds');
+    //this.log.info('Invalid creds');
     this.flash = { message: ['danger', 'Invalid creds'] };
     this.response.redirect('/login');
     return;
@@ -390,8 +392,8 @@ app.post('/sessions', function*() {
     interval: interval
   });
 
-  this.log.info({ session: session, session_interval: interval },
-                'Created session');
+  // this.log.info({ session: session, session_interval: interval },
+  //               'Created session');
   this.cookies.set('sessionId', session.id, {
     expires: belt.futureDate(new Date(), rememberMe ? { years: 1 } : { days: 1 })
   });
@@ -525,7 +527,7 @@ app.use(route.post('/forgot', function*() {
   // Don't let the user know if the email belongs to anyone.
   // Always look like a success
   if (!user) {
-    this.log.info('User not found with email: %s', email);
+    //this.log.info('User not found with email: %s', email);
     this.flash = { message: ['success', successMessage]};
     this.response.redirect('/');
     return;
@@ -533,16 +535,16 @@ app.use(route.post('/forgot', function*() {
 
   // Don't send another email until previous reset token has expired
   if (yield db.findLatestActiveResetToken(user.id)) {
-    this.log.info('User already has an active reset token');
+    //this.log.info('User already has an active reset token');
     this.flash = { message: ['success', successMessage] };
     this.response.redirect('/');
     return;
   }
 
   var resetToken = yield db.createResetToken(user.id);
-  this.log.info({ resetToken: resetToken }, 'Created reset token');
+  //this.log.info({ resetToken: resetToken }, 'Created reset token');
   // Send email in background
-  this.log.info('Sending email to %s', user.email);
+  //this.log.info('Sending email to %s', user.email);
   emailer.sendResetTokenEmail(user.uname, user.email, resetToken.token);
 
   this.flash = { message: ['success', successMessage] };
