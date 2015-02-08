@@ -1906,9 +1906,6 @@ app.get('/staff', function*() {
 // List currUser's notifications
 //
 app.get('/me/notifications', function*() {
-  this.body = 'This feature is temporarily turned off while I hotfix it.';
-  return;
-
   this.assert(this.currUser, 404);
   var notifications = yield db.findReceivedNotificationsForUserId(this.currUser.id);
   notifications = notifications.map(pre.presentNotification);
