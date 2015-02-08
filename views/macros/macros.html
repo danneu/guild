@@ -114,3 +114,26 @@
     </div>
   {% endif %}
 {% endmacro %}
+
+{% macro renderViewers(viewers) %}
+  {% set userCount = viewers.users.length %}
+  {% set guestCount = viewers.guests.length %}
+  {% if userCount > 0 || guestCount > 0 %}
+    <div class="viewers">
+      {% if userCount > 0 %}
+        {{ userCount }} User{% if userCount > 1 %}s{% endif %}
+      {% endif %}
+      {% if userCount > 0 && guestCount > 0%}
+        and
+      {% endif %}
+      {% if guestCount > 0 %}
+        {{ guestCount }} Guest{% if guestCount > 1 %}s{% endif %}
+      {% endif %}
+      viewing this page
+      <br>
+      <ul class="list-inline">
+        {% for viewer in viewers.users %}<li><a href="/users/{{ viewer.uname|slugifyUname }}">{{- viewer.uname -}}</a>{% if !loop.last %},{% endif %}</li>{% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+{% endmacro %}

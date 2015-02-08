@@ -1486,3 +1486,131 @@ exports.deleteNotificationsForPostId = function*(toUserId, postId) {
   var result = yield query(sql, [toUserId, postId]);
   return result.rowCount;
 };
+
+// Viewer tracker /////////////////////////////////////////////////
+
+// - ctx is the Koa context
+// - topicId is optional
+// If user.is_hidden, then we count them as a guest
+exports.upsertViewer = function*(ctx, forumId, topicId) {
+  assert(_.isObject(ctx));
+  assert(forumId);
+  return yield withTransaction(function*(client) {
+    var sql, params;
+    if (ctx.currUser && !ctx.currUser.is_hidden) {
+      sql = m(function() {/*
+  INSERT INTO viewers (uname, forum_id, topic_id, viewed_at)
+  VALUES ($1, $2, $3, NOW())
+      */});
+      params = [ctx.currUser.uname, forumId, topicId];
+    } else {
+      sql = m(function() {/*
+  INSERT INTO viewers (ip, forum_id, topic_id, viewed_at)
+  VALUES ($1, $2, $3, NOW())
+      */});
+      params = [ctx.ip, forumId, topicId];
+    }
+
+    try {
+      var result = yield client.queryPromise(sql, params);
+    } catch(ex) {
+      if (ex.code === '23505') {
+        yield client.queryPromise('ROLLBACK');
+        if (ctx.currUser && !ctx.currUser.is_hidden) {
+          sql = m(function() {/*
+            UPDATE viewers
+            SET forum_id = $2, topic_id = $3, viewed_at = NOW()
+            WHERE uname = $1
+          */});
+          params = [ctx.currUser.uname, forumId, topicId];
+        } else {
+          sql = m(function() {/*
+            UPDATE viewers
+            SET forum_id = $2, topic_id = $3, viewed_at = NOW()
+            WHERE ip = $1
+          */});
+          params = [ctx.ip, forumId, topicId];
+        }
+        yield client.queryPromise(sql, params);
+        return;
+      } else {
+        throw ex;
+      }
+    }
+  });
+};
+
+// Returns map of ForumId->Int
+exports.getForumViewerCounts = function*() {
+  debug('[getForumViewerCounts] Running');
+  // Query returns { forum_id: Int, viewers_count: Int } for every forum
+  sql = m(function() {/*
+SELECT
+  f.id "forum_id",
+  COUNT(v.*) "viewers_count"
+FROM forums f
+LEFT OUTER JOIN active_viewers v ON f.id = v.forum_id
+GROUP BY f.id
+  */});
+  var result = yield query(sql);
+
+  var output = {};
+  result.rows.forEach(function(row) {
+    output[row.forum_id] = row.viewers_count;
+  });
+
+  return output;
+};
+
+// Deletes viewers where viewed_at is older than 15 min ago
+// Run this in a cronjob
+// Returns Int of viewers deleted
+exports.clearExpiredViewers = function*() {
+  debug('[clearExpiredViewers] Running');
+  var sql = m(function() {/*
+DELETE FROM viewers
+WHERE viewed_at < NOW() - interval '15 minutes'
+  */});
+  var result = yield query(sql);
+  var count = result.rowCount;
+  debug('[clearExpiredViewers] Deleted views: ' + count);
+  return count;
+};
+
+// Returns viewers as a map of { users: [Viewer], guests: [Viewer] }
+exports.findViewersForTopicId = function*(topicId) {
+  assert(topicId);
+  var sql = m(function() {/*
+SELECT *
+FROM viewers
+WHERE topic_id = $1
+  */});
+  var result = yield query(sql, [topicId]);
+  var viewers = result.rows;
+
+  var output = {
+    users: _.filter(viewers, 'uname'),
+    guests: _.filter(viewers, 'ip')
+  };
+
+  return output;
+};
+
+// Returns viewers as a map of { users: [Viewer], guests: [Viewer] }
+exports.findViewersForForumId = function*(forumId) {
+  assert(forumId);
+  var sql = m(function() {/*
+SELECT *
+FROM viewers
+WHERE forum_id = $1
+  */});
+  var result = yield query(sql, [forumId]);
+  var viewers = result.rows;
+
+  var output = {
+    users: _.filter(viewers, 'uname'),
+    guests: _.filter(viewers, 'ip')
+  };
+
+  return output;
+};

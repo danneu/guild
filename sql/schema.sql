@@ -229,6 +229,40 @@ CREATE TABLE notifications (
   UNIQUE (to_user_id, convo_id)
 );
 
+--
+-- Viewers tracking
+--
+
+CREATE TABLE viewers (
+  -- uname is set when user is logged-in
+  uname     text     NULL,
+  -- ip is set when user is logged-out/guest
+  ip        inet     NULL,
+  forum_id  int      NOT NULL,
+  topic_id  int      NULL,
+  viewed_at timestamp with time zone NOT NULL  DEFAULT NOW(),
+  UNIQUE (uname),
+  UNIQUE (ip),
+  -- Ensure either uname or ip is set
+  CHECK(
+    (CASE WHEN uname IS NOT NULL THEN 1 ELSE 0 END +
+     CASE WHEN ip IS NOT NULL THEN 1 ELSE 0 END)
+    = 1
+  )
+);
+
+CREATE INDEX viewers_forum_id ON viewers (forum_id);
+CREATE INDEX viewers_topic_id ON viewers (topic_id);
+
+-- Always select from this.
+-- A cronjob will delete expired views, but this lets us run the cronjob
+-- much less frequently. (i.e. limited by Heroku Scheduler's min interval)
+CREATE VIEW active_viewers AS
+  SELECT *
+  FROM viewers
+  WHERE viewed_at > NOW() - interval '15 minutes'
+;
+
 ------------------------------------------------------------
 ------------------------------------------------------------
 -- Functions/triggers that should exist for the COPY FROM

@@ -176,6 +176,7 @@ function commafy(n) {
 }
 swig.setFilter('commafy', commafy);
 swig.setFilter('formatDate', pre.formatDate);
+swig.setFilter('slugifyUname', belt.slugifyUname);
 
 ////////////////////////////////////////////////////////////
 
@@ -444,6 +445,13 @@ app.use(route.get('/', function*() {
   _.remove(categories, { id: 4 });
   var categoryIds = _.pluck(categories, 'id');
   var allForums = yield db.findForums(categoryIds);
+
+  // Assoc forum viewCount from cache
+  var viewerCounts = cache.get('forum-viewer-counts');
+  allForums.forEach(function(forum) {
+    forum.viewerCount = viewerCounts[forum.id];
+  });
+
   var topLevelForums = _.reject(allForums, 'parent_forum_id');
   var childForums = _.filter(allForums, 'parent_forum_id');
   // Map of {CategoryId: [Forums...]}
@@ -879,6 +887,9 @@ app.get('/forums/:forumSlug', function*() {
 
   var pager = belt.calcPager(this.request.query.page, 25, forum.topics_count);
 
+  co(db.upsertViewer(this, forum.id));
+  var viewers = yield db.findViewersForForumId(forum.id);
+
   var topics = yield db.findTopicsByForumId(forumId, pager.limit, pager.offset);
   forum.topics = topics;
   forum = pre.presentForum(forum);
@@ -887,7 +898,9 @@ app.get('/forums/:forumSlug', function*() {
     forum: forum,
     currPage: pager.currPage,
     totalPages: pager.totalPages,
-    title: forum.title
+    title: forum.title,
+    // Viewers
+    viewers: viewers
   });
 });
 
@@ -1830,6 +1843,9 @@ app.get('/topics/:slug/:postType', function*() {
     return this.response.redirect(redirectUrl);
   }
 
+  co(db.upsertViewer(this, topic.forum_id, topic.id));
+  var viewers = yield db.findViewersForTopicId(topic.id);
+
   var posts = yield db.findPostsByTopicId(topicId, this.params.postType, page);
   topic.posts = posts.map(pre.presentPost);
   yield this.render('show_topic', {
@@ -1839,7 +1855,9 @@ app.get('/topics/:slug/:postType', function*() {
     title: topic.title,
     // Pagination
     currPage: page,
-    totalPages: totalPages
+    totalPages: totalPages,
+    // Viewer tracker
+    viewers: viewers
   });
 });
 

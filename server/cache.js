@@ -73,5 +73,12 @@ module.exports = function() {
     this.set('uname-regex-trie', trie);
   });
 
+  // Every 10 seconds
+  cache.every(1000 * 10, function*() {
+    var result = yield db.getForumViewerCounts();
+    // Map of ForumId->Int (includes all ForumIds in database)
+    this.set('forum-viewer-counts', result);
+  });
+
   return cache;
 };

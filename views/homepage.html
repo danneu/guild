@@ -25,6 +25,9 @@
                   <div class="col-xs-7">
                     <h5 class="list-group-item-heading forum-item-title">
                       <a href="{{ forum.url }}">{{ forum.title }}</a>
+                      {% if forum.viewerCount > 0 %}
+                        <span style="font-weight: 400;">({{ forum.viewerCount }} Viewing)</span>
+                      {% endif %}
                     </h5>
                     {% if forum.description %}
                       <p class="forum-item-description">{{ forum.description }}</p>
@@ -60,6 +63,9 @@
                     <div class="col-xs-7">
                       <img src="/img/subforum-icon.gif">
                       <a href="{{ subforum.url }}">{{ subforum.title }}</a>
+                      {% if subforum.viewerCount > 0 %}
+                        ({{ subforum.viewerCount }} Viewing)
+                      {% endif %}
                     </div>
                     <div class="col-xs-1">{{ subforum.topics_count|commafy }}</div>
                     <div class="col-xs-1">{{ subforum.posts_count|commafy }}</div>

@@ -11,6 +11,9 @@
     <li><a href="{{ topic.forum.url }}">{{ topic.forum.title }}</a></li>
   </ol>
 
+  <!-- Viewers -->
+  {{ macros.renderViewers(viewers) }}
+
   <!-- Page header -->
 
   <div class="page-header" style="border: 0">
@@ -284,7 +287,13 @@
     {% endif %} <!-- can READ_POST check -->
   {% endfor %}
 
-  <a href="#" class="top-link">&uarr; Top</a>
+  <!-- Top -->
+  <a href="#" class="top-link" style="display: block; margin-bottom: 20px;">
+    &uarr; Top
+  </a>
+
+  <!-- Viewers -->
+  {{ macros.renderViewers(viewers) }}
 
   {{ paginate.render(currPage, totalPages, ctx.request.path) }}
 

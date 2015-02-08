@@ -1,5 +1,6 @@
 {% extends 'layouts/master.html' %}
 {% import 'macros/paginate.html' as paginate %}
+{% import 'macros/macros.html' as macros %}
 
 {% block embed %}
   <ol class="breadcrumb">
@@ -7,6 +8,9 @@
       <a href="/">Home</a>
     </li>
   </ol>
+
+  <!-- Viewers -->
+  {{ macros.renderViewers(viewers) }}
 
   <!-- Page header -->
 
@@ -126,6 +130,14 @@
       {% endfor %}
     </div> <!-- /.list-group -->
   {% endif %}
+
+  <!-- Top -->
+  <a href="#" class="top-link" style="display: block; margin-bottom: 20px;">
+    &uarr; Top
+  </a>
+
+  <!-- Viewers -->
+  {{ macros.renderViewers(viewers) }}
 
   {{ paginate.render(currPage, totalPages, forum.url) }}
 

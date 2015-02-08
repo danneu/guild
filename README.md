@@ -49,3 +49,4 @@ It will run with the default variables, but some features are turned off until t
 - Add online-status to post user-meta for mobile-sized devices
 - Fix slow BBCode tags like [tabs] so that I can possibly render BBCode on the fly instead of pre-baking it in the `html` columns
 - Finish BBCode support in convos
+- Create cronjob (Heroku Scheduler) for db.clearExpiredViews
