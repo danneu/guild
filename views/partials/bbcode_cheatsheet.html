@@ -13,6 +13,11 @@
     <hr>
     <h5>BBCode Announcements</h5>
     <ul>
+      <li>
+        [Feb 7] @MentionQuotes added (they send notifications).
+        Example: <code>[quote=@Their Username]...[/quote]</code>
+      </li>
+      <li>[Feb 7] @Mentions now send notifications.</li>
       <li>[Jan 29] @Mention BBCode added. Example: <code>[@Mahz]</code></li>
       <li>[Jan 24] BBCode system implemented. Just the basics, though. As new BBCode tags are added to the system, I'll update this list of announcements. Check back regularly.</li>
     </ul>
@@ -77,6 +82,7 @@
 [i]Italicize[/i]
 [u]Underline[/u]
 [s]Strike-through[/s]
+[noparse][color=red][/noparse]
 
 log[sub]b[/sub](xy) = log[sub]b[/sub](x) + log[sub]b[/sub](y)
 E=mc[sup]2[/sup]
@@ -86,6 +92,7 @@ E=mc[sup]2[/sup]
 [i]Italicize[/i]
 [u]Underline[/u]
 [s]Strike-through[/s]
+[noparse][color=red][/noparse]
 
 log[sub]b[/sub](xy) = log[sub]b[/sub](x) + log[sub]b[/sub](y)
 E=mc[sup]2[/sup]
@@ -130,10 +137,7 @@ E=mc[sup]2[/sup]
 
     <h3>User @Mentions</h3>
     <p>
-      You can @Mention someone in a post to ping them or let them know that you've replied to them. You will receive a notification whenever someone @Mentions you.
-    </p>
-    <p>
-      <span class="label label-warning">Under Construction</span> The @Mentions system does not actually send notifications yet. Until it's finished, it's just a handy way to link to someone.
+      You can @Mention someone in a post to ping them or let them know that you've replied to them. They will receive a notification that you mentioned them.
     </p>
     <div class="row">
       <div class="col-sm-6">
@@ -144,7 +148,10 @@ Hello, [@Internet Tough Guy]!
       </div>
     </div>
 
-    <h3>Quotes</h3>
+    <h3>Quotes and @QuoteMentions</h3>
+    <p>
+      You can @QuoteMention someone in a post to ping them or let them know that you've replied to them. They will receive a notification that you quoted them.
+    </p>
     <div class="row">
       <div class="col-sm-6">
         <pre>
@@ -152,7 +159,8 @@ Hello, [@Internet Tough Guy]!
 
 [quote=Socrates]A quote with a name[/quote]
 
-[quote=@Mahz]A quote with a @Mention[/quote]
+[quote=@Mahz]A quote with a @QuoteMention[/quote]
+(Mahz receives a notification)
 
 [quote=@Internet Tough Guy]
 [quote=@Mahz]Here's my opinion.[/quote]
@@ -162,7 +170,7 @@ Well, that's a wrong opinion.
       </div>
       <div class="col-sm-6 bbcode">[quote]A quote with no name[/quote]
 [quote=Socrates]A quote with a name[/quote]
-[quote=@Mahz]A quote with a @Mention[/quote]
+[quote=@Mahz]A quote with a @QuoteMention[/quote]
 [quote=@Internet Tough Guy]
 [quote=@Mahz]
 Here's my opinion.
