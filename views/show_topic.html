@@ -294,7 +294,13 @@
     <h2>New Reply</h2>
     <ul>
       <li>Before submitting your post, it's wise to copy it somewhere so that you don't lose it in the event of server error.</li>
-      <li>Check out the BBCode Cheatsheet below the editor. It's pretty basic for now, but I will add more BBCode over time. Check the cheatsheet every once in a while for updates.</li>
+      <li>
+        It's a good idea to notify people you're talking to so they know to read your post. There are two ways to do this:
+        <ol type="A">
+          <li>@Mention: <code>[@Their Username]</code></li>
+          <li>@Quote: <code>[quote=@Their Username]...[/quote]</code></li>
+        </ol>
+      </li>
       <li>Post limit: {{ ctx.config.MAX_POST_LENGTH|commafy }} chars</li>
     </ul>
     <form method="post" action="{{ topic.url }}/posts" id="new-post">
