@@ -19,7 +19,7 @@ function Cache() {
 
   this.get = function(key) {
     var val = self.store[key];
-    assert(val);
+    //assert(val);
     return val;
   };
 
