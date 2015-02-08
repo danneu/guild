@@ -9,7 +9,7 @@
   <div class="page-header" style="border-color: #000">
     <h3>New Private Convo</h3>
     <p>
-      A conversation is a private thread that only the participants can see and reply to. You are always a participant. If you leave 'Participants' blank, it's just a convo with yourself. Good for note-taking. In other words, instead of sending PMs to people, you start a convo with them.
+      A conversation is a private thread that only the participants can see and reply to. You are always the first participant.
     </p>
   </div>
 
@@ -26,6 +26,7 @@
             <!-- To -->
             <div class="form-group">
               <label class="control-label" for="to-input">Participants:</label>
+              <p>You can start a convo with up to 5 other people. Just put a comma between multiple usernames. You can leave this field blank if you just want to start a convo with yourself (useful for note-taking). Example: <code>Mahz, Contra Fates, Internet Tough Guy</code></p>
               <input id="to-input"
                      type="text"
                      name="to"
@@ -38,11 +39,12 @@
             </div>
 
             <div class="form-group">
-              <label class="control-label" for="title-input">Subject:</label>
+              <label class="control-label" for="title-input">Subject/Title:</label>
               <input id="title-input"
                      type="text"
                      name="title"
                      class="form-control"
+                     placeholder="Tip: Put something descriptive to help you and other participants remember what this convo is about"
                      {% if ctx.flash.params %}
                      value="{{ ctx.flash.params.title }}"
                      {% endif %}
@@ -51,7 +53,10 @@
 
             <div class="form-group">
                 <label class="control-label" for="text-input">Message:</label>
-                <p>{{ ctx.config.MAX_POST_LENGTH|commafy }} char limit</p>
+                <ul>
+                  <li>{{ ctx.config.MAX_POST_LENGTH|commafy }} char limit</li>
+                  <li>Always copy your post before clicking "Submit" so that you don't lose it due to server error or a bad connection.</li>
+                </ul>
                 <textarea id="text-input"
                           rows="10"
                           placeholder="Click here and begin writing"
