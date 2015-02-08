@@ -2,11 +2,17 @@
 
 {% block embed %}
 
+  <a href="/convos/new" class="pull-right btn btn-success">
+    <span class="glyphicon glyphicon-plus"></span>
+    Create Convo
+  </a>
+
   <form action="/me/notifications/convos" method="post" class="pull-right">
     <input type="hidden" name="_method" value="delete">
     <input type="submit"
            value="Clear PM Notifications"
-           class="btn btn-default btn-xs">
+           class="btn btn-default"
+           style="margin-right: 10px;">
   </form>
 
   <!-- Pagination -->
