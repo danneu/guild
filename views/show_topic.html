@@ -298,8 +298,9 @@
         It's a good idea to notify people you're talking to so they know to read your post. There are two ways to do this:
         <ol type="A">
           <li>@Mention: <code>[@Their Username]</code></li>
-          <li>@Quote: <code>[quote=@Their Username]...[/quote]</code></li>
+          <li>@QuoteMention: <code>[quote=@Their Username]...[/quote]</code></li>
         </ol>
+        Note: Nested @QuoteMentions do not trigger notifications. Nor do @Mentions inside quotes.
       </li>
       <li>Post limit: {{ ctx.config.MAX_POST_LENGTH|commafy }} chars</li>
     </ul>
