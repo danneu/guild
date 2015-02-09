@@ -505,3 +505,105 @@ textarea {
     margin-top: 0px;
     position: relative;
 }
+
+/* overrides to darken the editor padding */
+.md-editor>.md-header {
+    background-color: #888;
+}
+.md-editor .md-footer, .md-editor>.md-header {
+    background-color: #888;
+}
+.char-count {
+    color: #333;
+}
+.md-editor>textarea {
+    padding: 5px;
+}
+
+/* take off the glaring white bg from bootstrap's <code>.
+   give it darker font color*/
+code {
+    background-color: transparent;
+    color: #7bcdc8;
+}
+
+/*
+  darken tabs, llike the OOC/IC tabs
+ */
+.nav-tabs > li.active > a,
+.nav-tabs > li.active > a:hover,
+.nav-tabs > li.active > a:focus {
+    background-color: #777;
+    /* darken text */
+    color: #333;
+    font-weight: 500;
+    /* darken border */
+    border-color: #999;
+}
+.nav-tabs {
+    /* darken border */
+    border-color: #111;
+}
+
+.nav-tabs > li.active > a,
+.nav-tabs > li.active > a:hover,
+.nav-tabs > li.active > a:focus,
+.forum-tabs > li.active > a,
+.forum-tabs > li.active > a:hover,
+.forum-tabs > li.active > a:focus,
+.topic-tabs > li.active > a,
+.topic-tabs > li.active > a:hover,
+.topic-tabs > li.active > a:focus {
+    border-bottom: 0;
+    border-color: #111;
+}
+.forum-tabs,
+.topic-tabs {
+    /* remove border-bottom since it's flush against post that has border*/
+    border: 0
+}
+.topic-tabs {
+    /* override -1px since topic tabs should be flush against first post */
+    margin-bottom: 0;
+}
+.topic-tabs .badge {
+    /* darken */
+    background-color: #333;
+}
+.nav > li > a:hover, .nav > li > a:focus {
+    /*too bright white. just make it slightly lighter than active tabs*/
+    background-color: #999;
+    /* normally it's yellow like a:hover. make it dark */
+    color: #333;
+}
+.nav-tabs > li > a:hover {
+    /*when tab is hovered, remove those white borders.make it same color as
+      hovered tab*/
+    border-color: #999;
+}
+
+
+textarea.form-control,
+input[type="text"].form-control {
+    background-color: #333;
+    border-color: #111;
+    box-shadow: rgba(255, 255, 255, 0.1) 0 1px 0, rgba(0, 0, 0, 0.8) 0 1px 7px 0px inset;
+    color: white;
+}
+
+.md-editor {
+    border: 0;
+}
+.md-editor>textarea {
+    border-left: 1px solid #111;
+    border-right: 1px solid #111;
+}
+.md-editor>textarea:focus {
+    /* this turns box shadow off on focus. i wnat it back*/
+    box-shadow: rgba(255, 255, 255, 0.1) 0 1px 0, rgba(0, 0, 0, 0.8) 0 1px 7px 0px inset;
+    /* default is white. */
+    background: inherit;
+}
+.form-control:focus {
+    border: 0;
+}

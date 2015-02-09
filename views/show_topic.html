@@ -121,7 +121,7 @@
     {% endif %}
   {% endif %}
 
-  <ul class="nav nav-tabs">
+  <ul class="nav nav-tabs topic-tabs">
     {% if topic.forum.is_roleplay %}
       <li class="{% if ctx.request.path.endsWith('/ic') %}active{% endif %}">
         <a href="{{ topic.url }}/ic">
@@ -450,7 +450,7 @@ $(function() {
       cache: false,
       // This is going to be post.markup || post.text
       success: function(post_text) {
-        var $post_editor = $('<div class="post-editor"></div>');
+        var $post_editor = $('<textarea class="post-editor form-control"></textarea>');
         $spinner.remove();
 
         // Warn about Markdown->BBCode conversion on Markdown posts.

@@ -265,7 +265,7 @@ $(function() {
       cache: false,
       success: function(post_text) {
         console.log(post_text);
-        var $post_editor = $('<div class="post-editor"></div>');
+        var $post_editor = $('<textarea class="post-editor form-control"></textarea>');
         $spinner.remove();
 
         // Warn about Markdown->BBCode conversion on Markdown posts.

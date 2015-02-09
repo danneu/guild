@@ -228,7 +228,7 @@
       console.log('click');
       var userId = $(this).attr('data-user-id');
       var $cancelBtn = $('<button style="margin-left: 5px;" class="btn btn-default post-edit-cancel-btn">Cancel</button>');
-      var $editor = $('<div class="editor">'+$('#bio-markup').text()+'</div>');
+      var $editor = $('<textarea class="editor form-control">'+$('#bio-markup').text()+'</textarea>');
       $('.user-bio').html(
         "<p>Write whatever you want in your bio. Everyone can see it, even people not logged in.</p>"+
         "<p>Ideas: Introduce yourself, keep a list of roleplays you're involved in, describe what kind of roleplays/partners you're looking for, provide off-site contact info, share some hilarious jokes, share art, share dank memes, etc.</p>"+

@@ -40,21 +40,21 @@
   <!-- Tabs -->
 
   {% if forum.parent_forum  %}
-    <ul class="nav nav-tabs">
+    <ul class="nav nav-tabs forum-tabs">
       <li><a href="{{ forum.parent_forum.url }}">Roleplays</a></li>
       <li class="active"><a href="{{ forum.url }}">Interest Checks</a></li>
     </ul>
   {% endif %}
 
   {% if forum.child_forum  %}
-    <ul class="nav nav-tabs">
+    <ul class="nav nav-tabs forum-tabs">
       <li class="active"><a href="{{ forum.url }}">Roleplays</a></li>
       <li><a href="{{ forum.child_forum.url }}">Interest Checks</a></li>
     </ul>
   {% endif %}
 
   {% if (!forum.child_forum && !forum.parent_forum && !forum.is_roleplay) %}
-    <ul class="nav nav-tabs">
+    <ul class="nav nav-tabs forum-tabs">
       <li class="active"><a href="{{ forum.url }}">Topics</a></li>
     </ul>
   {% endif %}

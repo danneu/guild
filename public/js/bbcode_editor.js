@@ -308,11 +308,10 @@ var w;
       ],
       footer: '<div class="bbcode-editor-mode">You are in Preview Mode</div>'+
               '<div class="bbcode-errors">'+
-              '  <div class="char-count text-right text-muted">'+
+              '  <div class="char-count text-right">'+
               '    <span class="current">--</span>'+
               '    / <span class="limit">'+ (charLimit ? commafy(charLimit) : '--') +'</span> chars'+
               '  </div>'+
-              '  <p>Click the "Preview" button to check for errors</p>'+
               '  <ul style="color: red;"></ul>'+
               '</div>'
     };
