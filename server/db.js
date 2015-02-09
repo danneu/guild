@@ -1516,6 +1516,7 @@ exports.upsertViewer = function*(ctx, forumId, topicId) {
     } catch(ex) {
       if (ex.code === '23505') {
         yield client.queryPromise('ROLLBACK');
+        yield client.queryPromise('BEGIN');
         if (ctx.currUser && !ctx.currUser.is_hidden) {
           sql = m(function() {/*
             UPDATE viewers
