@@ -1591,7 +1591,7 @@ exports.findViewersForTopicId = function*(topicId) {
   assert(topicId);
   var sql = m(function() {/*
 SELECT *
-FROM viewers
+FROM active_viewers
 WHERE topic_id = $1
   */});
   var result = yield query(sql, [topicId]);
@@ -1610,7 +1610,7 @@ exports.findViewersForForumId = function*(forumId) {
   assert(forumId);
   var sql = m(function() {/*
 SELECT *
-FROM viewers
+FROM active_viewers
 WHERE forum_id = $1
   */});
   var result = yield query(sql, [forumId]);
