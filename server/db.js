@@ -1495,50 +1495,58 @@ exports.deleteNotificationsForPostId = function*(toUserId, postId) {
 exports.upsertViewer = function*(ctx, forumId, topicId) {
   assert(_.isObject(ctx));
   assert(forumId);
-  return yield withTransaction(function*(client) {
-    var sql, params;
-    if (ctx.currUser && !ctx.currUser.is_hidden) {
-      sql = m(function() {/*
-  INSERT INTO viewers (uname, forum_id, topic_id, viewed_at)
-  VALUES ($1, $2, $3, NOW())
-      */});
-      params = [ctx.currUser.uname, forumId, topicId];
-    } else {
-      sql = m(function() {/*
-  INSERT INTO viewers (ip, forum_id, topic_id, viewed_at)
-  VALUES ($1, $2, $3, NOW())
-      */});
-      params = [ctx.ip, forumId, topicId];
-    }
 
+  // First, try to insert
+
+  var sql, params;
+  if (ctx.currUser && !ctx.currUser.is_hidden) {
+    sql = m(function() {/*
+INSERT INTO viewers (uname, forum_id, topic_id, viewed_at)
+VALUES ($1, $2, $3, NOW())
+    */});
+    params = [ctx.currUser.uname, forumId, topicId];
+  } else {
+    sql = m(function() {/*
+INSERT INTO viewers (ip, forum_id, topic_id, viewed_at)
+VALUES ($1, $2, $3, NOW())
+    */});
+    params = [ctx.ip, forumId, topicId];
+  }
+
+  var result;
+  for (var i = 0; i < 100; i++) {
     try {
-      var result = yield client.queryPromise(sql, params);
+      return yield query(sql, params);
     } catch(ex) {
+      // If it fails, if it was unique violation (already existed), then
+      // update the row
       if (ex.code === '23505') {
-        yield client.queryPromise('ROLLBACK');
-        yield client.queryPromise('BEGIN');
         if (ctx.currUser && !ctx.currUser.is_hidden) {
           sql = m(function() {/*
             UPDATE viewers
             SET forum_id = $2, topic_id = $3, viewed_at = NOW()
             WHERE uname = $1
           */});
-          params = [ctx.currUser.uname, forumId, topicId];
         } else {
           sql = m(function() {/*
             UPDATE viewers
             SET forum_id = $2, topic_id = $3, viewed_at = NOW()
             WHERE ip = $1
           */});
-          params = [ctx.ip, forumId, topicId];
         }
-        yield client.queryPromise(sql, params);
-        return;
+        var result = yield query(sql, params);
+
+        // Only return if we actually updated something
+        // Else, loop back so we can insert it
+        if (result.rowCount > 0)
+          return
       } else {
         throw ex;
       }
-    }
-  });
+    }  // end try/catch
+  }  // end for loop
+
+  throw new Error('Query retry limit exceeded 100 attempts');
 };
 
 // Returns map of ForumId->Int
