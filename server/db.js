@@ -1499,7 +1499,7 @@ exports.upsertViewer = function*(ctx, forumId, topicId) {
   // First, try to insert
 
   var sql, params;
-  if (ctx.currUser && !ctx.currUser.is_hidden) {
+  if (ctx.currUser && !ctx.currUser.is_ghost) {
     sql = m(function() {/*
 INSERT INTO viewers (uname, forum_id, topic_id, viewed_at)
 VALUES ($1, $2, $3, NOW())
@@ -1521,7 +1521,7 @@ VALUES ($1, $2, $3, NOW())
       // If it fails, if it was unique violation (already existed), then
       // update the row
       if (ex.code === '23505') {
-        if (ctx.currUser && !ctx.currUser.is_hidden) {
+        if (ctx.currUser && !ctx.currUser.is_ghost) {
           sql = m(function() {/*
             UPDATE viewers
             SET forum_id = $2, topic_id = $3, viewed_at = NOW()
