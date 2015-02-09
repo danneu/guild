@@ -1593,6 +1593,7 @@ exports.findViewersForTopicId = function*(topicId) {
 SELECT *
 FROM active_viewers
 WHERE topic_id = $1
+ORDER BY uname
   */});
   var result = yield query(sql, [topicId]);
   var viewers = result.rows;
@@ -1612,6 +1613,7 @@ exports.findViewersForForumId = function*(forumId) {
 SELECT *
 FROM active_viewers
 WHERE forum_id = $1
+ORDER BY uname
   */});
   var result = yield query(sql, [forumId]);
   var viewers = result.rows;
