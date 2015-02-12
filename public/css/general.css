@@ -363,7 +363,7 @@ textarea {
     height: 15px;
     width: 15px;
     display: inline-block;
-    border: 1px solid white;
+    /* border: 1px solid white; */
 }
 
 
@@ -414,6 +414,7 @@ textarea {
 /* Popover font color is white by default. We need it to be dark. */
 .popover {
     color: #000;
+    border: 2px solid black;
 }
 
 /* Make the smilies wrap */
@@ -514,7 +515,9 @@ textarea {
     background-color: #888;
 }
 .char-count {
-    color: #333;
+    color: #ccc;
+    text-shadow: -1px -1px 0px rgba(0,0,0,1.0);
+    margin-right: 10px;
 }
 .md-editor>textarea {
     padding: 5px;
@@ -583,7 +586,10 @@ code {
 }
 
 
+/* give dat cool, dark , "sunken"/inset look to form elements */
 textarea.form-control,
+input[type="email"].form-control,
+input[type="password"].form-control,
 input[type="text"].form-control {
     background-color: #333;
     border-color: #111;
@@ -606,4 +612,177 @@ input[type="text"].form-control {
 }
 .form-control:focus {
     border: 0;
+}
+
+
+
+.btn {
+    border-radius: 0;
+    border-color: #111 !important;
+    text-shadow: 0 1px 0 #111;
+}
+
+.btn-success {
+    background-image: linear-gradient(to bottom, #3BB878 0%, #27784E 100%)
+}
+.btn-success:hover {
+    background-color: #27784E;
+}
+.btn-success.active,
+.btn-success:active {
+    background-color: #27784E;
+}
+.btn.disabled, .btn[disabled], fieldset[disabled] .btn {
+    /* darken beyond just opacity 0.65*/
+    color: #aaa;
+}
+
+
+.btn-gray,
+.btn-default {
+  /* Gray */
+  /* background-image: linear-gradient(to bottom, #666 0%, #333 100%); */
+  background-image: linear-gradient(to bottom, #666 0%, #615753 100%);
+  border-color: #111;
+  color: #ccc;
+  text-shadow: 0 1px 0 #111;
+  background-color: #333;
+  border-radius: 0px;
+}
+
+.btn-default:disabled, .btn-default[disabled] {
+    background-color: #333;
+    color: #555;
+}
+
+.btn-gray:hover,
+.btn-default:hover,
+.btn-gray:focus,
+.btn-default:focus,
+.btn-gray:active,
+.btn-default:active,
+.btn-gray.active,
+.btn-default.active {
+  /* Gray */
+  /* background-color: #333; */
+  background-color: #615753;
+  border-color: #111;
+}
+
+.btn-default:hover,
+.btn-default:focus,
+.btn-default.focus,
+.btn-gray:hover,
+.btn-gray:focus,
+.btn-gray.focus {
+    color: #ccc;
+}
+
+.md-editor .md-footer {
+    min-height: 45px;
+  background-image: linear-gradient(to bottom, #53615F 0%, #495861 100%);
+  border-color: black;
+  border-style: solid;
+  border-width: 0 1px 1px 1px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .15), 0 1px 1px rgba(0, 0, 0, .075);
+  -webkit-box-shadow: inset 0 1px 0 rgba(255, 255, 255, .15), 0 1px 1px rgba(0, 0, 0, .075);
+}
+.md-editor>.md-header {
+  background-image: linear-gradient(to bottom, #495861 0%, #53615F 100%);
+  border-color: black;
+  border-style: solid;
+  border-width: 1px 1px 0 1px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .15), 0 1px 1px rgba(0, 0, 0, .075);
+  -webkit-box-shadow: inset 0 1px 0 rgba(255, 255, 255, .15), 0 1px 1px rgba(0, 0, 0, .075);
+}
+
+.md-editor>.md-preview {
+    border-top: 0;
+    border-right: 1px solid #111;
+    border-bottom: 0;
+    border-left: 1px solid #111;
+}
+.md-editor.active {
+    box-shadow: inset 0 1px 1px rgba(0,0,0,.075),0 0 8px rgba(152, 134, 134, 1);
+}
+
+.md-editor {
+    position: relative;
+}
+.md-editor>.md-preview:before {
+    content: 'Preview Mode';
+    position: absolute;
+    top: 50px;
+    right: 10px;
+    color: #ccc;
+    opacity: 0.25;
+    font-size: 2em;
+}
+
+/* popover */
+
+.popover {
+    background-color: #777;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .15), 0 1px 1px rgba(0, 0, 0, .075), 0px 3px 15px 0px black;
+  -webkit-box-shadow: inset 0 1px 0 rgba(255, 255, 255, .15), 0 1px 1px rgba(0, 0, 0, .075);
+  border-radius: 0;
+}
+.popover-title {
+    background-color: #777;
+    border-bottom: 0;
+    padding: 8px 14px 0 14px;
+    font-size: 0.9em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-style: oblique;
+}
+.popover.top > .arrow:after {
+    border-top-color: #777;
+}
+/* white repalcement D7CFC0*/
+
+
+
+.label-success {
+    background-color: #3BB878;
+
+}
+.label {
+      text-shadow: 0 -1px 0 rgba(0,0,0,.2);
+}
+.bbcode-errors p {
+    color: #ccc;
+    text-shadow: -1px -1px 0px rgba(0,0,0,1.0);
+    margin-left: 10px;
+}
+
+.bbcode-errors {
+    position: relative;
+}
+
+.char-count {
+    position: absolute;
+    right: 10px;
+}
+
+.list-group-item:last-child,
+.list-group-item:first-child,
+.list-group-item,
+.list-group,
+.panel {
+    border-radius: 0;
+}
+
+.post .panel-heading {
+  /* box-shadow: inset 0 1px 0 rgba(255, 255, 255, .15), 0 1px 1px rgba(0, 0, 0, .075), 0px 3px 15px 0px black; */
+  /* -webkit-box-shadow: inset 0 1px 0 rgba(255, 255, 255, .15), 0 1px 1px rgba(0, 0, 0, .075); */
+}
+.post.panel {
+    margin-bottom: 5px;
+}
+
+/* remove rounded corners */
+.navbar,
+.breadcrumb {
+    border-radius: 0;
 }

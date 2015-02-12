@@ -213,12 +213,10 @@ var w;
         if (e.$isPreview === false) {
           e.showPreview();
           e.enableButtons('bb-preview');
-          e.$editor.find('.bbcode-editor-mode').css('display', 'inline-block');
         } else {
           e.hidePreview();
+          e.$editor.find('.bbcode-errors p').html('');
           e.$editor.find('.bbcode-errors ul').html('');
-          e.$editor.find('.bbcode-errors p').html('Click "Preview" to check for errors');
-          e.$editor.find('.bbcode-editor-mode').hide();
         }
       }
     }
@@ -306,12 +304,12 @@ var w;
            data: [buttons['bb-preview']]}
         ]
       ],
-      footer: '<div class="bbcode-editor-mode">You are in Preview Mode</div>'+
-              '<div class="bbcode-errors">'+
-              '  <div class="char-count text-right">'+
+      footer: '<div class="bbcode-errors">'+
+              '  <div class="char-count">'+
               '    <span class="current">--</span>'+
               '    / <span class="limit">'+ (charLimit ? commafy(charLimit) : '--') +'</span> chars'+
               '  </div>'+
+              '  <p></p>'+
               '  <ul style="color: red;"></ul>'+
               '</div>'
     };

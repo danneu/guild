@@ -301,8 +301,13 @@
 
   {% if ctx.can(ctx.currUser, 'CREATE_POST', topic) %}
     <a name="new-reply-form"></a>
-    <h2>New Reply</h2>
-    <ul>
+    <h2 style="display: inline-block;">New Reply</h2>
+    <button type="button" class="btn btn-default btn-xs"
+            onclick="togglePostHint()"
+            style="display: inline-block; margin-left: 10px; margin-bottom: 10px;">
+      Toggle Hint
+    </button>
+    <ul class="post-hint" style="display: none;">
       <li>Before submitting your post, it's wise to copy it somewhere so that you don't lose it in the event of server error.</li>
       <li>
         It's a good idea to notify people you're talking to so they know to read your post. There are two ways to do this:
@@ -530,5 +535,11 @@ $(function() {
       $this.attr('data-rendered', true);
     }
   });
+</script>
+
+<script>
+function togglePostHint() {
+  $('.post-hint').toggle();
+}
 </script>
 {% endblock%}
