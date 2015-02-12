@@ -56,9 +56,10 @@
           </p>
         {% elif n.type === 'CONVO' %}
           <p>
-            <a href="/users/{{ n.from_user.slug }}">{{ n.from_user.uname }}</a>
-            started a new private convo with you:
-            <a href="/convos/{{ n.convo_id }}">{{ n.convo_title }}</a>
+            <!-- <a href="/users/{{ n.from_user.slug }}">{{ n.from_user.uname }}</a> -->
+            <!-- started a new private convo with you: -->
+            {{ n.count }} unread PM{% if n.count > 1 %}s{% endif %} in convo:
+            <a href="/convos/{{ n.convo.id }}">{{ n.convo.title }}</a>
           </p>
         {% endif %}
       </li>
