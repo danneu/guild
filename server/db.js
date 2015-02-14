@@ -1370,7 +1370,14 @@ exports.findAllUnames = function*() {
 
 exports.findTopicById = function*(topicId) {
   assert(topicId);
-  var sql = 'SELECT * FROM topics WHERE id = $1';
+  var sql = m(function() {/*
+SELECT
+  t.*,
+  to_json(f.*) "forum"
+FROM topics t
+JOIN forums f ON t.forum_id = f.id
+WHERE t.id = $1
+  */});
   var result = yield query(sql, [topicId]);
   return result.rows[0];
 };
