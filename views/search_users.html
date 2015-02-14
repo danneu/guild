@@ -10,8 +10,11 @@
     <!-- Search bar -->
     <form name="search-bar" class="form-inline pull-right">
       <div class="form-group">
-        <input type="text" name="text" placeholder="Username (or part of one)" class="form-control" style="width: 200px;">
+        <input type="text" name="text" placeholder="Username (or part of one)" class="form-control" style="width: 200px;" value="{{ term }}">
         <input type="submit" value="Search" class="btn btn-default">
+        {% if term %}
+          <a href="/users" class="btn btn-danger">Clear Search</a>
+        {% endif %}
       </div>
     </form>
 
