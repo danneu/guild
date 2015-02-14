@@ -24,8 +24,10 @@ exports.dateToSeconds = function(date) {
 };
 
 exports.futureDate = function(nowDate, opts) {
-  // assert(opts.years || opts.days || opts.minutes ||
-  //        opts.seconds || opts.milliseconds);
+  if (!opts) {
+    opts = nowDate;
+    nowDate = new Date();
+  }
 
   return new Date(nowDate.getTime() +
                   (opts.years   || 0) * 1000 * 60 * 60 * 24 * 365 +
