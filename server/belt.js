@@ -19,6 +19,10 @@ var config = require('./config');
 //// Somewhat of a junk drawer.
 ////
 
+exports.dateToSeconds = function(date) {
+  return Math.floor(date.getTime() / 1000);
+};
+
 exports.futureDate = function(nowDate, opts) {
   // assert(opts.years || opts.days || opts.minutes ||
   //        opts.seconds || opts.milliseconds);
