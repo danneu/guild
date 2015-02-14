@@ -10,6 +10,10 @@ var assert = require('better-assert');
 exports.can = can;
 function can(user, action, target) {
   switch(action) {
+    case 'READ_USER_LIST': // no target
+      // Only registered users can
+      if (!user) return false;
+      return true;
     case 'UPDATE_TOPIC_TITLE': // target is topic
       if (!user) return false;
       // Banned users can't update their old topics

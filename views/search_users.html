@@ -3,37 +3,35 @@
 {% block embed %}
   <ol class="breadcrumb">
     <li><a href="/">Home</a></li>
-    <li>Search Users</li>
+    <li>Users</li>
   </ol>
 
   <div class="page-header">
+    <!-- Search bar -->
+    <form name="search-bar" class="form-inline pull-right">
+      <div class="form-group">
+        <input type="text" name="text" placeholder="Username (or part of one)" class="form-control" style="width: 200px;">
+        <input type="submit" value="Search" class="btn btn-default">
+      </div>
+    </form>
+
     <h1>
-      <a href="/search/users">Search Users</a>
+      <a href="/search/users" style="color: white;">Users</a>
     </h1>
   </div>
 
   <div class="row">
-    <div class="col-xs-6">
+    <div class="col-xs-12">
 
-      
-      <!-- Search bar -->
-      <span><form name="search-bar" class="form-inline">
-        <div class="form-group">
-        <input type="text" name="text" placeholder="Search users" class="form-control"></input>
-        <input type="submit" value="Search" class="btn btn-primary"></input>
-      </div>
-      </form></span>
-
-      <!-- Search results -->
-      <a name="search-results"></a>
-      <h3>Search Results</h3>
+      <!-- Explanation -->
+      <p>If a user has no <code>Last Online</code> value, then they haven't logged in since the Guild's relaunch in January 2015.</p>
 
       <!-- Pagination -->
 
       {% if usersList.length-1 > 1 || beforeId %}
         <ul class="pager">
           <li>
-            <a href="{{ ctx.request.path }}#search-results">
+            <a href="{{ ctx.request.path }}">
               First Page
             </a>
           </li>
@@ -46,9 +44,9 @@
           {% else %}
             <li>
               {% if term %}
-              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}&text={{ term }}#search-results">
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}&text={{ term }}">
               {% else %}
-              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#search-results">
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}">
               {% endif %}
                 Next Page &rarr;
               </a>
@@ -65,32 +63,63 @@
         </div>
       {% endif %}
 
-      {% for user in usersList %}
-        <div class="panel panel-default">
-          <div class="panel-heading">
-            <a href="/users/{{ user.id }}" style="color: #ffc300">
-              {{ user.uname }}
-            </a>
-            {% if user.last_online_at != null %}
-            Last Online:
-            <abbr class="timeago" title="{{ user.last_online_at.toISOString() }}">
-              {{ user.last_online_at|formatDate }}
-            </abbr>
-            {% endif %}
-            {% if user.oldguild_uname != null %}
-              Oldguild: {{ user.oldguild_uname }}
-            {% endif %}
-          </div>
-        </div>
-      {% endfor %}
-
+      {% if usersList.length > 0 %}
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Posts</th>
+              <th>Last Online</th>
+              <th>Joined</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for user in usersList %}
+            <tr>
+              <!-- Username -->
+              <td>
+                <a href="{{ user.url }}">{{ user.uname }}</a>
+              </td>
+              <!-- Posts -->
+              <td>
+                {{ user.posts_count }}
+              </td>
+              <!-- Last Online -->
+              <td>
+                {% if user.is_ghost && user.last_online_at %}
+                  {% if ctx.can(ctx.currUser, 'READ_USER_ONLINE_STATUS', user) %}
+                    <abbr class="timeago" title="{{ user.last_online_at.toISOString() }}">
+                      {{ user.last_online_at|formatDate }}
+                    </abbr>
+                  {% else %}
+                    Invisible
+                  {% endif %}
+                {% elif user.last_online_at %}
+                  <abbr class="timeago" title="{{ user.last_online_at.toISOString() }}">
+                    {{ user.last_online_at|formatDate }}
+                  </abbr>
+                {% else %}
+                  --
+                {% endif %}
+              </td>
+              <!-- Joined -->
+              <td>
+                <abbr class="timeago" title="{{ user.created_at.toISOString() }}">
+                  {{ user.created_at|formatDate }}
+                </abbr>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
 
       <!-- Pagination -->
 
       {% if usersList.length-1 > 1 || beforeId %}
         <ul class="pager">
           <li>
-            <a href="{{ ctx.request.path }}#search-results">
+            <a href="{{ ctx.request.path }}">
               First Page
             </a>
           </li>
@@ -103,9 +132,9 @@
           {% else %}
             <li>
               {% if term.length > 0 %}
-              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}&text={{ term }}#search-results">
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}&text={{ term }}">
               {% else %}
-              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#search-results">
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}">
               {% endif %}
                 Next Page &rarr;
               </a>

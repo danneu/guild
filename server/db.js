@@ -1615,7 +1615,6 @@ VALUES ($1, $2, $3, NOW())
 
 // Returns map of ForumId->Int
 exports.getForumViewerCounts = function*() {
-  debug('[getForumViewerCounts] Running');
   // Query returns { forum_id: Int, viewers_count: Int } for every forum
   sql = m(function() {/*
 SELECT

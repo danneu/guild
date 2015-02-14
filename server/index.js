@@ -401,15 +401,6 @@ app.post('/sessions', function*() {
 });
 
 //
-// Show users
-//
-app.get('/users', function*() {
-  yield this.render('users', {
-    ctx: this
-  });
-});
-
-//
 // BBCode Cheatsheet
 //
 app.get('/bbcode', function*() {
@@ -984,9 +975,23 @@ app.post('/topics/:topicSlug/posts', function*() {
 //
 // Search users
 //
-app.get('/search/users', function*() {
-  this.checkQuery('text').optional().toString(); // undefined || String
+app.get('/users', function*() {
+  this.assertAuthorized(this.currUser, 'READ_USER_LIST');
+
+  // undefined || String
+  this.checkQuery('text')
+    .optional()
+    .isLength(3, 15, 'Username must be 3-15 chars')
   this.checkQuery('before-id').optional().toInt();  // undefined || Number
+
+  if (this.errors) {
+    this.flash = {
+      message: ['danger', belt.joinErrors(this.errors)],
+      params: this.request.body
+    };
+    this.response.redirect('/users');
+    return;
+  }
 
   var usersList;
   if (this.query['before-id']) {
@@ -1003,14 +1008,7 @@ app.get('/search/users', function*() {
     usersList = yield db.findAllUsers();
   }
 
-  if (this.errors) {
-  this.flash = {
-    message: ['danger', belt.joinErrors(this.errors)],
-    params: this.request.body
-  };
-  this.response.redirect('/search/users');
-  return;
-  }
+  usersList = usersList.map(pre.presentUser);
 
   var nextBeforeId = _.last(usersList) != null ? _.last(usersList).id : null;
 
