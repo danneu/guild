@@ -999,7 +999,7 @@ app.get('/users', function*() {
       //this.checkQuery('text').notEmpty().isLength(1, 15, 'Search text must be 1-15 chars');
       usersList = yield db.findUsersContainingStringWithId(this.query['text'], this.query['before-id']);
     }else {
-      usersList = yield db.findAllUsersWithId(this.query['before-id']);
+      usersList = yield db.findAllUsers(this.query['before-id']);
     }
   }else if (this.query['text']) {
     //this.checkQuery('text').notEmpty().isLength(1, 15, 'Search text must be 1-15 chars');

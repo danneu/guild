@@ -607,8 +607,7 @@ function* findUsersContainingString(searchTerm) {
     var sql = m(function() {/*
   SELECT *
   FROM users
-  WHERE
-  lower(uname) LIKE '%' || lower($1::text) || '%'
+  WHERE lower(uname) LIKE '%' || lower($1::text) || '%'
   ORDER BY id DESC
   LIMIT $2::bigint
     */});
@@ -617,18 +616,7 @@ function* findUsersContainingString(searchTerm) {
 }
 
 exports.findAllUsers = wrapTimer(findAllUsers);
-function* findAllUsers() {
-    var sql = m(function() {/*
-  SELECT *
-  FROM users
-  ORDER BY id DESC
-  LIMIT $1::bigint
-    */});
-  var result = yield query(sql, [config.USERS_PER_PAGE]);
-  return result.rows;
-}
-exports.findAllUsersWithId = wrapTimer(findAllUsersWithId);
-function* findAllUsersWithId(beforeId) {
+function* findAllUsers(beforeId) {
     var sql = m(function() {/*
   SELECT *
   FROM users
@@ -636,7 +624,7 @@ function* findAllUsersWithId(beforeId) {
   ORDER BY id DESC
   LIMIT $1::bigint
     */});
-  var result = yield query(sql, [config.USERS_PER_PAGE, beforeId]);
+  var result = yield query(sql, [config.USERS_PER_PAGE, beforeId || 1e9]);
   return result.rows;
 }
 
