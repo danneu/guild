@@ -90,6 +90,7 @@
           {% for user in latestUsers %}
             <li>
               <a href="{{ user.url }}">{{ user.uname }}</a>
+              <span class="text-muted">{{ user.email }}</span>
               <div>
                 Joined <abbr class="timeago" title="{{ user.created_at.toISOString() }}">
                   {{ user.formattedCreatedAt }}
