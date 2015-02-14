@@ -1,0 +1,122 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li>Search Users</li>
+  </ol>
+
+  <div class="page-header">
+    <h1>
+      <a href="/search/users">Search Users</a>
+    </h1>
+  </div>
+
+  <div class="row">
+    <div class="col-xs-6">
+
+      
+      <!-- Search bar -->
+      <span><form name="search-bar" class="form-inline">
+        <div class="form-group">
+        <input type="text" name="text" placeholder="Search users" class="form-control"></input>
+        <input type="submit" value="Search" class="btn btn-primary"></input>
+      </div>
+      </form></span>
+
+      <!-- Search results -->
+      <a name="search-results"></a>
+      <h3>Search Results</h3>
+
+      <!-- Pagination -->
+
+      {% if usersList.length-1 > 1 || beforeId %}
+        <ul class="pager">
+          <li>
+            <a href="{{ ctx.request.path }}#search-results">
+              First Page
+            </a>
+          </li>
+          {% if usersList.length < usersPerPage %}
+            <li class="disabled">
+              <a href="{{ ctx.request.url }}">
+                Next Page &rarr;
+              </a>
+            </li>
+          {% else %}
+            <li>
+              {% if term %}
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}&text={{ term }}#search-results">
+              {% else %}
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#search-results">
+              {% endif %}
+                Next Page &rarr;
+              </a>
+            </li>
+          {% endif %}
+        </ul>
+      {% endif %}
+
+      <!-- Users list -->
+
+      {% if usersList.length === 0 %}
+        <div class="well">
+          No users found
+        </div>
+      {% endif %}
+
+      {% for user in usersList %}
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <a href="/users/{{ user.id }}" style="color: #ffc300">
+              {{ user.uname }}
+            </a>
+            {% if user.last_online_at != null %}
+            Last Online:
+            <abbr class="timeago" title="{{ user.last_online_at.toISOString() }}">
+              {{ user.last_online_at|formatDate }}
+            </abbr>
+            {% endif %}
+            {% if user.oldguild_uname != null %}
+              Oldguild: {{ user.oldguild_uname }}
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+
+
+      <!-- Pagination -->
+
+      {% if usersList.length-1 > 1 || beforeId %}
+        <ul class="pager">
+          <li>
+            <a href="{{ ctx.request.path }}#search-results">
+              First Page
+            </a>
+          </li>
+          {% if usersList.length < usersPerPage %}
+            <li class="disabled">
+              <a href="{{ ctx.request.url }}">
+                Next Page &rarr;
+              </a>
+            </li>
+          {% else %}
+            <li>
+              {% if term.length > 0 %}
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}&text={{ term }}#search-results">
+              {% else %}
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#search-results">
+              {% endif %}
+                Next Page &rarr;
+              </a>
+            </li>
+          {% endif %}
+        </ul>
+      {% endif %}
+
+    </div> <!-- /.col-6 -->
+  </div> <!-- /.row -->
+
+
+{% block scripts %}
+{% endblock %}
