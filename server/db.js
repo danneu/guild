@@ -1032,6 +1032,8 @@ SELECT
       'id', f.id,
       'title', f.title,
       'pos', f.pos,
+      'posts_count', f.posts_count,
+      'topics_count', f.topics_count,
       'description', f.description,
       'category_id', f.category_id,
       'parent_forum_id', f.parent_forum_id,
