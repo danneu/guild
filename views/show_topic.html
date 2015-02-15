@@ -82,6 +82,36 @@
         </form>
       {% endif %}
 
+     <!-- MOVE -->
+     {% if ctx.can(ctx.currUser, 'MOVE_TOPIC', topic) %}
+        <div style="display: inline-block;" class="well well-sm">
+        Move topic:
+        <form action="{{ topic.url }}/move" method="post">
+
+          <!-- Destination forum -->
+           <select name="forum-id">
+             {% for c in categories %}
+              <optgroup label="{{ c.title }}"></optgroup>
+              {% for f in c.forums %}
+                <option style="padding-left: 15px" value="{{ f.id }}">
+                  &mdash; {{ f.title }}
+                </option>
+              {% endfor %}
+             {% endfor %}
+           </select>
+
+          <!-- Leave redirect? -->
+          <label>
+            Leave redirect?
+            <input type="checkbox" name="leave-redirect?" checked>
+          </label>
+
+          <input type="submit" class="btn btn-default btn-xs" value="Move Topic"
+                 style="margin-left: 20px;">
+        </form>
+        </div>
+     {% endif %}
+
     </div><!--/.topic-controls-->
   </div><!--/.page-header-->
 

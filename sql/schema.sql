@@ -125,7 +125,11 @@ CREATE TABLE topics (
   posts_count int NOT NULL  DEFAULT 0,
   ic_posts_count int NOT NULL DEFAULT 0,
   ooc_posts_count int NOT NULL DEFAULT 0,
-  char_posts_count int NOT NULL DEFAULT 0
+  char_posts_count int NOT NULL DEFAULT 0,
+  -- Moving
+  moved_from_forum_id int NULL REFERENCES forums(id),
+  moved_at timestamp with time zone NULL,
+  latest_post_at timestamp with time zone NULL
 );
 
 CREATE TYPE post_type AS ENUM ('ic', 'ooc', 'char');

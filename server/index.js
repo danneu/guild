@@ -427,13 +427,15 @@ app.get('/register', function*() {
 // Homepage
 //
 app.use(route.get('/', function*() {
-  var categories = yield db.findCategories();
+  var categories = cache.get('categories');
+
   // We don't show the mod forum on the homepage.
   // Nasty, but just delete it for now
   // TODO: Abstract
   _.remove(categories, { id: 4 });
+
   var categoryIds = _.pluck(categories, 'id');
-  var allForums = yield db.findForums(categoryIds);
+  var allForums = _.flatten(_.pluck(categories, 'forums'));
 
   // Assoc forum viewCount from cache
   var viewerCounts = cache.get('forum-viewer-counts');
@@ -443,6 +445,7 @@ app.use(route.get('/', function*() {
 
   var topLevelForums = _.reject(allForums, 'parent_forum_id');
   var childForums = _.filter(allForums, 'parent_forum_id');
+
   // Map of {CategoryId: [Forums...]}
   childForums.forEach(function(childForum) {
     var parentIdx = _.findIndex(topLevelForums, { id: childForum.parent_forum_id });
@@ -1894,6 +1897,7 @@ app.get('/topics/:slug/:postType', function*() {
     topic: topic,
     postType: this.params.postType,
     title: topic.title,
+    categories: cache.get('categories'),
     // Pagination
     currPage: page,
     totalPages: totalPages,
@@ -1973,6 +1977,46 @@ app.get('/me/notifications', function*() {
     ctx: this,
     notifications: notifications
   });
+});
+
+//
+// Move topic
+//
+app.post('/topics/:slug/move', function*() {
+  var topicId = belt.extractId(this.params.slug);
+  var topic = yield db.findTopicById(topicId);
+  this.assert(topic, 404);
+  this.assertAuthorized(this.currUser, 'MOVE_TOPIC', topic);
+  topic = pre.presentTopic(topic);
+
+  // Validation
+
+  this.checkBody('forum-id')
+    .notEmpty('forum-id required')
+    .toInt('forum-id invalid')
+    .neq(topic.forum_id, 'Topic already belongs to the forum you tried to move it to');
+  this.checkBody('leave-redirect?')
+    .toBoolean();
+
+  if (this.errors) {
+    this.flash = { message: ['danger', belt.joinErrors(this.errors)] };
+    this.response.redirect(topic.url);
+    return;
+  }
+
+  topic = yield db.moveTopic(
+    topic.id,
+    topic.forum_id,
+    this.request.body['forum-id'],
+    this.request.body['leave-redirect?']
+  );
+  topic = pre.presentTopic(topic);
+
+  this.flash = {
+    message: ['success', 'Topic moved']
+  };
+
+  this.response.redirect(topic.url);
 });
 
 app.listen(config.PORT);

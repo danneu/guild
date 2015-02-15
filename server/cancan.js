@@ -69,9 +69,9 @@ function can(user, action, target) {
     case 'UNHIDE_TOPIC':
     case 'CLOSE_TOPIC':
     case 'OPEN_TOPIC':
+    case 'MOVE_TOPIC':
       // Only staff can do this
       return _.contains(['mod', 'smod', 'admin'], user.role);
-      return false;
     case 'CREATE_POST': // target is topic
       if (!user) return false;
       if (user.role === 'banned') return false;

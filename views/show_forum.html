@@ -85,6 +85,9 @@
             <div class="row">
               <div class="col-xs-6">
                 <h5 class="list-group-item-heading topic-panel-title">
+                  {% if topic.moved_at && topic.moved_from_forum_id === forum.id %}
+                    <span class="glyphicon glyphicon-share-alt"></span>
+                  {% endif %}
                   {% if topic.is_closed %}
                     <span class="label label-default">Closed</span>
                   {% endif %}
@@ -107,23 +110,37 @@
                     </abbr>
                   </div>
                 </p>
-              </div>
-              <div class="col-xs-1"></div>
-              <div class="col-xs-2">{{ topic.posts_count|commafy }}</div>
-              <!-- Latest post -->
-              <div class="col-xs-3">
-                <div>
-                  by <a href="{{ topic.latest_user.url }}" style="color: #fff">{{ topic.latest_user.uname }}</a>
-                <a href="{{ topic.latest_post.url }}">
-                  <span class="glyphicon glyphicon-link"></span>
-                  &rarr;
-                </a>
+              </div> <!-- /col6 -->
+              {% if topic.moved_at && topic.moved_from_forum_id === forum.id %}
+                <div class="col-xs-6">
+                  Moved to
+                  <a href="/forums/{{ topic.forum_id }}">
+                    {{ topic.forum.title -}}
+                  </a>
+                  <div>
+                    <abbr class="timeago" title="{{ topic.moved_at.toISOString() }}">
+                      {{ topic.moved_at|formatDate }}
+                    </abbr>
+                  </div>
+                </div> <!-- /col-6 -->
+              {% else %}
+                <div class="col-xs-1"></div>
+                <div class="col-xs-2">{{ topic.posts_count|commafy }}</div>
+                <!-- Latest post -->
+                <div class="col-xs-3">
+                  <div>
+                    by <a href="{{ topic.latest_user.url }}" style="color: #fff">{{ topic.latest_user.uname }}</a>
+                  <a href="{{ topic.latest_post.url }}">
+                    <span class="glyphicon glyphicon-link"></span>
+                    &rarr;
+                  </a>
+                  </div>
+                  <abbr class="timeago"
+                        title="{{ topic.latest_post.created_at.toISOString() }}">
+                    {{ topic.latest_post.formattedCreatedAt }}
+                  </abbr>
                 </div>
-                <abbr class="timeago"
-                      title="{{ topic.latest_post.created_at.toISOString() }}">
-                  {{ topic.latest_post.formattedCreatedAt }}
-                </abbr>
-              </div>
+              {% endif %} <!-- /if moved -->
             </div> <!-- /.row -->
           </div> <!-- /.list-group-item -->
         {% endif %}

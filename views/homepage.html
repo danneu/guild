@@ -39,7 +39,7 @@
                     {% if forum.latest_post %}
                       <div>
                         <a href="{{ forum.latest_post.url }}">
-                          {{ forum.latest_topic.title|truncate(30) }}
+                          {{ forum.latest_topic.title }}
                         </a>
                       </div>
                       <div>
@@ -50,7 +50,7 @@
                       </div>
                       <abbr class="timeago"
                             title="{{ forum.latest_post.created_at.toISOString() }}">
-                        {{ forum.latest_post.formattedCreatedAt }}
+                        {{ forum.latest_post.created_at|formatDate }}
                       </abbr>
                     {% else %}
                       --
@@ -79,7 +79,7 @@
                         <br>
                         <abbr class="timeago"
                               title="{{ subforum.latest_post.created_at.toISOString() }}">
-                          {{ subforum.latest_post.formattedCreatedAt }}
+                          {{ subforum.latest_post.created_at|formatDate }}
                         </abbr>
                       {% else %}
                         --

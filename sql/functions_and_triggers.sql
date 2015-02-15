@@ -13,6 +13,9 @@ CREATE INDEX users_created_at_desc          ON users (created_at DESC);
 CREATE UNIQUE INDEX cp_uniq_convoId_userId ON convos_participants (convo_id, user_id);
 CREATE INDEX convos_id_latestPmId_DESC ON convos (id, latest_pm_id DESC);
 CREATE INDEX ON notifications (to_user_id);
+CREATE INDEX topics_moved_at_latest_post_at ON topics (
+  COALESCE(moved_at, latest_post_at) DESC
+);
 
 ------------------------------------------------------------
 ------------------------------------------------------------
@@ -215,12 +218,13 @@ $$
 
   plv8.execute(q, [NEW.id, NEW.topic_id]);
 
-  q = 'UPDATE topics                                               '+
-      'SET latest_post_id      = $2,                               '+
-      '    latest_ic_post_id   = COALESCE($3, latest_ic_post_id),  '+
-      '    latest_ooc_post_id  = COALESCE($4, latest_ooc_post_id), '+
-      '    latest_char_post_id = COALESCE($5, latest_char_post_id) '+
-      'WHERE id = $1                                               ';
+  q = 'UPDATE topics                                                '+
+      'SET latest_post_id      = $2,                                '+
+      '    latest_ic_post_id   = COALESCE($3, latest_ic_post_id),   '+
+      '    latest_ooc_post_id  = COALESCE($4, latest_ooc_post_id),  '+
+      '    latest_char_post_id = COALESCE($5, latest_char_post_id), '+
+      '    latest_post_at      = NOW()                              '+
+      'WHERE id = $1                                                ';
 
   // If NonRP, just set the latest_post_id
   if (!NEW.is_roleplay) {

@@ -478,7 +478,8 @@ function* findTopicsByForumId(forumId, limit, offset) {
   t.*,
   to_json(u.*) "user",
   to_json(p.*) "latest_post",
-  to_json(u2.*) "latest_user"
+  to_json(u2.*) "latest_user",
+  NULL "forum" -- don't need this for stickies
 FROM topics t
 JOIN users u ON t.user_id = u.id
 LEFT JOIN posts p ON t.latest_post_id = p.id
@@ -494,13 +495,17 @@ UNION ALL
   t.*,
   to_json(u.*) "user",
   to_json(p.*) "latest_post",
-  to_json(u2.*) "latest_user"
+  to_json(u2.*) "latest_user",
+  to_json(f.*) "forum"
 FROM topics t
 JOIN users u ON t.user_id = u.id
 LEFT JOIN posts p ON t.latest_post_id = p.id
 LEFT JOIN users u2 ON p.user_id = u2.id
-WHERE t.forum_id = $1 AND NOT t.is_sticky
-ORDER BY t.latest_post_id DESC
+LEFT JOIN forums f ON t.forum_id = f.id
+WHERE
+  (t.forum_id = $1 OR t.moved_from_forum_id = $1)
+  AND NOT t.is_sticky
+ORDER BY COALESCE(t.moved_at, t.latest_post_at) DESC
 LIMIT $2
 OFFSET $3)
   */});
@@ -1017,20 +1022,53 @@ ORDER BY c.pos
   return result.rows;
 };
 
-// TODO: Order forums by pos
 exports.findCategoriesWithForums = findCategoriesWithForums;
 function* findCategoriesWithForums() {
   var sql = m(function() {/*
 SELECT
   c.*,
-  to_json(array_agg(f.*)) "forums"
+	array_agg(
+    json_build_object(
+      'id', f.id,
+      'title', f.title,
+      'pos', f.pos,
+      'description', f.description,
+      'category_id', f.category_id,
+      'parent_forum_id', f.parent_forum_id,
+      'latest_user', (
+        SELECT json_build_object(
+          'uname', u.uname,
+          'slug', u.slug
+        )
+        FROM users u
+        WHERE u.id = p.user_id
+      ),
+      'latest_topic', (
+        SELECT json_build_object('id', t.id, 'title', t.title)
+        FROM topics t
+        WHERE t.id = p.topic_id
+      ),
+      'latest_post', (
+        SELECT json_build_object(
+          'id', p.id,
+          'created_at', p.created_at
+        )
+      )
+    )
+	) "forums"
 FROM categories c
 JOIN forums f ON c.id = f.category_id
+JOIN posts p ON f.latest_post_id = p.id
 GROUP BY c.id
 ORDER BY c.pos
   */});
   var result = yield query(sql);
-  return result.rows;
+  var categories = result.rows;
+  categories = categories.map(function(c) {
+    c.forums = _.sortBy(c.forums, 'pos');
+    return c;
+  });
+  return categories;
 }
 
 // Creates a user and a session (logs them in).
@@ -1675,4 +1713,69 @@ ORDER BY uname
   };
 
   return output;
+};
+
+// leaveRedirect: Bool
+exports.moveTopic = function*(topicId, fromForumId, toForumId, leaveRedirect) {
+  assert(_.isNumber(toForumId));
+  var sql, params, result;
+  if (leaveRedirect) {
+    sql = m(function() {/*
+      UPDATE topics
+      SET forum_id = $2, moved_from_forum_id = $3, moved_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    */});
+    params = [topicId, toForumId, fromForumId];
+  } else {
+    sql = m(function() {/*
+      UPDATE topics
+      SET forum_id = $2, moved_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    */});
+    params = [topicId, toForumId];
+  }
+  result = yield query(sql, params);
+  var topic = result.rows[0];
+
+  // TODO: Put this in transaction
+
+  var results = yield [
+    query('SELECT * FROM forums WHERE id = $1', [fromForumId]),
+    query('SELECT * FROM forums WHERE id = $1', [toForumId])
+  ];
+  var fromForum = results[0].rows[0];
+  var toForum = results[1].rows[0];
+
+  // If moved topic's latest post is newer than destination forum's latest post,
+  // then update destination forum's latest post.
+  if (topic.latest_post_id > toForum.latest_post_id) {
+    debug('[moveTopic] Updating toForum latest_post_id');
+    sql = m(function() {/*
+UPDATE forums
+SET latest_post_id = $2
+WHERE id = $1
+    */});
+    debug('topic.id: %s, topic.latest_post_id: %s', topic.id, topic.latest_post_id);
+    yield query(sql, [topic.forum_id, topic.latest_post_id]);
+  }
+
+  // Update fromForum.latest_post_id if it was topic.latest_post_id since
+  // we moved the topic out of this forum.
+  if (topic.latest_post_id === fromForum.latest_post_id) {
+    debug('[moveTopic] Updating fromForum.latest_post_id');
+    sql = m(function() {/*
+UPDATE forums
+SET latest_post_id = (
+  SELECT MAX(t.latest_post_id) "latest_post_id"
+  FROM topics t
+  WHERE t.forum_id = $1
+)
+WHERE id = $1
+    */});
+    yield query(sql, [fromForumId]);
+  }
+
+  return topic;
 };

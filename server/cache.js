@@ -86,5 +86,11 @@ module.exports = function() {
     this.set('forum-viewer-counts', result);
   });
 
+  // Every 15 seconds
+  cache.every(1000 * 15, function*() {
+    var categories = yield db.findCategoriesWithForums();
+    this.set('categories', categories);
+  });
+
   return cache;
 };
