@@ -43,7 +43,9 @@
     </div>
   {% endif %}
 
-    <h2 id="tagline">Play-by-Post Forum Based Roleplaying</h2>
+    {% if ctx.config.NODE_ENV === 'production' %}
+      <h2 id="tagline">Play-by-Post Forum Based Roleplaying</h2>
+    {% endif %}
 
     <!-- Static navbar -->
     <nav class="navbar navbar-inverse" role="navigation"
@@ -56,7 +58,13 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="/">Roleplayer Guild</a>
+          <a class="navbar-brand" href="/">
+            {% if ctx.config.NODE_ENV === 'production' %}
+              Roleplayer Guild
+            {% else %}
+              {{ ctx.config.NODE_ENV }}-guild
+            {% endif %}
+          </a>
         </div>
         <div id="navbar" class="navbar-collapse collapse">
           <ul class="nav navbar-nav">
