@@ -133,7 +133,7 @@
               Total
             </td>
             <td>
-              {% set total_received =  _.values(user.ratings_received)|sum %}
+              {% set total_received =  user.ratings_received|sumValues %}
               {% if total_received > 0 %}
                 <span style="color: #3bb878; text-shadow: 0px 0px 1px #3bb878;">
                   {{ total_received }}
@@ -145,7 +145,7 @@
               {% endif %}
             </td>
             <td>
-              {% set total_given =  _.values(user.ratings_given)|sum %}
+              {% set total_given =  user.ratings_given|sumValues %}
               {% if total_given > 0 %}
                 <span style="color: #3bb878; text-shadow: 0px 0px 1px #3bb878;">
                   {{ total_given }}

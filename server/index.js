@@ -148,8 +148,16 @@ swig.setDefaults({
   }
 });
 
+// Sums `nums`, an array of numbers. Returns zero if `nums` is falsey.
 swig.setFilter('sum', function(nums) {
   return (nums || []).reduce(function(memo, n) {
+    return memo + n;
+  }, 0);
+});
+
+// Sums the values of an object
+swig.setFilter('sumValues', function(obj) {
+  return (_.values(obj)).reduce(function(memo, n) {
     return memo + n;
   }, 0);
 });

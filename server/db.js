@@ -263,23 +263,42 @@ exports.findUserById = exports.findUser = function*(id) {
 exports.findUserBySlug = function*(slug) {
   assert(_.isString(slug));
   var sql = m(function() {/*
+WITH q1 AS (
+  SELECT
+    COUNT(r) FILTER (WHERE r.type = 'like') like_count,
+    COUNT(r) FILTER (WHERE r.type = 'laugh') laugh_count,
+    COUNT(r) FILTER (WHERE r.type = 'thank') thank_count
+  FROM ratings r
+  JOIN users u ON r.to_user_id = u.id
+  WHERE u.slug = lower($1)
+  GROUP BY r.to_user_id
+),
+q2 AS (
+  SELECT
+    COUNT(r) FILTER (WHERE r.type = 'like') like_count,
+    COUNT(r) FILTER (WHERE r.type = 'laugh') laugh_count,
+    COUNT(r) FILTER (WHERE r.type = 'thank') thank_count
+  FROM ratings r
+  JOIN users u ON r.from_user_id = u.id
+  WHERE u.slug = lower($1)
+  GROUP BY r.from_user_id
+)
+
 SELECT
   u.*,
   json_build_object(
-    'like', COUNT(r1.*) FILTER (WHERE r1.type = 'like'),
-    'laugh', COUNT(r1.*) FILTER (WHERE r1.type = 'laugh'),
-    'thank', COUNT(r1.*) FILTER (WHERE r1.type = 'thank')
+    'like', (SELECT like_count FROM q1),
+    'laugh', (SELECT laugh_count FROM q1),
+    'thank', (SELECT thank_count FROM q1)
   ) ratings_received,
   json_build_object(
-    'like', COUNT(r2.*) FILTER (WHERE r2.type = 'like'),
-    'laugh', COUNT(r2.*) FILTER (WHERE r2.type = 'laugh'),
-    'thank', COUNT(r2.*) FILTER (WHERE r2.type = 'thank')
+    'like', (SELECT like_count FROM q2),
+    'laugh', (SELECT laugh_count FROM q2),
+    'thank', (SELECT thank_count FROM q2)
   ) ratings_given
 FROM users u
-LEFT OUTER JOIN ratings r1 ON u.id = r1.to_user_id
-LEFT OUTER JOIN ratings r2 ON u.id = r2.from_user_id
-WHERE lower(u.slug) = lower($1)
-group by u.id
+WHERE u.slug = lower($1)
+GROUP BY u.id
   */});
   var result = yield query(sql, [slug]);
   return result.rows[0];
