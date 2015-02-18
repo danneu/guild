@@ -276,10 +276,10 @@ CREATE VIEW active_viewers AS
 CREATE TYPE rating_type AS ENUM ('like', 'laugh', 'thank');
 
 CREATE TABLE ratings (
-  from_user_id    int NOT NULL REFERENCES users(id),
+  from_user_id    int NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   from_user_uname text NOT NULL,
-  to_user_id      int NOT NULL REFERENCES users(id),
-  post_id         int NOT NULL REFERENCES posts(id),
+  to_user_id      int NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  post_id         int NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
   type            rep_type NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT NOW(),
   -- A user can rate a post once
