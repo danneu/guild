@@ -47,6 +47,7 @@ function can(user, action, target) {
       return false;
     case 'UPDATE_USER':  // target is user
       if (!user) return false;
+      if (user.role === 'banned') return false;
       // Anyone can update themselves
       if (user.id === target.id) return true;
       // Staff can change staff below them
