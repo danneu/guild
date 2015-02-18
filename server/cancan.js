@@ -81,8 +81,15 @@ function can(user, action, target) {
         return true;
       // Members can post as long as it's outside the lexus lounge,
       // the topic is open, and the topic is visible
-      if (user.role === 'member')
-        return target.category_id !== 4 && !target.is_closed && !target.is_hidden;
+      if (user.role === 'member') {
+        if (target.category_id === 4) return false;
+        if (target.is_closed) return false;
+        if (target.is_hidden) return false
+        // Topic latest_post_at must be newer than 1 month
+        var t = new Date();
+        t.setMonth(t.getMonth() - 1);
+        return target.latest_post_at > t;
+      }
       return false;
     case 'READ_PM': // target is pm with pm.convo and pm.participants props
       if (!user) return false;
