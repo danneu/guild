@@ -183,6 +183,7 @@ function can(user, action, target) {
       return target.user_id === user.id;
     case 'UPDATE_POST':  // target expected to be a post
       if (!user) return false;
+      if (user.role === 'banned') return false;
       // Admin can update any post
       if (user.role === 'admin') return true;
       // TODO: Create rules for other staff roles
