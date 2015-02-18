@@ -139,6 +139,7 @@ function can(user, action, target) {
       return false;
     case 'CREATE_PM': // target is convo w/ participants prop
       if (!user) return false;
+      if (user.role === 'banned') return false;
       // User can send pm if they're a participant
       return !!_.find(target.participants, { id: user.id });
     case 'CREATE_POST':  // target is topic
