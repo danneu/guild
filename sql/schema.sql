@@ -15,6 +15,8 @@ DROP VIEW IF EXISTS active_reset_tokens;
 DROP TABLE IF EXISTS reset_tokens CASCADE;
 DROP TABLE IF EXISTS notifications CASCADE;
 DROP TYPE IF EXISTS notification_type;
+DROP TABLE IF EXISTS ratings;
+DROP TYPE IF EXISTS rating_type;
 
 --
 -- Only put things in this file that should be present for the
@@ -266,6 +268,23 @@ CREATE VIEW active_viewers AS
   FROM viewers
   WHERE viewed_at > NOW() - interval '15 minutes'
 ;
+
+--
+-- Post ratings
+--
+
+CREATE TYPE rating_type AS ENUM ('like', 'laugh', 'thank');
+
+CREATE TABLE ratings (
+  from_user_id    int NOT NULL REFERENCES users(id),
+  from_user_uname text NOT NULL,
+  to_user_id      int NOT NULL REFERENCES users(id),
+  post_id         int NOT NULL REFERENCES posts(id),
+  type            rep_type NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT NOW(),
+  -- A user can rate a post once
+  UNIQUE(from_user_id, post_id)
+);
 
 ------------------------------------------------------------
 ------------------------------------------------------------

@@ -263,9 +263,23 @@ exports.findUserById = exports.findUser = function*(id) {
 exports.findUserBySlug = function*(slug) {
   assert(_.isString(slug));
   var sql = m(function() {/*
-SELECT *
+SELECT
+  u.*,
+  json_build_object(
+    'like', COUNT(r1.*) FILTER (WHERE r1.type = 'like'),
+    'laugh', COUNT(r1.*) FILTER (WHERE r1.type = 'laugh'),
+    'thank', COUNT(r1.*) FILTER (WHERE r1.type = 'thank')
+  ) ratings_received,
+  json_build_object(
+    'like', COUNT(r2.*) FILTER (WHERE r2.type = 'like'),
+    'laugh', COUNT(r2.*) FILTER (WHERE r2.type = 'laugh'),
+    'thank', COUNT(r2.*) FILTER (WHERE r2.type = 'thank')
+  ) ratings_given
 FROM users u
+LEFT OUTER JOIN ratings r1 ON u.id = r1.to_user_id
+LEFT OUTER JOIN ratings r2 ON u.id = r2.from_user_id
 WHERE lower(u.slug) = lower($1)
+group by u.id
   */});
   var result = yield query(sql, [slug]);
   return result.rows[0];
@@ -767,11 +781,13 @@ SELECT
   p.*,
   to_json(u.*) "user",
   to_json(t.*) "topic",
-  to_json(f.*) "forum"
+  to_json(f.*) "forum",
+  to_json(array_remove(array_agg(r.*), null)) ratings
 FROM posts p
 JOIN users u ON p.user_id = u.id
 JOIN topics t ON p.topic_id = t.id
 JOIN forums f ON t.forum_id = f.id
+LEFT OUTER JOIN ratings r ON p.id = r.post_id
 WHERE p.topic_id = $1 AND p.type = $2 AND p.idx >= $3 AND p.idx < $4
 GROUP BY p.id, u.id, t.id, f.id
 ORDER BY p.id
@@ -1780,4 +1796,44 @@ WHERE id = $1
   }
 
   return topic;
+};
+
+// Required props:
+// - post_id: Int
+// - from_user_id: Int
+// - from_user_uname: String
+// - to_user_id: Int
+// - type: like | laugh | thank
+exports.ratePost = function*(props) {
+  assert(props.post_id);
+  assert(props.from_user_id);
+  assert(props.from_user_uname);
+  assert(props.to_user_id);
+  assert(props.type);
+  var sql = m(function() {/*
+INSERT INTO ratings (from_user_id, from_user_uname, post_id, type, to_user_id)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING *
+  */});
+  var result = yield query(sql, [
+    props.from_user_id,
+    props.from_user_uname,
+    props.post_id,
+    props.type,
+    props.to_user_id
+  ]);
+  return result.rows[0];
+};
+
+exports.findLatestRatingForUserId = function*(userId) {
+  assert(userId);
+  var sql = m(function() {/*
+SELECT *
+FROM ratings
+WHERE from_user_id = $1
+ORDER BY created_at DESC
+LIMIT 1
+  */});
+  var result = yield query(sql, [userId]);
+  return result.rows[0];
 };

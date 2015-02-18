@@ -7,6 +7,18 @@
   </ol>
 
   <div class="page-header">
+      <!-- PM button -->
+      {% if ctx.can(ctx.currUser, 'CREATE_CONVO') %}
+        <a class="btn btn-primary pull-right"
+           href="/convos/new?to={{ encodeURI(user.uname) }}">
+          <span class="glyphicon glyphicon-envelope"></span>
+          {% if ctx.currUser.id === user.id %}
+            Start Private Convo with yourself
+          {% else %}
+            Start Private Convo with {{ user.uname }}
+          {% endif %}
+        </a>
+      {% endif %}
     <h1>
       <a href="{{ user.url }}">{{ user.uname }}</a>
       <small>{{ user.role|capitalize}}</small>
@@ -27,12 +39,7 @@
       {% endif %}
 
       {% if ctx.can(ctx.currUser, 'DELETE_USER', user) %}
-        <form action="/users/{{ user.id }}" method="post" class="pull-right">
-          <input type="hidden" name="_method" value="delete">
-          <button type="submit" class="btn btn-danger btn-xs">
-            Delete
-          </button>
-        </form>
+        <!-- Delete button temporarily disabled -->
       {% endif %}
     </h1>
   </div>
@@ -79,19 +86,83 @@
 
     </div><!-- col-6 -->
 
-    <!-- PM button -->
 
     <div class="col-xs-6">
-      {% if ctx.can(ctx.currUser, 'CREATE_CONVO') %}
-        <a class="btn btn-primary btn-block pull-right"
-           href="/convos/new?to={{ encodeURI(user.uname) }}">
-          <span class="glyphicon glyphicon-envelope"></span>
-          {% if ctx.currUser.id === user.id %}
-            Start Private Convo with yourself
-          {% else %}
-            Start Private Convo with {{ user.uname }}
-          {% endif %}
-        </a>
+      <!-- Ratings table -->
+      <table class="table table-condensed rating-table">
+        <thead>
+          <tr style="border-bottom: 2px solid #333;">
+            <th>Rating</th>
+            <th>Received</th>
+            <th>Given</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for type in ['like', 'thank', 'laugh'] %}
+            <tr>
+              <td>
+                {{ type|capitalize }}s
+                <img src="{{ type|ratingTypeToImageSrc }}">
+              </td>
+              <td>
+                {% if user.ratings_received[type] > 0 %}
+                  <span style="color: #3bb878; text-shadow: 0px 0px 1px #3bb878;">
+                    {{ user.ratings_received[type] }}
+                  </span>
+                {% else %}
+                  <span class="text-muted">
+                  {{ user.ratings_received[type] }}
+                  </span>
+                {% endif %}
+              </td>
+              <td>
+                {% if user.ratings_given[type] > 0 %}
+                  <span style="color: #3bb878; text-shadow: 0px 0px 1px #3bb878;">
+                    {{ user.ratings_given[type] }}
+                  </span>
+                {% else %}
+                  <span class="text-muted">
+                  {{ user.ratings_given[type] }}
+                  </span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+          <tr style="border-top: 2px solid #333;">
+            <td>
+              Total
+            </td>
+            <td>
+              {% set total_received =  _.values(user.ratings_received)|sum %}
+              {% if total_received > 0 %}
+                <span style="color: #3bb878; text-shadow: 0px 0px 1px #3bb878;">
+                  {{ total_received }}
+                </span>
+              {% else %}
+                <span class="text-muted">
+                {{ total_received }}
+                </span>
+              {% endif %}
+            </td>
+            <td>
+              {% set total_given =  _.values(user.ratings_given)|sum %}
+              {% if total_given > 0 %}
+                <span style="color: #3bb878; text-shadow: 0px 0px 1px #3bb878;">
+                  {{ total_given }}
+                </span>
+              {% else %}
+                <span class="text-muted">
+                {{ total_given }}
+                </span>
+              {% endif %}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      {% if ctx.currUser && ctx.currUser.id === user.id%}
+        <p class="text-muted">
+          Use ratings to give kudos to posts you liked, thought were funny, or found helpful.<br>Please don't abuse the system.
+        </p>
       {% endif %}
     </div> <!-- /.col-6 -->
 

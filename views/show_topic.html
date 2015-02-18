@@ -263,6 +263,18 @@
           <div class="col-sm-10 post-content-wrapper">
             <!-- Post text -->
             {{- macros.renderPost(post) -}}
+            <!-- Ratings -->
+            {% if post.ratings.length > 0 %}
+              <div class="post-rating-list well well-sm">
+                {% set freq = belt.frequencies(post.ratings, 'type') %}
+                {% for type in ['like', 'laugh', 'thank'] %}
+                  {% if freq[type] %}
+                    {{ freq[type] }}x {{ type|capitalize }}
+                    <img src="{{ type|ratingTypeToImageSrc }}">
+                  {% endif %}
+                {% endfor %}
+              </div>
+            {% endif %}
             <!-- Signature -->
             {{- macros.renderSig(post.user) -}}
           </div>
@@ -312,6 +324,30 @@
                post-id={{ post.id }}
               >Edit</a>
           {% endif %}
+
+          {% if ctx.can(ctx.currUser, 'RATE_POST', post) %}
+            {% if post.has_rated %}
+              <span class="pull-right text-muted" style="margin-right: 10px;">
+                You <img src="{{ post.has_rated.type|ratingTypeToImageSrc }}">'ed this
+              </span>
+            {% else %}
+              <ul class="post-rating-actions list-inline pull-right">
+                <li data-rating-type="like" data-toggle="tooltip" title="Like"
+                    data-placement="top" data-post-id="{{ post.id }}">
+                  <img src="/ratings/like.png">
+                </li>
+                <li data-rating-type="laugh" data-toggle="tooltip" title="Laugh"
+                    data-placement="top" data-post-id="{{ post.id }}">
+                  <img src="/ratings/laugh-static.png">
+                </li>
+                <li data-rating-type="thank" data-toggle="tooltip" title="Thank"
+                    data-placement="top" data-post-id="{{ post.id }}">
+                  <img src="/ratings/thank.png">
+                </li>
+              </ul>
+            {% endif %}
+          {% endif %}
+
         </div> <!-- /.panel-footer -->
       </div> <!-- /.panel -->
     {% endif %} <!-- can READ_POST check -->
@@ -571,5 +607,42 @@ $(function() {
 function togglePostHint() {
   $('.post-hint').toggle();
 }
+</script>
+<script>
+$(function () {
+  $('[data-toggle="tooltip"]').tooltip()
+})
+</script>
+
+<script>
+  $('.post-rating-actions li').on('click', function() {
+    var $this = $(this);
+    var ratingType = $this.attr('data-rating-type');
+    var postId = $this.attr('data-post-id');
+    $.ajax({
+      type: 'POST',
+      url: '/posts/' + postId + '/rate',
+      data: { type: ratingType, post_id: postId },
+      dataType: 'json',
+      error: function(xhr) {
+        var json;
+        try {
+          json = JSON.parse(xhr.responseText);
+        } catch(ex) {
+          alert('Rating failed. Refresh the page and try again.');
+          throw ex;
+        }
+        if (json.error === 'TOO_SOON')
+          alert('Must wait 30 seconds between ratings.');
+      },
+      success: function(rating) {
+        var html = '<li class="text-muted">'+
+          'Rating submitted: '+ rating.type.charAt(0).toUpperCase() +
+          rating.type.slice(1) +
+          '</li>';
+        $this.parent().html(html);
+      },
+    });
+  });
 </script>
 {% endblock%}

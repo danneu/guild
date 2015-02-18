@@ -141,6 +141,32 @@ app.use(function*(next) {  // Must become before koa-router
 // Custom Swig filters
 ////////////////////////////////////////////////////////////
 
+swig.setDefaults({
+  locals: {
+    '_': _,
+    'belt': belt
+  }
+});
+
+swig.setFilter('sum', function(nums) {
+  return (nums || []).reduce(function(memo, n) {
+    return memo + n;
+  }, 0);
+});
+
+swig.setFilter('ratingTypeToImageSrc', function(type) {
+  switch(type) {
+    case 'like':
+      return '/ratings/like.png';
+    case 'laugh':
+      return '/ratings/laugh-static.png';
+    case 'thank':
+      return '/ratings/thank.png';
+    default:
+      throw new Error('Unsupported rating type: ' + type);
+  }
+});
+
 // TODO: Extract custom swig filters
 // {{ 'firetruck'|truncate(5) }}  -> 'firet...'
 // {{ 'firetruck'|truncate(6) }}  -> 'firetruck'
@@ -201,6 +227,52 @@ app.get('/test', function*() {
   yield this.render('test', {
     ctx: this
   });
+});
+
+// Required body params:
+// - type: like | laugh | thank
+// - post_id: Int
+app.post('/posts/:postId/rate', function*() {
+  this.checkBody('type')
+    .notEmpty('type is required')
+    .isIn(['like', 'laugh', 'thank'], 'Invalid type');
+  this.checkBody('post_id').toInt('Invalid post_id');
+
+  // Validate params (400)
+  this.assert(!this.errors, 400, belt.joinErrors(this.errors));
+
+  var post = yield db.findPostById(this.request.body.post_id);
+
+  // Ensure post exists (404)
+  this.assert(post, 404);
+  post = pre.presentPost(post);
+
+  // Ensure currUser is authorized to rep (403)
+  this.assert(cancan.can(this.currUser, 'RATE_POST', post));
+
+  // Ensure user has waited a certain duration since giving latest rating.
+  // (To prevent rating spamming)
+  var prevRating = yield db.findLatestRatingForUserId(this.currUser.id);
+  if (prevRating) {
+    var thirtySecondsAgo = new Date(Date.now() - 1000 * 30);
+    // If this user's previous rating is newer than 30 seconds ago, fail.
+    if (prevRating.created_at > thirtySecondsAgo) {
+      this.body = JSON.stringify({ error: 'TOO_SOON' });
+      this.status = 400;
+      return;
+    }
+  }
+
+  // Create rep
+  var rating = yield db.ratePost({
+    post_id: post.id,
+    from_user_id: this.currUser.id,
+    from_user_uname: this.currUser.uname,
+    to_user_id: post.user_id,
+    type: this.request.body.type
+  });
+
+  this.body = JSON.stringify(rating);
 });
 
 //
@@ -1891,6 +1963,13 @@ app.get('/topics/:slug/:postType', function*() {
   var viewers = yield db.findViewersForTopicId(topic.id);
 
   var posts = yield db.findPostsByTopicId(topicId, this.params.postType, page);
+  if (this.currUser) {
+    posts.forEach(function(post) {
+      var rating = _.findWhere(post.ratings, { from_user_id: this.currUser.id });
+      post.has_rated = rating;
+    }, this);
+  }
+
   topic.posts = posts.map(pre.presentPost);
   yield this.render('show_topic', {
     ctx: this,

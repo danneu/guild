@@ -786,3 +786,30 @@ input[type="text"].form-control {
 .breadcrumb {
     border-radius: 0;
 }
+
+/* Ratings */
+
+ul.post-rating-actions {
+    margin-right: 10px;
+    margin-bottom: 0;
+}
+ul.post-rating-actions li {
+    display: inline-block;
+    cursor: pointer;
+    padding-left: 0;
+    padding-right: 0;
+}
+.post-rating-list {
+    margin-top: 20px;
+}
+.rating-table.table > thead > tr > th {
+    border-bottom: 0;
+}
+.rating-table.table > thead > tr > th,
+.rating-table.table > tbody > tr > th,
+.rating-table.table > tfoot > tr > th,
+.rating-table.table > thead > tr > td,
+.rating-table.table > tbody > tr > td,
+.rating-table.table > tfoot > tr > td {
+    border-top: 0;
+}

@@ -339,3 +339,17 @@ exports.extractQuoteMentions = function(str, unameToReject) {
 
   return ret;
 };
+
+
+exports.frequencies = function(objs, prop) {
+  return _.chain(objs)
+   .groupBy(prop)
+   .pairs()
+   .reduce(function(memo, pair) {
+     var key = pair[0];
+     var vals = pair[1];
+     memo[key] = vals.length;
+     return memo;
+   }, {})
+   .value();
+};

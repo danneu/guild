@@ -17,6 +17,12 @@ CREATE INDEX topics_moved_at_latest_post_at ON topics (
   COALESCE(moved_at, latest_post_at) DESC
 );
 
+-- To fetch a user's most recent rating
+CREATE INDEX ON ratings (created_at DESC);
+CREATE INDEX ON ratings (from_user_id);
+CREATE INDEX ON ratings (to_user_id);
+CREATE INDEX ON ratings (post_id);
+
 ------------------------------------------------------------
 ------------------------------------------------------------
 -- Update forum.topics_count when a topic is inserted/deleted

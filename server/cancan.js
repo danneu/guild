@@ -10,6 +10,15 @@ var assert = require('better-assert');
 exports.can = can;
 function can(user, action, target) {
   switch(action) {
+    case 'RATE_POST': // target is post
+      // Guests can't rate
+      if (!user) return false;
+      // Banned members can't rate
+      if (user.role === 'banned') return false;
+      // Cannot rate your own post
+      if (user.id === target.user_id ) return false;
+      // Can rate if you're authorized to read post
+      return can(user, 'READ_POST', target);
     case 'READ_USER_LIST': // no target
       // Only registered users can
       if (!user) return false;
