@@ -280,7 +280,7 @@ CREATE TABLE ratings (
   from_user_uname text NOT NULL,
   to_user_id      int NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   post_id         int NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
-  type            rep_type NOT NULL,
+  type            rating_type NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT NOW(),
   -- A user can rate a post once
   UNIQUE(from_user_id, post_id)
