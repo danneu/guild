@@ -177,6 +177,7 @@ function can(user, action, target) {
       return false;
     case 'UPDATE_PM':  // target is pm with pm.convo and pm.participants
       if (!user) return false;
+      if (user.role === 'banned') return false;
       // Can't update legacy PMs. TODO: Implement BBCode editing for PMs
       // once post BBCode system is tested
       if (target.legacy_html) return false;
