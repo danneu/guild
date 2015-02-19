@@ -445,15 +445,18 @@ $('#new-reply').submit(function() {
 });
 </script>
 
-  <script>
-    // Turn the new post editor into a bbcode editor
+  {% if ctx.can(ctx.currUser, 'CREATE_POST', topic) %}
+    <script>
+      // Turn the new post editor into a bbcode editor
 
-    $(function() {
-      $('#markup-input').bbcode({
-        charLimit: {{ ctx.config.MAX_POST_LENGTH }}
+
+      $(function() {
+        $('#markup-input').bbcode({
+          charLimit: {{ ctx.config.MAX_POST_LENGTH }}
+        });
       });
-    });
-  </script>
+    </script>
+  {% endif %}
 
   {#
           REPLY BUTTON
