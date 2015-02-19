@@ -2106,5 +2106,33 @@ app.post('/topics/:slug/move', function*() {
   this.response.redirect(topic.url);
 });
 
+//
+// Delete currUser's rating for a post
+//
+app.delete('/me/ratings/:postId', function*() {
+  // Ensure user is logged in
+  this.assert(this.currUser, 403);
+  var rating = yield db.findRatingByFromUserIdAndPostId(
+    this.currUser.id, this.params.postId
+  );
+  // Ensure rating exists
+  this.assert(rating, 404);
+
+  // Ensure rating was created within 30 seconds
+  var thirtySecondsAgo = new Date(Date.now() - 1000 * 30);
+  // If this user's previous rating is newer than 30 seconds ago, fail.
+  if (rating.created_at < thirtySecondsAgo) {
+    this.status = 400;
+    this.body = 'You cannot delete a rating that is older than 30 seconds';
+    return;
+  }
+
+  yield db.deleteRatingByFromUserIdAndPostId(
+    this.currUser.id, this.params.postId
+  );
+
+  this.response.redirect('/posts/' + this.params.postId);
+});
+
 app.listen(config.PORT);
 console.log('Listening on ' + config.PORT);

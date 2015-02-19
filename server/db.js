@@ -1856,3 +1856,27 @@ LIMIT 1
   var result = yield query(sql, [userId]);
   return result.rows[0];
 };
+
+exports.findRatingByFromUserIdAndPostId = function*(from_user_id, post_id) {
+  assert(from_user_id);
+  assert(post_id);
+  var sql = m(function() {/*
+SELECT *
+FROM ratings
+WHERE from_user_id = $1 AND post_id = $2
+  */});
+  var result = yield query(sql, [from_user_id, post_id]);
+  return result.rows[0];
+};
+
+exports.deleteRatingByFromUserIdAndPostId = function*(from_user_id, post_id) {
+  assert(from_user_id);
+  assert(post_id);
+  var sql = m(function() {/*
+DELETE FROM ratings
+WHERE from_user_id = $1 AND post_id = $2
+RETURNING *
+  */});
+  var result = yield query(sql, [from_user_id, post_id]);
+  return result.rows[0];
+};

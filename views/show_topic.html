@@ -636,10 +636,11 @@ $(function () {
           alert('Must wait 30 seconds between ratings.');
       },
       success: function(rating) {
-        var html = '<li class="text-muted">'+
-          'Rating submitted: '+ rating.type.charAt(0).toUpperCase() +
-          rating.type.slice(1) +
-          '</li>';
+        var undoForm = '<form action="/me/ratings/'+ rating.post_id +'" method="post" style="display: inline-block;">'+
+          ' <input type="hidden" name="_method" value="delete">'+
+          '  <input type="submit" value="Undo '+ rating.type.charAt(0).toUpperCase() + rating.type.slice(1) +'" class="btn-link btn-xs">'+
+          '</form>'
+        var html = '<li class="text-muted">'+ undoForm + '</li>';
         $this.parent().html(html);
       },
     });
