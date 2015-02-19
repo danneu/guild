@@ -287,14 +287,14 @@ q2 AS (
 SELECT
   u.*,
   json_build_object(
-    'like', (SELECT like_count FROM q1),
-    'laugh', (SELECT laugh_count FROM q1),
-    'thank', (SELECT thank_count FROM q1)
+    'like', COALESCE((SELECT like_count FROM q1), 0),
+    'laugh', COALESCE((SELECT laugh_count FROM q1), 0),
+    'thank', COALESCE((SELECT thank_count FROM q1), 0)
   ) ratings_received,
   json_build_object(
-    'like', (SELECT like_count FROM q2),
-    'laugh', (SELECT laugh_count FROM q2),
-    'thank', (SELECT thank_count FROM q2)
+    'like', COALESCE((SELECT like_count FROM q2), 0),
+    'laugh', COALESCE((SELECT laugh_count FROM q2), 0),
+    'thank', COALESCE((SELECT thank_count FROM q2), 0)
   ) ratings_given
 FROM users u
 WHERE u.slug = lower($1)
