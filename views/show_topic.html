@@ -266,6 +266,9 @@
             <!-- Ratings -->
             {% if post.ratings.length > 0 %}
               <div class="post-rating-list well well-sm">
+                <button class="rater-list-toggle btn btn-default btn-xs pull-right">
+                  View All
+                </button>
                 {% set freq = belt.frequencies(post.ratings, 'type') %}
                 {% for type in ['like', 'laugh', 'thank'] %}
                   {% if freq[type] %}
@@ -273,6 +276,22 @@
                     <img src="{{ type|ratingTypeToImageSrc }}">
                   {% endif %}
                 {% endfor %}
+                <div style="margin-top: 10px; display: none;" class="rater-list">
+                {% for type in ['like', 'laugh', 'thank'] %}
+                  {% if freq[type] %}
+                    <div>
+                      <img src="{{ type|ratingTypeToImageSrc }}">
+                      <ul class="list-inline" style="display: inline-block;">
+                      {% for rating in _.sortBy(_.filter(post.ratings, { type: type }), 'from_user_uname') %}
+                        <li>
+                          <a href="/users/{{ rating.froum_user_uname|slugifyUname }}">{{ rating.from_user_uname }}</a>{% if !loop.last %},{% endif %}
+                        </li>
+                      {% endfor %}
+                      </ul>
+                    </div>
+                  {% endif %}
+                {% endfor %}
+                </div>
               </div>
             {% endif %}
             <!-- Signature -->
@@ -658,6 +677,11 @@ $(function () {
   $('.post').on('mouseleave', function() {
     var $this = $(this);
     $this.find('.post-rating-actions').hide();
+  });
+</script>
+<script type="text/javascript">
+  $('.rater-list-toggle').on('click', function() {
+    $(this).parent().find('.rater-list').toggle();
   });
 </script>
 {% endblock%}

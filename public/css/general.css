@@ -813,3 +813,7 @@ ul.post-rating-actions li {
 .rating-table.table > tfoot > tr > td {
     border-top: 0;
 }
+
+.rater-list li {
+    padding-right: 0;
+}
