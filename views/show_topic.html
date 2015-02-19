@@ -284,7 +284,7 @@
                       <ul class="list-inline" style="display: inline-block;">
                       {% for rating in _.sortBy(_.filter(post.ratings, { type: type }), 'from_user_uname') %}
                         <li>
-                          <a href="/users/{{ rating.froum_user_uname|slugifyUname }}">{{ rating.from_user_uname }}</a>{% if !loop.last %},{% endif %}
+                          <a href="/users/{{ rating.from_user_uname|slugifyUname }}">{{ rating.from_user_uname }}</a>{% if !loop.last %},{% endif %}
                         </li>
                       {% endfor %}
                       </ul>
