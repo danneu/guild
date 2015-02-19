@@ -5,6 +5,19 @@ var _ = require('lodash');
 var debug = require('debug')('app:cancan');
 var assert = require('better-assert');
 
+// These are forums where topics cannot be posted
+// in if the latest post is older than 1 month
+var ANTI_NECRO_FORUMS = [
+  30, // Spam
+  32, // Member Lounge
+  33, // Off-topic
+  9, // Bugs/feature requests
+  44, // Writing contests
+  36, // Need help?
+  1, // News
+  2, // Introduce yourself
+];
+
 // TODO: Actually write tests for these
 // TODO: Implement rules for all rules, not just member and admin
 exports.can = can;
@@ -93,11 +106,17 @@ function can(user, action, target) {
       if (user.role === 'member') {
         if (target.category_id === 4) return false;
         if (target.is_closed) return false;
-        if (target.is_hidden) return false
+        if (target.is_hidden) return false;
+
         // Topic latest_post_at must be newer than 1 month
-        var t = new Date();
-        t.setMonth(t.getMonth() - 1);
-        return target.latest_post_at > t;
+        // if in certain forums where necro'ing is disruptive
+        if (_.contains(ANTI_NECRO_FORUMS, target.forum_id)) {
+          debug(_.contains(ANTI_NECRO_FORUMS, target.forum_id));
+          var t = new Date();
+          t.setMonth(t.getMonth() - 1);
+          return target.latest_post_at > t;
+        }
+        return true;
       }
       return false;
     case 'READ_PM': // target is pm with pm.convo and pm.participants props
@@ -158,13 +177,6 @@ function can(user, action, target) {
       if (user.role === 'banned') return false;
       // User can send pm if they're a participant
       return !!_.find(target.participants, { id: user.id });
-    case 'CREATE_POST':  // target is topic
-      if (!user) return false;
-      // Staff can post everywhere
-      if (_.contains(['admin', 'smod', 'mod'], user.role)) return true;
-      if (user.role === 'member')
-        return (!target.is_hidden && !target.is_closed && target.category_id !== 4);
-      return false;
     case 'READ_TOPIC':  // target is topic
       // Only staff can read lexus lounge
       if (target.category_id === 4)
