@@ -331,7 +331,7 @@
                 You <img src="{{ post.has_rated.type|ratingTypeToImageSrc }}">'ed this
               </span>
             {% else %}
-              <ul class="post-rating-actions list-inline pull-right">
+              <ul class="post-rating-actions list-inline pull-right" style="display: none;">
                 <li data-rating-type="like" data-toggle="tooltip" title="Like"
                     data-placement="top" data-post-id="{{ post.id }}">
                   <img src="/ratings/like.png">
@@ -643,6 +643,17 @@ $(function () {
         $this.parent().html(html);
       },
     });
+  });
+</script>
+
+<script type="text/javascript">
+  $('.post').on('mouseenter', function() {
+    var $this = $(this);
+    $this.find('.post-rating-actions').show();
+  });
+  $('.post').on('mouseleave', function() {
+    var $this = $(this);
+    $this.find('.post-rating-actions').hide();
   });
 </script>
 {% endblock%}
