@@ -1968,9 +1968,15 @@ app.get('/topics/:slug/:postType', function*() {
   }
 
   co(db.upsertViewer(this, topic.forum_id, topic.id));
-  var viewers = yield db.findViewersForTopicId(topic.id);
 
-  var posts = yield db.findPostsByTopicId(topicId, this.params.postType, page);
+  // Get viewers and posts in parallel
+  var results = yield [
+    db.findViewersForTopicId(topic.id),
+    db.findPostsByTopicId(topicId, this.params.postType, page)
+  ];
+  var viewers = results[0];
+  var posts = results[1];
+
   if (this.currUser) {
     posts.forEach(function(post) {
       var rating = _.findWhere(post.ratings, { from_user_id: this.currUser.id });
