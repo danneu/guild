@@ -817,3 +817,8 @@ ul.post-rating-actions li {
 .rater-list li {
     padding-right: 0;
 }
+
+.bb-greentext {
+    color: #789922;
+    text-shadow: 0 0 1px #789922;
+}

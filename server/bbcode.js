@@ -57,6 +57,11 @@ function replaceSmilies(text) {
   return text.replace(smilieRegExp, '<img src="/smilies/$1.gif">');
 }
 
+var greenTextRegExp = /^(&gt;\S.*)$/gm;
+function replaceGreenText(text) {
+  return text.replace(greenTextRegExp, '<span class="bb-greentext">$1</span>');
+}
+
 // Replace unames
 
 
@@ -1070,6 +1075,9 @@ var XBBCODE = (function() {
     errQueue = checkParentChildRestrictions("bbcode", config.text, -1, "", "", config.text);
 
     ret.html = parse(config);
+
+    // Wrap >greentext with styling
+    ret.html = replaceGreenText(ret.html);
 
     if ( ret.html.indexOf("[") !== -1 || ret.html.indexOf("]") !== -1) {
       errQueue.push("Some tags appear to be misaligned.");
