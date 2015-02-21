@@ -61,9 +61,6 @@ exports.handleAvatar = function*(userId, fullInPath) {
   var handler = function(resolve, reject) {
     hashPromise.then(function(hash) {
       gm(inStream)
-        // Orient the image according to exif
-        // http://aheckmann.github.io/gm/docs.html#autoOrient
-        .autoOrient()
         .resize(150, 200)
         // Remove all metadata
         // http://aheckmann.github.io/gm/docs.html#strip
