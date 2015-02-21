@@ -89,77 +89,77 @@
 
     <div class="col-xs-6">
       <!-- Ratings table -->
-      <table class="table table-condensed rating-table">
-        <thead>
-          <tr style="border-bottom: 2px solid #333;">
-            <th>Rating</th>
-            <th>Received</th>
-            <th>Given</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for type in ['like', 'thank', 'laugh'] %}
-            <tr>
+      {% if ctx.can(ctx.currUser, 'READ_USER_RATINGS_TABLE', user) %}
+        <table class="table table-condensed rating-table">
+          <thead>
+            <tr style="border-bottom: 2px solid #333;">
+              <th>Rating</th>
+              <th>Received</th>
+              <th>Given</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for type in ['like', 'thank', 'laugh'] %}
+              <tr>
+                <td>
+                  {{ type|capitalize }}s
+                  <img src="{{ type|ratingTypeToImageSrc }}">
+                </td>
+                <td>
+                  {% if user.ratings_received[type] > 0 %}
+                    <span style="color: #3bb878; text-shadow: 0px 0px 1px #3bb878;">
+                      {{ user.ratings_received[type] }}
+                    </span>
+                  {% else %}
+                    <span class="text-muted">
+                    {{ user.ratings_received[type] }}
+                    </span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if user.ratings_given[type] > 0 %}
+                    <span style="color: #3bb878; text-shadow: 0px 0px 1px #3bb878;">
+                      {{ user.ratings_given[type] }}
+                    </span>
+                  {% else %}
+                    <span class="text-muted">
+                    {{ user.ratings_given[type] }}
+                    </span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+            <tr style="border-top: 2px solid #333;">
               <td>
-                {{ type|capitalize }}s
-                <img src="{{ type|ratingTypeToImageSrc }}">
+                Total
               </td>
               <td>
-                {% if user.ratings_received[type] > 0 %}
+                {% set total_received =  user.ratings_received|sumValues %}
+                {% if total_received > 0 %}
                   <span style="color: #3bb878; text-shadow: 0px 0px 1px #3bb878;">
-                    {{ user.ratings_received[type] }}
+                    {{ total_received }}
                   </span>
                 {% else %}
                   <span class="text-muted">
-                  {{ user.ratings_received[type] }}
+                  {{ total_received }}
                   </span>
                 {% endif %}
               </td>
               <td>
-                {% if user.ratings_given[type] > 0 %}
+                {% set total_given =  user.ratings_given|sumValues %}
+                {% if total_given > 0 %}
                   <span style="color: #3bb878; text-shadow: 0px 0px 1px #3bb878;">
-                    {{ user.ratings_given[type] }}
+                    {{ total_given }}
                   </span>
                 {% else %}
                   <span class="text-muted">
-                  {{ user.ratings_given[type] }}
+                  {{ total_given }}
                   </span>
                 {% endif %}
               </td>
             </tr>
-          {% endfor %}
-          <tr style="border-top: 2px solid #333;">
-            <td>
-              Total
-            </td>
-            <td>
-              {% set total_received =  user.ratings_received|sumValues %}
-              {% if total_received > 0 %}
-                <span style="color: #3bb878; text-shadow: 0px 0px 1px #3bb878;">
-                  {{ total_received }}
-                </span>
-              {% else %}
-                <span class="text-muted">
-                {{ total_received }}
-                </span>
-              {% endif %}
-            </td>
-            <td>
-              {% set total_given =  user.ratings_given|sumValues %}
-              {% if total_given > 0 %}
-                <span style="color: #3bb878; text-shadow: 0px 0px 1px #3bb878;">
-                  {{ total_given }}
-                </span>
-              {% else %}
-                <span class="text-muted">
-                {{ total_given }}
-                </span>
-              {% endif %}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      {% if ctx.currUser && ctx.currUser.id === user.id%}
+          </tbody>
+        </table>
         <p class="text-muted">
           Use ratings to give kudos to posts you liked, thought were funny, or found helpful.<br>Please don't abuse the system.
         </p>

@@ -20,9 +20,31 @@ var ANTI_NECRO_FORUMS = [
 
 // TODO: Actually write tests for these
 // TODO: Implement rules for all rules, not just member and admin
-exports.can = can;
+exports.can = function(user, action, target) {
+  var result = can(user, action, target);
+  debug('[cancan] %s %s %s %s %s: %s',
+        (user && util.format('%s [%d]', user.uname, user.id)) || '<Guest>',
+        // can/cannot
+        (result ? '\033[1;32m can' : '\033[1;31m cannot') + ' \033[0m',
+        action,
+        target && util.format('[%s]', target.id),
+        (target && JSON.stringify(target) || 'undefined').slice(0, 50)
+       );
+  return result;
+};
 function can(user, action, target) {
   switch(action) {
+    // The ratings table is on the user profile
+    case 'READ_USER_RATINGS_TABLE': // target is user
+      // Guests cannot
+      if (!user) return false;
+      // Banned cannot
+      if (user.role === 'banned') return false;
+      // Members can only read their own
+      if (user.role === 'member' && user.id === target.id) return true;
+      // Staff can read everyone's
+      if (_.contains(['mod', 'smod', 'admin'], user.role)) return true;
+      return false;
     case 'RATE_POST': // target is post
       // Guests can't rate
       if (!user) return false;
