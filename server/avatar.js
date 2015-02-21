@@ -22,6 +22,16 @@ var getFormat = function(fullInPath) {
   });
 };
 
+var identify = function(fullInPath) {
+  return new Promise(function(resolve, reject) {
+    gm(fullInPath)
+      .identify(function(err, val) {
+        if (err) return reject(err);
+        return resolve(val);
+      });
+  });
+};
+
 // Returns promise that resolves to hex hash string for given readable stream
 var calcStreamHash = function(inStream) {
   return new Promise(function(resolve, reject) {
@@ -44,12 +54,18 @@ var calcStreamHash = function(inStream) {
 };
 
 exports.handleAvatar = function*(userId, fullInPath) {
-  // :: String 'jpeg' | 'gif' | 'png' | ...
-  // Needs to buffer entire image to get its format (and any other
-  // data using gm's basic getters)
-  var format = (yield getFormat(fullInPath)).toLowerCase();
+  // Returns an object with these useful keys (among others):
+  // - format: 'GIF'
+  // - size: { width: 130, height: 133 }
+  // - 'Mime type': 'image/gif'
+  var data = yield identify(fullInPath);
+  data['format'] = data['format'].toLowerCase();
 
-  // :: Stream of the uploaded image
+  debug('format: ', data['format']);
+  debug('size: ', data['size']);
+  debug('Mime type: ', data['Mime type']);
+
+  // :: Stream of the original uploaded image
   var inStream = nodeFs.createReadStream(fullInPath);
 
   var hashPromise = calcStreamHash(nodeFs.createReadStream(fullInPath));
@@ -60,45 +76,58 @@ exports.handleAvatar = function*(userId, fullInPath) {
 
   var handler = function(resolve, reject) {
     hashPromise.then(function(hash) {
-      gm(inStream)
-        .resize(150, 200)
-        // Remove all metadata
-        // http://aheckmann.github.io/gm/docs.html#strip
-        .strip()
-        .stream(format, function(err, processedImageReadStream) {
-          if (err) return reject(err);
-          var objectName = 'avatars/' + hash + '.' + format;
-          var uploader = new Uploader({
-            stream: processedImageReadStream,
-            accessKey: config.AWS_KEY,
-            secretKey: config.AWS_SECRET,
-            bucket: config.S3_BUCKET,
-            objectName: objectName,
-            objectParams: {
-              'ContentType': 'image/' + format,
-              'CacheControl': 'max-age=31536000' // 1 year
-            }
-          });
-          uploader.send(function(err, data) {
-            if (err) return reject(err);
-            var avatarUrl = data.Location;
-            return resolve(avatarUrl);
-          });
+      var objectName = 'avatars/' + hash + '.' + data.format;
+
+      // Only process image if it exceeds constraints
+      if (data['size']['width'] < 150 && data['size']['height'] < 200) {
+        debug('No need to process image. Uploading to S3...');
+        // Image is within constraints, so just upload directly
+        var uploader = new Uploader({
+          stream: inStream,
+          accessKey: config.AWS_KEY,
+          secretKey: config.AWS_SECRET,
+          bucket: config.S3_BUCKET,
+          objectName: objectName,
+          objectParams: {
+            'ContentType': data['Mime type'],
+            'CacheControl': 'max-age=31536000' // 1 year
+          }
         });
+        uploader.send(function(err, data) {
+          if (err) return reject(err);
+          var avatarUrl = data.Location;
+          return resolve(avatarUrl);
+        });
+      } else {
+        debug('Processing image...');
+        // Image exceeds dimension constraints, so process before uploading
+        gm(inStream)
+          .resize(150, 200)
+          .strip() // Remove all metadata
+          .stream(data.format, function(err, processedImageReadStream) {
+            if (err) return reject(err);
+            var uploader = new Uploader({
+              stream: processedImageReadStream,
+              accessKey: config.AWS_KEY,
+              secretKey: config.AWS_SECRET,
+              bucket: config.S3_BUCKET,
+              objectName: objectName,
+              objectParams: {
+                'ContentType': data['Mime type'],
+                'CacheControl': 'max-age=31536000' // 1 year
+              }
+            });
+            uploader.send(function(err, data) {
+              if (err) return reject(err);
+              var avatarUrl = data.Location;
+              return resolve(avatarUrl);
+            });
+          });
+      }
     });
   };
 
   return new Promise(handler);
-};
-
-var identify = function(fullInPath) {
-  return new Promise(function(resolve, reject) {
-    gm(fullInPath)
-      .identify(function(err, val) {
-        if (err) return reject(err);
-        return resolve(val);
-      });
-  });
 };
 
 function readProcessWrite(inPath, outPath) {

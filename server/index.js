@@ -2162,6 +2162,14 @@ app.post('/users/:slug/avatar', function*() {
   // Ensure currUser is authorized to update user
   this.assertAuthorized(this.currUser, 'UPDATE_USER', user);
 
+  // Handle avatar delete button
+  if (this.request.body.fields.submit === 'delete') {
+    yield db.deleteAvatar(user.id);
+    this.flash = { message: ['success', 'Avatar deleted'] };
+    this.response.redirect(user.url + '/edit#avatar');
+    return;
+  }
+
   // Ensure params
   // FIXME: Sloppy/lame validation
   this.assert(this.request.body.files, 400, 'Must choose an avatar to upload');
@@ -2170,14 +2178,6 @@ app.post('/users/:slug/avatar', function*() {
   this.assert(this.request.body.files.avatar.size > 0, 400, 'Must choose an avatar to upload');
   // TODO: Do a real check. This just looks at mime type
   this.assert(this.request.body.files.avatar.type.startsWith('image'), 400, 'Must be an image');
-
-  // Handle avatar delete button
-  if (this.request.body.fields.submit === 'delete') {
-    yield db.deleteAvatar(user.id);
-    this.flash = { message: ['success', 'Avatar deleted'] };
-    this.response.redirect(user.url + '/edit#avatar');
-    return;
-  }
 
   // Process avatar, upload to S3, and get the S3 url
   var avatarUrl = yield avatar.handleAvatar(
