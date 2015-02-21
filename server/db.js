@@ -1893,3 +1893,25 @@ RETURNING *
   var result = yield query(sql, [from_user_id, post_id]);
   return result.rows[0];
 };
+
+exports.deleteLegacyAvatar = function*(userId) {
+  var sql = m(function() {/*
+UPDATE users
+SET legacy_avatar_url = null
+WHERE id = $1
+RETURNING *
+  */});
+  var result = yield query(sql, [userId]);
+  return result.rows[0];
+};
+
+exports.deleteAvatar = function*(userId) {
+  var sql = m(function() {/*
+UPDATE users
+SET legacy_avatar_url = null, avatar_url = ''
+WHERE id = $1
+RETURNING *
+  */});
+  var result = yield query(sql, [userId]);
+  return result.rows[0];
+};

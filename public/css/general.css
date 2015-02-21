@@ -152,10 +152,8 @@ blockquote {
 }
 
 @media (min-width: 992px) {
-    /* 151px used so that images larger than 150px will
-         trigger the "This image is too large" event */
     .post-avatar img {
-        max-width: 151px;
+        max-width: 150px;
     }
 }
 

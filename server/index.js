@@ -14,9 +14,10 @@ app.use(require('koa-static')('public'));
 app.use(require('koa-static')('dist', { maxage: 1000 * 60 * 60 * 24 * 365 }));
 app.use(require('koa-logger')());
 app.use(require('koa-body')({
+  multipart: true,
   // Max payload size allowed in request form body
   // Defaults to '56kb'
-  formLimit: config.MAX_POST_LENGTH*2
+  formLimit: '25mb'
 }));
 app.use(require('koa-methodoverride')('_method'));
 var route = require('koa-route');
@@ -43,6 +44,7 @@ var cache = require('./cache')();
 var belt = require('./belt');
 var bbcode = require('./bbcode');
 var welcomePm = require('./welcome_pm');
+var avatar = require('./avatar');
 
 // Catch and log all errors that bubble up to koa
 // app.on('error', function(err) {
@@ -2145,6 +2147,52 @@ app.delete('/me/ratings/:postId', function*() {
   );
 
   this.response.redirect('/posts/' + this.params.postId);
+});
+
+// Params
+// - submit: 'save' | 'delete'
+// - files
+//   - avatar
+//     - path
+app.post('/users/:slug/avatar', function*() {
+  // Ensure user exists
+  var user = yield db.findUserBySlug(this.params.slug);
+  this.assert(user, 404);
+  user = pre.presentUser(user);
+  // Ensure currUser is authorized to update user
+  this.assertAuthorized(this.currUser, 'UPDATE_USER', user);
+
+  // Ensure params
+  // FIXME: Sloppy/lame validation
+  this.assert(this.request.body.files, 400, 'Must choose an avatar to upload');
+  this.assert(this.request.body.files.avatar, 400, 'Must choose an avatar to upload');
+
+  this.assert(this.request.body.files.avatar.size > 0, 400, 'Must choose an avatar to upload');
+  // TODO: Do a real check. This just looks at mime type
+  this.assert(this.request.body.files.avatar.type.startsWith('image'), 400, 'Must be an image');
+
+  // Handle avatar delete button
+  if (this.request.body.fields.submit === 'delete') {
+    yield db.deleteAvatar(user.id);
+    this.flash = { message: ['success', 'Avatar deleted'] };
+    this.response.redirect(user.url + '/edit#avatar');
+    return;
+  }
+
+  // Process avatar, upload to S3, and get the S3 url
+  var avatarUrl = yield avatar.handleAvatar(
+    user.id,
+    this.request.body.files.avatar.path
+  )
+
+  // Save new avatar url to db
+  yield db.updateUser(user.id, { avatar_url: avatarUrl });
+
+  // Delete legacy avatar if it exists
+  yield db.deleteLegacyAvatar(user.id);
+
+  this.flash = { message: ['success', 'Avatar uploaded and saved'] };
+  this.response.redirect(user.url + '/edit#avatar');
 });
 
 app.listen(config.PORT);

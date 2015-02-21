@@ -221,7 +221,8 @@
 
       <!-- Set avatar URL -->
 
-      <form action="{{ user.url }}" method="post" class="form-horizontal">
+      <a name="avatar"></a>
+      <form action="{{ user.url }}/avatar" method="POST" enctype="multipart/form-data">
         <input type="hidden" name="_method" value="put">
         <div class="panel panel-default no-select"
              style="border-color: #000">
@@ -231,26 +232,50 @@
 
             <p>Your avatar is the image that appears below your username to the left of every post you make.</p>
 
-            <ul>
-              <li>Until I get an image-upload system working, I'm letting you input a URL to any image.</li>
-              <li>Do not link to images hosted on random websites. Instead, re-upload the image to <a href="http://imgur.com/">imgur.com</a>. Copy and paste the "Original GIF link" from imgur into the box below. It should end in ".gif", ".jpg", or ".png".</li>
-              <li>Please, please, please ensure the image you link to is 150px by 150px. You can resize the image after you upload it to <a href="http://imgur.com/">imgur.com</a>. I'm going to personally trust you to follow this rule.</li>
-            </ul>
+            {% if user.legacy_avatar_url %}
+              <div class="alert alert-warning">
+                <strong>Legacy Avatar Detected</strong>
+                <p>Your avatar needs to be uploaded into the new system. Download it to your computer and then use the form below.</p>
+                <p>Old Avatar:</p>
+                <div style="max-width: 150px; max-height: 150px;">
+                  <img src="{{ user.legacy_avatar_url }}" class="img-responsive">
+                </div>
+                Link: <a href="{{ user.legacy_avatar_url }}">{{ user.legacy_avatar_url }}</a>
+              </div>
+            {% endif %}
+
+            {% if user.avatar_url %}
+              <div class="form-group" style="margin-bottom: 20px;">
+                <div class="row">
+                <div class="col-sm-4" style="font-weight: bold;">Current Avatar:</div>
+                <div class="col-sm-8">
+                  <img src="{{ user.avatar_url }}" class="img-thumbnail">
+                </div>
+                </div>
+              </div>
+            {% endif %}
 
             <div class="form-group">
-              <label for="avatar-url-input" class="col-sm-3 control-label">Avatar URL:</label>
-              <div class="col-sm-9">
-                <input id="avatar-url-input" name="avatar-url" type="text"
-                       class="form-control" value="{{ user.avatar_url }}">
+              <div class="row">
+              <label for="avatar-url-input" class="col-sm-4 control-label">New Avatar:</label>
+
+
+              <div class="col-sm-8">
+                <input type="file" name="avatar">
                 <div class="help-block"></div>
+              </div>
               </div>
             </div>
           </div> <!-- /.panel-body -->
           <!-- PANEL FOOTER -->
           <div class="panel-footer" style="border-color: #000">
             <div class="text-right">
-              <input id="avatar-url-submit" type="submit" value="Save Avatar"
-                     class="btn btn-primary">
+              <button type="submit" name="submit" value="delete" class="btn btn-danger">
+                Delete Avatar
+              </button>
+              <button type="submit" name="submit" value="save" class="btn btn-primary">
+                Save Avatar
+              </button>
             </div>
           </div> <!-- /.panel-footer -->
         </div> <!-- /.panel -->

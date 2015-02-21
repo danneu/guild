@@ -27,6 +27,9 @@ exports.HOST = process.env.HOST || ('http://localhost:' + exports.PORT);
 // Required for sending emails
 exports.AWS_KEY = process.env.AWS_KEY;
 exports.AWS_SECRET = process.env.AWS_SECRET;
+// Bucket will get an avatars/ folder in it with many avatars/<imageHash>.<ext>
+exports.S3_BUCKET = process.env.S3_BUCKET;
+if (!exports.S3_BUCKET) console.warn('S3_BUCKET not set. Cannot process avatars.');
 exports.FROM_EMAIL = process.env.FROM_EMAIL;
 
 // How many posts/PMs to display per page in topics/convos

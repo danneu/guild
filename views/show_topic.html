@@ -437,20 +437,6 @@
 </script>
 
 <script>
-
-  // Hide avatars that are larger than 150x150
-
-  $('.post-avatar img').on('load', function(e) {
-    console.log('avatar loaded');
-    var h = $(this).height();
-    var w = $(this).width();
-    if (h > 150 || w > 150) {
-      $(this).parent().html('<span style="color: red">Avatar larger than 150x150</span>');
-    }
-  });
-</script>
-
-<script>
 // Prevent double-submit on new-reply form
 
 $('#new-reply').submit(function() {

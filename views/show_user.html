@@ -47,42 +47,53 @@
   <div class="row">
     <div class="col-xs-6">
 
-      <!-- Stats list -->
-      <ul>
-          {% if user.is_ghost %}
-            {% if ctx.can(ctx.currUser, 'READ_USER_ONLINE_STATUS', user) %}
-              <li>Last Seen: <span style="color: #000">Invisible</span></li>
-            {% endif %}
-          {% else %}
-            <li>Last Seen:
-              {% if user.last_online_at %}
-                {% if user.last_online_at.getTime() >= Date.now() - (1000 * 60 * 15) %}
-                  <span style="color: #3BB878">Online now</span>
+      <!-- Avatar -->
+        <div class="media">
+      {% if user.avatar_url %}
+          <div class="media-left">
+            <img src="{{ user.avatar_url }}" class="img-thumbnail media-object">
+          </div>
+      {% endif %}
+          <div class="media-body">
+            <!-- Stats list -->
+            <ul>
+                {% if user.is_ghost %}
+                  {% if ctx.can(ctx.currUser, 'READ_USER_ONLINE_STATUS', user) %}
+                    <li>Last Seen: <span style="color: #000">Invisible</span></li>
+                  {% endif %}
                 {% else %}
-                  <abbr class="timeago" title="{{ user.last_online_at.toISOString() }}">
-                    {{ user.last_online_at|formatDate }}
-                  </abbr>
+                  <li>Last Seen:
+                    {% if user.last_online_at %}
+                      {% if user.last_online_at.getTime() >= Date.now() - (1000 * 60 * 15) %}
+                        <span style="color: #3BB878">Online now</span>
+                      {% else %}
+                        <abbr class="timeago" title="{{ user.last_online_at.toISOString() }}">
+                          {{ user.last_online_at|formatDate }}
+                        </abbr>
+                      {% endif %}
+                    {% else %}
+                      Hasn't logged in since relaunch
+                    {% endif %}
+                  </li>
                 {% endif %}
-              {% else %}
-                Hasn't logged in since relaunch
+              </li>
+              {% if user.oldguild_uname %}
+                <li>Old Guild Username: {{ user.oldguild_uname }}</li>
               {% endif %}
-            </li>
-          {% endif %}
-        </li>
-        {% if user.oldguild_uname %}
-          <li>Old Guild Username: {{ user.oldguild_uname }}</li>
-        {% endif %}
-        <li>
-          Joined:
-          <abbr class="timeago" title="{{ user.created_at.toISOString() }}">
-            {{ user.created_at|formatDate }}
-          </abbr>
-        </li>
-        <li>Posts: {{ user.posts_count }}</li>
-        {% if ctx.can(ctx.currUser, 'READ_USER_PM_SENT_COUNT', user) %}
-          <li>PMs: {{ user.pms_count }}</li>
-        {% endif %}
-      </ul>
+              <li>
+                Joined:
+                <abbr class="timeago" title="{{ user.created_at.toISOString() }}">
+                  {{ user.created_at|formatDate }}
+                </abbr>
+              </li>
+              <li>Posts: {{ user.posts_count }}</li>
+              {% if ctx.can(ctx.currUser, 'READ_USER_PM_SENT_COUNT', user) %}
+                <li>PMs: {{ user.pms_count }}</li>
+              {% endif %}
+            </ul>
+          </div>
+        </div>
+
 
     </div><!-- col-6 -->
 
