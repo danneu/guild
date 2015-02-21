@@ -39,33 +39,12 @@
   {% if ctx.currUser && !ctx.currUser.hide_sigs && !post.is_hidden %}
     <!-- User has sig html-->
     {% if post.user.sig_html %}
-      <div class="post-sig-legacy post-sig"
-           style="max-height: 300px;
-                  overflow: auto;
-                  margin-top: 50px;
-                  padding: 20px 20px 0 20px;
-                  border-top: 2px solid black">
-        {{- post.user.sig_html|safe -}}
-      </div>
+      <div class="post-sig-legacy post-sig">{{- post.user.sig_html|safe -}}</div>
     <!-- User has old Markdown sig that needs conversion to BBCode -->
     {% elif post.user.sig %}
-      <div class="post-sig-markdown post-sig"
-           style="max-height: 300px;
-                  overflow: auto;
-                  margin-top: 50px;
-                  padding: 20px 20px 0 20px;
-                  border-top: 2px solid black">
-        {{- post.user.sig -}}
-      </div>
+      <div class="post-sig-markdown post-sig">{{- post.user.sig -}}</div>
     {% elif post.user.legacy_sig %}
-      <div class="post-sig post-sig-legacy"
-           style="max-height: 300px;
-                  overflow: auto;
-                  margin-top: 50px;
-                  padding: 20px 20px 0 20px;
-                  border-top: 2px solid black">
-        {{- post.user.legacy_sig|safe -}}
-      </div>
+      <div class="post-sig post-sig-legacy">{{- post.user.legacy_sig|safe -}}</div>
     {% endif %}
   {% endif %}
 {% endmacro %}

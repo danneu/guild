@@ -820,3 +820,11 @@ ul.post-rating-actions li {
     color: #789922;
     text-shadow: 0 0 1px #789922;
 }
+
+.post-sig {
+    max-height: 200px;
+    overflow-y: hidden;
+    margin-top: 50px;
+    padding: 20px 20px 0 20px;
+    border-top: 2px solid black;
+}

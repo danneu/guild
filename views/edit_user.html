@@ -198,14 +198,12 @@
             <p>Your signature appears below every post you make.</p>
             <ul>
               <li>Please keep it small and simple. Remember that everyone who views your post will have to download any massive images you chose to put in your sig. Even people on smartphones that do not have unlimited internet plans.</li>
-              <li>If your sig is larger than 300px, you'll trigger scrollbars to appear. Only the first 300px will be visible.</li>
-              <li>Use common sense. Signatures with images that are too big will be manually removed by moderators and may get you banned from the signature system.</li>
+              <li>Max signature height: 200px. Anything taller will get cut off.</li>
             </ul>
 
             <div class="form-group">
               <label for="sig-input" class="control-label">Signature:</label>
-              <textarea id="sig-input" name="sig" rows=5
-                     class="form-control">{{ user.sig }}</textarea>
+              <textarea id="sig-input" name="sig" class="form-control">{{ user.sig }}</textarea>
               <div class="help-block">If you currently have a signature ported over from the old database, it will be replaced by anything you save here.</div>
             </div>
           </div> <!-- /.panel-body -->
@@ -294,7 +292,7 @@
   <script>
     $(function() {
       $('#sig-input').bbcode({
-        height: 200
+        height: 288  // Seems to come out to 200px
       });
     });
   </script>
