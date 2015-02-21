@@ -18,6 +18,12 @@ var ANTI_NECRO_FORUMS = [
   2, // Introduce yourself
 ];
 
+// Applies to anyone above member
+exports.isStaffRole = isStaffRole;
+function isStaffRole(role) {
+  return _.contains(['mod', 'smod', 'admin'], role);
+}
+
 // TODO: Actually write tests for these
 // TODO: Implement rules for all rules, not just member and admin
 exports.can = function(user, action, target) {
@@ -43,7 +49,7 @@ function can(user, action, target) {
       // Members can only read their own
       if (user.role === 'member' && user.id === target.id) return true;
       // Staff can read everyone's
-      if (_.contains(['mod', 'smod', 'admin'], user.role)) return true;
+      if (isStaffRole(user.role)) return true;
       return false;
     case 'RATE_POST': // target is post
       // Guests can't rate
@@ -63,7 +69,7 @@ function can(user, action, target) {
       // Banned users can't update their old topics
       if (user.role === 'banned') return false;
       // Staff can edit all topic titles
-      if (_.contains(['mod', 'smod', 'admin'], user.role)) return true;
+      if (isStaffRole(user.role)) return true;
       // Topic owner can edit their own titles
       return user.id === target.user_id;
     case 'READ_USER_ONLINE_STATUS': // target is user
@@ -73,13 +79,17 @@ function can(user, action, target) {
       if (user.role === 'member')
         return target.id === user.id || !target.is_ghost;
       // Staff can see ghosts
-      return _.contains(['mod', 'smod', 'admin'], user.role);
+      if (isStaffRole(user.role)) return true;
+      return false;
     case 'DELETE_USER':  // target is user
       if (!user) return false;
       return user.role === 'admin';
     case 'READ_USER_PM_SENT_COUNT':  // target is user
+      // Guests cannot
       if (!user) return false;
-      return _.contains(['mod', 'smod', 'admin'], user.role);
+      // Only staff can read user pm-sent count
+      if (isStaffRole(user.role)) return true;
+      return false;
     case 'UPDATE_USER_ROLE': // target is user
       if (!user) return false;
       if (user.role === 'admin') return true;
@@ -106,7 +116,8 @@ function can(user, action, target) {
     case 'HIDE_POST':
       if (!user) return false;
       // Staff can hide/unhide
-      return !!_.contains(['mod', 'smod', 'admin'], user.role);
+      if (isStaffRole(user.role)) return true;
+      return false;
     // Topic state
     case 'STICK_TOPIC':
     case 'UNSTICK_TOPIC':
@@ -115,14 +126,16 @@ function can(user, action, target) {
     case 'CLOSE_TOPIC':
     case 'OPEN_TOPIC':
     case 'MOVE_TOPIC':
+      // Guests cannot
+      if (!user) return false;
       // Only staff can do this
-      return _.contains(['mod', 'smod', 'admin'], user.role);
+      if (isStaffRole(user.role)) return true;
+      return false;
     case 'CREATE_POST': // target is topic
       if (!user) return false;
       if (user.role === 'banned') return false;
       // Staff can always create posts anywhere
-      if (_.contains(['admin', 'smod', 'mod'], user.role))
-        return true;
+      if (isStaffRole(user.role)) return true;
       // Members can post as long as it's outside the lexus lounge,
       // the topic is open, and the topic is visible
       if (user.role === 'member') {
@@ -149,8 +162,7 @@ function can(user, action, target) {
       assert(target.topic, 'post.topic is missing');
       assert(target.forum, 'post.forum is missing');
       // Staff can read all posts
-      if (user && _.contains(['admin', 'smod', 'mod'], user.role))
-        return true;
+      if (user && isStaffRole(user.role)) return true;
       // Everyone else can read a post as long as it's not hidden,
       // the topic is not hidden, and the topic is not in lexus lounge
       return !target.is_hidden &&
@@ -169,13 +181,14 @@ function can(user, action, target) {
     case 'READ_FORUM':  // target is a forum
       // TODO: Remove hardcoded mod forum
       if (target.category_id === 4)
-        return user && _.contains(['admin', 'smod', 'mod'], user.role);
+        return user && isStaffRole(user.role);
       else
         return true; // for now, anyone can read a non-lexus-lounge forum
       return false;
     case 'LEXUS_LOUNGE':  // no target
       if (!user) return false;
-      if (_.contains(['mod', 'smod', 'admin'], user.role)) return true;
+      // All staff can access
+      if (isStaffRole(user.role)) return true;
       return false;
     // TODO: Replace LEXUS_LOUNGE with this?
     case 'READ_CATEGORY':  //  target is category
@@ -202,10 +215,10 @@ function can(user, action, target) {
     case 'READ_TOPIC':  // target is topic
       // Only staff can read lexus lounge
       if (target.category_id === 4)
-        return user && _.contains(['admin', 'smod', 'mod'], user.role);
+        return user && isStaffRole(user.role);
       // Only staff can see hidden topics
       if (target.is_hidden)
-        return user && _.contains(['admin', 'smod', 'mod'], user.role);
+        return user && isStaffRole(user.role);
       if (!target.is_hidden) return true;
       return false;
     case 'CREATE_CONVO':  // no target
@@ -220,9 +233,9 @@ function can(user, action, target) {
       if (user.role === 'member') return target.category_id !== 4;
       // Only staff can create topics in lexus lounge
       if (target.id === 4) {
-        return _.contains(['admin', 'smod', 'mod'], user.role);
+        return isStaffRole(user.role);
       } else {
-        return _.contains(['admin', 'smod', 'mod', 'member'], user.role);
+        return _.contains(['member', 'mod', 'smod', 'admin'], user.role);
       }
       if (user.role === 'member') return true;
       return false;
@@ -233,7 +246,8 @@ function can(user, action, target) {
       // once post BBCode system is tested
       if (target.legacy_html) return false;
       // User can update a PM if they own it
-      return target.user_id === user.id;
+      if (target.user_id === user.id) return true;
+      return false;
     case 'UPDATE_POST':  // target expected to be a post
       if (!user) return false;
       if (user.role === 'banned') return false;
@@ -249,7 +263,8 @@ function can(user, action, target) {
     case 'READ_CONVO':
       if (!user) return false;
       // Users can only read convos they're participants of
-      return !!_.findWhere(target.participants, { id: user.id });
+      if (_.findWhere(target.participants, { id: user.id })) return true;
+      return false;
     default:
       debug('Unsupported cancan action: ' + action);
       return false;

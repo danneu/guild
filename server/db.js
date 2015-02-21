@@ -263,6 +263,19 @@ exports.findUserById = exports.findUser = function*(id) {
 exports.findUserBySlug = function*(slug) {
   assert(_.isString(slug));
   var sql = m(function() {/*
+SELECT u.*
+FROM users u
+WHERE u.slug = lower($1)
+GROUP BY u.id
+  */});
+  var result = yield query(sql, [slug]);
+  return result.rows[0];
+};
+
+// Only use this if you need ratings table, else use just findUserBySlug
+exports.findUserWithRatingsBySlug = function*(slug) {
+  assert(_.isString(slug));
+  var sql = m(function() {/*
 WITH q1 AS (
   SELECT
     COUNT(r) FILTER (WHERE r.type = 'like') like_count,

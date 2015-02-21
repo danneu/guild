@@ -1153,7 +1153,14 @@ app.get('/users/:userIdOrSlug', function*() {
 
   this.checkQuery('before-id').optional().toInt();  // will be undefined or number
   var userId = this.params.userIdOrSlug;
-  var user = yield db.findUserBySlug(userId);
+
+  // FIXME: Keep in sync with cancan READ_USER_RATINGS_TABLE
+  // If currUser is a guest or if currUser is
+  if (this.currUser &&
+      (cancan.isStaffRole(this.currUser.role) || this.currUser.slug === userId))
+    user = yield db.findUserWithRatingsBySlug(userId);
+  else
+    user = yield db.findUserBySlug(userId);
   // Ensure user exists
   this.assert(user, 404);
   user = pre.presentUser(user);
