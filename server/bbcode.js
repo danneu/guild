@@ -57,9 +57,9 @@ function replaceSmilies(text) {
   return text.replace(smilieRegExp, '<img src="/smilies/$1.gif">');
 }
 
-var greenTextRegExp = /^(&gt;\S.*)$/gm;
+var greenTextRegExp = /^((?:<[^>]+>)*)(&gt;\S.*)$/gm;
 function replaceGreenText(text) {
-  return text.replace(greenTextRegExp, '<span class="bb-greentext">$1</span>');
+  return text.replace(greenTextRegExp, '$1<span class="bb-greentext">$2</span>');
 }
 
 // Replace unames
