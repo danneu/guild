@@ -78,52 +78,31 @@ exports.handleAvatar = function*(userId, fullInPath) {
     hashPromise.then(function(hash) {
       var objectName = 'avatars/' + hash + '.' + data.format;
 
-      // Only process image if it exceeds constraints
-      if (data['size']['width'] < 150 && data['size']['height'] < 200) {
-        debug('No need to process image. Uploading to S3...');
-        // Image is within constraints, so just upload directly
-        var uploader = new Uploader({
-          stream: inStream,
-          accessKey: config.AWS_KEY,
-          secretKey: config.AWS_SECRET,
-          bucket: config.S3_BUCKET,
-          objectName: objectName,
-          objectParams: {
-            'ContentType': data['Mime type'],
-            'CacheControl': 'max-age=31536000' // 1 year
-          }
-        });
-        uploader.send(function(err, data) {
+      gm(inStream)
+        // width, height, modifier
+        // '>' = only resize if image exceeds dimensions
+        // http://www.imagemagick.org/script/command-line-processing.php#geometry
+        .resize(150, 200, '>')
+        .strip() // Remove all metadata
+        .stream(data.format, function(err, processedImageReadStream) {
           if (err) return reject(err);
-          var avatarUrl = data.Location;
-          return resolve(avatarUrl);
-        });
-      } else {
-        debug('Processing image...');
-        // Image exceeds dimension constraints, so process before uploading
-        gm(inStream)
-          .resize(150, 200)
-          .strip() // Remove all metadata
-          .stream(data.format, function(err, processedImageReadStream) {
-            if (err) return reject(err);
-            var uploader = new Uploader({
-              stream: processedImageReadStream,
-              accessKey: config.AWS_KEY,
-              secretKey: config.AWS_SECRET,
-              bucket: config.S3_BUCKET,
-              objectName: objectName,
-              objectParams: {
-                'ContentType': data['Mime type'],
-                'CacheControl': 'max-age=31536000' // 1 year
-              }
-            });
-            uploader.send(function(err, data) {
-              if (err) return reject(err);
-              var avatarUrl = data.Location;
-              return resolve(avatarUrl);
-            });
+          var uploader = new Uploader({
+            stream: processedImageReadStream,
+            accessKey: config.AWS_KEY,
+            secretKey: config.AWS_SECRET,
+            bucket: config.S3_BUCKET,
+            objectName: objectName,
+            objectParams: {
+              'ContentType': data['Mime type'],
+              'CacheControl': 'max-age=31536000' // 1 year
+            }
           });
-      }
+          uploader.send(function(err, data) {
+            if (err) return reject(err);
+            var avatarUrl = data.Location;
+            return resolve(avatarUrl);
+          });
+        });
     });
   };
 
