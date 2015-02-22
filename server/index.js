@@ -2035,11 +2035,15 @@ app.get('/topics/:slug/:postType', function*() {
   }
 
   topic.posts = posts.map(pre.presentPost);
+  var postType = this.params.postType;
   yield this.render('show_topic', {
     ctx: this,
     topic: topic,
-    postType: this.params.postType,
-    title: topic.title,
+    postType: postType,
+    title: topic.is_roleplay ?
+             '[' + postType.toUpperCase() + '] ' + topic.title +
+               (page > 1 ? ' (Page '+ page +')' : '')
+             : topic.title,
     categories: cache.get('categories'),
     // Pagination
     currPage: page,

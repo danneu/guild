@@ -836,3 +836,13 @@ ul.post-rating-actions li {
     top: 20px;
     color: #65F598;
 }
+
+.post-type-label {
+  font-family: Courier New;
+  color: #ffffff;
+  font-size: 25px;
+  text-decoration: none;
+  vertical-align: middle;
+  display: inline-block;
+  margin-bottom: 5px;
+}
