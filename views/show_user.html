@@ -220,19 +220,19 @@
       {% if user.posts_count > 1 %}
         <ul class="pager">
           <li>
-            <a href="{{ ctx.request.path }}#recent-posts">
+            <a href="{{ ctx.request.path }}#recent-posts" rel="first">
               First Page
             </a>
           </li>
           {% if recentPosts.length < recentPostsPerPage %}
             <li class="disabled">
-              <a href="{{ ctx.request.url }}">
+              <a href="{{ ctx.request.url }}" rel="next">
                 Next Page &rarr;
               </a>
             </li>
           {% else %}
             <li>
-              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#recent-posts">
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#recent-posts" rel="next">
                 Next Page &rarr;
               </a>
             </li>
@@ -277,19 +277,19 @@
       {% if user.posts_count > 1 %}
         <ul class="pager">
           <li>
-            <a href="{{ ctx.request.path }}#recent-posts">
+            <a href="{{ ctx.request.path }}#recent-posts" rel="first">
               First Page
             </a>
           </li>
           {% if recentPosts.length < recentPostsPerPage %}
             <li class="disabled">
-              <a href="{{ ctx.request.url }}">
+              <a href="{{ ctx.request.url }}" rel="next">
                 Next Page &rarr;
               </a>
             </li>
           {% else %}
             <li>
-              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#recent-posts">
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#recent-posts" rel="next">
                 Next Page &rarr;
               </a>
             </li>
