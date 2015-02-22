@@ -218,7 +218,7 @@ CREATE TABLE convos_participants (
 -- Notifications
 --
 
-CREATE TYPE notification_type AS ENUM ('MENTION', 'QUOTE', 'CONVO');
+CREATE TYPE notification_type AS ENUM ('MENTION', 'QUOTE', 'CONVO', 'RATING');
 
 CREATE TABLE notifications (
   id           serial PRIMARY KEY,
@@ -232,6 +232,7 @@ CREATE TABLE notifications (
   pm_id    int NULL  REFERENCES pms(id) ON DELETE CASCADE,
   topic_id int NULL  REFERENCES topics(id) ON DELETE CASCADE,
   post_id  int NULL  REFERENCES posts(id) ON DELETE CASCADE,
+  meta     json NULL,
   UNIQUE (to_user_id, convo_id)
 );
 
