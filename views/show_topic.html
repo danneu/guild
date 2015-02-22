@@ -162,17 +162,17 @@
   <ul class="nav nav-tabs topic-tabs">
     {% if topic.forum.is_roleplay %}
       <li class="{% if ctx.request.path.endsWith('/ic') %}active{% endif %}">
-        <a href="{{ topic.url }}/ic">
+        <a id="ic-tab-link" href="{{ topic.url }}/ic">
           IC <span class="badge">{{ topic.ic_posts_count|commafy }}</span>
         </a>
       </li>
       <li class="{% if ctx.request.path.endsWith('/ooc') %}active{% endif %}">
-        <a href="{{ topic.url }}/ooc">
+        <a id="ooc-tab-link" href="{{ topic.url }}/ooc">
           OOC <span class="badge">{{ topic.ooc_posts_count|commafy }}</span>
         </a>
       </li>
       <li class="{% if ctx.request.path.endsWith('/char') %}active{% endif %}">
-        <a href="{{ topic.url }}/char">
+        <a id="char-tab-link" href="{{ topic.url }}/char">
           Characters <span class="badge">{{ topic.char_posts_count|commafy }}</span>
         </a>
       </li>
@@ -678,4 +678,55 @@ $(function () {
     $(this).parent().find('.rater-list').toggle();
   });
 </script>
+
+<script>
+  // Is localStorage supported in this browser?
+  function isStorage() {
+    var key = 'test';
+    try {
+        localStorage.setItem(key, key);
+        localStorage.removeItem(key);
+        return true;
+    } catch(ex) {
+        return false;
+    }
+  }
+
+  if (isStorage) {
+    var re, match;
+    var topicId, postType, pageNum;
+    var localKey, localVal;
+
+    re = /\/topics\/([\d]+)[^\/]*\/(ic|ooc|char)/;
+    match = window.location.pathname.match(re);
+
+    topicId = match[1];
+    postType = match[2];
+
+    re = /\\&|\?page=([\d]+)/;
+    match = window.location.search.match(re);
+
+    pageNum = (match && match[1]) || 1;
+
+    if (pageNum > 1) {
+      localKey = topicId + ':' + postType;
+      localVal = pageNum;
+      localStorage.setItem(localKey, localVal);
+      console.log([localKey, localVal]);
+    }
+
+    //
+
+    ['ic', 'ooc', 'char'].forEach(function(postType) {
+      var key = topicId + ':' + postType;
+      var pg = localStorage.getItem(key) || 1;
+      if (pg > 1) {
+        var $el = $('#' + postType + '-tab-link');
+        $el.attr('href', $el.attr('href') + '?page=' + pg)
+      }
+    });
+  }
+
+</script>
+
 {% endblock%}
