@@ -40,6 +40,12 @@ exports.can = function(user, action, target) {
 };
 function can(user, action, target) {
   switch(action) {
+    case 'REFRESH_FORUM':  // target is forum
+      // Guests cannot
+      if (!user) return false;
+      // Staff can
+      if (isStaffRole(user.role)) return true;
+      return false;
     // The ratings table is on the user profile
     case 'READ_USER_RATINGS_TABLE': // target is user
       // Guests cannot

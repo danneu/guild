@@ -945,6 +945,32 @@ app.get('/lexus-lounge', function*() {
 });
 
 //
+// Refresh forum
+//
+// Recalculates forum caches including the counter caches and
+// the latest_post_id and latest_post_at
+app.post('/forums/:forumSlug/refresh', function*() {
+  // Load forum
+  var forumId = belt.extractId(this.params.forumSlug);
+  this.assert(forumId, 404);
+  var forum = yield db.findForum(forumId);
+  this.assert(forum, 404);
+  forum = pre.presentForum(forum);
+
+  // Authorize user
+  this.assertAuthorized(this.currUser, 'REFRESH_FORUM', forum);
+
+  // Refresh forum
+  yield db.refreshForum(forum.id);
+
+  // Redirect to homepage
+  this.flash = {
+    message: ['success', 'Forum refreshed. It may take up to 10 seconds for the changes to be reflected on the homepage.']
+  };
+  this.response.redirect('/');
+});
+
+//
 // Canonical show forum
 //
 app.get('/forums/:forumSlug', function*() {

@@ -1925,3 +1925,30 @@ RETURNING *
   ]);
   return result.rows[0];
 };
+
+// Recalculates forum caches including the counter caches and
+// the latest_post_id and latest_post_at
+//
+// Ignores hidden topics in the recalculation
+// Use this to fix a forum when you hide a spambot. Otherwise the spambot
+// topic will hang around as the forum's latest post.
+exports.refreshForum = function*(forumId) {
+  assert(forumId);
+  var sql = m(function(){/*
+UPDATE forums
+SET
+  posts_count = sub.posts_count,
+  latest_post_id = sub.latest_post_id
+FROM (
+  SELECT
+    SUM(posts_count) posts_count,
+    MAX(latest_post_id) latest_post_id
+  FROM topics
+  WHERE forum_id = $1 AND is_hidden = false
+) sub
+WHERE id = $1
+RETURNING forums.*
+  */});
+  var result = yield query(sql, [forumId]);
+  return result.rows[0];
+};

@@ -21,6 +21,18 @@
     {% endif %}
   </div>
 
+  <!-- Force latest_post_id and latest_post_at refresh -->
+  {% if ctx.can(ctx.currUser, 'REFRESH_FORUM', forum) %}
+    <div class="well well-sm">
+      <form action="{{ forum.url }}/refresh" method="post">
+        <button class="btn btn-default btn-xs">
+          Refresh Forum
+        </button>
+        <span>Recalculate forum's latest post to ignore hidden topics. Use this to fix a forum when you hide a spambot's topic and it still shows up as the forum's latest post</span>
+      </form>
+    </div>
+  {% endif %}
+
   {{ paginate.render(currPage, totalPages, forum.url) }}
 
 
