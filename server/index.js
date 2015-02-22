@@ -282,6 +282,15 @@ app.post('/posts/:postId/rate', function*() {
     type: this.request.body.type
   });
 
+  // Send receiver a RATING notification in the background
+  co(db.createRatingNotification({
+    from_user_id: this.currUser.id,
+    to_user_id: post.user_id,
+    post_id: post.id,
+    topic_id: post.topic_id,
+    rating_type: rating.type
+  }));
+
   this.body = JSON.stringify(rating);
 });
 

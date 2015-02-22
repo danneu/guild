@@ -37,6 +37,17 @@
               {{ n.post.html|safe }}
             </div>
           </div>
+        {% elif n.type === 'RATING' %}
+          <p>
+            <a href="/users/{{ n.from_user.slug }}">{{ n.from_user.uname }}</a>
+            <img src="{{ n.meta.type|ratingTypeToImageSrc }}">'d your post in
+            <a href="{{ n.post.url }}">{{ n.topic.title }}</a>
+          </p>
+          <div class="panel panel-default">
+            <div class="panel-body" style="max-height: 100px; overflow: auto;">
+              {{ n.post.html|safe }}
+            </div>
+          </div>
         {% elif n.type === 'QUOTE' %}
           <p>
             <a href="/users/{{ n.from_user.slug }}">{{ n.from_user.uname }}</a>

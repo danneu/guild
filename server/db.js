@@ -1915,3 +1915,33 @@ RETURNING *
   var result = yield query(sql, [userId]);
   return result.rows[0];
 };
+
+// User receives this when someone rates their post
+// Required props:
+// - from_user_id
+// - to_user_id
+// - post_id
+// - topic_id
+// - rating_type: Any rating_type enum
+// Returns created notification
+exports.createRatingNotification = function*(props) {
+  assert(props.from_user_id);
+  assert(props.to_user_id);
+  assert(props.post_id);
+  assert(props.topic_id);
+  assert(props.rating_type);
+  var sql = m(function(){/*
+INSERT INTO notifications
+(type, from_user_id, to_user_id, meta, post_id, topic_id)
+VALUES ('RATING', $1, $2, $3, $4, $5)
+RETURNING *
+  */});
+  var result = yield query(sql, [
+    props.from_user_id, // $1
+    props.to_user_id, // $2
+    { type: props.rating_type }, // $3
+    props.post_id, // $4
+    props.topic_id // $5
+  ]);
+  return result.rows[0];
+};
