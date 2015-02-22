@@ -7,16 +7,22 @@
   {% if totalPages > 1 %}
     <ul class="pager">
       <li {% if currPage === 1 %} class="disabled" {% endif %}>
-        <a href="{{ baseUrl }}?page=1{{ urlFragment }}" rel="first">First</a>
+        <a href="{{ baseUrl }}{{ urlFragment }}" rel="first">First</a>
       </li>
 
       <li {% if currPage === 1 %} class="disabled" {% endif %}>
-        <a href="{{ baseUrl + '?page=' + Math.max(currPage-1, 1) }}{{ urlFragment}}" rel="prev">
+        {% if prevPage > 1 %}
+          {% set suffix = '?page=' + Math.max(currPage-1, 1) %}
+        {% endif %}
+        <a href="{{ baseUrl + suffix }}{{ urlFragment}}" rel="prev">
           &larr; Prev Page
         </a>
       </li>
 
-      <a style="color: white;" href="{{ baseUrl + '?page=' + currPage }}{{ urlFragment }}">
+      {% if currPage > 1 %}
+        {% set suffix = '?page=' + currPage  %}
+      {% endif %}
+      <a style="color: white;" href="{{ baseUrl + suffix }}{{ urlFragment }}">
         Page {{ currPage|commafy }} of {{ totalPages|commafy -}}
       </a>
 
