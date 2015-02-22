@@ -480,7 +480,7 @@ $(function() {
       $reply_btn.removeClass('disabled').html('Reply');
 
       var quote_markup = '[quote=@' + uname + ']\n' +
-        markup.trim()  +
+        extractTopLevelMarkup(markup.trim())  +
         '\n[/quote]\n';
 
       var $reply_textarea = $('#markup-input');

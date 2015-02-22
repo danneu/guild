@@ -17,6 +17,77 @@ if (isServer) {
   cache = require('./cache')();
 }
 
+// This function is intended to prevent the Reply button from including
+// nested quote contents.
+//
+// aaa
+// [quote=outer]
+// hello
+// [quote=inner]
+// :)
+// [/quote]
+// bye
+// [/quote]
+// zzz
+//
+// becomes...
+//
+// aaa
+// <Snipped quote by outer>
+// zzz
+//
+//
+// Given a post's markup, it replaces nested quotes with
+// <Snipped quote by {{ uname }}> or <Snipped quote>
+// The returned string is then ready to be wrapped with [quote=@...][/quote]
+// and placed in the editor
+function extractTopLevelMarkup(markup) {
+  var re = /\[(quote)=?@?([a-z0-9_\- ]+)?\]|\[(\/quote)\]/gi;
+  // A quoteStack item is { idx: Int, uname: String | undefined }
+  var quoteStack = [];
+
+  // match[1] is 'quote' (opening quote tag)
+  // match[2] is 'uname' of [quote=uname]. Only maybe present when match[1] exists
+  // match[3] is '/quote' (closing quote)
+  while(true) {
+    var match = re.exec(markup);
+    if (!match) {
+      break;
+    } else {
+      if (match[1]) {
+        // Open quote tag
+        var uname = match[2]; // String | undefined
+        quoteStack.push({ idx: match.index, uname: uname });
+      } else if (match[3]) {
+        // Close quote tag
+        // - If there's only 1 quote on the quoteStack, we know this is a top-level
+        //   quote that we want to replace with '<Snip>'
+        // - If there are more than 1 quote on the stack, then just pop() and loop.
+        //   Means we're in a nested quote.
+        // - If quoteStack is empty just loop
+        if (quoteStack.length > 1) {
+          quoteStack.pop();
+        } else if (quoteStack.length === 1) {
+          //debug(match.input);
+          var startIdx = quoteStack[0].idx;
+          var endIdx = match.index + '[/quote]'.length;
+          var quote = quoteStack.pop();
+          var newMarkup = match.input.slice(0, startIdx) +
+            (quote.uname ? '<Snipped quote by ' + quote.uname  + '>'
+                         : '<Snipped quote>') +
+            match.input.slice(endIdx);
+
+          markup = newMarkup;
+          re.lastIndex = re.lastIndex - (endIdx - startIdx);
+        }
+      }
+    }
+  }
+
+  return markup;
+}
+
+
 // Keep in sync with BBCode cheatsheet
 var smilies = [
   'airquotes',
