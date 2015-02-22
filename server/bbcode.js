@@ -17,6 +17,13 @@ if (isServer) {
   cache = require('./cache')();
 }
 
+// String -> Maybe String
+function extractYoutubeId(url) {
+  var re = /^.*(?:youtu.be\/|v\/|e\/|u\/\w+\/|embed\/|v=)([^#\&\?]{11}).*/;
+  var match = url.match(re);
+  return match && match[1];
+}
+
 // This function is intended to prevent the Reply button from including
 // nested quote contents.
 //
@@ -324,6 +331,19 @@ var XBBCODE = (function() {
       },
       closeTag: function(params, content) {
         return '</div></div>';
+      }
+    },
+    "youtube": {
+      displayContent: false,
+      openTag: function(params, content) {
+        var youtubeId = extractYoutubeId(content);
+        if (!youtubeId)
+          return '&#91;youtube&#93;' + content +'&#91;/youtube&#93;';
+        var src = '//youtube.com/embed/' + youtubeId + '?theme=dark';
+        return '<iframe src="'+src+'" frameborder="0" width="496" height="279" allowfullscreen></iframe>';
+      },
+      closeTag: function(params, content) {
+        return '';
       }
     },
     "abbr": {
