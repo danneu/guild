@@ -999,7 +999,13 @@ app.get('/forums/:forumSlug', function*() {
   co(db.upsertViewer(this, forum.id));
   var viewers = yield db.findViewersForForumId(forum.id);
 
-  var topics = yield db.findTopicsByForumId(forumId, pager.limit, pager.offset);
+  // Avoid the has_posted subquery if guest
+  var topics;
+  if (this.currUser)
+    topics = yield db.findTopicsWithHasPostedByForumId(forumId, pager.limit, pager.offset, this.currUser.id);
+  else
+    topics = yield db.findTopicsByForumId(forumId, pager.limit, pager.offset);
+
   forum.topics = topics;
   forum = pre.presentForum(forum);
   yield this.render('show_forum', {

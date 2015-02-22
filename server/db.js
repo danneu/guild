@@ -514,6 +514,7 @@ RETURNING *
   return result.rows[0];
 };
 
+// Sync with db.findTopicsWithHasPostedByForumId
 exports.findTopicsByForumId = wrapTimer(findTopicsByForumId);
 function* findTopicsByForumId(forumId, limit, offset) {
   debug('[%s] forumId: %s, limit: %s, offset: %s',
@@ -536,6 +537,35 @@ LIMIT $2
 OFFSET $3
   */});
   var result = yield query(sql, [forumId, limit, offset]);
+  return result.rows;
+};
+
+// Sync with db.findTopicsByForumId
+// Same as db.findTopicsByForumId except each forum has a has_posted boolean
+// depending on whether or not userId has posted in each topic
+exports.findTopicsWithHasPostedByForumId = function*(forumId, limit, offset, userId) {
+  assert(userId);
+  var sql = m(function() {/*
+SELECT
+  EXISTS(
+    SELECT 1 FROM posts WHERE topic_id = t.id AND user_id = $4
+  ) has_posted,
+  t.*,
+  to_json(u.*) "user",
+  to_json(p.*) "latest_post",
+  to_json(u2.*) "latest_user",
+  to_json(f.*) "forum"
+FROM topics t
+JOIN users u ON t.user_id = u.id
+LEFT JOIN posts p ON t.latest_post_id = p.id
+LEFT JOIN users u2 ON p.user_id = u2.id
+LEFT JOIN forums f ON t.forum_id = f.id
+WHERE (t.forum_id = $1 OR t.moved_from_forum_id = $1)
+ORDER BY is_sticky DESC, COALESCE(t.moved_at, t.latest_post_at) DESC
+LIMIT $2
+OFFSET $3
+  */});
+  var result = yield query(sql, [forumId, limit, offset, userId]);
   return result.rows;
 };
 

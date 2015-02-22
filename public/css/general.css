@@ -828,3 +828,11 @@ ul.post-rating-actions li {
     padding: 20px 20px 0 20px;
     border-top: 2px solid black;
 }
+
+.topic-item-current-user-posted:before {
+    content: "-";
+    position: absolute;
+    left: -10px;
+    top: 20px;
+    color: #65F598;
+}
