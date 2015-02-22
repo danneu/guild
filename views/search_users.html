@@ -34,22 +34,22 @@
       {% if usersList.length-1 > 1 || beforeId %}
         <ul class="pager">
           <li>
-            <a href="{{ ctx.request.path }}">
+            <a href="{{ ctx.request.path }}" rel="first">
               First Page
             </a>
           </li>
           {% if usersList.length < usersPerPage %}
             <li class="disabled">
-              <a href="{{ ctx.request.url }}">
+              <a href="{{ ctx.request.url }}" rel="next">
                 Next Page &rarr;
               </a>
             </li>
           {% else %}
             <li>
               {% if term %}
-              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}&text={{ term }}">
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}&text={{ term }}" rel="next">
               {% else %}
-              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}">
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}" rel="next">
               {% endif %}
                 Next Page &rarr;
               </a>
@@ -122,22 +122,22 @@
       {% if usersList.length-1 > 1 || beforeId %}
         <ul class="pager">
           <li>
-            <a href="{{ ctx.request.path }}">
+            <a href="{{ ctx.request.path }}" rel="first">
               First Page
             </a>
           </li>
           {% if usersList.length < usersPerPage %}
             <li class="disabled">
-              <a href="{{ ctx.request.url }}">
+              <a href="{{ ctx.request.url }}" rel="next">
                 Next Page &rarr;
               </a>
             </li>
           {% else %}
             <li>
               {% if term.length > 0 %}
-              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}&text={{ term }}">
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}&text={{ term }}" rel="next">
               {% else %}
-              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}">
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}" rel="next">
               {% endif %}
                 Next Page &rarr;
               </a>
