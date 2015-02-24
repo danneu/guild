@@ -255,6 +255,21 @@
        })
     });
   </script>
+
+  <script type="text/javascript">
+    // Is localStorage supported in this browser?
+    function isStorage() {
+      var key = 'test';
+      try {
+          localStorage.setItem(key, key);
+          localStorage.removeItem(key);
+          return true;
+      } catch(ex) {
+          return false;
+      }
+    }
+  </script>
+
   {% block scripts %}{% endblock %}
 </body>
 </html>

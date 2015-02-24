@@ -11,7 +11,7 @@
       </li>
 
       <li {% if currPage === 1 %} class="disabled" {% endif %}>
-        {% if prevPage > 1 %}
+        {% if currPage-1 > 1 %}
           {% set suffix = '?page=' + Math.max(currPage-1, 1) %}
         {% endif %}
         <a href="{{ baseUrl + suffix }}{{ urlFragment}}" rel="prev">

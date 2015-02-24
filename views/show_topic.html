@@ -679,54 +679,79 @@ $(function () {
   });
 </script>
 
-<script>
-  // Is localStorage supported in this browser?
-  function isStorage() {
-    var key = 'test';
-    try {
-        localStorage.setItem(key, key);
-        localStorage.removeItem(key);
-        return true;
-    } catch(ex) {
-        return false;
-    }
-  }
+{# tab-page tracking only enabeld for roleplays #}
+{% if topic.is_roleplay %}
+  <script type="text/javascript">
+    if (isStorage()) {
+      var re, match;
+      var topicId, postType, currPage, prevPage;
+      var localKey, localVal;
 
-  if (isStorage) {
-    var re, match;
-    var topicId, postType, pageNum;
-    var localKey, localVal;
+      re = /\/topics\/([\d]+)[^\/]*\/(ic|ooc|char)/;
+      match = window.location.pathname.match(re);
 
-    re = /\/topics\/([\d]+)[^\/]*\/(ic|ooc|char)/;
-    match = window.location.pathname.match(re);
+      topicId = match[1];
+      postType = match[2];
 
-    topicId = match[1];
-    postType = match[2];
+      re = /\\&|\?page=([\d]+)/;
+      match = window.location.search.match(re);
 
-    re = /\\&|\?page=([\d]+)/;
-    match = window.location.search.match(re);
+      currPage = (match && match[1]) || 1;
 
-    pageNum = (match && match[1]) || 1;
-
-    if (pageNum > 1) {
       localKey = topicId + ':' + postType;
-      localVal = pageNum;
-      localStorage.setItem(localKey, localVal);
-      console.log([localKey, localVal]);
+      prevPage = localStorage.getItem(localKey) && parseInt(localStorage.getItem(localKey));
+
+      // If there was a value for this topic+postType but now user is one
+      // page 1, then just remove it instead of polluting localStorage with
+      // a bunch of page 1s.
+      if (prevPage && currPage === 1) {
+        localStorage.removeItem(localKey);
+      }
+
+      if (currPage > 1) {
+        localStorage.setItem(localKey, currPage);
+      }
+
+      // When localStorage accumulates 1000 keys, then reset it
+      if (localStorage.length >= 1000) {
+        console.log('Resetting localStorage');
+
+        // Save the localStorage key/vals of the current topic
+        // Map of localKey->localVal
+        var currTopicStorage = {};
+        ['ic', 'ooc', 'char'].forEach(function(postType) {
+          var localKey = topicId + ':' + postType;
+          var localVal = localStorage.getItem(localKey);
+          currTopicStorage[localKey] = localVal;
+        });
+
+        // Delete localStorage
+        localStorage.clear();
+
+        // Replay currentTopicStorage on top of it
+        Object.keys(currTopicStorage).forEach(function(localKey) {
+          var localVal = currTopicStorage[localKey];
+          if (localVal)
+            localStorage.setItem(localKey, localVal);
+        });
+        console.log('Reset: ', localStorage.length);
+      }
+
+      ['ic', 'ooc', 'char'].forEach(function(postType) {
+        var key = topicId + ':' + postType;
+        var page = localStorage.getItem(key) || 1;
+        if (page > 1) {
+          var $el = $('#' + postType + '-tab-link');
+          $el.attr('href', $el.attr('href') + '?page=' + page)
+          $el.tooltip({
+            title: 'Page ' + page,
+            trigger: 'manual'
+          }).tooltip('show');
+        }
+      });
     }
 
-    //
-
-    ['ic', 'ooc', 'char'].forEach(function(postType) {
-      var key = topicId + ':' + postType;
-      var pg = localStorage.getItem(key) || 1;
-      if (pg > 1) {
-        var $el = $('#' + postType + '-tab-link');
-        $el.attr('href', $el.attr('href') + '?page=' + pg)
-      }
-    });
-  }
-
-</script>
+  </script>
+{% endif%}
 
 {% endblock%}
