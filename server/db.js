@@ -1196,16 +1196,86 @@ function* findSubscribedTopicsForUserId(userId) {
   var sql = m(function() {/*
 SELECT
   t.*,
-  to_json(u.*)                "user",
-  to_json(latest_post.*)      "latest_post",
-  to_json(u2.*)               "latest_user",
-  to_json(latest_ic_post.*)   "latest_ic_post",
-  to_json(latest_ic_user.*)   "latest_ic_user",
-  to_json(latest_ooc_post.*)  "latest_ooc_post",
-  to_json(latest_ooc_user.*)  "latest_ooc_user",
-  to_json(latest_char_post.*) "latest_char_post",
-  to_json(latest_char_user.*) "latest_char_user",
-  to_json(f.*)                "forum"
+
+  -- to_json(u.*)                "user",
+  json_build_object(
+    'uname', u.uname,
+    'slug', u.slug
+  ) "user",
+
+  -- to_json(latest_post.*)      "latest_post",
+  json_build_object(
+    'id', latest_post.id,
+    'created_at', latest_post.created_at
+  ) "latest_post",
+
+  -- to_json(u2.*)               "latest_user",
+  json_build_object(
+    'uname', u2.uname,
+    'slug', u2.slug
+  ) "latest_user",
+
+  -- to_json(latest_ic_post.*)   "latest_ic_post",
+  CASE
+    WHEN latest_ic_post IS NULL THEN NULL
+    ELSE
+      json_build_object(
+        'id', latest_ic_post.id,
+        'created_at', latest_ic_post.created_at
+      )
+  END "latest_ic_post",
+
+  -- to_json(latest_ic_user.*)   "latest_ic_user",
+  CASE
+    WHEN latest_ic_user IS NULL THEN NULL
+    ELSE
+      json_build_object(
+        'uname', latest_ic_user.uname,
+        'slug', latest_ic_user.slug
+      )
+  END "latest_ic_user",
+
+  -- to_json(latest_ooc_post.*)  "latest_ooc_post",
+  CASE
+    WHEN latest_ooc_post IS NULL THEN NULL
+    ELSE
+      json_build_object(
+        'id', latest_ooc_post.id,
+        'created_at', latest_ooc_post.created_at
+      )
+  END "latest_ooc_post",
+
+  -- to_json(latest_ooc_user.*)  "latest_ooc_user",
+  CASE
+    WHEN latest_ooc_user IS NULL THEN NULL
+    ELSE
+      json_build_object(
+        'uname', latest_ooc_user.uname,
+        'slug', latest_ooc_user.slug
+      )
+  END "latest_ooc_user",
+
+  -- to_json(latest_char_post.*) "latest_char_post",
+  CASE
+    WHEN latest_char_post IS NULL THEN NULL
+    ELSE
+      json_build_object(
+        'id', latest_char_post.id,
+        'created_at', latest_char_post.created_at
+      )
+  END "latest_char_post",
+
+  -- to_json(latest_char_user.*) "latest_char_user",
+  CASE
+    WHEN latest_char_user IS NULL THEN NULL
+    ELSE
+      json_build_object(
+        'uname', latest_char_user.uname,
+        'slug', latest_char_user.slug
+      )
+  END "latest_char_user",
+
+  to_json(f.*) "forum"
 FROM topic_subscriptions ts
 JOIN topics t ON ts.topic_id = t.id
 JOIN users u ON t.user_id = u.id
