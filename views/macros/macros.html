@@ -56,6 +56,12 @@
     </a>
   </div>
 
+  {% if user.custom_title %}
+    <div class="user-custom-title text-muted">
+      {{ user.custom_title }}
+    </div>
+  {% endif %}
+
   {% if user.avatar_url %}
     <div class="post-avatar"
          style="margin-top: 10px;">

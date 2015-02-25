@@ -836,6 +836,7 @@ app.put('/api/users/:id/bio', function*() {
 // - sig (which will pre-render sig_html field)
 // - hide-sigs
 // - is-ghost
+// - custom-title
 app.put('/users/:slug', function*() {
   debug('BEFORE', this.request.body);
 
@@ -846,6 +847,12 @@ app.put('/users/:slug', function*() {
     .optional()
   this.checkBody('avatar-url')
     .optional()
+  this.checkBody('custom-title')
+    .optional()
+  if (this.request.body['custom-title'])
+    this.checkBody('custom-title')
+      .trim()
+      .isLength(0, 50, 'custom-title can be up to 50 chars. Yours was ' + this.request.body['custom-title'].length + '.')
   if (this.request.body['avatar-url'] && this.request.body['avatar-url'].length > 0)
     this.checkBody('avatar-url')
       .trim()
@@ -881,6 +888,7 @@ app.put('/users/:slug', function*() {
     email: this.request.body.email || user.email,
     sig: this.request.body.sig,
     sig_html: sig_html,
+    custom_title: this.request.body['custom-title'],
     avatar_url: this.request.body['avatar-url'],
     hide_sigs: _.isBoolean(this.request.body['hide-sigs'])
                  ? this.request.body['hide-sigs']

@@ -999,7 +999,8 @@ SET
   avatar_url = COALESCE($4, avatar_url),
   hide_sigs = COALESCE($5, hide_sigs),
   is_ghost = COALESCE($6, is_ghost),
-  sig_html = COALESCE($7, sig_html)
+  sig_html = COALESCE($7, sig_html),
+  custom_title = COALESCE($8, custom_title)
 WHERE id = $1
 RETURNING *
   */});
@@ -1010,7 +1011,8 @@ RETURNING *
     attrs.avatar_url,
     attrs.hide_sigs,
     attrs.is_ghost,
-    attrs.sig_html
+    attrs.sig_html,
+    attrs.custom_title  // $8
   ]);
   return result.rows[0];
 };

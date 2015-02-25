@@ -19,7 +19,7 @@
           {% endif %}
         </a>
       {% endif %}
-    <h1>
+    <h1 style="margin-bottom: 0;">
       <a href="{{ user.url }}">{{ user.uname }}</a>
       <small>{{ user.role|capitalize}}</small>
       {% if ctx.can(ctx.currUser, 'UPDATE_USER', user) %}
@@ -42,6 +42,9 @@
         <!-- Delete button temporarily disabled -->
       {% endif %}
     </h1>
+    {% if user.custom_title %}
+      <h3 style="margin-top: 0;">{{ user.custom_title }}</h3>
+    {% endif %}
   </div>
 
   <div class="row">

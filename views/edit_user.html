@@ -13,6 +13,36 @@
   <div class="row">
     <div class="col-sm-6 col-sm-offset-3">
 
+      <!-- Change custom_title form -->
+      {% if ctx.can(ctx.currUser, 'UPDATE_USER_CUSTOM_TITLE', user) %}
+        <form action="{{ user.url }}" method="post" class="form-horizontal">
+          <input type="hidden" name="_method" value="put">
+          <div class="panel panel-default no-select" style="border-color: #000">
+            <div class="panel-heading">Edit Custom Title</div>
+            <!-- PANEL BODY -->
+            <div class="panel-body">
+              <p>Your title is displayed between your username and avatar in each post. It's fun.</p>
+              <p>Examples: <code>The Bearded</code>, <code>A Friendly Hobbit</code>, <code>Dank Meme Generator</code>.</p>
+              <p class="text-muted">Please don't set it to things like "Admin", "Banned", etc.</p>
+              <div class="form-group">
+                <label for="custom-title-input" class="col-sm-3 control-label">Custom Title:</label>
+                <div class="col-sm-9">
+                  <input id="custom-title-input" name="custom-title" class="form-control" autocomplete="off" value="{{ user.custom_title }}" type="text">
+                  <p class="help-block">50 chars max</p>
+                </div>
+              </div>
+            </div> <!-- /.panel-body -->
+            <!-- PANEL FOOTER -->
+            <div class="panel-footer" style="border-color: #000">
+              <div class="text-right">
+                <input id="custom-title-submit" type="submit" value="Submit"
+                       class="btn btn-primary">
+              </div>
+            </div> <!-- /.panel-footer -->
+          </div> <!-- /.panel -->
+        </form>
+      {% endif %}
+
       <!-- Change role form -->
       {% if ctx.can(ctx.currUser, 'UPDATE_USER_ROLE', user) %}
         <form action="{{ user.url }}/role" method="post" class="form-horizontal">
