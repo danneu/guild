@@ -71,6 +71,9 @@
                     <a href="{{ post.user.url }}">
                       {{ post.user.uname }}
                     </a>
+                    {% if post.user.custom_title %}
+                      <small><span class="text-muted">{{ post.user.custom_title }}</span></small>
+                    {% endif %}
                   </h4>
                   <div class="pull-left">
                     {{ post.user.role|capitalize }}<br>
