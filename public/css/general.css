@@ -846,3 +846,7 @@ ul.post-rating-actions li {
   display: inline-block;
   margin-bottom: 5px;
 }
+
+.user-custom-title {
+    word-break: break-word;
+}
