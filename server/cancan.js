@@ -40,6 +40,22 @@ exports.can = function(user, action, target) {
 };
 function can(user, action, target) {
   switch(action) {
+    case 'UPDATE_USER_CUSTOM_TITLE': // target is user
+      // Guests cannot
+      if (!user) return false;
+      // Members can change their own
+      if (user.role === 'member')
+        return user.id === target.id;
+      // Mods can change any non-staff
+      if (user.role === 'mod')
+        return !isStaffRole(target.role);
+      // Smods can change mods and below
+      if (user.role === 'smod')
+        return target.role === 'mod' || !isStaffRole(target.role);
+      // Admins can change all
+      if (user.role === 'admin')
+        return true;
+      return false;
     case 'REFRESH_FORUM':  // target is forum
       // Guests cannot
       if (!user) return false;
