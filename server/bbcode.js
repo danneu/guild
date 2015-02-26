@@ -200,7 +200,45 @@ var XBBCODE = (function() {
   // -----------------------------------------------------------------------------
 
   var me = {},
-  urlPattern = /^(?:https?|file|c):(?:\/{1,3}|\\{1})[-a-zA-Z0-9:;@#%&()~_?\+=\/\\\.]*$/,
+  // This library's default:
+  //urlPattern = /^[-a-z0-9:;@#%&()~_?\+=\/\\\.]+$/i,
+
+  // https://mathiasbynens.be/demo/url-regex
+  // Source from https://gist.github.com/dperini/729294
+  urlPattern = new RegExp(
+    "^" +
+      // protocol identifier
+      "(?:(?:https?|ftp)://)" +
+      // user:pass authentication
+      "(?:\\S+(?::\\S*)?@)?" +
+      "(?:" +
+        // IP address exclusion
+        // private & local networks
+        "(?!(?:10|127)(?:\\.\\d{1,3}){3})" +
+        "(?!(?:169\\.254|192\\.168)(?:\\.\\d{1,3}){2})" +
+        "(?!172\\.(?:1[6-9]|2\\d|3[0-1])(?:\\.\\d{1,3}){2})" +
+        // IP address dotted notation octets
+        // excludes loopback network 0.0.0.0
+        // excludes reserved space >= 224.0.0.0
+        // excludes network & broacast addresses
+        // (first & last IP address of each class)
+        "(?:[1-9]\\d?|1\\d\\d|2[01]\\d|22[0-3])" +
+        "(?:\\.(?:1?\\d{1,2}|2[0-4]\\d|25[0-5])){2}" +
+        "(?:\\.(?:[1-9]\\d?|1\\d\\d|2[0-4]\\d|25[0-4]))" +
+      "|" +
+        // host name
+        "(?:(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)" +
+        // domain name
+        "(?:\\.(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)*" +
+        // TLD identifier
+        "(?:\\.(?:[a-z\\u00a1-\\uffff]{2,}))" +
+      ")" +
+      // port number
+      "(?::\\d{2,5})?" +
+      // resource path
+      "(?:/\\S*)?" +
+    "$", "i"
+  ),
   colorNamePattern = /^(?:aliceblue|antiquewhite|aqua|aquamarine|azure|beige|bisque|black|blanchedalmond|blue|blueviolet|brown|burlywood|cadetblue|chartreuse|chocolate|coral|cornflowerblue|cornsilk|crimson|cyan|darkblue|darkcyan|darkgoldenrod|darkgray|darkgreen|darkkhaki|darkmagenta|darkolivegreen|darkorange|darkorchid|darkred|darksalmon|darkseagreen|darkslateblue|darkslategray|darkturquoise|darkviolet|deeppink|deepskyblue|dimgray|dodgerblue|firebrick|floralwhite|forestgreen|fuchsia|gainsboro|ghostwhite|gold|goldenrod|gray|green|greenyellow|honeydew|hotpink|indianred|indigo|ivory|khaki|lavender|lavenderblush|lawngreen|lemonchiffon|lightblue|lightcoral|lightcyan|lightgoldenrodyellow|lightgray|lightgreen|lightpink|lightsalmon|lightseagreen|lightskyblue|lightslategray|lightsteelblue|lightyellow|lime|limegreen|linen|magenta|maroon|mediumaquamarine|mediumblue|mediumorchid|mediumpurple|mediumseagreen|mediumslateblue|mediumspringgreen|mediumturquoise|mediumvioletred|midnightblue|mintcream|mistyrose|moccasin|navajowhite|navy|oldlace|olive|olivedrab|orange|orangered|orchid|palegoldenrod|palegreen|paleturquoise|palevioletred|papayawhip|peachpuff|peru|pink|plum|powderblue|purple|red|rosybrown|royalblue|saddlebrown|salmon|sandybrown|seagreen|seashell|sienna|silver|skyblue|slateblue|slategray|snow|springgreen|steelblue|tan|teal|thistle|tomato|turquoise|violet|wheat|white|whitesmoke|yellow|yellowgreen)$/,
   colorCodePattern = /^#?[a-fA-F0-9]{6}$/,
   emailPattern = /[^\s@]+@[^\s@]+\.[^\s@]+/,
@@ -569,7 +607,7 @@ var XBBCODE = (function() {
     "img": {
       openTag: function(params,content) {
 
-        var myUrl = content;
+        var myUrl = content.trim();
 
         urlPattern.lastIndex = 0;
         if ( !urlPattern.test( myUrl ) ) {
@@ -890,20 +928,27 @@ var XBBCODE = (function() {
         var myUrl;
 
         if (!params) {
-          myUrl = content.replace(/<.*?>/g,"");
+          myUrl = content.trim().replace(/<.*?>/g,"");
         } else {
-          myUrl = params.substr(1);
+          myUrl = params.trim().substr(1).trim();
         }
 
         urlPattern.lastIndex = 0;
         if ( !urlPattern.test( myUrl ) ) {
-          myUrl = "#";
+          hasError.url = true;
+          tagErrs.push('One of your [url] tags has an invalid url');
+          if (params)
+            return '&#91;url='+ myUrl + '&#93;';
+          else
+            return '&#91;url&#93;';
         }
 
-        return '<a href="' + myUrl + '">';
+        return '<a rel="nofollow" href="' + myUrl + '">';
       },
       closeTag: function(params,content) {
-        return '</a>';
+        var ret = hasError.url ? '&#91;/url&#93;' : '</a>';
+        hasError.url = false;
+        return ret;
       }
     },
     /*
