@@ -306,7 +306,9 @@
               </div>
             {% endif %}
             <!-- Signature -->
-            {{- macros.renderSig(post.user) -}}
+            {% if !post.is_hidden %}
+              {{- macros.renderSig(post.user) -}}
+            {% endif %}
           </div>
 
         </div> <!-- /.panel-body -->

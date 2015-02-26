@@ -36,16 +36,8 @@
 {% endmacro %}
 
 {% macro renderSig(user) %}
-  {% if ctx.currUser && !ctx.currUser.hide_sigs && !post.is_hidden %}
-    <!-- User has sig html-->
-    {% if post.user.sig_html %}
-      <div class="post-sig-legacy post-sig">{{- post.user.sig_html|safe -}}</div>
-    <!-- User has old Markdown sig that needs conversion to BBCode -->
-    {% elif post.user.sig %}
-      <div class="post-sig-markdown post-sig">{{- post.user.sig -}}</div>
-    {% elif post.user.legacy_sig %}
-      <div class="post-sig post-sig-legacy">{{- post.user.legacy_sig|safe -}}</div>
-    {% endif %}
+  {% if ctx.currUser && !ctx.currUser.hide_sigs && user.sig_html %}
+    <div class="post-sig-legacy post-sig">{{- post.user.sig_html|safe -}}</div>
   {% endif %}
 {% endmacro %}
 
