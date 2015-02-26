@@ -46,12 +46,14 @@ function can(user, action, target) {
       // Members can change their own
       if (user.role === 'member')
         return user.id === target.id;
-      // Mods can change any non-staff
+      // Mods can change their own title and the title of any non-staff
       if (user.role === 'mod')
-        return !isStaffRole(target.role);
+        return user.id === target.id || !isStaffRole(target.role);
       // Smods can change mods and below
       if (user.role === 'smod')
-        return target.role === 'mod' || !isStaffRole(target.role);
+        return user.id === target.id ||
+               target.role === 'mod' ||
+               !isStaffRole(target.role);
       // Admins can change all
       if (user.role === 'admin')
         return true;
