@@ -45,6 +45,7 @@ var belt = require('./belt');
 var bbcode = require('./bbcode');
 var welcomePm = require('./welcome_pm');
 var avatar = require('./avatar');
+var bouncer = require('./koa-bouncer');
 
 // Catch and log all errors that bubble up to koa
 // app.on('error', function(err) {
@@ -228,9 +229,25 @@ app.use(views('../views', {
 // Routes //////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 
+app.use(bouncer.middleware());
+
+app.use(function*(next) {
+  try {
+    yield next;
+  } catch(ex) {
+    if (ex instanceof bouncer.ValidationError) {
+      this.flash = { message: ['danger', ex.message || 'Validation error'] };
+      this.response.redirect('back');
+      return;
+    }
+    throw ex;
+  }
+});
+
 // TODO: Migrate from route to koa-router.
 // For one, it lets koa-validate's checkParams work since it puts the params
 // in the koa context
+// - Create middleware before this
 app.use(require('koa-router')(app));
 
 app.get('/test', function*() {
@@ -243,22 +260,25 @@ app.get('/test', function*() {
 // - type: like | laugh | thank
 // - post_id: Int
 app.post('/posts/:postId/rate', function*() {
-  this.checkBody('type')
-    .notEmpty('type is required')
-    .isIn(['like', 'laugh', 'thank'], 'Invalid type');
-  this.checkBody('post_id').toInt('Invalid post_id');
+  try {
+    this.validateBody('type')
+      .isNotEmpty('type is required')
+      .isIn(['like', 'laugh', 'thank'], 'Invalid type');
+    this.validateBody('post_id').toInt('Invalid post_id');
+  } catch(ex) {
+    if (ex instanceof bouncer.ValidationError)
+      this.throw(ex.message, 400);
+    throw ex;
+  }
 
-  // Validate params (400)
-  this.assert(!this.errors, 400, belt.joinErrors(this.errors));
-
-  var post = yield db.findPostById(this.request.body.post_id);
+  var post = yield db.findPostById(this.valid.post_id);
 
   // Ensure post exists (404)
   this.assert(post, 404);
   post = pre.presentPost(post);
 
   // Ensure currUser is authorized to rep (403)
-  this.assert(cancan.can(this.currUser, 'RATE_POST', post));
+  this.assert(cancan.can(this.currUser, 'RATE_POST', post), 403);
 
   // Ensure user has waited a certain duration since giving latest rating.
   // (To prevent rating spamming)
@@ -279,16 +299,16 @@ app.post('/posts/:postId/rate', function*() {
     from_user_id: this.currUser.id,
     from_user_uname: this.currUser.uname,
     to_user_id: post.user_id,
-    type: this.request.body.type
+    type: this.valid.type
   });
 
   // Send receiver a RATING notification in the background
   co(db.createRatingNotification({
     from_user_id: this.currUser.id,
-    to_user_id: post.user_id,
-    post_id: post.id,
-    topic_id: post.topic_id,
-    rating_type: rating.type
+    to_user_id:   post.user_id,
+    post_id:      post.id,
+    topic_id:     post.topic_id,
+    rating_type:  rating.type
   }));
 
   this.body = JSON.stringify(rating);
@@ -420,7 +440,7 @@ app.post('/users', function*() {
 
   // Log in the user
   this.cookies.set('sessionId', session.id, {
-    expires: belt.futureDate(new Date(), { years: 1 })
+    expires: belt.futureDate({ years: 1 })
   });
 
   // Send user the introductory PM
@@ -443,49 +463,22 @@ app.post('/users', function*() {
 // Create session
 //
 app.post('/sessions', function*() {
-  this.checkBody('uname-or-email').notEmpty();
-  this.checkBody('password').notEmpty();
-  this.checkBody('remember-me').toBoolean();
-
-  if (this.errors) {
-    this.flash = { message: ['danger', 'Invalid creds'] };
-    this.response.redirect('/login');
-    return;
-  }
-
-  var unameOrEmail = this.request.body['uname-or-email'];
-  var password = this.request.body.password;
-  var rememberMe = this.request.body['remember-me'];
-
-  // Check if user with this uname or email exists
-  var user = yield db.findUserByUnameOrEmail(unameOrEmail);
-  if (!user) {
-    //this.log.info('Invalid creds');
-    this.flash = { message: ['danger', 'Invalid creds'] };
-    this.response.redirect('/login');
-    return;
-  }
-
-  // Check if provided password matches digest
-  if (! (yield belt.checkPassword(password, user.digest))) {
-    //this.log.info('Invalid creds');
-    this.flash = { message: ['danger', 'Invalid creds'] };
-    this.response.redirect('/login');
-    return;
-  }
+  this.validateBody('uname-or-email').isNotEmpty('Invalid creds');
+  this.validateBody('password').isNotEmpty('Invalid creds');
+  this.validateBody('remember-me').toBoolean();
+  var user = yield db.findUserByUnameOrEmail(this.valid['uname-or-email']);
+  this.validate(user, 'Invalid creds');
+  this.validate(yield belt.checkPassword(this.valid['password'], user.digest), 'Invalid creds');
 
   // User authenticated
-  var interval = (rememberMe ? '1 year' : '1 day');
   var session = yield db.createSession({
-    userId: user.id,
+    userId:    user.id,
     ipAddress: this.request.ip,
-    interval: interval
+    interval:  (this.valid['remember-me'] ? '1 year' : '2 weeks')
   });
 
-  // this.log.info({ session: session, session_interval: interval },
-  //               'Created session');
   this.cookies.set('sessionId', session.id, {
-    expires: belt.futureDate(new Date(), rememberMe ? { years: 1 } : { days: 1 })
+    expires: this.valid['remember-me'] ? belt.futureDate({ years: 1 }) : undefined
   });
   this.flash = { message: ['success', 'Logged in successfully'] };
   this.response.redirect('/');
@@ -1005,14 +998,19 @@ app.get('/forums/:forumSlug', function*() {
   var pager = belt.calcPager(this.request.query.page, 25, forum.topics_count);
 
   co(db.upsertViewer(this, forum.id));
-  var viewers = yield db.findViewersForForumId(forum.id);
 
   // Avoid the has_posted subquery if guest
-  var topics;
+  var thunk, results, topics, viewers;
   if (this.currUser)
-    topics = yield db.findTopicsWithHasPostedByForumId(forumId, pager.limit, pager.offset, this.currUser.id);
+    thunk = db.findTopicsWithHasPostedByForumId(
+      forumId, pager.limit, pager.offset, this.currUser.id
+    );
   else
-    topics = yield db.findTopicsByForumId(forumId, pager.limit, pager.offset);
+    thunk = db.findTopicsByForumId(forumId, pager.limit, pager.offset);
+
+  results = yield [db.findViewersForForumId(forum.id), thunk];
+  viewers = results[0];
+  topics = results[1];
 
   forum.topics = topics;
   forum = pre.presentForum(forum);
