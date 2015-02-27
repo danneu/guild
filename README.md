@@ -3,6 +3,44 @@
 
 Work in progress
 
+## Features
+
+### Post Ratings
+
+Users can express appreciation for posts they liked, laughed at, found helpful, etc. without having to write a post. They just click the rating button. By reducing the barrier to this kind of feedback, more people are willing to provide it.
+
+![](docs/img/ratings-table.png)
+
+![](docs/img/ratings-post.png)
+
+### User last-online-at tracking
+
+Users are considered "online" if they've visited the forum within 15 minutes.
+
+When a user is offline, the forum shows when they were online last.
+
+![](docs/img/userbit-last-online.png)
+
+![](docs/img/whos-online.png)
+
+Users that want more privacy can enable "Ghost Mode" which hides the last-online-at field on their posts and remove them from the "Who's Online" list.
+
+### Viewer tracking
+
+The forum tracks the visitors that are viewing each page and then presents this info to all visitors. It makes the forum feel more alive and gives users a feel for the "regulars" of the subforums they frequent.
+
+![](docs/img/current-viewers-forum.png)
+
+![](docs/img/current-viewers-topics-list.png)
+
+Logged-in users that have "Ghost Mode" enabled and unauthenticated visitors are considered guests.
+
+### BBCode editor + preview
+
+The BBCode editor, the preview button, and the BBCode error output are implemented with patched versions of the [Bootstrap Markdown](https://github.com/toopay/bootstrap-markdown) and [Extendible-BBCode-Parser](https://github.com/danneu/Extendible-BBCode-Parser) libraries.
+
+![](docs/img/bbcode-editor.png)
+
 ## Setup and Install
 
 The Guild is a Node.js app (v0.11.x) that talks to a Postgres database.
