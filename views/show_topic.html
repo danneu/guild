@@ -38,15 +38,21 @@
       {% endif %}
 
       {% if ctx.can(ctx.currUser, 'UPDATE_TOPIC_TITLE', topic) %}
-        <small class="pull-right">
+        <small class="pull-right" style="margin-left: 10px;">
           <a href="{{ topic.url }}/edit">Edit</a>
         </small>
+      {% endif %}
+
+      {% if ctx.currUser && cancan.isStaffRole(ctx.currUser.role) %}
+        <button type="button" id="toggle-topic-modkit" class="pull-right btn btn-default btn-xs">Toggle Modkit</button>
       {% endif %}
     </h2>
 
     <!-- Topic state buttons -->
 
-    <div class="topic-controls">
+
+    {% if ctx.currUser && cancan.isStaffRole(ctx.currUser.role) %}
+    <div class="topic-controls topic-modkit" style="display: none;">
 
       <!-- STICK -->
       {% if ctx.can(ctx.currUser, 'STICK_TOPIC', topic) %}
@@ -121,6 +127,7 @@
      {% endif %}
 
     </div><!--/.topic-controls-->
+    {% endif %}
   </div><!--/.page-header-->
 
   <!-- Pagination -->
@@ -756,6 +763,11 @@ $(function () {
       });
     }
 
+  </script>
+  <script type="text/javascript">
+    $('#toggle-topic-modkit').on('click', function() {
+      $('.topic-modkit').toggle();
+    });
   </script>
 {% endif%}
 
