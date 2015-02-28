@@ -138,7 +138,7 @@
         </li>
         {% for uname in topic.co_gm_unames %}
           <span class="label label-warning" style="margin-left: 10px;">Co-GM</span>
-          <a href="{{ uname|slugifyUname }}">{{ uname }}</a>
+          <a href="/users/{{ uname|slugifyUname }}">{{ uname }}</a>
         {% endfor %}
       </ul>
     {% endif %}
