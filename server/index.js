@@ -1240,26 +1240,30 @@ app.get('/users/:userIdOrSlug', function*() {
   });
 });
 
-app.get('/showthread.php', function*() {
-  this.flash = {
-    message: ['info', 'Sorry, that page does not exist anymore.']
-  };
-  this.response.redirect('/');
+////////////////////////////////////////////////////////////
+
+var LEGACY_VBULLETIN_PATHS = [
+  '/forumdisplay.php',
+  '/misc.php',
+  '/external.php',
+  '/showgroups.php',
+  '/register.php',
+  '/index.php',
+  '/activity.php',
+  '/forum.php',
+  '/showthread.php',
+  '/printthread.php',
+  '/private.php'
+];
+
+LEGACY_VBULLETIN_PATHS.forEach(function(legacyPath) {
+  app.get(legacyPath, function*() {
+    this.flash = { message: ['info', 'Sorry, that page does not exist anymore.'] };
+    this.response.redirect('/');
+  });
 });
 
-app.get('/printthread.php', function*() {
-  this.flash = {
-    message: ['info', 'Sorry, that page does not exist anymore.']
-  };
-  this.response.redirect('/');
-});
-
-app.get('/private.php', function*() {
-  this.flash = {
-    message: ['info', 'Sorry, that page does not exist anymore.']
-  };
-  this.response.redirect('/');
-});
+////////////////////////////////////////////////////////////
 
 //
 // Delete user
