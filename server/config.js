@@ -32,6 +32,9 @@ exports.S3_BUCKET = process.env.S3_BUCKET;
 if (!exports.S3_BUCKET) console.warn('S3_BUCKET not set. Cannot process avatars.');
 exports.FROM_EMAIL = process.env.FROM_EMAIL;
 
+// The max amount of co-GMs per topic
+exports.MAX_CO_GM_COUNT = process.env.MAX_CO_GM_COUNT || 2;
+
 // How many posts/PMs to display per page in topics/convos
 exports.POSTS_PER_PAGE = parseInt(process.env.POSTS_PER_PAGE, 10) || 20;
 // How many users to display per page in user search

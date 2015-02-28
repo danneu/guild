@@ -182,7 +182,9 @@ function* findTopicWithIsSubscribed(userId, topicId) {
 SELECT
   t.*,
   to_json(f.*) "forum",
-  array_agg($1::int) @> Array[ts.user_id::int] "is_subscribed"
+  array_agg($1::int) @> Array[ts.user_id::int] "is_subscribed",
+  (SELECT to_json(u.*) FROM users u WHERE id = t.user_id) "user",
+  (SELECT json_agg(u.uname) FROM users u WHERE id = ANY (t.co_gm_ids::int[])) co_gm_unames
 FROM topics t
 JOIN forums f ON t.forum_id = f.id
 LEFT OUTER JOIN topic_subscriptions ts
@@ -1531,7 +1533,9 @@ exports.findTopicById = function*(topicId) {
   var sql = m(function() {/*
 SELECT
   t.*,
-  to_json(f.*) "forum"
+  to_json(f.*) "forum",
+  (SELECT to_json(u.*) FROM users u WHERE id = t.user_id) "user",
+  (SELECT json_agg(u.uname) FROM users u WHERE id = ANY (t.co_gm_ids::int[])) co_gm_unames
 FROM topics t
 JOIN forums f ON t.forum_id = f.id
 WHERE t.id = $1
@@ -2053,4 +2057,28 @@ RETURNING forums.*
   */});
   var result = yield query(sql, [forumId]);
   return result.rows[0];
+};
+
+// -> JSONString
+exports.findAllUnamesJson = function*() {
+  var sql = m(function() {/*
+SELECT json_agg(uname) unames
+FROM users
+--WHERE last_online_at IS NOT NULL
+  */});
+  var result = yield query(sql);
+  return result.rows[0].unames;
+};
+
+exports.updateTopicCoGms = function*(topicId, userIds) {
+  assert(topicId);
+  assert(_.isArray(userIds));
+  var sql = m(function() {/*
+UPDATE topics
+SET co_gm_ids = $2
+WHERE id = $1
+RETURNING *
+  */});
+  var result = yield query(sql, [topicId, userIds]);
+  return result[0];
 };

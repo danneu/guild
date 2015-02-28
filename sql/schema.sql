@@ -120,6 +120,7 @@ CREATE TABLE topics (
   forum_id   int NOT NULL  REFERENCES forums(id)  ON DELETE CASCADE,
   created_at timestamp with time zone NOT NULL  DEFAULT NOW(),
   is_roleplay boolean NOT NULL,
+  co_gm_ids  int[] NOT NULL DEFAULT ARRAY[]::int[],
   -- Modkit flags
   is_hidden  boolean NOT NULL  DEFAULT false,
   is_closed  boolean NOT NULL  DEFAULT false,

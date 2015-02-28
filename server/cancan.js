@@ -40,6 +40,16 @@ exports.can = function(user, action, target) {
 };
 function can(user, action, target) {
   switch(action) {
+    case 'UPDATE_TOPIC_CO_GMS':  // target is topic
+      // Only roleplays can have co-GMs
+      if (!target.is_roleplay) return false;
+      // Guests can't
+      if (!user) return false;
+      // GM can
+      if (target.user_id === user.id) return true;
+      // Staff can
+      if (isStaffRole(user.role)) return true;
+      return false;
     case 'UPDATE_USER_CUSTOM_TITLE': // target is user
       // Guests cannot
       if (!user) return false;

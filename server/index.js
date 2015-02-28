@@ -257,6 +257,54 @@ app.get('/test', function*() {
   });
 });
 
+app.post('/topics/:topicSlug/co-gms', function*() {
+  var topicId = belt.extractId(this.params.topicSlug);
+  var topic = yield db.findTopicById(topicId);
+  this.assert(topic, 404);
+  this.assertAuthorized(this.currUser, 'UPDATE_TOPIC_CO_GMS', topic);
+  topic = pre.presentTopic(topic);
+
+  this.validateBody('uname')
+    .isNotEmpty('Username required');
+  var user = yield db.findUserByUname(this.valid.uname);
+  // Ensure user exists
+  this.validate(user, 'User does not exist');
+  // Ensure user is not already a co-GM
+  this.validate(!_.contains(topic.co_gm_ids, user.id), 'User is already a co-GM');
+  // Ensure user is not the GM
+  this.validate(user.id !== topic.user.id, 'User is already the GM');
+  // Ensure topic has room for another co-GM
+  this.validate(topic.co_gm_ids.length < config.MAX_CO_GM_COUNT,
+                'Cannot have more than ' + config.MAX_CO_GM_COUNT + ' co-GMs');
+
+  yield db.updateTopicCoGms(topic.id, topic.co_gm_ids.concat([user.id]));
+
+  this.response.redirect('back');
+});
+
+app.delete('/topics/:topicSlug/co-gms/:userSlug', function*() {
+  var topicId = belt.extractId(this.params.topicSlug);
+  var topic = yield db.findTopicById(topicId);
+  this.assert(topic, 404);
+  this.assertAuthorized(this.currUser, 'UPDATE_TOPIC_CO_GMS', topic);
+  topic = pre.presentTopic(topic);
+
+  var user = yield db.findUserBySlug(this.params.userSlug);
+  this.validate(user, 'User does not exist');
+  this.validate(_.contains(topic.co_gm_ids, user.id), 'User is not a co-GM');
+
+  yield db.updateTopicCoGms(topic.id, topic.co_gm_ids.filter(function(co_gm_id) {
+    return co_gm_id !== user.id;
+  }));
+
+  this.response.redirect('back');
+});
+
+app.get('/unames.json', function*() {
+  this.type = 'application/json';
+  this.body = yield db.findAllUnamesJson();
+});
+
 // Required body params:
 // - type: like | laugh | thank
 // - post_id: Int
@@ -1996,7 +2044,7 @@ app.get('/topics/:slug/:postType', function*() {
   if (this.currUser) {
     topic = yield db.findTopicWithIsSubscribed(this.currUser.id, topicId);
   } else {
-    topic = yield db.findTopic(topicId);
+    topic = yield db.findTopicById(topicId);
   }
   this.assert(topic, 404);
 

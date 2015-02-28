@@ -128,6 +128,21 @@
 
     </div><!--/.topic-controls-->
     {% endif %}
+
+    <!-- List topic GM/co-GMs -->
+    {% if topic.is_roleplay %}
+      <ul class="list-inline">
+        <li>
+          <span class="label label-primary">GM</span>
+          <a href="{{ topic.user.uname|slugifyUname }}">{{ topic.user.uname }}</a>
+        </li>
+        {% for uname in topic.co_gm_unames %}
+          <span class="label label-warning" style="margin-left: 10px;">Co-GM</span>
+          <a href="{{ uname|slugifyUname }}">{{ uname }}</a>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
   </div><!--/.page-header-->
 
   <!-- Pagination -->
@@ -240,6 +255,8 @@
             {% else %}
               <div class="corner-ribbon top-right">OP</div>
             {% endif %}
+          {% elif _.contains(topic.co_gm_ids, post.user_id) %}
+            <div class="corner-ribbon top-right orange">coGM</div>
           {% endif %}
 
           <!-- Author metadata -->

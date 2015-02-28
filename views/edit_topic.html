@@ -12,6 +12,7 @@
     <h3>Edit {{ topic.title }}</h3>
   </div>
 
+  <!-- edit title -->
   <form action="{{ topics.url }}" method="post">
     <input name="_method" type="hidden" value="put">
 
@@ -44,11 +45,116 @@
     </div> <!-- /.panel -->
   </form>
 
+
+  <!-- ====================================================== -->
+  <!-- Manage Co-GMs -->
+  <!-- ====================================================== -->
+
+  {% if ctx.can(ctx.currUser, 'UPDATE_TOPIC_CO_GMS', topic) %}
+
+    <div class="panel panel-default no-select" style="border-color: #000">
+
+      <!-- PANEL HEADER -->
+      <div class="panel-heading">
+        <h4>Manage Co-GMs</h4>
+      </div>
+
+      <!-- PANEL BODY -->
+      <div class="panel-body">
+
+        <p><strong>What are co-GMs?</strong></p>
+        <ul>
+          <li>You can elect co-GMs to help run the roleplay. Co-GMs will have an orange "Co-GM" banner on their posts so that other players know that they carry authority.</li>
+          <li>Eventually GMs/co-GMs will have more power in a roleplay, but for now it's just an indication of authority.</li>
+          <li>Players are required to obey GMs and co-GMs if they wish to participate in a roleplay.</li>
+          <li>You can promote/demote co-GMs at any time.</li>
+        </ul>
+
+        <p>
+          <strong>Current GM:</strong>
+          <div>
+            <a href="{{ topic.user.url }}">{{ topic.user.uname }}</a>
+            {% if ctx.currUser.id === topic.user.id %}
+              (You)
+            {% endif %}
+          </div>
+        </p>
+
+        <p><strong>Current Co-GMs:</strong>
+          ({{ topic.co_gm_ids.length }}/{{ ctx.config.MAX_CO_GM_COUNT }})</p>
+        {% if !topic.co_gm_unames %}
+          <p class="text-muted">None</p>
+        {% endif %}
+        {% if topic.co_gm_unames %}
+          <ul class="list-inline">
+            {% for uname in topic.co_gm_unames %}
+              <li>
+                <a href="/users/{{ uname|slugifyUname }}">{{ uname }}</a>
+                <form action="{{ topic.url }}/co-gms/{{ uname|slugifyUname }}"
+                      method="post" style="display: inline-block;">
+                  <input type="hidden" name="_method" value="delete">
+                  <input type="submit" value="Remove" class="btn btn-xs btn-danger">
+                </form>
+              </li>
+              {% if !loop.last %}&mdash;{% endif %}
+            {% endfor %}
+          </ul>
+        {% endif %}
+
+  <form action="{{ topic.url }}/co-gms" method="post">
+        <div class="form-group">
+          <label for="title-input" style="display: block;">
+            New Co-GM:
+          </label>
+          <input class="co-gm-input" type="text" name="uname"
+                 class="form-control"
+                 >
+        </div>
+
+      </div> <!-- /.panel-body -->
+      <!--
+          PANEL FOOTER
+          -->
+      <div class="panel-footer" style="border-color: #000">
+        <div class="text-right">
+          <a href="{{ topic.url }}" class="btn btn-default">Cancel</a>
+          <input id="topic-submit" type="submit" value="Add Co-GM"
+                 class="btn btn-primary">
+        </div>
+      </div> <!-- /.panel-footer -->
+    </div> <!-- /.panel -->
+  </form>
+  {% endif %}
+
 {% endblock %}
 
 {% block scripts %}
-<script>
-  // Focus title-input, but put cursor at end of value
-  $('#title-input').val($('#title-input').val()).focus();
-</script>
+  {% if ctx.can(ctx.currUser, 'UPDATE_TOPIC_CO_GMS', topic) %}
+    <script type="text/javascript" src="/vendor/typeahead/typeahead.bundle.js"></script>
+    <script type="text/javascript">
+      var unames = new Bloodhound({
+        datumTokenizer: Bloodhound.tokenizers.obj.whitespace('value'),
+        queryTokenizer: Bloodhound.tokenizers.whitespace,
+        limit: 5,
+        prefetch: {
+          url: '/unames.json',
+          filter: function(unames) {
+            return unames.map(function(uname) { return { value: uname }});
+          }
+        }
+      });
+
+      unames.initialize();
+
+      $('.co-gm-input').typeahead({
+        hint: true,
+        highlight: true,
+        minLength: 1
+      }, {
+        name: 'Usernames',
+        displayKey: 'value',
+        source: unames.ttAdapter()
+      });
+    </script>
+  {% endif %}
 {% endblock %}

@@ -466,6 +466,17 @@ textarea {
     transform: rotate(45deg);
     -webkit-transform: rotate(45deg);
 }
+.corner-ribbon.orange{background: #e82;}
+.corner-ribbon.white{background: #f0f0f0; color: #555;}
+.corner-ribbon.black{background: #333;}
+.corner-ribbon.grey{background: #999;}
+.corner-ribbon.blue{background: #39d;}
+.corner-ribbon.green{background: #2c7;}
+.corner-ribbon.turquoise{background: #1b9;}
+.corner-ribbon.purple{background: #95b;}
+.corner-ribbon.red{background: #e43;}
+.corner-ribbon.orange{background: #e82;}
+.corner-ribbon.yellow{background: #ec0;}
 
 /* hide/unhide btn. it's on the left of post footer. give it some space*/
 .hide-btn,
@@ -583,8 +594,43 @@ code {
     border-color: #999;
 }
 
+/*
+   Typeahead wraps the <input> in a span.twitter-typeahead that has
+   display: inline-block. But we want it to be block.
+ */
+.twitter-typeahead {
+    display: block !important;
+}
+
+.tt-dropdown-menu {
+    background-color: #fff;
+    border: 1px solid rgba(0,0,0,.15);
+    box-shadow: 0 6px 12px rgba(0,0,0,.175);
+    padding: 5px 0;
+    color: black;
+}
+.tt-suggestion {
+    padding: 3px 20px;
+    white-space: nowrap;
+}
+
+.tt-suggestion:hover {
+    color: #262626;
+    background-color: #f5f5f5;
+    cursor: pointer;
+}
+.tt-input {
+    display: block;
+    width: 100%;
+    height: 34px;
+    padding: 6px 12px;
+    font-size: 14px;
+    line-height: 1.42857143;
+    background-color: #333 !important;
+}
 
 /* give dat cool, dark , "sunken"/inset look to form elements */
+.tt-input,
 textarea.form-control,
 input[type="email"].form-control,
 input[type="password"].form-control,
