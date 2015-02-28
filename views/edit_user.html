@@ -259,6 +259,13 @@
           <div class="panel-body">
 
             <p>Your avatar is the image that appears below your username to the left of every post you make.</p>
+            <ul>
+              <li><b>Max dimensions:</b> 150px width, 200px height</li>
+              <li>Images larger than these dimensions will be resized</li>
+              <li>Animated GIFs often break when resized by the system, so you may want to resize them yourself before uploading</li>
+            </ul>
+
+            <hr>
 
             {% if user.legacy_avatar_url %}
               <div class="alert alert-warning">
