@@ -134,7 +134,7 @@
       <ul class="list-inline">
         <li>
           <span class="label label-primary">GM</span>
-          <a href="{{ topic.user.uname|slugifyUname }}">{{ topic.user.uname }}</a>
+          <a href="/users/{{ topic.user.uname|slugifyUname }}">{{ topic.user.uname }}</a>
         </li>
         {% for uname in topic.co_gm_unames %}
           <span class="label label-warning" style="margin-left: 10px;">Co-GM</span>
