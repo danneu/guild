@@ -150,6 +150,11 @@
     </div> <!-- /.panel -->
   {% endfor %}
 
+  <!-- Top -->
+  <div style="display: block; margin-bottom: 20px;">
+    <a href="#" class="top-link">&uarr; Top</a>
+  </div>
+
   <!-- Pagination -->
   {{ paginate.render(currPage, totalPages, ctx.request.path) }}
 
