@@ -247,13 +247,13 @@ blockquote {
 .bb-h1 {
     /* font-size: 2em; */
     font-size: 3em;
-    border-bottom: 6px double white;
+    /* border-bottom: 6px double white; */
     margin-top: 20px;
 }
 .bb-h2 {
     /* font-size: 1.75em; */
     font-size: 2.25em;
-    border-bottom: 1px solid white;
+    /* border-bottom: 1px solid white; */
     margin-top: 20px;
 }
 .bb-h3 {
