@@ -137,7 +137,7 @@
            post-uname="{{ post.user.uname }}"
            style="margin-left: 5px"
            {% if !ctx.can(ctx.currUser, 'CREATE_PM', convo) %}disabled{% endif %}
-           >Reply</a>
+           >Quote</a>
         <!-- Edit button -->
         {% if ctx.can(ctx.currUser, 'UPDATE_PM', post) %}
           <a href="{{ post.url }}/edit"
