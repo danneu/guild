@@ -102,16 +102,16 @@
               <div class="col-xs-6">
                 <h5 class="list-group-item-heading topic-panel-title">
                   {% if topic.moved_at && topic.moved_from_forum_id === forum.id %}
-                    <span class="glyphicon glyphicon-share-alt"></span>
+                    <span class="glyphicon glyphicon-share-alt" title="Moved" data-toggle="tooltip"></span>
                   {% endif %}
                   {% if topic.is_closed %}
-                    <span class="label label-default">Closed</span>
+                    <span class="glyphicon glyphicon-lock text-muted" title="Closed" data-toggle="tooltip"></span>
                   {% endif %}
                   {% if topic.is_hidden %}
                     <span class="label label-warning">Hidden</span>
                   {% endif %}
                   {% if topic.is_sticky %}
-                    <span class="label label-primary">Sticky</span>
+                    <span class="glyphicon glyphicon-pushpin" style="color: #2FAECE;" title="Sticky" data-toggle="tooltip"></span>
                   {% endif %}
                   <a href="{{ topic.url }}">{{ topic.title }}</a>
                 </h5>

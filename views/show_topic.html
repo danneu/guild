@@ -18,6 +18,15 @@
 
   <div class="page-header" style="border: 0">
     <h2>
+      {% if topic.is_closed %}
+        <span class="glyphicon glyphicon-lock text-muted" title="Closed" data-toggle="tooltip"></span>
+      {% endif %}
+      {% if topic.is_sticky %}
+        <span class="glyphicon glyphicon-pushpin" style="color: #2FAECE;" title="Sticky" data-toggle="tooltip"></span>
+      {% endif %}
+      {% if topic.is_hidden %}
+        <span class="label label-warning">Hidden</span>
+      {% endif %}
       <a href="{{ topic.url }}" style="color: #fff">
         {% if topic.is_roleplay %}
           <span class="post-type-label">[{{ postType.toUpperCase() }}]</span>
@@ -27,15 +36,6 @@
           <small>Page {{ currPage }}</small>
         {% endif %}
       </a>
-      {% if topic.is_sticky %}
-        <span class="label label-primary">Sticky</span>
-      {% endif %}
-      {% if topic.is_hidden %}
-        <span class="label label-warning">Hidden</span>
-      {% endif %}
-      {% if topic.is_closed %}
-        <span class="label label-default">Closed</span>
-      {% endif %}
 
       {% if ctx.can(ctx.currUser, 'UPDATE_TOPIC_TITLE', topic) %}
         <small class="pull-right" style="margin-left: 10px;">
