@@ -900,12 +900,3 @@ ul.post-rating-actions li {
 .user-custom-title {
     word-break: break-word;
 }
-
-/* Make bootstrap tooltips more visible on dark bgs */
-.tooltip.top .tooltip-arrow {
-    border-top-color: white;
-}
-.tooltip-inner {
-    border-radius: 0;
-    border: 1px outset white;
-}
