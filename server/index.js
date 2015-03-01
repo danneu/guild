@@ -91,6 +91,12 @@ co(function*() {
   //log.error(err, 'dist failed');
 });
 
+// Only allow guild to be iframed from same domain
+app.use(function*(next) {
+  this.set('X-Frame-Options', 'SAMEORIGIN');
+  yield next;
+});
+
 app.use(function*(next) {
   this.dist = dist;
   yield next;
