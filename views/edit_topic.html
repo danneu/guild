@@ -160,6 +160,11 @@
 {% endblock %}
 
 {% block scripts %}
+
+  <script type="text/javascript">
+    $('[data-toggle="tooltip"]').tooltip();
+  </script>
+
   {% if ctx.can(ctx.currUser, 'UPDATE_TOPIC_CO_GMS', topic) %}
     <script type="text/javascript" src="/vendor/typeahead/typeahead.bundle.js"></script>
     <script type="text/javascript">
