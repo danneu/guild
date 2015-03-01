@@ -40,6 +40,18 @@ exports.can = function(user, action, target) {
 };
 function can(user, action, target) {
   switch(action) {
+    case 'UPDATE_TOPIC_TAGS':  // target is topic
+      // Nobody can unless forum has tags enabled
+      if (!target.forum.has_tags_enabled) return false;
+      // Guests never can
+      if (!user) return false;
+      // GM can
+      if (target.user_id === user.id) return true;
+      // Co-GMs can
+      if (_.contains(target.co_gm_ids, user.id)) return true;
+      // Staff can
+      if (isStaffRole(user.role)) return true;
+      return false;
     case 'UPDATE_TOPIC_CO_GMS':  // target is topic
       // Only roleplays can have co-GMs
       if (!target.is_roleplay) return false;

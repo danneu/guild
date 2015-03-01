@@ -39,7 +39,7 @@
   <!-- New Topic button -->
 
   {% if ctx.can(ctx.currUser, 'CREATE_TOPIC', forum) %}
-    <a class="btn btn-primary pull-right" href="#new-topic-form">
+    <a class="btn btn-primary pull-right" href="{{ forum.url }}/topics/new">
       <span class="glyphicon glyphicon-pencil"></span>
       {% if forum.is_roleplay %}
         New Roleplay
@@ -125,6 +125,20 @@
                       {{ topic.created_at|formatDate }}
                     </abbr>
                   </div>
+                  <!-- List topic tags -->
+                  {% if topic.tags %}
+                    <ul class="list-inline" style="margin: 0;">
+                      {% for tag in topic.tags %}
+                        <!-- Ignore tag if we're in the "tag's forum" -->
+                        {% if tag.id !== forum.tag_id %}
+                          <li data-toggle="tooltip" title="{{ tag.description }}"
+                              style="padding: 0;">
+                            <span class="label label-default">{{ tag.title }}</span>
+                          </li>
+                        {% endif %}
+                      {% endfor %}
+                    </ul>
+                  {% endif %}
                 </p>
               </div> <!-- /col6 -->
               {% if topic.moved_at && topic.moved_from_forum_id === forum.id %}
@@ -169,76 +183,29 @@
     <a href="#" class="top-link">&uarr; Top</a>
   </div>
 
+  <!-- New Topic button -->
+
+  {% if ctx.can(ctx.currUser, 'CREATE_TOPIC', forum) %}
+    <a class="btn btn-primary pull-right" href="{{ forum.url }}/topics/new">
+      <span class="glyphicon glyphicon-pencil"></span>
+      {% if forum.is_roleplay %}
+        New Roleplay
+      {% else %}
+        New Topic
+      {% endif %}
+    </a>
+  {% endif %}
+
   <!-- Viewers -->
   {{ macros.renderViewers(viewers) }}
 
   {{ paginate.render(currPage, totalPages, forum.url) }}
 
-  <!-- New post forum -->
-
-  {% if ctx.can(ctx.currUser, 'CREATE_TOPIC', forum) %}
-    {% if forum.is_roleplay %}
-      <h2>New Roleplay</h2>
-    {% else %}
-      <h2>New Topic</h2>
-    {% endif %}
-
-    <form id="new-topic-form" role="form" method="post"
-          action="{{ forum.url }}/topics">
-      <input type="hidden" name="forum-id" value="{{ forum.id }}">
-      <div class="form-group">
-        <input type="text"
-               placeholder="Topic Title"
-               name="title"
-               class="form-control">
-      </div>
-      <div class="form-group">
-        {% if forum.is_roleplay %}
-          <div style="margin-bottom: 5px;">
-            First Post:
-            <div class="btn-group" data-toggle="buttons">
-              <label class="btn btn-primary">
-                <input type="radio" name="post-type"
-                       value="ic"
-                       id="option2" autocomplete="off"> IC
-              </label>
-              <label class="btn btn-primary active">
-                <input type="radio" name="post-type"
-                       value="ooc"
-                       id="option1" autocomplete="off" checked> OOC
-              </label>
-            </div>
-          </div>
-        {% endif %}
-        <textarea rows=10
-                  id="reply-input"
-                  name="markup"
-                  class="form-control"
-                  placeholder="Click here and begin writing"></textarea>
-      </div>
-      <input type="submit" class="btn btn-primary" value="Create Topic"></input>
-    </form>
-
-    {% include 'partials/bbcode_cheatsheet.html' %}
-
-  {% endif %}
-
 {% endblock %}
 
 {% block scripts %}
-  <script>
-      $('input[type="submit"]').on('click', function(e) {
-        var $this = $(this);
-        if ($this.data('already-clicked'))
-          return false;
-        $this.data('already-clicked', true);
-      });
-  </script>
-  <script>
-    $(function() {
-      $('#reply-input').bbcode({
-        charLimit: {{ ctx.config.MAX_POST_LENGTH }}
-      });
-    });
+  <script type="text/javascript">
+    // Activate tag tooltips
+    $('[data-toggle="tooltip"]').tooltip()
   </script>
 {% endblock %}

@@ -176,6 +176,7 @@ WHERE user_id = $1 AND topic_id = $2
 
 // Same as findTopic but takes a userid so that it can return a topic
 // with an is_subscribed boolean for the user
+// Keep in sync with db.findTopicById
 exports.findTopicWithIsSubscribed = wrapTimer(findTopicWithIsSubscribed);
 function* findTopicWithIsSubscribed(userId, topicId) {
   var sql = m(function() {/*
@@ -184,11 +185,16 @@ SELECT
   to_json(f.*) "forum",
   array_agg($1::int) @> Array[ts.user_id::int] "is_subscribed",
   (SELECT to_json(u.*) FROM users u WHERE id = t.user_id) "user",
-  (SELECT json_agg(u.uname) FROM users u WHERE id = ANY (t.co_gm_ids::int[])) co_gm_unames
+  (SELECT json_agg(u.uname) FROM users u WHERE id = ANY (t.co_gm_ids::int[])) co_gm_unames,
+  (
+   SELECT json_agg(tags.*)
+   FROM tags
+   JOIN tags_topics ON tags.id = tags_topics.tag_id
+   WHERE tags_topics.topic_id = t.id
+  ) tags
 FROM topics t
 JOIN forums f ON t.forum_id = f.id
-LEFT OUTER JOIN topic_subscriptions ts
-  ON t.id = ts.topic_id AND ts.user_id = $1
+LEFT OUTER JOIN topic_subscriptions ts ON t.id = ts.topic_id AND ts.user_id = $1
 WHERE t.id = $2
 GROUP BY t.id, f.id, ts.user_id
   */});
@@ -527,7 +533,13 @@ SELECT
   to_json(u.*) "user",
   to_json(p.*) "latest_post",
   to_json(u2.*) "latest_user",
-  to_json(f.*) "forum"
+  to_json(f.*) "forum",
+  (
+   SELECT json_agg(tags.*)
+   FROM tags
+   JOIN tags_topics ON tags.id = tags_topics.tag_id
+   WHERE tags_topics.topic_id = t.id
+  ) tags
 FROM topics t
 JOIN users u ON t.user_id = u.id
 LEFT JOIN posts p ON t.latest_post_id = p.id
@@ -547,6 +559,8 @@ OFFSET $3
 // depending on whether or not userId has posted in each topic
 exports.findTopicsWithHasPostedByForumId = function*(forumId, limit, offset, userId) {
   assert(userId);
+  debug('[findTopicsWithHasPostedByForumId] forumId: %s, userId: %s',
+        forumId, userId);
   var sql = m(function() {/*
 SELECT
   EXISTS(
@@ -556,7 +570,13 @@ SELECT
   to_json(u.*) "user",
   to_json(p.*) "latest_post",
   to_json(u2.*) "latest_user",
-  to_json(f.*) "forum"
+  to_json(f.*) "forum",
+  (
+   SELECT json_agg(tags.*)
+   FROM tags
+   JOIN tags_topics ON tags.id = tags_topics.tag_id
+   WHERE tags_topics.topic_id = t.id
+  ) tags
 FROM topics t
 JOIN users u ON t.user_id = u.id
 LEFT JOIN posts p ON t.latest_post_id = p.id
@@ -954,6 +974,7 @@ RETURNING *
 // - markup     Required String
 // - postType   Required String, ic | ooc | char
 // - isRoleplay Required Boolean
+// - tagIds     Optional [Int]
 //
 exports.createTopic = function*(props) {
   debug('[createTopic]');
@@ -965,6 +986,7 @@ exports.createTopic = function*(props) {
   assert(_.isString(props.html));
   assert(_.isBoolean(props.isRoleplay));
   assert(_.contains(['ic', 'ooc', 'char'], props.postType));
+  assert(_.isArray(props.tagIds) || _.isUndefined(props.tagIds));
   var topicSql = m(function() {/*
 INSERT INTO topics (forum_id, user_id, title, is_roleplay)
 VALUES ($1, $2, $3, $4)
@@ -977,14 +999,29 @@ RETURNING *
   */});
 
   return yield withTransaction(function*(client) {
+    // Create topic
     var topicResult = yield client.queryPromise(topicSql, [
       props.forumId, props.userId, props.title, props.isRoleplay
     ]);
     var topic = topicResult.rows[0];
+    // Create topic's first post
     yield client.queryPromise(postSql, [
       topic.id, props.userId, props.ipAddress,
       props.markup, props.html, props.postType, props.isRoleplay
     ]);
+
+    // Create tags if given
+    if (props.tagIds) {
+      var promises = props.tagIds.map(function(tagId) {
+        var sql = m(function() {/*
+INSERT INTO tags_topics (topic_id, tag_id)
+VALUES ($1, $2)
+        */});
+        return client.queryPromise(sql, [topic.id, tagId]);
+      });
+      yield promises;
+    }
+
     return topic;
   });
 };
@@ -1528,6 +1565,7 @@ exports.findAllUnames = function*() {
   return _.pluck(result.rows, 'uname');
 };
 
+// Keep in sync with findTopicWithHasSubscribed
 exports.findTopicById = function*(topicId) {
   assert(topicId);
   var sql = m(function() {/*
@@ -1535,10 +1573,17 @@ SELECT
   t.*,
   to_json(f.*) "forum",
   (SELECT to_json(u.*) FROM users u WHERE id = t.user_id) "user",
-  (SELECT json_agg(u.uname) FROM users u WHERE id = ANY (t.co_gm_ids::int[])) co_gm_unames
+  (SELECT json_agg(u.uname) FROM users u WHERE id = ANY (t.co_gm_ids::int[])) co_gm_unames,
+  (
+   SELECT json_agg(tags.*)
+   FROM tags
+   JOIN tags_topics ON tags.id = tags_topics.tag_id
+   WHERE tags_topics.topic_id = t.id
+  ) tags
 FROM topics t
 JOIN forums f ON t.forum_id = f.id
 WHERE t.id = $1
+GROUP BY t.id, f.id
   */});
   var result = yield query(sql, [topicId]);
   return result.rows[0];
@@ -2080,5 +2125,55 @@ WHERE id = $1
 RETURNING *
   */});
   var result = yield query(sql, [topicId, userIds]);
-  return result[0];
+  return result.rows[0];
+};
+
+exports.findAllTags = function*() {
+  var sql = m(function() {/*
+SELECT *
+FROM tags
+  */});
+  var result = yield query(sql);
+  return result.rows;
+};
+
+// Returns [TagGroup] where each group has [Tag] array bound to `tags` property
+exports.findAllTagGroups = function*() {
+  var sql = m(function() {/*
+SELECT
+  *,
+  (SELECT json_agg(t.*) FROM tags t WHERE t.tag_group_id = tg.id) tags
+FROM tag_groups tg
+  */});
+  var result = yield query(sql);
+  return result.rows;
+};
+
+// topicId :: String | Int
+// tagIds :: [Int]
+exports.updateTopicTags = function*(topicId, tagIds) {
+  assert(topicId);
+  assert(_.isArray(tagIds));
+
+  var sql;
+  return yield withTransaction(function*(client) {
+    // Delete all tags for this topic from the bridge table
+    yield client.queryPromise(m(function() {/*
+DELETE FROM tags_topics
+WHERE topic_id = $1
+    */}), [topicId]);
+
+    // Now create the new bridge links
+    var thunks = [];
+    tagIds.forEach(function(tagId) {
+      var thunk = client.queryPromise(m(function() {/*
+INSERT INTO tags_topics (topic_id, tag_id)
+VALUES ($1, $2)
+      */}), [topicId, tagId]);
+
+      thunks.push(thunk);
+    });
+
+    yield coParallel(thunks, 5);
+  });
 };

@@ -152,6 +152,11 @@ swig.setDefaults({
   }
 });
 
+// {% if user.id|isIn([1, 2, 3]) %}
+swig.setFilter('isIn', function(v, coll) {
+  return _.contains(coll, v);
+});
+
 // Sums `nums`, an array of numbers. Returns zero if `nums` is falsey.
 swig.setFilter('sum', function(nums) {
   return (nums || []).reduce(function(memo, n) {
@@ -251,10 +256,8 @@ app.use(function*(next) {
 // - Create middleware before this
 app.use(require('koa-router')(app));
 
-app.get('/test', function*() {
-  yield this.render('test', {
-    ctx: this
-  });
+app.post('/test', function*() {
+  this.body = JSON.stringify(this.request.body, null, '  ');
 });
 
 app.post('/topics/:topicSlug/co-gms', function*() {
@@ -1021,6 +1024,31 @@ app.post('/forums/:forumSlug/refresh', function*() {
 });
 
 //
+// New topic form
+//
+app.get('/forums/:forumSlug/topics/new', function*() {
+  // Load forum
+  var forumId = belt.extractId(this.params.forumSlug);
+  this.assert(forumId, 404);
+  var forum = yield db.findForum(forumId);
+  this.assert(forum, 404);
+  forum = pre.presentForum(forum);
+
+  // Ensure user authorized to create topic in this forum
+  this.assertAuthorized(this.currUser, 'CREATE_TOPIC', forum);
+
+  // Get tag groups
+  var tagGroups = forum.has_tags_enabled ? yield db.findAllTagGroups() : [];
+
+  // Render template
+  yield this.render('new_topic', {
+    ctx: this,
+    forum: forum,
+    tagGroups: tagGroups
+  });
+});
+
+//
 // Canonical show forum
 //
 app.get('/forums/:forumSlug', function*() {
@@ -1576,12 +1604,47 @@ app.delete('/me/notifications/convos', function*() {
 });
 
 //
+// Update topic tags
+// - tag-ids: Required [StringIds]
+//
+app.put('/topics/:topicSlug/tags', function*() {
+  // Load topic
+  var topicId = belt.extractId(this.params.topicSlug);
+  this.assert(topicId, 404);
+  var topic = yield db.findTopicById(topicId);
+  this.assert(topic, 404);
+  topic = pre.presentTopic(topic);
+
+  // Authorize user
+  this.assertAuthorized(this.currUser, 'UPDATE_TOPIC_TAGS', topic);
+
+  // Validate body params
+  this.validateBody('tag-ids')
+    .toInts()
+    .uniq()
+    .isLength(1, 5, 'Must select 1-5 tags');
+
+  // Add this forum's tag_id if it has one
+  var tagIds = _.chain(this.valid['tag-ids'])
+    .concat(topic.forum.tag_id ? [topic.forum.tag_id] : [])
+    .uniq()
+    .value();
+
+  // Update topic
+  yield db.updateTopicTags(topic.id, tagIds);
+
+  this.flash = { message: ['success', 'Tags updated'] };
+  this.response.redirect(topic.url);
+});
+
+//
 // Create topic
 //
 // Body params:
 // - forum-id
 // - title
 // - markup
+// - tag-ids: Array of StringIntegers (IntChecks/RPs only for now)
 //
 app.post('/forums/:slug/topics', function*() {
   var forumId = belt.extractId(this.params.slug);
@@ -1601,60 +1664,66 @@ app.post('/forums/:slug/topics', function*() {
   this.assertAuthorized(this.currUser, 'CREATE_TOPIC', forum);
 
   // Validate params
-
-  this.checkBody('title')
-    .notEmpty('Title is required')
+  this.validateBody('title')
+    .isNotEmpty('Title is required')
     .isLength(config.MIN_TOPIC_TITLE_LENGTH,
               config.MAX_TOPIC_TITLE_LENGTH,
               'Title must be between ' +
               config.MIN_TOPIC_TITLE_LENGTH + ' and ' +
               config.MAX_TOPIC_TITLE_LENGTH + ' chars');
-  this.checkBody('markup')
-    .notEmpty('Post is required')
+  this.validateBody('markup')
+    .isNotEmpty('Post is required')
     .isLength(config.MIN_POST_LENGTH,
               config.MAX_POST_LENGTH,
               'Post must be between ' +
               config.MIN_POST_LENGTH + ' and ' +
               config.MAX_POST_LENGTH + ' chars');
-  this.checkBody('forum-id')
-    .notEmpty()
+  this.validateBody('forum-id')
+    .isNotEmpty()
     .toInt();
 
-  if (forum.is_roleplay)
-    this.checkBody('post-type')
-      .notEmpty()
-      .toLowercase()
-      .isIn(['ooc', 'ic'], 'post-type must be "ooc" or "ic"')
-
-  // Validation failure
-
-  if (this.errors) {
-    this.flash = {
-      message: ['danger', belt.joinErrors(this.errors)],
-      params: this.request.body
-    };
-    this.response.redirect(forum.url);
-    return;
+  if (forum.is_roleplay) {
+    this.validateBody('post-type')
+      .isNotEmpty()
+      .toLowerCase()
+      .isIn(['ooc', 'ic'], 'post-type must be "ooc" or "ic"');
   }
+
+  // Validate tags (only for RPs/Checks
+  if (forum.has_tags_enabled) {
+    this.validateBody('tag-ids')
+      .toArray()
+      .isLength(1, 5, 'Must select 1-5 tags')
+      .toInts();
+  }
+  this.validateBody('tag-ids').default([]);
+
+  debug({valid: this.valid, body: this.request.body});
 
   // Validation succeeded
 
   // Render BBCode to html
-  var html = bbcode(this.request.body.markup);
+  var html = bbcode(this.valid.markup);
 
   // post-type is always ooc for non-RPs
-  var postType = forum.is_roleplay ? this.request.body['post-type'] : 'ooc';
+  var postType = forum.is_roleplay ? this.valid['post-type'] : 'ooc';
+
+  var tagIds = _.chain(this.valid['tag-ids'])
+    .concat(forum.tag_id ? [forum.tag_id] : [])
+    .uniq()
+    .value();
 
   // Create topic
   var topic = yield db.createTopic({
     userId: this.currUser.id,
     forumId: forumId,
     ipAddress: this.request.ip,
-    title: this.request.body.title,
-    markup: this.request.body.markup,
+    title: this.valid.title,
+    markup: this.valid.markup,
     html: html,
     postType: postType,
-    isRoleplay: forum.is_roleplay
+    isRoleplay: forum.is_roleplay,
+    tagIds: tagIds
   });
   topic = pre.presentTopic(topic);
   this.response.redirect(topic.url);
@@ -1972,9 +2041,14 @@ app.get('/topics/:slug/edit', function*() {
   topic = pre.presentTopic(topic);
   this.assertAuthorized(this.currUser, 'UPDATE_TOPIC_TITLE', topic);
 
+  // Get tag groups
+  var tagGroups = yield db.findAllTagGroups();
+
   yield this.render('edit_topic', {
     ctx: this,
-    topic: topic
+    topic: topic,
+    selectedTagIds: _.pluck(topic.tags, 'id'),
+    tagGroups: tagGroups
   });
 });
 

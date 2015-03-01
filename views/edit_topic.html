@@ -1,8 +1,10 @@
 {% extends 'layouts/master.html' %}
+{% import 'macros/macros.html' as macros %}
 
 {% block embed %}
   <ol class="breadcrumb">
     <li><a href="/">Home</a></li>
+    <li><a href="{{ topic.forum.url }}">{{ topic.forum.title }}</a></li>
     <li><a href="{{ topic.url }}">{{ topic.title }}</a></li>
     <li class="active">Edit Topic</li>
   </ol>
@@ -45,6 +47,35 @@
     </div> <!-- /.panel -->
   </form>
 
+  <!-- ====================================================== -->
+  <!-- Edit tags -->
+  <!-- ====================================================== -->
+
+  {% if ctx.can(ctx.currUser, 'UPDATE_TOPIC_TAGS', topic) %}
+    <form action="{{ topic.url }}/tags" method="post">
+      <input name="_method" value="put" type="hidden">
+      <div class="panel panel-default no-select" style="border-color: #000">
+        <!-- PANEL HEADING -->
+        <div class="panel-heading">
+          <h4>Manage Tags</h4>
+        </div><!--/panel-heading-->
+
+        <!-- PANEL BODY -->
+        <div class="panel-body">
+          {{ macros.renderTagInputs(tagGroups, selectedTagIds) }}
+        </div><!--/panel-body-->
+
+        <!-- PANEL FOOTER -->
+        <div class="panel-footer" style="border-color: #000">
+          <div class="text-right">
+            <a href="{{ topic.url }}" class="btn btn-default">Cancel</a>
+            <input id="topic-submit" type="submit" value="Save Tags"
+                   class="btn btn-primary">
+          </div>
+        </div> <!-- /.panel-footer -->
+      </div><!--/panel-->
+    </form>
+  {% endif %}
 
   <!-- ====================================================== -->
   <!-- Manage Co-GMs -->

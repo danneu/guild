@@ -1,22 +1,5 @@
-DROP TABLE IF EXISTS users CASCADE;
-DROP TABLE IF EXISTS sessions CASCADE;
-DROP VIEW IF EXISTS active_sessions;
-DROP TABLE IF EXISTS categories CASCADE;
-DROP TABLE IF EXISTS forums CASCADE;
-DROP TABLE IF EXISTS topics CASCADE;
-DROP TABLE IF EXISTS posts CASCADE;
-DROP TYPE IF EXISTS role_type;
-DROP TABLE IF EXISTS convos CASCADE;
-DROP TABLE IF EXISTS pms CASCADE;
-DROP TABLE IF EXISTS convos_participants CASCADE;
-DROP TYPE IF EXISTS post_type;
-DROP TABLE IF EXISTS topic_subscriptions CASCADE;
-DROP VIEW IF EXISTS active_reset_tokens;
-DROP TABLE IF EXISTS reset_tokens CASCADE;
-DROP TABLE IF EXISTS notifications CASCADE;
-DROP TYPE IF EXISTS notification_type;
-DROP TABLE IF EXISTS ratings;
-DROP TYPE IF EXISTS rating_type;
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public;
 
 --
 -- Only put things in this file that should be present for the
@@ -104,6 +87,8 @@ CREATE TABLE forums (
   description     text NULL,
   pos             int NOT NULL,
   is_roleplay     boolean NOT NULL  DEFAULT false,
+  tag_id          int NULL REFERENCES tags(id) ON DELETE SET NULL,
+  has_tags_enabled boolean NOT NULL DEFAULT false,
   -- Cache
   topics_count    int NOT NULL  DEFAULT 0,
   posts_count     int NOT NULL  DEFAULT 0
@@ -288,6 +273,40 @@ CREATE TABLE ratings (
   -- A user can rate a post once
   UNIQUE(from_user_id, post_id)
 );
+
+--
+-- Topic tags
+--
+
+CREATE TABLE tag_groups (
+  id serial PRIMARY KEY,
+  title text NOT NULL,
+  -- Constraints
+  UNIQUE(title)
+);
+
+CREATE TABLE tags (
+  id serial PRIMARY KEY,
+  tag_group_id int NOT NULL REFERENCES tag_groups(id),
+  title text NOT NULL,
+  description text NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT NOW(),
+  -- Constraints
+  UNIQUE(title)
+);
+
+CREATE INDEX ON tags (tag_group_id);
+
+CREATE TABLE tags_topics (
+  topic_id int NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+  tag_id   int NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+  -- Constraints
+  UNIQUE(topic_id, tag_id)
+);
+
+-- FK lookups
+CREATE INDEX ON tags_topics (topic_id);
+CREATE INDEX ON tags_topics (tag_id);
 
 ------------------------------------------------------------
 ------------------------------------------------------------

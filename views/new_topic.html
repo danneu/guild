@@ -1,0 +1,106 @@
+{% extends 'layouts/master.html' %}
+{% import 'macros/paginate.html' as paginate %}
+{% import 'macros/macros.html' as macros %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="{{ forum.url }}">{{ forum.title }}</a></li>
+    <li class="active">New Topic</li>
+  </ol>
+
+  <div class="page-header" style="border-color: #000">
+    <h3><a href="{{ forum.url }}" style="color: #fff">{{ forum.title }}</a></h3>
+    {% if forum.description %}
+      <div>{{ forum.description }}</div>
+    {% endif %}
+  </div>
+
+  {% if ctx.can(ctx.currUser, 'CREATE_TOPIC', forum) %}
+    {% if forum.is_roleplay %}
+      <h2>New Roleplay</h2>
+    {% else %}
+      <h2>New Topic</h2>
+    {% endif %}
+
+    <!-- <form id="new-topic-form" role="form" method="post" -->
+    <!--       action="/test"> -->
+    <form id="new-topic-form" role="form" method="post"
+          action="{{ forum.url }}/topics">
+      <input type="hidden" name="forum-id" value="{{ forum.id }}">
+      <div class="form-group">
+        <input type="text"
+               placeholder="Topic Title"
+               name="title"
+               class="form-control">
+      </div>
+      <div class="form-group">
+        {% if forum.has_tags_enabled %}
+
+          <!-- Tags selection-->
+          <div style="margin-bottom: 5px;">
+            <h4>Tags: (5 Max)</h4>
+
+            {{ macros.renderTagInputs(tagGroups) }}
+
+          </div>
+        {% endif %}{# /if this forum's tags are enabled #}
+
+        {% if forum.is_roleplay %}
+
+          <!-- IC vs OOC radio buttons -->
+          <div style="margin-bottom: 5px;">
+            <h4>First Post:</h4>
+            <div class="btn-group" data-toggle="buttons" style="display: inline-block;">
+              <label class="btn btn-default">
+                <input type="radio" name="post-type"
+                       value="ic"
+                       id="option2" autocomplete="off"> IC
+              </label>
+              <label class="btn btn-default active">
+                <input type="radio" name="post-type"
+                       value="ooc"
+                       id="option1" autocomplete="off" checked> OOC
+              </label>
+            </div>
+            <span class="text-muted">Select which tab this post will be created in</span>
+          </div>
+        {% endif %}
+        <textarea rows=10
+                  id="reply-input"
+                  name="markup"
+                  class="form-control"
+                  placeholder="Click here and begin writing"></textarea>
+      </div>
+      <a href="{{ forum.url }}" class="btn btn-default">Cancel</a>
+      <input type="submit" class="btn btn-primary" value="Create Topic"></input>
+    </form>
+
+    {% include 'partials/bbcode_cheatsheet.html' %}
+
+  {% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+
+  <script type="text/javascript">
+    $('[data-toggle="tooltip"]').tooltip()
+  </script>
+
+  <script>
+      $('input[type="submit"]').on('click', function(e) {
+        var $this = $(this);
+        if ($this.data('already-clicked'))
+          return false;
+        $this.data('already-clicked', true);
+      });
+  </script>
+  <script>
+    $(function() {
+      $('#reply-input').bbcode({
+        charLimit: {{ ctx.config.MAX_POST_LENGTH }}
+      });
+    });
+  </script>
+{% endblock %}

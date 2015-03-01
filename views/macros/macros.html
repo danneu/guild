@@ -114,3 +114,31 @@
     </div>
   {% endif %}
 {% endmacro %}
+
+{% macro renderTagInputs(tagGroups, selectedTagIds) %}
+  {% set selectedTagIds = selectedTagIds || [] %}
+
+  <p class="text-muted">
+    Tags describe your roleplay or interest-check and allow other players to find it by using tag filters. Recommendation: Select at least one tag from each group.
+  </p>
+
+  {% for group in tagGroups %}
+    <div class="row">
+      <div class="col-sm-2 text-right">
+        {{ group.title }}:
+      </div><!--/col1-->
+
+      <div class="col-sm-10">
+        <div class="btn-group" data-toggle="buttons">
+          {% for tag in group.tags %}
+            <label class="btn btn-default btn-xs {% if tag.id|isIn(selectedTagIds) %}active{% endif %}"
+                   data-toggle="tooltip" title="{{ tag.description }}">
+              <input name="tag-ids" type="checkbox" autocomplete="off" value="{{ tag.id }}" {% if tag.id|isIn(selectedTagIds) %}checked="checked"{% endif %}>
+              {{ tag.title }}
+            </label>
+          {% endfor %}
+       </div><!--/btn-group-->
+      </div><!--/col2-->
+    </div><!--/row-->
+  {% endfor %}
+{% endmacro %}
