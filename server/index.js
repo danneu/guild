@@ -637,6 +637,7 @@ app.delete('/me/subscriptions/:topicSlug', function*() {
   if (this.request.body['return-to-topic'])
     return this.response.redirect(topic.url);
 
+  this.flash = { message: ['success', 'Successfully unsubscribed'] };
   this.response.redirect('/me/subscriptions');
 });
 
