@@ -307,7 +307,10 @@ function can(user, action, target) {
       if (user.role === 'member') return true;
       return false;
     case 'READ_CONVO':
+      // Banned members can't
       if (!user) return false;
+      // Admin can read all convos
+      if (user.role === 'admin') return true;
       // Users can only read convos they're participants of
       if (_.findWhere(target.participants, { id: user.id })) return true;
       return false;
