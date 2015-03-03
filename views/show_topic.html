@@ -408,18 +408,18 @@
                 You <img src="{{ post.has_rated.type|ratingTypeToImageSrc }}">'ed this
               </span>
             {% else %}
-              <ul class="post-rating-actions list-inline pull-right" style="display: none;">
+              <ul class="post-rating-actions list-inline pull-right">
                 <li data-rating-type="like" data-toggle="tooltip" title="Like"
                     data-placement="top" data-post-id="{{ post.id }}">
-                  <img src="/ratings/like.png">
+                  <img src="/ratings/like-grey.png">
                 </li>
                 <li data-rating-type="laugh" data-toggle="tooltip" title="Laugh"
                     data-placement="top" data-post-id="{{ post.id }}">
-                  <img src="/ratings/laugh-static.png">
+                  <img src="/ratings/laugh-static-grey.png">
                 </li>
                 <li data-rating-type="thank" data-toggle="tooltip" title="Thank"
                     data-placement="top" data-post-id="{{ post.id }}">
-                  <img src="/ratings/thank.png">
+                  <img src="/ratings/thank-grey.png">
                 </li>
               </ul>
             {% endif %}
@@ -740,16 +740,6 @@ $(function () {
   });
 </script>
 
-<script type="text/javascript">
-  $('.post').on('mouseenter', function() {
-    var $this = $(this);
-    $this.find('.post-rating-actions').show();
-  });
-  $('.post').on('mouseleave', function() {
-    var $this = $(this);
-    $this.find('.post-rating-actions').hide();
-  });
-</script>
 <script type="text/javascript">
   $('.rater-list-toggle').on('click', function() {
     $(this).parent().find('.rater-list').toggle();

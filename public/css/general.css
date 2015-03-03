@@ -900,3 +900,11 @@ ul.post-rating-actions li {
 .user-custom-title {
     word-break: break-word;
 }
+
+/* Make ratings more subtle */
+.post-rating-actions img {
+    opacity: 0.50;
+}
+.post-rating-actions img:hover {
+    opacity: 1.00;
+}
