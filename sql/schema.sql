@@ -140,6 +140,7 @@ CREATE TABLE posts (
   idx         int  NULL
 );
 
+CREATE INDEX ON posts (ip_address);
 CREATE UNIQUE INDEX posts_topic_id_type_idx_idx ON posts (topic_id, type, idx DESC);
 
 -- Last post cache
@@ -188,6 +189,8 @@ CREATE TABLE pms (
   created_at timestamp with time zone NOT NULL  DEFAULT NOW(),
   updated_at timestamp with time zone NULL
 );
+
+CREATE INDEX ON pms (ip_address);
 
 -- Latest PM cache
 ALTER TABLE convos ADD COLUMN latest_pm_id
