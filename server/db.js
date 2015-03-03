@@ -2217,3 +2217,21 @@ GROUP BY u.uname
   var result = yield query(sql, [ip_address]);
   return result.rows;
 };
+
+// Returns [String]
+exports.findAllIpAddressesForUserId = function*(user_id) {
+  assert(user_id);
+  var sql = m(function() {/*
+SELECT DISTINCT ip_address
+FROM posts
+WHERE user_id = $1 AND ip_address IS NOT NULL
+
+UNION
+
+SELECT DISTINCT ip_address
+FROM pms
+WHERE user_id = $1 AND ip_address IS NOT NULL
+  */});
+  var result = yield query(sql, [user_id]);
+  return _.pluck(result.rows, 'ip_address');
+};

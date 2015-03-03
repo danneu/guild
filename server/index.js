@@ -2403,5 +2403,19 @@ app.get('/ips/:ip_address', function*() {
   });
 });
 
+app.get('/users/:slug/ips', function*() {
+  // Load user
+  var user = yield db.findUserBySlug(this.params.slug);
+  this.assert(user, 404);
+
+  // Authorize currUser
+  this.assertAuthorized(this.currUser, 'READ_USER_IP', user);
+
+  // Load ip addresses
+  var ip_addresses = yield db.findAllIpAddressesForUserId(user.id);
+
+  this.body = ip_addresses.join('\n');
+});
+
 app.listen(config.PORT);
 console.log('Listening on ' + config.PORT);

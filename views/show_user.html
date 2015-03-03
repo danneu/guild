@@ -47,6 +47,19 @@
     {% endif %}
   </div>
 
+  {% if ctx.currUser && cancan.isStaffRole(ctx.currUser.role) %}
+    <div class="well well-sm">
+      <h4>
+        <span class="glyphicon glyphicon-eye-open"></span> User Modkit
+      </h4>
+      <ul>
+        {% if ctx.can(ctx.currUser, 'READ_USER_IP', user) %}
+          <li><a href="{{ user.url }}/ips">View All IP Addresses</a></li>
+        {% endif %}
+      </ul>
+    </div>
+  {% endif %}
+
   <div class="row">
     <div class="col-xs-6">
 
