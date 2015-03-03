@@ -125,9 +125,10 @@
            style="background-color: #2E2C2C; border-radius: 0; border: 0">
         <!-- IP address -->
         {% if ctx.can(ctx.currUser, 'READ_USER_IP', post.user) %}
-          <div class="pull-left"
-               style="margin-left: 5px; color: #6E6B6B">
-            {{ post.ip_address }}
+          <div class="pull-left" style="margin-left: 5px; color: #6E6B6B">
+            <a href="/ips/{{ post.ip_address }}" class="text-muted">
+              {{ post.ip_address }}
+            </a>
           </div>
         {% endif %}
         <!-- Reply button -->
