@@ -7,14 +7,15 @@
         {% if ctx.can(ctx.currUser, 'READ_CATEGORY', category) %}
           <div class="list-group category-group">
             <div class="list-group-item category-group-heading">
-                 <!--style="background-color: #1d1d1d; border: 1px solid #111;"-->
               <div class="row">
                 <div class="col-xs-7">
-                  <h4>{{ category.title }}</h4>
+                  <h4 style="font-family: Georgia; font-size: 2.0em;">
+                    {{ category.title }}
+                  </h4>
                 </div>
-                <div class="col-xs-1 category-group-stats-heading">Topics</div>
-                <div class="col-xs-1 category-group-stats-heading">Posts</div>
-                <div class="col-xs-3 category-group-stats-heading">Latest Post</div>
+                <div class="col-xs-1 category-group-stats-heading text-muted">Topics</div>
+                <div class="col-xs-1 category-group-stats-heading text-muted">Posts</div>
+                <div class="col-xs-3 category-group-stats-heading text-muted">Latest Post</div>
               </div> <!-- /.row -->
             </div> <!-- /.list-group-item -->
             {% for forum in category.forums %}

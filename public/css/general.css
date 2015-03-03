@@ -125,9 +125,17 @@ a {
 
 
 /* Remove inline styles from homepage */
+.category-group-stats-heading {
+    margin-top: 20px;
+}
 .category-group-heading {
-    background-color: #1d1d1d;
-    border: 1px solid #111;
+    /* background-color: #1d1d1d; */
+    /* border: 1px solid #111; */
+    background-color: transparent;
+    border: 0;
+}
+.category-group {
+    box-shadow: none;
 }
 .forum-item {
     background-color: #3d3a3a;
