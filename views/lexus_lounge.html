@@ -81,23 +81,39 @@
   </div> <!-- /.row -->
 
   <!-- Dashboard -->
+  <style>
+    .latest-user-list li {
+      padding-left: 10px;
+      padding: 10px;
+    }
+  </style>
 
   <div class="row">
-    <div class="col-sm-6">
+    <div class="col-sm-12">
       <div class="well">
         <h4 class="text-center">Latest {{ latestUserLimit }} Users</h4>
-        <ul>
+        <ul class="latest-user-list list-unstyled">
           {% for user in latestUsers %}
             <li>
-              <a href="{{ user.url }}">{{ user.uname }}</a>
-              <span class="text-muted">{{ user.email }}</span>
-              <div>
+              <span style="display: inline-block; width: 150px;" class="text-muted">
                 Joined <abbr class="timeago" title="{{ user.created_at.toISOString() }}">
                   {{ user.formattedCreatedAt }}
               </abbr>
-              </div>
-              <div style="width: 100px;">{{ user.posts_count }} posts</div>
-              <div style="width: 100px;">{{ user.pms_count }} PMs</div>
+              </span>
+              <span style="display: inline-block; width: 70px;">
+                {% if user.role === 'banned' %}
+                  <span style="color: #d9534f;">{{ user.role }}</span>
+                {% else %}
+                  <span class="text-muted">{{ user.role }}</span>
+                {% endif %}
+              </span>
+              <span style="display: inline-block; width: 200px; font-family: monospace">
+                <a href="{{ user.url }}">{{ user.uname }}</a>
+              </span>
+              <input type="text" value="{{ user.email }}" style="display: inline-block; width: 400px; font-family: monospace; box-shadow: none; color: #ccc;" class="form-control">
+                <span class="text-muted">
+                {{ user.pms_count }} pms, {{ user.posts_count }} posts
+                </span>
             </li>
           {% endfor %}
         </ul>
