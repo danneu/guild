@@ -271,6 +271,18 @@ app.post('/test', function*() {
   this.body = JSON.stringify(this.request.body, null, '  ');
 });
 
+// Useful to redirect users to their own profiles since canonical edit-user
+// url is /users/:slug/edit
+
+// Ex: /me/edit#grayscale-avatars to show users how to toggle that feature
+app.get('/me/edit', function*() {
+  // Ensure current user can edit themself
+  this.assertAuthorized(this.currUser, 'UPDATE_USER', this.currUser);
+
+  // Note: Redirects fragment params
+  this.response.redirect('/users/' + this.currUser.slug + '/edit');
+});
+
 app.post('/topics/:topicSlug/co-gms', function*() {
   var topicId = belt.extractId(this.params.topicSlug);
   var topic = yield db.findTopicById(topicId);
