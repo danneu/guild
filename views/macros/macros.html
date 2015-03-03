@@ -57,7 +57,7 @@
   {% if user.avatar_url %}
     <div class="post-avatar"
          style="margin-top: 10px;">
-      <img src="{{ user.avatar_url}}">
+      <img class="avatar-img {% if ctx.currUser.is_grayscale %}desaturate{% endif %}" src="{{ user.avatar_url}}">
     </div>
   {% endif %}
 

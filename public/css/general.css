@@ -916,3 +916,8 @@ ul.post-rating-actions li {
 .post-rating-actions img:hover {
     opacity: 1.00;
 }
+
+img.desaturate {
+  filter: grayscale(100%);
+  -webkit-filter: grayscale(100%);
+}

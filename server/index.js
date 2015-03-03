@@ -894,6 +894,7 @@ app.put('/api/users/:id/bio', function*() {
 // - hide-sigs
 // - is-ghost
 // - custom-title
+// - is-grayscale
 app.put('/users/:slug', function*() {
   debug('BEFORE', this.request.body);
 
@@ -919,6 +920,8 @@ app.put('/users/:slug', function*() {
     this.checkBody('hide-sigs').toBoolean();
   if (!_.isUndefined(this.request.body['is-ghost']))
     this.checkBody('is-ghost').toBoolean();
+  if (!_.isUndefined(this.request.body['is-grayscale']))
+    this.checkBody('is-grayscale').toBoolean();
 
   debug('AFTER', this.request.body);
 
@@ -952,7 +955,10 @@ app.put('/users/:slug', function*() {
                  : user.hide_sigs,
     is_ghost: _.isBoolean(this.request.body['is-ghost'])
                 ? this.request.body['is-ghost']
-                : user.is_ghost
+                : user.is_ghost,
+    is_grayscale: _.isBoolean(this.request.body['is-grayscale'])
+                 ? this.request.body['is-grayscale']
+                 : user.is_grayscale
   });
   user = pre.presentUser(user);
   this.flash = { message: ['success', 'User updated'] };

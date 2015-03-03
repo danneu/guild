@@ -278,7 +278,8 @@
               <div class="media">
                 {% if post.user.avatar_url %}
                   <a class="media-left" href="{{ post.user.url }}">
-                    <img src="{{ post.user.avatar_url}}" alt="avatar"
+                    <img class="avatar-img {% if ctx.currUser.is_grayscale %}desaturate{% endif %}"
+                         src="{{ post.user.avatar_url}}" alt="avatar"
                          style="max-width: 60px">
                   </a>
                 {% endif %}

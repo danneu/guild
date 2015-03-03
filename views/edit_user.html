@@ -317,6 +317,43 @@
         </div> <!-- /.panel -->
       </form>
 
+      <!-- Toggle grayscale avatars -->
+
+      <a name="grayscale-avatars"></a>
+      <form action="{{ user.url }}" method="post">
+        <input type="hidden" name="_method" value="put">
+        <div class="panel panel-default no-select" style="border-color: #000">
+          <div class="panel-heading">Grayscale Avatars</div>
+          <!-- PANEL BODY -->
+          <div class="panel-body">
+            <p>Enabling this will convert all avatars to black and white.</p>
+            <div class="form-group">
+
+              <div class="checkbox">
+                <label>
+                  <input id="is-grayscale-input"
+                         name="is-grayscale"
+                         type="checkbox"
+                         {% if user.is_grayscale %}
+                           checked
+                         {% endif %}
+                         >
+                  Enable Grayscale Avatars
+                </label>
+              </div>
+
+            </div>
+          </div> <!-- /.panel-body -->
+          <!-- PANEL FOOTER -->
+          <div class="panel-footer" style="border-color: #000">
+            <div class="text-right">
+              <input id="is-grayscale-submit" type="submit" value="Save"
+                     class="btn btn-primary">
+            </div>
+          </div> <!-- /.panel-footer -->
+        </div> <!-- /.panel -->
+      </form>
+
     </div> <!-- /col -->
   </div> <!-- /.row -->
 

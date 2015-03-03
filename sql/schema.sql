@@ -30,6 +30,7 @@ CREATE TABLE users (
   sig_html       text      NOT NULL  DEFAULT '',
   avatar_url     text      NOT NULL DEFAULT '',
   hide_sigs      boolean   NOT NULL  DEFAULT false,
+  is_grayscale   boolean   NOT NULL  DEFAULT false,
   -- Bio
   bio_markup     text      NULL,
   bio_html       text      NULL,
