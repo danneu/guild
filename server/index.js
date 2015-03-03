@@ -2404,6 +2404,9 @@ app.get('/ips/:ip_address', function*() {
   });
 });
 
+//
+// Show user ip addresses
+//
 app.get('/users/:slug/ips', function*() {
   // Load user
   var user = yield db.findUserBySlug(this.params.slug);
@@ -2415,7 +2418,12 @@ app.get('/users/:slug/ips', function*() {
   // Load ip addresses
   var ip_addresses = yield db.findAllIpAddressesForUserId(user.id);
 
-  this.body = ip_addresses.join('\n');
+  this.set('Content-Type', 'text/html');
+  this.body = _.isEmpty(ip_addresses) ?
+    'None on file'
+    : ip_addresses.map(function(ip_address) {
+      return '<a href="/ips/' + ip_address + '">' + ip_address + '</a>';
+    }).join('<br>');
 });
 
 app.listen(config.PORT);
