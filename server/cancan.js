@@ -214,6 +214,12 @@ function can(user, action, target) {
       return !target.is_hidden &&
              !target.topic.is_hidden &&
              target.forum.category_id !== 4;
+    case 'LOOKUP_IP_ADDRESS': // no target
+      // Guests cannot
+      if (!user) return false;
+      // Staff can
+      if (isStaffRole(user.role)) return true;
+      return false;
     case 'READ_USER_IP': // target is a user
       if (!user) return false;
       // Staff can only see down-chain

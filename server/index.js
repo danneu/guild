@@ -163,6 +163,11 @@ swig.setFilter('isIn', function(v, coll) {
   return _.contains(coll, v);
 });
 
+// {% if things|isEmpty %}
+swig.setFilter('isEmpty', function(coll) {
+  return _.isEmpty(coll);
+});
+
 // Sums `nums`, an array of numbers. Returns zero if `nums` is falsey.
 swig.setFilter('sum', function(nums) {
   return (nums || []).reduce(function(memo, n) {
@@ -2377,6 +2382,25 @@ app.post('/users/:slug/avatar', function*() {
 
   this.flash = { message: ['success', 'Avatar uploaded and saved'] };
   this.response.redirect(user.url + '/edit#avatar');
+});
+
+app.get('/ips/:ip_address', function*() {
+  // Ensure authorization
+  this.assertAuthorized(this.currUser, 'LOOKUP_IP_ADDRESS');
+
+  var results = yield [
+    db.findUsersWithPostsWithIpAddress(this.params.ip_address),
+    db.findUsersWithPmsWithIpAddress(this.params.ip_address)
+  ];
+  var postsTable = results[0];
+  var pmsTable = results[1];
+
+  yield this.render('show_users_with_ip_address', {
+    ctx: this,
+    ip_address: this.params.ip_address,
+    postsTable: postsTable,
+    pmsTable: pmsTable
+  });
 });
 
 app.listen(config.PORT);

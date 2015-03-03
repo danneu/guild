@@ -2177,3 +2177,43 @@ VALUES ($1, $2)
     yield coParallel(thunks, 5);
   });
 };
+
+// Example return:
+//
+//   uname   count   latest_at
+//   foo     33      2015-02-27 06:50:18.943-06
+//   Mahz    125     2015-03-01 03:32:49.539-06
+//
+// `latest_post_at` is the timestamp of the latest post by that
+// user that has this ip address.
+exports.findUsersWithPostsWithIpAddress = function*(ip_address) {
+  assert(ip_address);
+  var sql = m(function() {/*
+SELECT
+  u.uname           uname,
+  COUNT(p.id)       count,
+  MAX(p.created_at) latest_at
+FROM posts p
+JOIN users u ON p.user_id = u.id
+WHERE p.ip_address = $1
+GROUP BY u.uname
+  */});
+  var result = yield query(sql, [ip_address]);
+  return result.rows;
+};
+
+exports.findUsersWithPmsWithIpAddress = function*(ip_address) {
+  assert(ip_address);
+  var sql = m(function() {/*
+SELECT
+  u.uname           uname,
+  COUNT(p.id)       count,
+  MAX(p.created_at) latest_at
+FROM pms p
+JOIN users u ON p.user_id = u.id
+WHERE p.ip_address = $1
+GROUP BY u.uname
+  */});
+  var result = yield query(sql, [ip_address]);
+  return result.rows;
+};
