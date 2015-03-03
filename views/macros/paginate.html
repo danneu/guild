@@ -4,6 +4,7 @@
   to <a name="urlFragment"></a> that's expected to exist on destination page
 #}
 {% macro render(currPage, totalPages, baseUrl, urlFragment) %}
+  {% set suffix = '' %} {# reset state of suffix #}
   {% if totalPages > 1 %}
     <ul class="pager">
       <li {% if currPage === 1 %} class="disabled" {% endif %}>
