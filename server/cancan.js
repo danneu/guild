@@ -201,7 +201,10 @@ function can(user, action, target) {
       }
       return false;
     case 'READ_PM': // target is pm with pm.convo and pm.participants props
+      // Guests can't
       if (!user) return false;
+      // Admin can see all
+      if (user.role === 'admin') return true;
       return !!_.find(target.participants, { id: user.id });
     case 'READ_POST': // target is post with a post.topic prop
       assert(target, 'Post missing');
