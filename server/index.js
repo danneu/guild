@@ -115,7 +115,7 @@ app.use(function*(next) {
   // we check for more than 1 char.
   if (/.+\/$/.test(this.request.path)) {
     var newPath = this.request.path.slice(0, this.request.path.length-1);
-    debug(newPath);
+    this.status = 301;
     this.response.redirect(newPath + this.request.search);
   }
 
@@ -1099,6 +1099,7 @@ app.get('/forums/:forumSlug', function*() {
   // Redirect to canonical slug
   var expectedSlug = belt.slugify(forum.id, forum.title);
   if (this.params.forumSlug !== expectedSlug) {
+    this.status = 301;
     this.response.redirect(forum.url + this.request.search);
     return;
   }
@@ -1306,6 +1307,7 @@ app.get('/users/:userIdOrSlug', function*() {
   if (/^\d+$/.test(this.params.userIdOrSlug)) {
     user = yield db.findUser(this.params.userIdOrSlug);
     this.assert(user, 404);
+    this.status = 301;
     this.response.redirect('/users/' + user.slug);
     return;
   }
@@ -1368,6 +1370,7 @@ var LEGACY_VBULLETIN_PATHS = [
 LEGACY_VBULLETIN_PATHS.forEach(function(legacyPath) {
   app.get(legacyPath, function*() {
     this.flash = { message: ['info', 'Sorry, that page does not exist anymore.'] };
+    this.status = 301;
     this.response.redirect('/');
   });
 });
@@ -1577,8 +1580,10 @@ app.use(route.get('/convos/:convoId', function*(convoId) {
 
   // If ?page=1 was given, then redirect without param
   // since page 1 is already the canonical destination of a convo url
-  if (this.request.query.page === 1)
+  if (this.request.query.page === 1) {
+    this.status = 301;
     return this.response.redirect(this.request.path);
+  }
 
   var page = Math.max(1, this.request.query.page || 1);
   var totalItems = convo.pms_count;
@@ -2032,6 +2037,7 @@ app.get('/posts/:postId', function*() {
     this.currUser.notifications_count -= notificationsDeletedCount;
   }
 
+  this.status = 301;
   this.response.redirect(redirectUrl);
 });
 
@@ -2056,6 +2062,8 @@ app.get('/pms/:id', function*() {
     redirectUrl = pm.convo.url + '?page=' +
                   Math.max(1, Math.ceil((pm.idx + 1) / config.POSTS_PER_PAGE)) +
                   '#post-' + pm.id;
+
+  this.status = 301;
   this.response.redirect(redirectUrl);
 });
 
@@ -2141,8 +2149,10 @@ app.get('/topics/:slug/:postType', function*() {
 
   // If ?page=1 was given, then redirect without param
   // since page 1 is already the canonical destination of a topic url
-  if (this.request.query.page === 1)
+  if (this.request.query.page === 1) {
+    this.status = 301;
     return this.response.redirect(this.request.path);
+  }
 
   var page = Math.max(1, this.request.query.page || 1);
 
@@ -2160,6 +2170,7 @@ app.get('/topics/:slug/:postType', function*() {
   // Redirect to canonical slug
   var expectedSlug = belt.slugify(topic.id, topic.title);
   if (this.params.slug !== expectedSlug) {
+    this.status = 301;
     this.response.redirect(topic.url + this.request.search);
     return;
   }
@@ -2223,6 +2234,7 @@ app.get('/topics/:slug/:postType', function*() {
 // Redirect to the new, shorter topic URL
 app.get('/topics/:topicId/posts/:postType', function*() {
   var redirectUrl = '/topics/' + this.params.topicId + '/' + this.params.postType;
+  this.status = 301;
   this.response.redirect(redirectUrl);
 });
 
@@ -2248,10 +2260,12 @@ app.get('/topics/:slug', function*() {
   // Redirect to canonical slug
   var expectedSlug = belt.slugify(topic.id, topic.title);
   if (this.params.slug !== expectedSlug) {
+    this.status = 301;
     this.response.redirect(topic.url + this.request.search);
     return;
   }
 
+  // TODO: Should these be 301?
   if (topic.forum.is_roleplay)
     if (topic.ic_posts_count > 0)
       this.response.redirect(this.request.path + '/ic');
