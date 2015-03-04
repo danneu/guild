@@ -149,7 +149,7 @@
 
   <div class="panel panel-default" style="background: transparent;">
     <div class="panel-body">
-      <h4 class="text-center">
+      <h4 style="margin-bottom: 20px;" class="text-center">
         <img src="/img/trophy.png" height="32" width="32"> Current Contest
       </h4>
       <div class="text-center">
@@ -169,7 +169,7 @@
   <div class="panel panel-default" style="background: transparent;">
     <div class="panel-body">
 
-      <h4 class="text-center">Latest Checks</h4>
+      <h4 style="margin-bottom: 20px;" class="text-center">Latest Checks</h4>
       {% for topic in latestChecks %}
         <div>
           <a href="{{ topic.url }}">{{ topic.title }}</a>
@@ -201,7 +201,7 @@
   <div class="panel panel-default" style="background: transparent;">
     <div class="panel-body">
 
-      <h4 class="text-center">Latest Roleplays</h4>
+      <h4 style="margin-bottom: 20px;" class="text-center">Latest Roleplays</h4>
       {% for topic in latestRoleplays %}
         <div>
           <a href="{{ topic.url }}">{{ topic.title }}</a>
