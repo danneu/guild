@@ -289,7 +289,7 @@
                       {{ post.user.uname }}
                     </a>
                     {% if post.user.custom_title %}
-                      <small><span class="text-muted">{{ post.user.custom_title }}</span></small>
+                      <small><span class="text-muted">{{ post.user.custom_title|replaceTitleNewlinesMobile|raw }}</span></small>
                     {% endif %}
                   </h4>
                   <div class="pull-left">

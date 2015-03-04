@@ -168,6 +168,16 @@ swig.setFilter('isEmpty', function(coll) {
   return _.isEmpty(coll);
 });
 
+// Specifically replaces \n with <br> in user.custom_title
+swig.setFilter('replaceTitleNewlines', function(str) {
+  if (!str) return '';
+  return _.escape(str).replace(/\\n/, '<br>').replace(/^<br>|<br>$/g, '');
+});
+swig.setFilter('replaceTitleNewlinesMobile', function(str) {
+  if (!str) return '';
+  return _.escape(str).replace(/(?:\\n){2,}/, '\n').replace(/^\\n|\\n$/g, '').replace(/\\n/, ' / ');
+});
+
 // Sums `nums`, an array of numbers. Returns zero if `nums` is falsey.
 swig.setFilter('sum', function(nums) {
   return (nums || []).reduce(function(memo, n) {
