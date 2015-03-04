@@ -1139,29 +1139,43 @@ SELECT
       'category_id', f.category_id,
       'parent_forum_id', f.parent_forum_id,
       'latest_user', (
-        SELECT json_build_object(
-          'uname', u.uname,
-          'slug', u.slug
-        )
+        SELECT
+          CASE
+            WHEN p.user_id IS NOT NULL
+            THEN
+              json_build_object(
+                'uname', u.uname,
+                'slug', u.slug
+              )
+          END
         FROM users u
         WHERE u.id = p.user_id
       ),
       'latest_topic', (
-        SELECT json_build_object('id', t.id, 'title', t.title)
+        SELECT
+          CASE
+            WHEN p.topic_id IS NOT NULL
+            THEN json_build_object('id', t.id, 'title', t.title)
+          END
         FROM topics t
         WHERE t.id = p.topic_id
       ),
       'latest_post', (
-        SELECT json_build_object(
-          'id', p.id,
-          'created_at', p.created_at
-        )
+        SELECT
+          CASE
+            WHEN p.id IS NOT NULL
+            THEN
+              json_build_object(
+                'id', p.id,
+                'created_at', p.created_at
+              )
+          END
       )
     )
 	) "forums"
 FROM categories c
 JOIN forums f ON c.id = f.category_id
-JOIN posts p ON f.latest_post_id = p.id
+LEFT OUTER JOIN posts p ON f.latest_post_id = p.id
 GROUP BY c.id
 ORDER BY c.pos
   */});
