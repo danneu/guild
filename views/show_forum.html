@@ -53,15 +53,31 @@
 
   {% if forum.parent_forum  %}
     <ul class="nav nav-tabs forum-tabs">
-      <li><a href="{{ forum.parent_forum.url }}">Roleplays</a></li>
-      <li class="active"><a href="{{ forum.url }}">Interest Checks</a></li>
+      <li>
+        <a href="{{ forum.parent_forum.url }}">
+          {{ forum.parent_forum.tab_title || 'Roleplays' }}
+        </a>
+      </li>
+      <li class="active">
+        <a href="{{ forum.url }}">
+          {{ forum.tab_title || 'Interest Checks' }}
+        </a>
+      </li>
     </ul>
   {% endif %}
 
   {% if forum.child_forum  %}
     <ul class="nav nav-tabs forum-tabs">
-      <li class="active"><a href="{{ forum.url }}">Roleplays</a></li>
-      <li><a href="{{ forum.child_forum.url }}">Interest Checks</a></li>
+      <li class="active">
+        <a href="{{ forum.url }}">
+          {{ forum.tab_title || 'Roleplays' }}
+        </a>
+      </li>
+      <li>
+        <a href="{{ forum.child_forum.url }}">
+          {{ forum.child_forum.tab_title || 'Interest Checks' }}
+        </a>
+      </li>
     </ul>
   {% endif %}
 

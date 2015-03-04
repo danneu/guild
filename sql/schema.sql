@@ -90,6 +90,7 @@ CREATE TABLE forums (
   is_roleplay     boolean NOT NULL  DEFAULT false,
   tag_id          int NULL REFERENCES tags(id) ON DELETE SET NULL,
   has_tags_enabled boolean NOT NULL DEFAULT false,
+  tab_title       text NULL,
   -- Cache
   topics_count    int NOT NULL  DEFAULT 0,
   posts_count     int NOT NULL  DEFAULT 0
