@@ -174,11 +174,14 @@
         <div>
           <a href="{{ topic.url }}">{{ topic.title }}</a>
           <div>
-            by <a href="{{ topic.user.url }}">{{ topic.user.uname }}</a>
+            by <a href="{{ topic.user.url }}" style="color: white;">{{ topic.user.uname }}</a>
+            <span class="text-muted" style="display: inline-block;">
+              &mdash;
+              <abbr class="timeago" title="{{ topic.created_at.toISOString() }}">
+                {{ topic.created_at|formatDate }}
+              </abbr>
+            </span>
           </div>
-          <abbr class="timeago text-muted" title="{{ topic.created_at.toISOString() }}">
-            {{ topic.created_at|formatDate }}
-          </abbr>
           <div>
             {% for tag in topic.tags %}
               <span class="label label-default" style="display: inline-block;">
@@ -203,11 +206,14 @@
         <div>
           <a href="{{ topic.url }}">{{ topic.title }}</a>
           <div>
-            by <a href="{{ topic.user.url }}">{{ topic.user.uname }}</a>
+            by <a href="{{ topic.user.url }}" style="color: white;">{{ topic.user.uname }}</a>
+            <span class="text-muted" style="display: inline-block;">
+              &mdash;
+              <abbr class="timeago" title="{{ topic.created_at.toISOString() }}">
+                {{ topic.created_at|formatDate }}
+              </abbr>
+            </span>
           </div>
-          <abbr class="timeago text-muted" title="{{ topic.created_at.toISOString() }}">
-            {{ topic.created_at|formatDate }}
-          </abbr>
           <div>
             {% for tag in topic.tags %}
               <span class="label label-default" style="display: inline-block;">
