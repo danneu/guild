@@ -628,7 +628,10 @@ app.use(route.get('/', function*() {
   yield this.render('homepage', {
     ctx: this,
     categories: categories,
-    stats: stats
+    stats: stats,
+    // For sidebar
+    latestChecks: cache.get('latest-checks').map(pre.presentTopic),
+    latestRoleplays: cache.get('latest-roleplays').map(pre.presentTopic)
   });
 }));
 

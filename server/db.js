@@ -2251,3 +2251,51 @@ WHERE user_id = $1 AND ip_address IS NOT NULL
   var result = yield query(sql, [user_id]);
   return _.pluck(result.rows, 'ip_address');
 };
+
+// Returns latest 5 unhidden checks
+exports.findLatestChecks = function*() {
+  var forumIds = [12, 38, 13, 14, 15, 16, 40, 43];
+  var sql = m(function() {/*
+SELECT
+  t.*,
+  (SELECT to_json(u.*) FROM users u WHERE id = t.user_id) "user",
+  (
+   SELECT json_agg(tags.*)
+   FROM tags
+   JOIN tags_topics ON tags.id = tags_topics.tag_id
+   WHERE tags_topics.topic_id = t.id
+  ) tags
+FROM topics t
+WHERE
+  t.forum_id = ANY ($1::int[])
+  AND NOT t.is_hidden
+ORDER BY t.id DESC
+LIMIT 5
+  */});
+  var result = yield query(sql, [forumIds]);
+  return result.rows;
+}
+
+// Returns latest 5 unhidden roleplays
+exports.findLatestRoleplays = function*() {
+  var forumIds = [3, 4, 5, 6, 7, 39, 42];
+  var sql = m(function() {/*
+SELECT
+  t.*,
+  (SELECT to_json(u.*) FROM users u WHERE id = t.user_id) "user",
+  (
+   SELECT json_agg(tags.*)
+   FROM tags
+   JOIN tags_topics ON tags.id = tags_topics.tag_id
+   WHERE tags_topics.topic_id = t.id
+  ) tags
+FROM topics t
+WHERE
+  t.forum_id = ANY ($1::int[])
+  AND NOT t.is_hidden
+ORDER BY t.id DESC
+LIMIT 5
+  */});
+  var result = yield query(sql, [forumIds]);
+  return result.rows;
+}

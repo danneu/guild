@@ -92,5 +92,15 @@ module.exports = function() {
     this.set('categories', categories);
   });
 
+  // Every 15 seconds
+  cache.every(1000 * 15, function*() {
+    var results = yield [
+      db.findLatestChecks(),
+      db.findLatestRoleplays()
+    ];
+    this.set('latest-checks', results[0]);
+    this.set('latest-roleplays', results[1]);
+  });
+
   return cache;
 };

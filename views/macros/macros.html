@@ -142,3 +142,66 @@
     </div><!--/row-->
   {% endfor %}
 {% endmacro %}
+
+{% macro renderSidebar(latestChecks, latestRoleplays) %}
+
+  <p class="text-muted text-center">This sidebar is under construction</p>
+
+  <!-- Latest checks -->
+
+  <div class="panel panel-default" style="background: transparent;">
+    <div class="panel-body">
+
+      <h4 class="text-center">Latest Checks</h4>
+      {% for topic in latestChecks %}
+        <div>
+          <a href="{{ topic.url }}">{{ topic.title }}</a>
+          <div>
+            by <a href="{{ topic.user.url }}">{{ topic.user.uname }}</a>
+          </div>
+          <abbr class="timeago text-muted" title="{{ topic.created_at.toISOString() }}">
+            {{ topic.created_at|formatDate }}
+          </abbr>
+          <div>
+            {% for tag in topic.tags %}
+              <span class="label label-default" style="display: inline-block;">
+                {{ tag.title }}
+              </span>
+            {% endfor %}
+          </div>
+        </div>
+        {% if !loop.last %}<hr>{% endif %}
+      {% endfor %}
+
+    </div><!-- /panel-body -->
+  </div><!-- /panel-default -->
+
+  <!-- Latest Roleplays -->
+
+  <div class="panel panel-default" style="background: transparent;">
+    <div class="panel-body">
+
+      <h4 class="text-center">Latest Roleplays</h4>
+      {% for topic in latestRoleplays %}
+        <div>
+          <a href="{{ topic.url }}">{{ topic.title }}</a>
+          <div>
+            by <a href="{{ topic.user.url }}">{{ topic.user.uname }}</a>
+          </div>
+          <abbr class="timeago text-muted" title="{{ topic.created_at.toISOString() }}">
+            {{ topic.created_at|formatDate }}
+          </abbr>
+          <div>
+            {% for tag in topic.tags %}
+              <span class="label label-default" style="display: inline-block;">
+                {{ tag.title }}
+              </span>
+            {% endfor %}
+          </div>
+        </div>
+        {% if !loop.last %}<hr>{% endif %}
+      {% endfor %}
+
+    </div><!-- /panel-body -->
+  </div><!-- /panel-default -->
+{% endmacro %}

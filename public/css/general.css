@@ -921,3 +921,10 @@ img.desaturate {
   filter: grayscale(100%);
   -webkit-filter: grayscale(100%);
 }
+
+/* darken hr and reduce margin */
+hr {
+    margin-bottom: 10px;
+    margin-top: 10px;
+    border-top: 1px solid #444;
+}
