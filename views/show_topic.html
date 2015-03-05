@@ -37,7 +37,7 @@
         {% endif %}
       </a>
 
-      {% if ctx.can(ctx.currUser, 'UPDATE_TOPIC_TITLE', topic) %}
+      {% if ctx.can(ctx.currUser, 'UPDATE_TOPIC', topic) %}
         <small class="pull-right" style="margin-left: 10px;">
           <a href="{{ topic.url }}/edit">Edit</a>
         </small>

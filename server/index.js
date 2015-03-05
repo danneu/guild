@@ -1681,6 +1681,9 @@ app.put('/topics/:topicSlug/tags', function*() {
     .toInts()
     .uniq()
     .isLength(1, 5, 'Must select 1-5 tags');
+  this.vals['tag-ids'] = this.vals['tag-ids'].filter(function(n) {
+    return n > 0;
+  });
 
   // Add this forum's tag_id if it has one
   var tagIds = _.chain(this.vals['tag-ids'])
@@ -1692,7 +1695,7 @@ app.put('/topics/:topicSlug/tags', function*() {
   yield db.updateTopicTags(topic.id, tagIds);
 
   this.flash = { message: ['success', 'Tags updated'] };
-  this.response.redirect(topic.url);
+  this.response.redirect(topic.url + '/edit');
 });
 
 //
@@ -2109,7 +2112,7 @@ app.get('/topics/:slug/edit', function*() {
   var topic = yield db.findTopicById(topicId);
   this.assert(topic, 404);
   topic = pre.presentTopic(topic);
-  this.assertAuthorized(this.currUser, 'UPDATE_TOPIC_TITLE', topic);
+  this.assertAuthorized(this.currUser, 'UPDATE_TOPIC', topic);
 
   // Get tag groups
   var tagGroups = yield db.findAllTagGroups();
@@ -2177,7 +2180,7 @@ app.put('/topics/:slug/edit', function*() {
     join_status: this.vals['join-status']
   });
 
-  this.flash = { message: ['success', 'Topic title updated'] };
+  this.flash = { message: ['success', 'Topic updated'] };
   this.response.redirect(topic.url + '/edit');
 });
 

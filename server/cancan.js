@@ -39,9 +39,19 @@ exports.can = function(user, action, target) {
   return result;
 };
 function can(user, action, target) {
+  var topic;
   switch(action) {
+    // Expresses user's ability to update any part of a topic
+    // Only use this for high level checks like to see if a user
+    // should see the "Edit Topic" link at all. The actual actions they
+    // can do to a topic will vary.
+    // Use the specific checks for granular authorization.
+    case 'UPDATE_TOPIC': // target is topic
+      return can(user, 'UPDATE_TOPIC_JOIN_STATUS', target) ||
+             can(user, 'UPDATE_TOPIC_TAGS', target) ||
+             can(user, 'UPDATE_TOPIC_CO_GMS', target);
     case 'UPDATE_TOPIC_JOIN_STATUS':  // target is topic
-      var topic = target;
+      topic = target;
       // Nobody can unless it's a roleplay
       if (!topic.is_roleplay) return false;
       // Guests cant
@@ -54,24 +64,27 @@ function can(user, action, target) {
       if (isStaffRole(user.role)) return true;
       return false;
     case 'UPDATE_TOPIC_TAGS':  // target is topic
+      topic = target;
+      assert(topic.forum);
       // Nobody can unless forum has tags enabled
-      if (!target.forum.has_tags_enabled) return false;
+      if (!topic.forum.has_tags_enabled) return false;
       // Guests never can
       if (!user) return false;
       // GM can
-      if (target.user_id === user.id) return true;
+      if (topic.user_id === user.id) return true;
       // Co-GMs can
-      if (_.contains(target.co_gm_ids, user.id)) return true;
+      if (_.contains(topic.co_gm_ids, user.id)) return true;
       // Staff can
       if (isStaffRole(user.role)) return true;
       return false;
     case 'UPDATE_TOPIC_CO_GMS':  // target is topic
+      topic = target;
       // Only roleplays can have co-GMs
-      if (!target.is_roleplay) return false;
+      if (!topic.is_roleplay) return false;
       // Guests can't
       if (!user) return false;
       // GM can
-      if (target.user_id === user.id) return true;
+      if (topic.user_id === user.id) return true;
       // Staff can
       if (isStaffRole(user.role)) return true;
       return false;
@@ -124,13 +137,17 @@ function can(user, action, target) {
       if (!user) return false;
       return true;
     case 'UPDATE_TOPIC_TITLE': // target is topic
+      topic = target;
       if (!user) return false;
       // Banned users can't update their old topics
       if (user.role === 'banned') return false;
       // Staff can edit all topic titles
       if (isStaffRole(user.role)) return true;
-      // Topic owner can edit their own titles
-      return user.id === target.user_id;
+      // Topic owner/GM can edit their own titles
+      if (user.id === topic.user_id) return true;
+      // Co-GMs can also edit topic title
+      if (_.contains(topic.co_gm_ids, user.id)) return true;
+      return false;
     case 'READ_USER_ONLINE_STATUS': // target is user
       // Guests and members can see status if target isn't in invisible mode.
       if (!user) return !target.is_ghost;
