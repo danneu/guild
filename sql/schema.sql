@@ -91,6 +91,7 @@ CREATE TABLE forums (
   tag_id          int NULL REFERENCES tags(id) ON DELETE SET NULL,
   has_tags_enabled boolean NOT NULL DEFAULT false,
   tab_title       text NULL,
+  is_check        boolean NOT NULL DEFAULT false,
   -- Cache
   topics_count    int NOT NULL  DEFAULT 0,
   posts_count     int NOT NULL  DEFAULT 0
@@ -100,6 +101,8 @@ CREATE TABLE forums (
 -- Topics/Posts system
 --
 
+CREATE TYPE join_status AS ENUM ('jump-in', 'apply', 'full');
+
 CREATE TABLE topics (
   id         serial PRIMARY KEY,
   title      text NOT NULL,
@@ -108,6 +111,7 @@ CREATE TABLE topics (
   created_at timestamp with time zone NOT NULL  DEFAULT NOW(),
   is_roleplay boolean NOT NULL,
   co_gm_ids  int[] NOT NULL DEFAULT ARRAY[]::int[],
+  join_status join_status NULL,
   -- Modkit flags
   is_hidden  boolean NOT NULL  DEFAULT false,
   is_closed  boolean NOT NULL  DEFAULT false,

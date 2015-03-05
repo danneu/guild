@@ -14,6 +14,70 @@
     <h3>Edit {{ topic.title }}</h3>
   </div>
 
+  <!-- ====================================================== -->
+  <!-- Manage join status -->
+  <!-- ====================================================== -->
+
+  {% if ctx.can(ctx.currUser, 'UPDATE_TOPIC_JOIN_STATUS', topic) %}
+    <form action="{{ topics.url }}" method="post">
+      <input name="_method" type="hidden" value="put">
+      <input name="join-status" type="hidden" value="">
+
+      <div class="panel panel-default no-select" style="border-color: #000">
+        <!-- PANEL HEADING -->
+        <div class="panel-heading">
+          <h4>Join Status</h4>
+        </div><!--/panel-heading-->
+
+        <!-- PANEL BODY -->
+        <div class="panel-body">
+
+          <!-- <p class="text-muted"></p> -->
+
+          <div class="row">
+            <div class="col-sm-6 col-sm-offset-3">
+          <div class="form-group">
+            <div class="btn-group btn-group-justified" data-toggle="buttons">
+              <label class="btn btn-default {% if topic.join_status === 'jump-in' %}active{% endif%} join-status join-status-jump-in">
+                <input type="radio" name="join-status" id="option1" autocomplete="off" value="jump-in" {% if topic.join_status === 'jump-in' %}checked{% endif%}>
+                Jump-in
+              </label>
+              <label class="btn btn-default {% if topic.join_status === 'apply' %}active{% endif%} join-status join-status-apply">
+                <input type="radio" name="join-status" id="option2" autocomplete="off" value="apply" {% if topic.join_status === 'apply' %}checked{% endif%}>
+                Apply
+              </label>
+              <label class="btn btn-default {% if topic.join_status === 'full' %}active{% endif%} join-status join-status-full">
+                <input type="radio" name="join-status" id="option3" autocomplete="off" value="full" {% if topic.join_status === 'full' %}checked{% endif%}> Full
+              </label>
+            </div>
+          </div> <!--/form-group-->
+            </div><!--/col-->
+          </div><!--/row-->
+
+          <ul>
+            {% for status in ['jump-in', 'apply', 'full'] %}
+              <li class="text-muted">
+                <span class="join-status join-status-{{ status }}">
+                  {{ status|capitalize }}
+                </span>
+                &mdash;
+                {{ status|expandJoinStatus }}
+              </li>
+            {% endfor %}
+          </ul>
+
+        </div> <!-- /.panel-body -->
+        <!-- PANEL FOOTER -->
+        <div class="panel-footer" style="border-color: #000">
+          <div class="text-right">
+            <a href="{{ topic.url }}" class="btn btn-default">Back</a>
+            <input id="topic-submit" type="submit" value="Save" class="btn btn-primary">
+          </div>
+        </div> <!-- /.panel-footer -->
+      </div> <!-- /.panel -->
+    </form>
+  {% endif %}
+
   <!-- edit title -->
   <form action="{{ topics.url }}" method="post">
     <input name="_method" type="hidden" value="put">
@@ -39,7 +103,7 @@
           -->
       <div class="panel-footer" style="border-color: #000">
         <div class="text-right">
-          <a href="{{ topic.url }}" class="btn btn-default">Cancel</a>
+          <a href="{{ topic.url }}" class="btn btn-default">Back</a>
           <input id="topic-submit" type="submit" value="Update Topic"
                  class="btn btn-primary">
         </div>
@@ -68,7 +132,7 @@
         <!-- PANEL FOOTER -->
         <div class="panel-footer" style="border-color: #000">
           <div class="text-right">
-            <a href="{{ topic.url }}" class="btn btn-default">Cancel</a>
+            <a href="{{ topic.url }}" class="btn btn-default">Back</a>
             <input id="topic-submit" type="submit" value="Save Tags"
                    class="btn btn-primary">
           </div>
@@ -83,6 +147,7 @@
 
   {% if ctx.can(ctx.currUser, 'UPDATE_TOPIC_CO_GMS', topic) %}
 
+    <a name="co-gms"></a>
     <div class="panel panel-default no-select" style="border-color: #000">
 
       <!-- PANEL HEADER -->
@@ -148,7 +213,7 @@
           -->
       <div class="panel-footer" style="border-color: #000">
         <div class="text-right">
-          <a href="{{ topic.url }}" class="btn btn-default">Cancel</a>
+          <a href="{{ topic.url }}" class="btn btn-default">Back</a>
           <input id="topic-submit" type="submit" value="Add Co-GM"
                  class="btn btn-primary">
         </div>

@@ -353,3 +353,17 @@ exports.frequencies = function(objs, prop) {
    }, {})
    .value();
 };
+
+// expandJoinStatus('full') => 'Roleplay is not accepting new players'
+exports.expandJoinStatus = function(status) {
+  switch(status) {
+  case 'jump-in':
+    return 'Players can join and begin posting IC without GM approval';
+  case 'apply':
+    return 'Players should apply and get GM approval before posting IC';
+  case 'full':
+    return 'Roleplay is not accepting new players';
+  default:
+    return '';
+  }
+}

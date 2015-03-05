@@ -17,31 +17,84 @@
   </div>
 
   {% if ctx.can(ctx.currUser, 'CREATE_TOPIC', forum) %}
-    {% if forum.is_roleplay %}
-      <h2>New Roleplay</h2>
-    {% else %}
-      <h2>New Topic</h2>
-    {% endif %}
+    <div style="margin-bottom: 30px;">
+      <h2>
+        {% if forum.is_roleplay %}
+          New Roleplay
+        {% else %}
+          New Topic
+        {% endif %}
+      </h2>
+      <ul class="text-muted">
+        <li><span class="text-info">Reminder</span> You can change anything on this form at a later point in time.</li>
+      </ul>
+    </div>
 
     <!-- <form id="new-topic-form" role="form" method="post" -->
     <!--       action="/test"> -->
     <form id="new-topic-form" role="form" method="post"
+          style="border: 2px solid #666; background-color: #3a3738;"
           action="{{ forum.url }}/topics">
       <input type="hidden" name="forum-id" value="{{ forum.id }}">
-      <div class="form-group">
-        <input type="text"
-               placeholder="Topic Title"
-               name="title"
-               class="form-control">
-      </div>
-      <div class="form-group">
+
+      <div style="margin-bottom: 30px;">
+        <h4>Title:</h4>
+        <div class="form-group">
+          <input type="text"
+                 id="title-input"
+                 placeholder="Topic Title"
+                 name="title"
+                 value="{{ initTitle }}"
+                 class="form-control">
+          <div class="help-block">3-150 characters</div>
+        </div>
+      </div><!--/div[css="margin-bottom: _"]-->
+
+        {% if forum.is_roleplay %}
+          <!-- Join status -->
+          <div style="margin-bottom: 30px;">
+          <h4>Join Status: <small>Let other players know if they can join (or apply to join) your roleplay</small></h4>
+              <ul class="form-group list-unstyled">
+                {% for status in ['jump-in', 'apply', 'full'] %}
+                  <li class="text-muted">
+                    <div class="radio" style="margin-top:0; margin-bottom:0;">
+                      <label style="padding: 5px 0 5px 20px; width: 100%;">
+                        <input type="radio" name="join-status" value="{{ status }}"
+                          {% if ctx.flash.params %}
+                            {% if ctx.flash.params['join-status'] === status %}
+                               checked
+                            {% endif %}
+                          {% elif status === 'apply' %}
+                            checked
+                          {% endif %}
+                        >
+                        <div style="display: inline-block; margin-left: 5px;">
+                          <span class="join-status join-status-{{ status }}">
+                            {{ status|capitalize -}}
+                          </span>
+                          &mdash;
+                          {{ status|expandJoinStatus }}
+                        </div>
+                      </label>
+                    </div><!--/div checkbox-->
+                  </li>
+                {% endfor %}
+              </ul>
+        </div><!--/div[css="margin-bottom: _"]-->
+        {% endif %}
+
         {% if forum.has_tags_enabled %}
 
           <!-- Tags selection-->
-          <div style="margin-bottom: 5px;">
-            <h4>Tags: (5 Max)</h4>
+          <div style="margin-bottom: 30px;">
+            <h4>Tags: (5 Max)
+              <small>Tags describe your roleplay or interest-check and allow other players to find it by using tag filters.</small>
 
-            {{ macros.renderTagInputs(tagGroups) }}
+            </h4>
+
+            <p class="text-muted">Recommendation: Select at least one tag from each group.</p>
+
+            {{ macros.renderTagInputs(tagGroups, selectedTagIds) }}
 
           </div>
         {% endif %}{# /if this forum's tags are enabled #}
@@ -49,31 +102,46 @@
         {% if forum.is_roleplay %}
 
           <!-- IC vs OOC radio buttons -->
-          <div style="margin-bottom: 5px;">
+          <div style="margin-bottom: 30px;">
             <h4>First Post:</h4>
-            <div class="btn-group" data-toggle="buttons" style="display: inline-block;">
-              <label class="btn btn-default">
+            <div class="post-type-btn-group btn-group" data-toggle="buttons" style="display: inline-block;">
+              <label class="btn btn-default {% if postType === 'ic' %}active{% endif %}">
                 <input type="radio" name="post-type"
                        value="ic"
-                       id="option2" autocomplete="off"> IC
+                       id="option2" autocomplete="off"
+                         {% if postType === 'ic'  %}
+                           checked
+                         {% endif %}
+                       > IC
               </label>
-              <label class="btn btn-default active">
+              <label class="btn btn-default {% if postType === 'ooc' %}active{% endif %}">
                 <input type="radio" name="post-type"
                        value="ooc"
-                       id="option1" autocomplete="off" checked> OOC
+                       id="option1" autocomplete="off"
+                         {% if postType === 'ooc'  %}
+                           checked
+                         {% endif %}> OOC
               </label>
             </div>
             <span class="text-muted">Select which tab this post will be created in</span>
           </div>
         {% endif %}
-        <textarea rows=10
-                  id="reply-input"
-                  name="markup"
-                  class="form-control"
-                  placeholder="Click here and begin writing"></textarea>
+
+          <ul class="text-muted" style="font-style: oblique;">
+            <li><span class="text-danger">Please</span> save your post to your computer before submitting the form. The forum currently does *not* reliably repopulate the form if you have a form error. I'm working on a fix.</li>
+          </ul>
+          <div class="form-group">
+            <textarea rows=10
+                      id="reply-input"
+                      name="markup"
+                      class="form-control"
+                      value="{{ ctx.flash.params && ctx.flash.params.markup }}"
+                      placeholder="Click here and begin writing">{{ ctx.flash.params && ctx.flash.params.markup }}</textarea>
+          </div><!--/form-group-->
+      <div class="form-controls">
+        <a href="{{ forum.url }}" class="btn btn-default">Cancel</a>
+        <input type="submit" class="btn btn-primary" value="Create Topic">
       </div>
-      <a href="{{ forum.url }}" class="btn btn-default">Cancel</a>
-      <input type="submit" class="btn btn-primary" value="Create Topic"></input>
     </form>
 
     {% include 'partials/bbcode_cheatsheet.html' %}
@@ -86,6 +154,10 @@
 
   <script type="text/javascript">
     $('[data-toggle="tooltip"]').tooltip()
+  </script>
+
+  <script type="text/javascript">
+    $('#title-input').val($('#title-input').val()).focus();
   </script>
 
   <script>

@@ -154,6 +154,17 @@
       </ul>
     {% endif %}
 
+    <!-- Join status -->
+
+    {% if topic.join_status %}
+      <div class="join-status-box">
+        <span class="a">Join Status:</span>
+        <abbr title="{{ topic.join_status|expandJoinStatus }}" data-toggle="tooltip" class="join-status join-status-{{ topic.join_status }}">
+          {{ topic.join_status|capitalize }}
+        </abbr>
+      </div>
+    {% endif %}
+
   </div><!--/.page-header-->
 
   <!-- Pagination -->

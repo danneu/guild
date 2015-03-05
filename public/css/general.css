@@ -433,7 +433,8 @@ textarea {
 
 /* .topic-item is each list-group-item on show_forum */
 /* Darken their timeagos */
-.topic-item abbr,
+.topic-item .moved-at,
+.topic-item .created-at,
 .forum-item abbr {
     color: #999;
 }
@@ -927,4 +928,54 @@ hr {
     margin-bottom: 10px;
     margin-top: 10px;
     border-top: 1px solid #444;
+}
+
+/* join_status */
+
+.join-status-apply,
+.join-status-jump-in,
+.edit-topic .join-status-apply,
+.edit-topic .join-status-jump-in,
+.show-topic .join-status-apply,
+.show-topic .join-status-jump-in,
+.show-forum .join-status-apply,
+.show-forum .join-status-jump-in {
+    color: #3bb878;
+    text-shadow: 0px 0px 1px #3bb878;
+}
+.join-status-full,
+.edit-topic .join-status-full,
+.show-topic .join-status-full,
+.show-forum .join-status-full {
+    color: #d9534f;
+}
+
+.join-status,
+.edit-topic .join-status,
+.show-forum .join-status {
+    font-family: monospace;
+}
+.show-forum .join-status {
+    text-align: center;
+}
+.show-topic .topic-join-status .a {
+    color: #ccc;
+}
+
+/* new topic form */
+#new-topic-form {
+    padding-bottom: 15px;
+}
+#new-topic-form .post-type-btn-group,
+#new-topic-form p,
+#new-topic-form .form-controls,
+#new-topic-form .form-group {
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+#new-topic-form h4 {
+    margin-top: 0;
+    background-color: #111;
+    padding: 10px 15px;
 }

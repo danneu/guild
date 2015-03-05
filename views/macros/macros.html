@@ -118,10 +118,7 @@
 {% macro renderTagInputs(tagGroups, selectedTagIds) %}
   {% set selectedTagIds = selectedTagIds || [] %}
 
-  <p class="text-muted">
-    Tags describe your roleplay or interest-check and allow other players to find it by using tag filters. Recommendation: Select at least one tag from each group.
-  </p>
-
+  <input type="hidden" name="tag-ids[]" value="-1">
   {% for group in tagGroups %}
     <div class="row">
       <div class="col-sm-2 text-right">
@@ -133,7 +130,7 @@
           {% for tag in group.tags %}
             <label class="btn btn-default btn-xs {% if tag.id|isIn(selectedTagIds) %}active{% endif %}"
                    data-toggle="tooltip" title="{{ tag.description }}">
-              <input name="tag-ids" type="checkbox" autocomplete="off" value="{{ tag.id }}" {% if tag.id|isIn(selectedTagIds) %}checked="checked"{% endif %}>
+              <input name="tag-ids[]" type="checkbox" autocomplete="off" value="{{ tag.id }}" {% if tag.id|isIn(selectedTagIds) %}checked="checked"{% endif %}>
               {{ tag.title }}
             </label>
           {% endfor %}
@@ -227,4 +224,292 @@
 
     </div><!-- /panel-body -->
   </div><!-- /panel-default -->
+{% endmacro %}
+
+<!-- Item rendering -->
+
+<!-- Roleplay items -->
+{% macro renderRoleplayItemHeading(topic, forum) %}
+  <div class="col-xs-1"></div>
+  <div class="col-xs-5">Roleplays</div>
+  <div class="col-xs-1"></div>
+  <div class="col-xs-2">Posts</div>
+  <div class="col-xs-3">Latest Post</div>
+{% endmacro %}
+
+{% macro renderRoleplayItem(topic, forum) %}
+          <div class="list-group-item topic-item
+                      {% if topic.has_posted %}
+                        topic-item-current-user-posted
+                      {% endif %}
+                      "
+               style="background-color: #3d3a3a; border: 1px solid #111; color: #fff;">
+            <div class="row">
+              <div class="col-xs-1">
+                {% if topic.join_status %}
+                  <div class="join-status join-status-{{ topic.join_status }}">
+                    <abbr title="{{ topic.join_status|expandJoinStatus }}" data-toggle="tooltip">
+                      {{ topic.join_status|capitalize }}
+                    </abbr>
+                  </div>
+                {% endif %}
+              </div>
+              <div class="col-xs-5">
+                <h5 class="list-group-item-heading topic-panel-title">
+                  {% if topic.moved_at && topic.moved_from_forum_id === forum.id %}
+                    <span class="glyphicon glyphicon-share-alt" title="Moved" data-toggle="tooltip"></span>
+                  {% endif %}
+                  {% if topic.is_closed %}
+                    <span class="glyphicon glyphicon-lock text-muted" title="Closed" data-toggle="tooltip"></span>
+                  {% endif %}
+                  {% if topic.is_hidden %}
+                    <span class="label label-warning">Hidden</span>
+                  {% endif %}
+                  {% if topic.is_sticky %}
+                    <span class="glyphicon glyphicon-pushpin" style="color: #2FAECE;" title="Sticky" data-toggle="tooltip"></span>
+                  {% endif %}
+                  <a href="{{ topic.url }}">{{ topic.title }}</a>
+                </h5>
+                <p class="list-group-item-text">
+                  <div style="margin-top: 6px;">
+                    by <a href="{{ topic.user.url }}" style="color: #fff">
+                      {{ topic.user.uname -}}
+                    </a>,
+                    <abbr class="timeago created-at"
+                          title="{{ topic.created_at.toISOString() }}">
+                      {{ topic.created_at|formatDate }}
+                    </abbr>
+                  </div>
+                  <!-- List topic tags -->
+                  {% if topic.tags %}
+                    <ul class="list-inline" style="margin: 0;">
+                      {% for tag in topic.tags %}
+                        <!-- Ignore tag if we're in the "tag's forum" -->
+                        {% if tag.id !== forum.tag_id %}
+                          <li data-toggle="tooltip" title="{{ tag.description }}"
+                              style="padding: 0;">
+                            <span class="label label-default">{{ tag.title }}</span>
+                          </li>
+                        {% endif %}
+                      {% endfor %}
+                    </ul>
+                  {% endif %}
+                </p>
+              </div> <!-- /col6 -->
+              {% if topic.moved_at && topic.moved_from_forum_id === forum.id %}
+                <div class="col-xs-6">
+                  Moved to
+                  <a href="/forums/{{ topic.forum_id }}">
+                    {{ topic.forum.title -}}
+                  </a>
+                  <div>
+                    <abbr class="timeago moved-at" title="{{ topic.moved_at.toISOString() }}">
+                      {{ topic.moved_at|formatDate }}
+                    </abbr>
+                  </div>
+                </div> <!-- /col-6 -->
+              {% else %}
+                <div class="col-xs-1"></div>
+                <div class="col-xs-2">{{ topic.posts_count|commafy }}</div>
+                <!-- Latest post -->
+                <div class="col-xs-3">
+                  <div>
+                    by <a href="{{ topic.latest_user.url }}" style="color: #fff">{{ topic.latest_user.uname }}</a>
+                  <a href="{{ topic.latest_post.url }}">
+                    <span class="glyphicon glyphicon-link"></span>
+                    &rarr;
+                  </a>
+                  </div>
+                  <abbr class="timeago created-at"
+                        title="{{ topic.latest_post.created_at.toISOString() }}">
+                    {{ topic.latest_post.created_at|formatDate }}
+                  </abbr>
+                </div>
+              {% endif %} <!-- /if moved -->
+            </div> <!-- /.row -->
+          </div> <!-- /.list-group-item -->
+{% endmacro %}
+
+<!-- Check items -->
+{% macro renderCheckItemHeading(topic, forum) %}
+  <div class="col-xs-6">Interest Checks</div>
+  <div class="col-xs-1"></div>
+  <div class="col-xs-2">Posts</div>
+  <div class="col-xs-3">Latest Post</div>
+{% endmacro %}
+
+{% macro renderCheckItem(topic, forum) %}
+          <div class="list-group-item topic-item
+                      {% if topic.has_posted %}
+                        topic-item-current-user-posted
+                      {% endif %}
+                      "
+               style="background-color: #3d3a3a; border: 1px solid #111; color: #fff;">
+            <div class="row">
+              <div class="col-xs-6">
+                <h5 class="list-group-item-heading topic-panel-title">
+                  {% if topic.moved_at && topic.moved_from_forum_id === forum.id %}
+                    <span class="glyphicon glyphicon-share-alt" title="Moved" data-toggle="tooltip"></span>
+                  {% endif %}
+                  {% if topic.is_closed %}
+                    <span class="glyphicon glyphicon-lock text-muted" title="Closed" data-toggle="tooltip"></span>
+                  {% endif %}
+                  {% if topic.is_hidden %}
+                    <span class="label label-warning">Hidden</span>
+                  {% endif %}
+                  {% if topic.is_sticky %}
+                    <span class="glyphicon glyphicon-pushpin" style="color: #2FAECE;" title="Sticky" data-toggle="tooltip"></span>
+                  {% endif %}
+                  <a href="{{ topic.url }}">{{ topic.title }}</a>
+                </h5>
+                <p class="list-group-item-text">
+                  <div style="margin-top: 6px;">
+                    by <a href="{{ topic.user.url }}" style="color: #fff">
+                      {{ topic.user.uname -}}
+                    </a>,
+                    <abbr class="timeago created-at"
+                          title="{{ topic.created_at.toISOString() }}">
+                      {{ topic.created_at|formatDate }}
+                    </abbr>
+                  </div>
+                  <!-- List topic tags -->
+                  {% if topic.tags %}
+                    <ul class="list-inline" style="margin: 0;">
+                      {% for tag in topic.tags %}
+                        <!-- Ignore tag if we're in the "tag's forum" -->
+                        {% if tag.id !== forum.tag_id %}
+                          <li data-toggle="tooltip" title="{{ tag.description }}"
+                              style="padding: 0;">
+                            <span class="label label-default">{{ tag.title }}</span>
+                          </li>
+                        {% endif %}
+                      {% endfor %}
+                    </ul>
+                  {% endif %}
+                </p>
+              </div> <!-- /col6 -->
+              {% if topic.moved_at && topic.moved_from_forum_id === forum.id %}
+                <div class="col-xs-6">
+                  Moved to
+                  <a href="/forums/{{ topic.forum_id }}">
+                    {{ topic.forum.title -}}
+                  </a>
+                  <div>
+                    <abbr class="timeago moved-at" title="{{ topic.moved_at.toISOString() }}">
+                      {{ topic.moved_at|formatDate }}
+                    </abbr>
+                  </div>
+                </div> <!-- /col-6 -->
+              {% else %}
+                <div class="col-xs-1"></div>
+                <div class="col-xs-2">{{ topic.posts_count|commafy }}</div>
+                <!-- Latest post -->
+                <div class="col-xs-3">
+                  <div>
+                    by <a href="{{ topic.latest_user.url }}" style="color: #fff">{{ topic.latest_user.uname }}</a>
+                  <a href="{{ topic.latest_post.url }}">
+                    <span class="glyphicon glyphicon-link"></span>
+                    &rarr;
+                  </a>
+                  </div>
+                  <abbr class="timeago created-at"
+                        title="{{ topic.latest_post.created_at.toISOString() }}">
+                    {{ topic.latest_post.created_at|formatDate }}
+                  </abbr>
+                </div>
+              {% endif %} <!-- /if moved -->
+            </div> <!-- /.row -->
+          </div> <!-- /.list-group-item -->
+{% endmacro %}
+
+<!-- Regular topics -->
+{% macro renderTopicItemHeading(topic, forum) %}
+  <div class="col-xs-6">Topics</div>
+  <div class="col-xs-1"></div>
+  <div class="col-xs-2">Posts</div>
+  <div class="col-xs-3">Latest Post</div>
+{% endmacro %}
+
+{% macro renderTopicItem(topic, forum) %}
+          <div class="list-group-item topic-item
+                      {% if topic.has_posted %}
+                        topic-item-current-user-posted
+                      {% endif %}
+                      "
+               style="background-color: #3d3a3a; border: 1px solid #111; color: #fff;">
+            <div class="row">
+              <div class="col-xs-6">
+                <h5 class="list-group-item-heading topic-panel-title">
+                  {% if topic.moved_at && topic.moved_from_forum_id === forum.id %}
+                    <span class="glyphicon glyphicon-share-alt" title="Moved" data-toggle="tooltip"></span>
+                  {% endif %}
+                  {% if topic.is_closed %}
+                    <span class="glyphicon glyphicon-lock text-muted" title="Closed" data-toggle="tooltip"></span>
+                  {% endif %}
+                  {% if topic.is_hidden %}
+                    <span class="label label-warning">Hidden</span>
+                  {% endif %}
+                  {% if topic.is_sticky %}
+                    <span class="glyphicon glyphicon-pushpin" style="color: #2FAECE;" title="Sticky" data-toggle="tooltip"></span>
+                  {% endif %}
+                  <a href="{{ topic.url }}">{{ topic.title }}</a>
+                </h5>
+                <p class="list-group-item-text">
+                  <div style="margin-top: 6px;">
+                    by <a href="{{ topic.user.url }}" style="color: #fff">
+                      {{ topic.user.uname -}}
+                    </a>,
+                    <abbr class="timeago created-at"
+                          title="{{ topic.created_at.toISOString() }}">
+                      {{ topic.created_at|formatDate }}
+                    </abbr>
+                  </div>
+                  <!-- List topic tags -->
+                  {% if topic.tags %}
+                    <ul class="list-inline" style="margin: 0;">
+                      {% for tag in topic.tags %}
+                        <!-- Ignore tag if we're in the "tag's forum" -->
+                        {% if tag.id !== forum.tag_id %}
+                          <li data-toggle="tooltip" title="{{ tag.description }}"
+                              style="padding: 0;">
+                            <span class="label label-default">{{ tag.title }}</span>
+                          </li>
+                        {% endif %}
+                      {% endfor %}
+                    </ul>
+                  {% endif %}
+                </p>
+              </div> <!-- /col6 -->
+              {% if topic.moved_at && topic.moved_from_forum_id === forum.id %}
+                <div class="col-xs-6">
+                  Moved to
+                  <a href="/forums/{{ topic.forum_id }}">
+                    {{ topic.forum.title -}}
+                  </a>
+                  <div>
+                    <abbr class="timeago moved-at" title="{{ topic.moved_at.toISOString() }}">
+                      {{ topic.moved_at|formatDate }}
+                    </abbr>
+                  </div>
+                </div> <!-- /col-6 -->
+              {% else %}
+                <div class="col-xs-1"></div>
+                <div class="col-xs-2">{{ topic.posts_count|commafy }}</div>
+                <!-- Latest post -->
+                <div class="col-xs-3">
+                  <div>
+                    by <a href="{{ topic.latest_user.url }}" style="color: #fff">{{ topic.latest_user.uname }}</a>
+                  <a href="{{ topic.latest_post.url }}">
+                    <span class="glyphicon glyphicon-link"></span>
+                    &rarr;
+                  </a>
+                  </div>
+                  <abbr class="timeago created-at"
+                        title="{{ topic.latest_post.created_at.toISOString() }}">
+                    {{ topic.latest_post.created_at|formatDate }}
+                  </abbr>
+                </div>
+              {% endif %} <!-- /if moved -->
+            </div> <!-- /.row -->
+          </div> <!-- /.list-group-item -->
 {% endmacro %}

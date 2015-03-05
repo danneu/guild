@@ -45,7 +45,7 @@ var belt = require('./belt');
 var bbcode = require('./bbcode');
 var welcomePm = require('./welcome_pm');
 var avatar = require('./avatar');
-var bouncer = require('./koa-bouncer');
+var bouncer = require('koa-bouncer');
 
 // Catch and log all errors that bubble up to koa
 // app.on('error', function(err) {
@@ -158,6 +158,8 @@ swig.setDefaults({
   }
 });
 
+swig.setFilter('expandJoinStatus', belt.expandJoinStatus);
+
 // {% if user.id|isIn([1, 2, 3]) %}
 swig.setFilter('isIn', function(v, coll) {
   return _.contains(coll, v);
@@ -263,7 +265,12 @@ app.use(function*(next) {
     yield next;
   } catch(ex) {
     if (ex instanceof bouncer.ValidationError) {
-      this.flash = { message: ['danger', ex.message || 'Validation error'] };
+      this.flash = {
+        message: ['danger', ex.message || 'Validation error'],
+        // FIXME: This breaks if body is bigger than ~4kb cookie size limit
+        // i.e. large posts, large bodies of text
+        params: this.request.body
+      };
       this.response.redirect('back');
       return;
     }
@@ -301,8 +308,8 @@ app.post('/topics/:topicSlug/co-gms', function*() {
   topic = pre.presentTopic(topic);
 
   this.validateBody('uname')
-    .isNotEmpty('Username required');
-  var user = yield db.findUserByUname(this.valid.uname);
+    .notEmpty('Username required');
+  var user = yield db.findUserByUname(this.vals.uname);
   // Ensure user exists
   this.validate(user, 'User does not exist');
   // Ensure user is not already a co-GM
@@ -315,7 +322,10 @@ app.post('/topics/:topicSlug/co-gms', function*() {
 
   yield db.updateTopicCoGms(topic.id, topic.co_gm_ids.concat([user.id]));
 
-  this.response.redirect('back');
+  this.flash = {
+    message: ['success', util.format('Co-GM added: %s', this.vals.uname)]
+  };
+  this.response.redirect(topic.url + '/edit#co-gms');
 });
 
 app.delete('/topics/:topicSlug/co-gms/:userSlug', function*() {
@@ -333,7 +343,10 @@ app.delete('/topics/:topicSlug/co-gms/:userSlug', function*() {
     return co_gm_id !== user.id;
   }));
 
-  this.response.redirect('back');
+  this.flash = {
+    message: ['success', util.format('Co-GM removed: %s', user.uname)]
+  };
+  this.response.redirect(topic.url + '/edit#co-gms');
 });
 
 app.get('/unames.json', function*() {
@@ -347,7 +360,7 @@ app.get('/unames.json', function*() {
 app.post('/posts/:postId/rate', function*() {
   try {
     this.validateBody('type')
-      .isNotEmpty('type is required')
+      .notEmpty('type is required')
       .isIn(['like', 'laugh', 'thank'], 'Invalid type');
     this.validateBody('post_id').toInt('Invalid post_id');
   } catch(ex) {
@@ -356,7 +369,7 @@ app.post('/posts/:postId/rate', function*() {
     throw ex;
   }
 
-  var post = yield db.findPostById(this.valid.post_id);
+  var post = yield db.findPostById(this.vals.post_id);
 
   // Ensure post exists (404)
   this.assert(post, 404);
@@ -384,7 +397,7 @@ app.post('/posts/:postId/rate', function*() {
     from_user_id: this.currUser.id,
     from_user_uname: this.currUser.uname,
     to_user_id: post.user_id,
-    type: this.valid.type
+    type: this.vals.type
   });
 
   // Send receiver a RATING notification in the background
@@ -428,12 +441,11 @@ app.use(route.get('/login', function*() {
 // - g-recaptcha-response
 
 app.post('/users', function*() {
-  // this.log.info({ body: this.request.body }, 'Submitting registration creds');
 
   // Validation
 
-  this.checkBody('uname')
-    .notEmpty()
+  this.validateBody('uname')
+    .notEmpty('Username required')
     .trim()
     .isLength(config.MIN_UNAME_LENGTH,
               config.MAX_UNAME_LENGTH,
@@ -443,48 +455,33 @@ app.post('/users', function*() {
     .match(/[a-z]/i, 'Username must contain at least one letter (a-z)')
     .notMatch(/^[-]/, 'Username must not start with hyphens')
     .notMatch(/[-]$/, 'Username must not end with hyphens')
-    .notMatch(/[ ]{2,}/, 'Username contains consecutive spaces');
-  this.checkBody('email')
+    .notMatch(/[ ]{2,}/, 'Username contains consecutive spaces')
+    .checkNot(yield db.findUserByUname(this.vals.uname), 'Username taken');
+  this.validateBody('email')
     .notEmpty('Email required')
     .trim()
-    .isEmail('Email must be valid');
-  this.checkBody('password2')
+    .isEmail('Email must be valid')
+    .checkNot(yield db.findUserByEmail(this.vals.email), 'Email taken');
+  this.validateBody('password2')
     .notEmpty('Password confirmation required');
-  this.checkBody('password1')
+  this.validateBody('password1')
     .notEmpty('Password required')
-    .eq(this.request.body.password2, 'Password confirmation must match');
-  this.checkBody('g-recaptcha-response')
+    .eq(this.vals.password2, 'Password confirmation must match');
+  this.validateBody('g-recaptcha-response')
     .notEmpty('You must attempt the human test');
 
-  this.checkBody('uname')
-    .assertNot(yield db.findUserByUname(this.request.body.uname),
-               'Username taken',
-               true);
-  this.checkBody('email')
-    .assertNot(yield db.findUserByEmail(this.request.body.email),
-               'Email taken',
-               true);
-
-  // Bail if any validation errs
-  if (this.errors) {
-    this.flash = {
-      message: ['danger', belt.joinErrors(this.errors)],
-      params: this.request.body
-    };
-    this.response.redirect('/register');
-    return;
-  }
+  // Validation success
 
   // Check recaptcha against google
   var passedRecaptcha = yield belt.makeRecaptchaRequest({
-    userResponse: this.request.body['g-recaptcha-response'],
+    userResponse: this.vals['g-recaptcha-response'],
     userIp: this.request.ip
   });
   if (! passedRecaptcha) {
     debug('Google rejected recaptcha');
     this.flash = {
       message: ['danger', 'You failed the recaptcha challenge'],
-      params: unvalidatedParams
+      params: this.request.body
     };
     return this.response.redirect('/register');
   }
@@ -493,9 +490,9 @@ app.post('/users', function*() {
   var result, errMessage;
   try {
     result = yield db.createUserWithSession({
-      uname: this.request.body.uname,
-      email: this.request.body.email,
-      password: this.request.body.password1,
+      uname: this.vals.uname,
+      email: this.vals.email,
+      password: this.vals.password1,
       ipAddress: this.request.ip
     });
   } catch(ex) {
@@ -548,22 +545,22 @@ app.post('/users', function*() {
 // Create session
 //
 app.post('/sessions', function*() {
-  this.validateBody('uname-or-email').isNotEmpty('Invalid creds');
-  this.validateBody('password').isNotEmpty('Invalid creds');
+  this.validateBody('uname-or-email').notEmpty('Invalid creds');
+  this.validateBody('password').notEmpty('Invalid creds');
   this.validateBody('remember-me').toBoolean();
-  var user = yield db.findUserByUnameOrEmail(this.valid['uname-or-email']);
+  var user = yield db.findUserByUnameOrEmail(this.vals['uname-or-email']);
   this.validate(user, 'Invalid creds');
-  this.validate(yield belt.checkPassword(this.valid['password'], user.digest), 'Invalid creds');
+  this.validate(yield belt.checkPassword(this.vals['password'], user.digest), 'Invalid creds');
 
   // User authenticated
   var session = yield db.createSession({
     userId:    user.id,
     ipAddress: this.request.ip,
-    interval:  (this.valid['remember-me'] ? '1 year' : '2 weeks')
+    interval:  (this.vals['remember-me'] ? '1 year' : '2 weeks')
   });
 
   this.cookies.set('sessionId', session.id, {
-    expires: this.valid['remember-me'] ? belt.futureDate({ years: 1 }) : undefined
+    expires: this.vals['remember-me'] ? belt.futureDate({ years: 1 }) : undefined
   });
   this.flash = { message: ['success', 'Logged in successfully'] };
   this.response.redirect('/');
@@ -1083,11 +1080,23 @@ app.get('/forums/:forumSlug/topics/new', function*() {
   // Get tag groups
   var tagGroups = forum.has_tags_enabled ? yield db.findAllTagGroups() : [];
 
+  var toArray = function(stringOrArray) {
+    return _.isArray(stringOrArray) ? stringOrArray : [stringOrArray];
+  };
+
   // Render template
   yield this.render('new_topic', {
     ctx: this,
     forum: forum,
-    tagGroups: tagGroups
+    tagGroups: tagGroups,
+    postType: (this.flash.params && this.flash.params['post-type']) || 'ooc',
+    initTitle: this.flash.params && this.flash.params.title,
+    selectedTagIds: (
+      this.flash.params
+        && toArray(this.flash.params['tag-ids']).map(function(idStr) {
+          return parseInt(idStr);
+        }))
+      || []
   });
 });
 
@@ -1141,6 +1150,7 @@ app.get('/forums/:forumSlug', function*() {
     currPage: pager.currPage,
     totalPages: pager.totalPages,
     title: forum.title,
+    className: 'show-forum',
     // Viewers
     viewers: viewers
   });
@@ -1673,7 +1683,7 @@ app.put('/topics/:topicSlug/tags', function*() {
     .isLength(1, 5, 'Must select 1-5 tags');
 
   // Add this forum's tag_id if it has one
-  var tagIds = _.chain(this.valid['tag-ids'])
+  var tagIds = _.chain(this.vals['tag-ids'])
     .concat(topic.forum.tag_id ? [topic.forum.tag_id] : [])
     .uniq()
     .value();
@@ -1693,6 +1703,7 @@ app.put('/topics/:topicSlug/tags', function*() {
 // - title
 // - markup
 // - tag-ids: Array of StringIntegers (IntChecks/RPs only for now)
+// - join-status
 //
 app.post('/forums/:slug/topics', function*() {
   var forumId = belt.extractId(this.params.slug);
@@ -1713,28 +1724,31 @@ app.post('/forums/:slug/topics', function*() {
 
   // Validate params
   this.validateBody('title')
-    .isNotEmpty('Title is required')
+    .notEmpty('Title is required')
     .isLength(config.MIN_TOPIC_TITLE_LENGTH,
               config.MAX_TOPIC_TITLE_LENGTH,
               'Title must be between ' +
               config.MIN_TOPIC_TITLE_LENGTH + ' and ' +
               config.MAX_TOPIC_TITLE_LENGTH + ' chars');
   this.validateBody('markup')
-    .isNotEmpty('Post is required')
+    .notEmpty('Post is required')
     .isLength(config.MIN_POST_LENGTH,
               config.MAX_POST_LENGTH,
               'Post must be between ' +
               config.MIN_POST_LENGTH + ' and ' +
               config.MAX_POST_LENGTH + ' chars');
   this.validateBody('forum-id')
-    .isNotEmpty()
+    .notEmpty()
     .toInt();
 
   if (forum.is_roleplay) {
     this.validateBody('post-type')
-      .isNotEmpty()
+      .notEmpty()
       .toLowerCase()
       .isIn(['ooc', 'ic'], 'post-type must be "ooc" or "ic"');
+    this.validateBody('join-status')
+      .notEmpty()
+      .isIn(['jump-in', 'apply', 'full'], 'Invalid join-status');
   }
 
   // Validate tags (only for RPs/Checks
@@ -1745,18 +1759,22 @@ app.post('/forums/:slug/topics', function*() {
       .toInts();
   }
   this.validateBody('tag-ids').default([]);
+  this.vals['tag-ids'] = this.vals['tag-ids'].filter(function(n) {
+    return n > 0;
+  });
 
-  debug({valid: this.valid, body: this.request.body});
+
+  debug({valid: this.vals, body: this.request.body});
 
   // Validation succeeded
 
   // Render BBCode to html
-  var html = bbcode(this.valid.markup);
+  var html = bbcode(this.vals.markup);
 
   // post-type is always ooc for non-RPs
-  var postType = forum.is_roleplay ? this.valid['post-type'] : 'ooc';
+  var postType = forum.is_roleplay ? this.vals['post-type'] : 'ooc';
 
-  var tagIds = _.chain(this.valid['tag-ids'])
+  var tagIds = _.chain(this.vals['tag-ids'])
     .concat(forum.tag_id ? [forum.tag_id] : [])
     .uniq()
     .value();
@@ -1766,12 +1784,13 @@ app.post('/forums/:slug/topics', function*() {
     userId: this.currUser.id,
     forumId: forumId,
     ipAddress: this.request.ip,
-    title: this.valid.title,
-    markup: this.valid.markup,
+    title: this.vals.title,
+    markup: this.vals.markup,
     html: html,
     postType: postType,
     isRoleplay: forum.is_roleplay,
-    tagIds: tagIds
+    tagIds: tagIds,
+    joinStatus: this.vals['join-status']
   });
   topic = pre.presentTopic(topic);
   this.response.redirect(topic.url);
@@ -2078,7 +2097,7 @@ app.get('/pms/:id', function*() {
 });
 
 //
-// Show topic edit forum
+// Show topic edit form
 // For now it's just used to edit topic title
 // Ensure this comes before /topics/:slug/:xxx so that "edit" is not
 // considered the second param
@@ -2099,7 +2118,8 @@ app.get('/topics/:slug/edit', function*() {
     ctx: this,
     topic: topic,
     selectedTagIds: _.pluck(topic.tags, 'id'),
-    tagGroups: tagGroups
+    tagGroups: tagGroups,
+    className: 'edit-topic'
   });
 });
 
@@ -2107,6 +2127,7 @@ app.get('/topics/:slug/edit', function*() {
 // Params:
 // - title Required
 app.put('/topics/:slug/edit', function*() {
+
   // Authorization
   this.assert(this.currUser, 403);
   var topicId = belt.extractId(this.params.slug);
@@ -2117,33 +2138,47 @@ app.put('/topics/:slug/edit', function*() {
   this.assertAuthorized(this.currUser, 'UPDATE_TOPIC_TITLE', topic);
 
   // Parameter validation
-  this.checkBody('title')
-    .notEmpty('Title required')
-    .isLength(config.MIN_TOPIC_TITLE_LENGTH,
-              config.MAX_TOPIC_TITLE_LENGTH,
-              'Title must be ' +
-              config.MIN_TOPIC_TITLE_LENGTH + ' - ' +
-              config.MAX_TOPIC_TITLE_LENGTH + ' chars long');
-  if (this.errors) {
-    this.flash = {
-      message: ['danger', belt.joinErrors(this.errors)],
-      params: this.request.body
-    };
-    this.response.redirect(topic.url + '/edit');
-    return;
+
+  try {
+
+    if (this.request.body['title']) {
+      this.assert(cancan.can(this.currUser, 'UPDATE_TOPIC_TITLE', topic));
+      this.validateBody('title')
+        .default(topic.title)
+        .isLength(config.MIN_TOPIC_TITLE_LENGTH,
+                  config.MAX_TOPIC_TITLE_LENGTH,
+                  'Title must be ' +
+                  config.MIN_TOPIC_TITLE_LENGTH + ' - ' +
+                  config.MAX_TOPIC_TITLE_LENGTH + ' chars long');
+    }
+
+    if (this.request.body['join-status']) {
+      this.assert(cancan.can(this.currUser, 'UPDATE_TOPIC_JOIN_STATUS', topic));
+      this.validateBody('join-status')
+        .default(topic.join_status)
+        .isIn(['jump-in', 'apply', 'full'], 'Invalid join-status')
+    }
+
+  } catch(ex) {
+    if (ex instanceof bouncer.ValidationError) {
+      this.flash = {
+        message: ['danger', ex.message],
+        params: this.request.body
+      };
+      this.response.redirect(topic.url + '/edit');
+      return;
+    }
+    throw ex;
   }
 
   // Validation succeeded, so update topic
-  var topic2 = yield db.updateTopic(topic.id, {
-    title: this.request.body.title
+  yield db.updateTopic(topic.id, {
+    title: this.vals.title,
+    join_status: this.vals['join-status']
   });
-  topic2 = pre.presentTopic(topic2);
 
-  this.flash = {
-    message: ['success', 'Topic title updated']
-  };
-
-  this.response.redirect(topic2.url);
+  this.flash = { message: ['success', 'Topic title updated'] };
+  this.response.redirect(topic.url + '/edit');
 });
 
 //
@@ -2232,6 +2267,7 @@ app.get('/topics/:slug/:postType', function*() {
                (page > 1 ? ' (Page '+ page +')' : '')
              : topic.title,
     categories: cache.get('categories'),
+    className: 'show-topic',
     // Pagination
     currPage: page,
     totalPages: totalPages,

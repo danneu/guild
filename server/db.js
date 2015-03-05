@@ -975,9 +975,10 @@ RETURNING *
 // - postType   Required String, ic | ooc | char
 // - isRoleplay Required Boolean
 // - tagIds     Optional [Int]
+// - joinStatus Optional String (Required if roleplay)
 //
 exports.createTopic = function*(props) {
-  debug('[createTopic]');
+  debug('[createTopic]', props);
   assert(_.isNumber(props.userId));
   assert(props.forumId);
   assert(_.isString(props.ipAddress));
@@ -987,9 +988,15 @@ exports.createTopic = function*(props) {
   assert(_.isBoolean(props.isRoleplay));
   assert(_.contains(['ic', 'ooc', 'char'], props.postType));
   assert(_.isArray(props.tagIds) || _.isUndefined(props.tagIds));
+  // Only roleplays have join-status
+  if (props.isRoleplay)
+    assert(_.isString(props.joinStatus));
+  else
+    assert(_.isUndefined(props.joinStatus));
+
   var topicSql = m(function() {/*
-INSERT INTO topics (forum_id, user_id, title, is_roleplay)
-VALUES ($1, $2, $3, $4)
+INSERT INTO topics (forum_id, user_id, title, is_roleplay, join_status)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING *
   */});
   var postSql = m(function() {/*
@@ -1001,7 +1008,7 @@ RETURNING *
   return yield withTransaction(function*(client) {
     // Create topic
     var topicResult = yield client.queryPromise(topicSql, [
-      props.forumId, props.userId, props.title, props.isRoleplay
+      props.forumId, props.userId, props.title, props.isRoleplay, props.joinStatus
     ]);
     var topic = topicResult.rows[0];
     // Create topic's first post
@@ -1606,17 +1613,25 @@ GROUP BY t.id, f.id
 };
 
 // props:
-// - title Required String
+// - title Maybe String
+// - join-status Maybe (jump-in | apply | full)
+//
 exports.updateTopic = function*(topicId, props) {
   assert(topicId);
-  assert(_.isString(props.title));
+  assert(props);
   var sql = m(function() {/*
     UPDATE topics
-    SET title = $2
+    SET
+      title = COALESCE($2, title),
+      join_status = COALESCE($3, join_status)::join_status
     WHERE id = $1
     RETURNING *
   */});
-  var result = yield query(sql, [topicId, props.title]);
+  var result = yield query(sql, [
+    topicId,
+    props.title,
+    props.join_status
+  ]);
   return result.rows[0];
 };
 
