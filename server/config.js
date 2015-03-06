@@ -49,6 +49,8 @@ exports.CONVOS_PER_PAGE = parseInt(process.env.CONVOS_PER_PAGE, 10) || 10;
 // up with users that respond to the welcome PM
 exports.STAFF_REPRESENTATIVE_ID = parseInt(process.env.STAFF_REPRESENTATIVE_ID);
 
+exports.ENABLE_ADS = !!process.env.ENABLE_ADS;
+
 // newrelic
 exports.NEW_RELIC_LICENSE_KEY = process.env.NEW_RELIC_LICENSE_KEY;
 exports.NEW_RELIC_APP_NAME = process.env.NEW_RELIC_APP_NAME || 'localhost-guild';

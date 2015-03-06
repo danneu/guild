@@ -2,43 +2,47 @@
 <!-- global leaderboard at top of page-->
 
 {% macro topLeaderboard() %}
-  <div class="abc">
-    {% if config.NODE_ENV === 'production' %}
-      <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
-      <!-- [koa-guild] top-leadboard -->
-      <ins class="adsbygoogle"
-           style="display:inline-block;width:728px;height:90px"
-           data-ad-client="ca-pub-9234114046145427"
-           data-ad-slot="4573647062"></ins>
-      <script>
-      (adsbygoogle = window.adsbygoogle || []).push({});
-      </script>
-    {% else %}
-      <div class="mock-ad" style="height: 90px; width: 728px;">
-        <div>Ad</div>
-      </div>
-    {% endif %}
-  </div>
+  {% if config.ENABLE_ADS %}
+    <div class="abc">
+      {% if config.NODE_ENV === 'production' %}
+        <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+        <!-- [koa-guild] top-leadboard -->
+        <ins class="adsbygoogle"
+             style="display:inline-block;width:728px;height:90px"
+             data-ad-client="ca-pub-9234114046145427"
+             data-ad-slot="4573647062"></ins>
+        <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
+      {% else %}
+        <div class="mock-ad" style="height: 90px; width: 728px;">
+          <div>Ad</div>
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
 {% endmacro %}
 
 <!-- box ad show to guests in user profiles -->
 
 {% macro profileBlock() %}
-  <div class="abc">
-    {% if config.NODE_ENV === 'production' %}
-      <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
-      <!-- [koa-guild] profile-block -->
-      <ins class="adsbygoogle"
-           style="display:inline-block;width:336px;height:280px"
-           data-ad-client="ca-pub-9234114046145427"
-           data-ad-slot="8864245869"></ins>
-      <script>
-      (adsbygoogle = window.adsbygoogle || []).push({});
-      </script>
-    {% else %}
-      <div class="mock-ad" style="height: 280px; width: 336px;">
-        <div>Ad</div>
-      </div>
-    {% endif %}
-  </div>
+  {% if config.ENABLE_ADS %}
+    <div class="abc">
+      {% if config.NODE_ENV === 'production' %}
+        <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+        <!-- [koa-guild] profile-block -->
+        <ins class="adsbygoogle"
+             style="display:inline-block;width:336px;height:280px"
+             data-ad-client="ca-pub-9234114046145427"
+             data-ad-slot="8864245869"></ins>
+        <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
+      {% else %}
+        <div class="mock-ad" style="height: 280px; width: 336px;">
+          <div>Ad</div>
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
 {% endmacro %}
