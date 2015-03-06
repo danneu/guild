@@ -1,6 +1,7 @@
 {% extends 'layouts/master.html' %}
 {% import './macros/paginate.html' as paginate %}
 {% import './macros/macros.html' as macros %}
+{% import './macros/ads.html' as ads %}
 
 {% block embed %}
   <ol class="breadcrumb">
@@ -18,6 +19,8 @@
       {% endfor %}
     </ul>
   </div>
+
+  {{ ads.topLeaderboard() }}
 
   <!-- Pagination -->
   {{ paginate.render(currPage, totalPages, ctx.request.path) }}

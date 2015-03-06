@@ -1,6 +1,11 @@
 {% extends 'layouts/master.html' %}
+{% import './macros/ads.html' as ads %}
 
 {% block embed %}
+
+  {{ ads.topLeaderboard() }}
+
+  <div class="convo-list-actions">
 
   <a href="/convos/new" class="pull-right btn btn-success">
     <span class="glyphicon glyphicon-plus"></span>
@@ -39,6 +44,8 @@
       {% endif %}
     </ul>
   {% endif %}
+
+  </div><!--/.convo-list-actions-->
 
   <div class="panel panel-default" style="border: 0; background-color: #111">
     <div class="panel-body" style="">

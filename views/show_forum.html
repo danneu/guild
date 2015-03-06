@@ -1,6 +1,7 @@
 {% extends 'layouts/master.html' %}
 {% import 'macros/paginate.html' as paginate %}
 {% import 'macros/macros.html' as macros %}
+{% import 'macros/ads.html' as ads %}
 
 {% block embed %}
   <ol class="breadcrumb">
@@ -11,6 +12,8 @@
 
   <!-- Viewers -->
   {{ macros.renderViewers(viewers) }}
+
+  {{ ads.topLeaderboard() }}
 
   <!-- Page header -->
 

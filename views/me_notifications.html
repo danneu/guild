@@ -1,10 +1,13 @@
 {% extends 'layouts/master.html' %}
+{% import './macros/ads.html' as ads %}
 
 {% block embed %}
   <ol class="breadcrumb">
     <li><a href="/">Home</a></li>
     <li>Notifications</li>
   </ol>
+
+  {{ ads.topLeaderboard() }}
 
   <div class="page-header" style="border-color: #000">
     <form action="/me/notifications" method="post" class="pull-right">

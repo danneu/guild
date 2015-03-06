@@ -147,8 +147,9 @@ app.use(function*(next) {  // Must become before koa-router
 swig.setDefaults({
   locals: {
     '_': _,
-    'belt': belt,
-    'cancan': cancan
+    belt: belt,
+    cancan: cancan,
+    config: config
   }
 });
 

@@ -1,6 +1,7 @@
 {% extends 'layouts/master.html' %}
 {% import './macros/paginate.html' as paginate %}
 {% import './macros/macros.html' as macros %}
+{% import './macros/ads.html' as ads %}
 
 {% block embed %}
 
@@ -13,6 +14,9 @@
 
   <!-- Viewers -->
   {{ macros.renderViewers(viewers) }}
+
+  <!-- Top ad -->
+  {{ ads.topLeaderboard() }}
 
   <!-- Page header -->
 

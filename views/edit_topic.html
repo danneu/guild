@@ -1,5 +1,6 @@
 {% extends 'layouts/master.html' %}
 {% import 'macros/macros.html' as macros %}
+{% import './macros/ads.html' as ads %}
 
 {% block embed %}
   <ol class="breadcrumb">
@@ -9,6 +10,7 @@
     <li class="active">Edit Topic</li>
   </ol>
 
+  {{ ads.topLeaderboard() }}
 
   <div class="page-header" style="border-color: #000">
     <h3>Edit {{ topic.title }}</h3>

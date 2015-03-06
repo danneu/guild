@@ -1,4 +1,5 @@
 {% extends 'layouts/master.html' %}
+{% import './macros/ads.html' as ads %}
 
 {% block embed %}
 
@@ -7,6 +8,8 @@
   <ol class="breadcrumb">
     <li><a href="/">Home</a></li>
   </ol>
+
+  {{ ads.topLeaderboard() }}
 
   <!-- Page header -->
 

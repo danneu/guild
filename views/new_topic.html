@@ -1,6 +1,7 @@
 {% extends 'layouts/master.html' %}
 {% import 'macros/paginate.html' as paginate %}
 {% import 'macros/macros.html' as macros %}
+{% import './macros/ads.html' as ads %}
 
 {% block embed %}
   <ol class="breadcrumb">
@@ -8,6 +9,8 @@
     <li><a href="{{ forum.url }}">{{ forum.title }}</a></li>
     <li class="active">New Topic</li>
   </ol>
+
+  {{ ads.topLeaderboard() }}
 
   <div class="page-header" style="border-color: #000">
     <h3><a href="{{ forum.url }}" style="color: #fff">{{ forum.title }}</a></h3>

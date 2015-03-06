@@ -1,10 +1,13 @@
 {% extends 'layouts/master.html' %}
+{% import './macros/ads.html' as ads %}
 
 {% block embed %}
   <ol class="breadcrumb">
     <li><a href="/">Home</a></li>
     <li><a href="/convos">Private Convos</a></li>
   </ol>
+
+  {{ ads.topLeaderboard() }}
 
   <div class="page-header" style="border-color: #000">
     <h3>New Private Convo</h3>
