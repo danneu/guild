@@ -181,7 +181,8 @@
           </div>
           <div>
             {% for tag in topic.tags %}
-              <span class="label label-default" style="display: inline-block;">
+              <span class="label label-default" style="display: inline-block;"
+                    data-toggle="tooltip" title="{{ tag.description }}">
                 {{ tag.title }}
               </span>
             {% endfor %}
@@ -213,7 +214,8 @@
           </div>
           <div>
             {% for tag in topic.tags %}
-              <span class="label label-default" style="display: inline-block;">
+              <span class="label label-default" style="display: inline-block;"
+                    data-toggle="tooltip" title="{{ tag.description }}">
                 {{ tag.title }}
               </span>
             {% endfor %}
@@ -224,6 +226,7 @@
 
     </div><!-- /panel-body -->
   </div><!-- /panel-default -->
+
 {% endmacro %}
 
 <!-- Item rendering -->
