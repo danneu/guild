@@ -1,11 +1,5 @@
 var config = require('./config');
 
-var newrelic;
-if (config.NEW_RELIC_LICENSE_KEY && config.NODE_ENV === 'production') {
-  console.log('Initializing newrelic...');
-  newrelic = require('newrelic');
-}
-
 // Koa deps
 var app = require('koa')();
 app.poweredBy = false;
