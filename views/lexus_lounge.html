@@ -1,9 +1,12 @@
 {% extends 'layouts/master.html' %}
+{% import './macros/ads.html' as ads %}
 
 {% block embed %}
 
+  {{ ads.topLeaderboard() }}
+
   {% if staffRep %}
-  <div class="well">
+  <div class="well" style="margin-top: 20px;">
     <p>
       Staff Representative Account:
       <a href="{{ staffRep.url }}">{{ staffRep.uname }}</a>
