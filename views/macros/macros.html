@@ -57,7 +57,10 @@
   {% if user.avatar_url %}
     <div class="post-avatar"
          style="margin-top: 10px;">
-      <img class="avatar-img {% if ctx.currUser.is_grayscale %}desaturate{% endif %}" src="{{ user.avatar_url}}">
+      <img class="avatar-img {% if ctx.currUser.is_grayscale %}desaturate{% endif %}"
+           src="{{ user.avatar_url}}"
+           alt="Avatar of {{ user.uname }}"
+           title="Avatar of {{ user.uname }}">
     </div>
   {% endif %}
 
@@ -86,7 +89,9 @@
   {% if user.bio_markup %}
     <div class="user-glyphs">
       <a href="{{ user.url }}#bio">
-        <img src="/img/bio1.gif" width="22" height="12">
+        <img src="/img/bio1.gif" width="22" height="12"
+             alt="Read bio of {{ user.uname }}"
+             title="Read bio of {{ user.uname }}">
       </a>
     </div>
   {% endif %}
@@ -147,7 +152,9 @@
   <div class="panel panel-default" style="background: transparent;">
     <div class="panel-body">
       <h4 style="margin-bottom: 20px;" class="text-center">
-        <img src="/img/trophy.png" height="32" width="32"> Current Contest
+        <img src="/img/trophy.png" height="32" width="32"
+             alt="Contests Icon"
+             title="Contests Icon"> Current Contest
       </h4>
       <div class="text-center">
         <!-- Link to contest -->

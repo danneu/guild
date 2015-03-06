@@ -290,7 +290,9 @@
                 {% if post.user.avatar_url %}
                   <a class="media-left" href="{{ post.user.url }}">
                     <img class="avatar-img {% if ctx.currUser.is_grayscale %}desaturate{% endif %}"
-                         src="{{ post.user.avatar_url}}" alt="avatar"
+                         src="{{ post.user.avatar_url }}"
+                         alt="Avatar of {{ post.user.uname }}"
+                         title="Avatar of {{ post.user.uname }}"
                          style="max-width: 60px">
                   </a>
                 {% endif %}
@@ -331,14 +333,18 @@
                 {% for type in ['like', 'laugh', 'thank'] %}
                   {% if freq[type] %}
                     {{ freq[type] }}x {{ type|capitalize }}
-                    <img src="{{ type|ratingTypeToImageSrc }}">
+                    <img src="{{ type|ratingTypeToImageSrc }}"
+                         alt="{{ type|capitalize }}"
+                         title="{{ type|capitalize }}">
                   {% endif %}
                 {% endfor %}
                 <div style="margin-top: 10px; display: none;" class="rater-list">
                 {% for type in ['like', 'laugh', 'thank'] %}
                   {% if freq[type] %}
                     <div>
-                      <img src="{{ type|ratingTypeToImageSrc }}">
+                      <img src="{{ type|ratingTypeToImageSrc }}"
+                           alt="{{ type|capitalize }}"
+                           title="{{ type|capitalize }}">
                       <ul class="list-inline" style="display: inline-block;">
                       {% for rating in _.sortBy(_.filter(post.ratings, { type: type }), 'from_user_uname') %}
                         <li>
@@ -417,21 +423,23 @@
           {% if ctx.can(ctx.currUser, 'RATE_POST', post) %}
             {% if post.has_rated %}
               <span class="pull-right text-muted" style="margin-right: 10px;">
-                You <img src="{{ post.has_rated.type|ratingTypeToImageSrc }}">'ed this
+                You <img src="{{ post.has_rated.type|ratingTypeToImageSrc }}"
+                         alt="{{ post.has_rated.type|capitalize }}"
+                         title="{{ post.has_rated.type|capitalize }}">'ed this
               </span>
             {% else %}
               <ul class="post-rating-actions list-inline pull-right">
                 <li data-rating-type="like" data-toggle="tooltip" title="Like"
                     data-placement="top" data-post-id="{{ post.id }}">
-                  <img src="/ratings/like-grey.png">
+                  <img src="/ratings/like-grey.png" alt="Like" title="Like">
                 </li>
                 <li data-rating-type="laugh" data-toggle="tooltip" title="Laugh"
                     data-placement="top" data-post-id="{{ post.id }}">
-                  <img src="/ratings/laugh-static-grey.png">
+                  <img src="/ratings/laugh-static-grey.png" alt="Laugh" title="Like">
                 </li>
                 <li data-rating-type="thank" data-toggle="tooltip" title="Thank"
                     data-placement="top" data-post-id="{{ post.id }}">
-                  <img src="/ratings/thank-grey.png">
+                  <img src="/ratings/thank-grey.png" alt="Thank" title="Thank">
                 </li>
               </ul>
             {% endif %}
@@ -613,7 +621,7 @@ $(function() {
     var post_id = $(this).attr('post-id');
     var $post_body = $('#post-' + post_id + ' .post-content');
     var prev_body = $post_body.html();
-    var $spinner = $('<span><img src="/img/spinner.gif"> Loading edit form...</span>');
+    var $spinner = $('<span><img src="/img/spinner.gif" alt="Loading..." title="Loading..."> Loading edit form...</span>');
 
     // Replace post body with a spinner to indicate we're doing something
     $post_body.html($spinner);

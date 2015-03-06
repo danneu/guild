@@ -66,7 +66,9 @@
                       {% for subforum in forum.forums %}
                         <div class="row">
                           <div class="col-xs-7">
-                            <img src="/img/subforum-icon.gif" alt="Subforum Icon">
+                            <img src="/img/subforum-icon.gif"
+                                 alt="Subforum Icon"
+                                 title="Subforum Icon">
                             <a href="{{ subforum.url }}">{{ subforum.title }}</a>
                             {% if subforum.viewerCount > 0 %}
                               ({{ subforum.viewerCount }} Viewing)
