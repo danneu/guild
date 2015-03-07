@@ -1,6 +1,8 @@
+{% import '../macros/macros.html' as macros %}
 <!doctype html>
 <html lang="en">
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="keywords" content="roleplay forum, forum based roleplay, play by post, rp forum, roleplaying forum, rpg forum">
@@ -36,12 +38,14 @@
 <body class="{{ className || '' }}">
 <div class="container">
 
-  <!-- Global info banner -->
-  {% if ctx.config.NODE_ENV === 'staging' %}
-    <div class="alert alert-info" role="alert">
-      <strong>Welcome</strong> This is the development server. If you find a bug/issue, email me: <a href="mailto:mahz@fastmail.com" style="color: #31708f; text-decoration: underline">mahz@fastmail.com</a>
-    </div>
-  {% endif %}
+  <div id="top-bottom-box">
+    <a class="top-btn" href="#" title="Go to top">
+      <span class="glyphicon glyphicon-chevron-up"></span>
+    </a>
+    <a class="bottom-btn" href="#bottom" title="Go to bottom">
+      <span class="glyphicon glyphicon-chevron-down"></span>
+    </a>
+  </div>
 
     {% if ctx.path === '/' && ctx.config.NODE_ENV === 'production' %}
       <h1 id="tagline">Play-by-Post Forum Based Roleplaying</h1>
@@ -81,52 +85,15 @@
             <form style="padding-top:3px;"
                   action="/me/logout"
                   method="post"
-                  class="navbar-form pull-right">
+                  class="logout-form navbar-form pull-right">
               <input type="submit"
                      value="Logout"
+                     style="color: white;"
                      class="btn-link">
             </form>
 
-            <div class="btn-group btn-group-sm pull-right">
-              <a href="/me/convos"
-                 class="btn btn-default navbar-btn">
-                <span class="glyphicon glyphicon-envelope"></span>
-                PMs
-                {# Doing !==0 instead of >0 so user can see any bugs where
-                   notification count goes negative #}
-                {% if ctx.currUser.convo_notifications_count !== 0 %}
-                <div class="badge">
-                  {{ ctx.currUser.convo_notifications_count|commafy }}
-                </div>
-                {% endif %}
-              </a>
-              <a href="/me/subscriptions"
-                 class="btn btn-default navbar-btn">
-                <span class="glyphicon glyphicon-list"></span>
-                Subs
-              </a>
-              {% if ctx.can(ctx.currUser, 'LEXUS_LOUNGE') %}
-                <a href="/lexus-lounge"
-                   class="btn btn-default navbar-btn">
-                  <span class="glyphicon glyphicon-eye-open"></span>
-                  Mod
-                </a>
-              {% endif %}
-
-              <a href="/me/notifications" class="btn btn-default navbar-btn">
-                <span class="glyphicon glyphicon-bell"></span>
-                {% if ctx.currUser.notifications_count > 0 %}
-                  <div class="badge">
-                    {{ ctx.currUser.notifications_count|commafy }}
-                  </div>
-                {% endif %}
-              </a>
-
-              <a href="/users/{{ ctx.currUser.id }}"
-                 class="btn btn-default navbar-btn">
-                <span class="glyphicon glyphicon-user"></span>
-                {{ ctx.currUser.uname }}
-              </a>
+            <div class="hidden-xs">
+              {{ macros.renderUserBar('pull-right') }}
             </div>
           {% endif %}
           <!-- If user is not logged in, show login/register controls -->
@@ -145,6 +112,13 @@
       </div><!--/.container-fluid -->
     </nav><!-- /navbar -->
 
+    <!-- userbar for mobile users -->
+    {% if ctx.currUser %}
+      <div class="text-center visible-xs-block">
+        {{ macros.renderUserBar() }}
+      </div>
+    {% endif %}
+
     <!-- Display flash message -->
     {% if ctx.flash && ctx.flash.message %}
       <div class="alert alert-{{= ctx.flash.message[0] }}"
@@ -155,6 +129,8 @@
 
     <!-- Embedded content is nested here -->
     {% block embed %}{% endblock %}
+
+    <a name="bottom"></a>
 
     <!-- Footer -->
     <div class="text-center" style="margin-top: 100px;">

@@ -9,7 +9,7 @@
     <li><a href="/">Home</a></li>
   </ol>
 
-  {{ ads.topLeaderboard() }}
+  {{ ads.topResponsive() }}
 
   <!-- Page header -->
 
@@ -26,12 +26,12 @@
     <div class="list-group">
       <div class="list-group-item" style="background-color: #1d1d1d; border: 1px solid #111;">
         <div class="row">
-          <div class="col-xs-1"></div>
-          <div class="col-xs-3">Roleplay</div>
-          <div class="col-xs-2">Posts</div>
-          <div class="col-xs-2">Latest IC</div>
-          <div class="col-xs-2">Latest OOC</div>
-          <div class="col-xs-2">Latest Character</div>
+          <div class="col-sm-1"></div>
+          <div class="col-sm-3">Roleplay</div>
+          <div class="col-sm-2 hidden-sm hidden-xs">Posts</div>
+          <div class="col-sm-2 hidden-sm hidden-xs">Latest IC</div>
+          <div class="col-sm-2 hidden-sm hidden-xs">Latest OOC</div>
+          <div class="col-sm-2 hidden-sm hidden-xs">Latest Character</div>
         </div>
       </div>
 
@@ -43,43 +43,34 @@
           <div class="list-group-item topic-panel"
              style="background-color: #3d3a3a; border: 1px solid #111; color: #fff;">
             <div class="row">
-              <div class="col-xs-1">
+              <div class="col-md-1">
 
-                <!-- Visible on small screens -->
                 <form action="{{ topic.subscriptionUrl }}" method="post"
-                      class="hidden-md hidden-lg unsub-form">
+                      class="unsub-form hidden-xs hidden-sm">
                   <input type="hidden" name="_method" value="delete">
                   <button type="submit"
                          class="btn btn-default btn-xs">
                     <span class="glyphicon glyphicon-remove"></span>
-                  </button>
-                </form>
-
-                <!-- Visible on medium screens -->
-                <form action="{{ topic.subscriptionUrl }}" method="post"
-                      class="visible-md-block unsub-form">
-                  <input type="hidden" name="_method" value="delete">
-                  <button type="submit"
-                         class="btn btn-default btn-xs">
-                    Unsub
-                  </button>
-                </form>
-
-                <!-- Visible on big screens -->
-                <form action="{{ topic.subscriptionUrl }}" method="post"
-                      class="visible-lg-block unsub-form">
-                  <input type="hidden" name="_method" value="delete">
-                  <button type="submit"
-                         class="btn btn-default btn-xs">
-                    <span class="glyphicon glyphicon-remove"></span>
-                    Unsub
                   </button>
                 </form>
 
               </div>
-              <div class="col-xs-3">
+              <div class="col-md-3">
+
                 <h5 class="list-group-item-heading topic-panel-title">
-                  <a href="{{ topic.url }}">{{ topic.title }}</a>
+
+                  <!-- Unsub button for xs/sm -->
+                  <form action="{{ topic.subscriptionUrl }}" method="post"
+                        class="unsub-form hidden-md hidden-lg">
+                    <input type="hidden" name="_method" value="delete">
+                    <button type="submit"
+                            class="btn btn-default btn-xs">
+                      <span class="glyphicon glyphicon-remove"></span>
+                    </button>
+                  </form>
+
+                  <!-- Title -->
+                  <a href="{{ topic.url }}" style="display: inline-block;">{{ topic.title }}</a>
                 </h5>
                 <p class="list-group-item-text topic-panel-desc">
                   by
@@ -91,21 +82,25 @@
                   </abbr>
                 </p>
               </div><!--/.col-4-->
-              <div class="col-xs-2">
-                {{ topic.ic_posts_count }} IC<br>{{ topic.ooc_posts_count }} OOC
+              <div class="col-md-2">
+                <small class="text-muted">
+                {{ topic.ic_posts_count }} IC,
+                {{ topic.ooc_posts_count }} OOC,
+                {{ topic.char_posts_count }} Char
+                </small>
               </div>
               <!-- Latest IC-->
-              <div class="col-xs-2">
+              <div class="col-md-2">
                 {% if topic.latest_ic_user %}
-                  <div>
-                    by
+                  <div class="latest-ic">
+                    Latest IC:
                     <a href="{{ topic.latest_ic_user.url }}"
                        style="color: #fff">
                       {{ topic.latest_ic_user.uname -}}
                     </a>
-                    <a href="{{ topic.latest_ic_post.url }}">
-                      <span class="glyphicon glyphicon-link"></span>
-                      &rarr;
+                    <a href="{{ topic.latest_ic_post.url }}"
+                       class="btn btn-default btn-xs">
+                      Go &rarr;
                     </a>
                   </div>
                   <abbr class="timeago" title="{{ topic.latest_ic_post.created_at.toISOString() }}">
@@ -116,17 +111,17 @@
                 {% endif %}
               </div>
               <!-- Latest OOC-->
-              <div class="col-xs-2">
+              <div class="col-md-2">
                 {% if topic.latest_ooc_user %}
-                  <div>
-                    by
+                  <div class="latest-ooc">
+                    Latest OOC:
                     <a href="{{ topic.latest_ooc_user.url }}"
                        style="color: #fff">
                       {{ topic.latest_ooc_user.uname -}}
                     </a>
-                    <a href="{{ topic.latest_ooc_post.url}}">
-                      <span class="glyphicon glyphicon-link"></span>
-                      &rarr;
+                    <a href="{{ topic.latest_ooc_post.url}}"
+                       class="btn btn-default btn-xs">
+                      Go &rarr;
                     </a>
                   </div>
                   <abbr class="timeago" title="{{ topic.latest_ooc_post.created_at.toISOString() }}">
@@ -137,10 +132,10 @@
                 {% endif %}
               </div><!--/.col-2-->
               <!-- Latest Character-->
-              <div class="col-xs-2">
+              <div class="col-md-2">
                 {% if topic.latest_char_user %}
-                  <div>
-                    by
+                  <div class="latest-char">
+                    Latest Char:
                     <a href="{{ topic.latest_char_user.url }}"
                        style="color: #fff">
                       {{ topic.latest_char_user.uname -}}
@@ -154,7 +149,7 @@
                     {{ topic.latest_char_post.formattedCreatedAt }}
                   </abbr>
                 {% else %}
-                  --
+                  Latest Char: --
                 {% endif %}
               </div><!--/.col-2-->
             </div><!--/.row-->
@@ -169,10 +164,10 @@
     <div class="list-group">
       <div class="list-group-item" style="background-color: #1d1d1d; border: 1px solid #111;">
         <div class="row">
-          <div class="col-xs-1"></div>
-          <div class="col-xs-6">Topics</div>
-          <div class="col-xs-2">Posts</div>
-          <div class="col-xs-3">Latest Post</div>
+          <div class="col-md-1"></div>
+          <div class="col-md-6">Topics</div>
+          <div class="col-md-2 hidden-xs hidden-sm">Posts</div>
+          <div class="col-md-3 hidden-xs hidden-sm">Latest Post</div>
         </div>
       </div><!--/.list-group-item-->
 
@@ -184,76 +179,67 @@
         <div class="list-group-item topic-panel"
            style="background-color: #3d3a3a; border: 1px solid #111; color: #fff;">
           <div class="row">
-            <div class="col-xs-1">
+            <div class="col-md-1">
 
-              <!-- Visible on small screens -->
               <form action="{{ topic.subscriptionUrl }}" method="post"
-                    class="hidden-md hidden-lg unsub-form">
+                    class="unsub-form hidden-xs hidden-sm">
                 <input type="hidden" name="_method" value="delete">
                 <button type="submit"
                        class="btn btn-default btn-xs">
                   <span class="glyphicon glyphicon-remove"></span>
                 </button>
               </form>
-
-              <!-- Visible on medium screens -->
-              <form action="{{ topic.subscriptionUrl }}" method="post"
-                    class="visible-md-block unsub-form">
-                <input type="hidden" name="_method" value="delete">
-                <button type="submit"
-                       class="btn btn-default btn-xs">
-                  Unsub
-                </button>
-              </form>
-
-              <!-- Visible on big screens -->
-              <form action="{{ topic.subscriptionUrl }}" method="post"
-                    class="visible-lg-block unsub-form">
-                <input type="hidden" name="_method" value="delete">
-                <button type="submit"
-                       class="btn btn-default btn-xs">
-                  <span class="glyphicon glyphicon-remove"></span>
-                  Unsub
-                </button>
-              </form>
-
 
             </div>
-            <div class="col-xs-6">
+            <div class="col-md-6">
               <h5 class="list-group-item-heading topic-panel-title">
+
+                <!-- Unsub button for xs/sm -->
+                <form action="{{ topic.subscriptionUrl }}" method="post"
+                      class="unsub-form hidden-md hidden-lg">
+                  <input type="hidden" name="_method" value="delete">
+                  <button type="submit"
+                          class="btn btn-default btn-xs">
+                    <span class="glyphicon glyphicon-remove"></span>
+                  </button>
+                </form>
+
+                <!-- Title -->
                 <a href="{{ topic.url }}">{{ topic.title }}</a>
               </h5>
+
               <p class="list-group-item-text topic-panel-desc">
-                by
                 <a href="{{ topic.user.url }}" style="color: #fff">
                   {{ topic.user.uname -}}
                 </a>,
                 <abbr class="timeago" title="{{ topic.created_at.toISOString() }}">
-                  {{ topic.formattedCreatedAt }}
+                  {{ topic.created_at|formatDate }}
                 </abbr>
               </p>
             </div><!--/.col-7-->
-            <div class="col-xs-2">
-              {{ topic.posts_count }}
+            <div class="col-md-2">
+              <small class="text-muted">
+                {{ topic.posts_count }} Posts
+              </small>
             </div>
-            <div class="col-xs-3">
+            <div class="col-md-3 text-right">
                 {% if topic.latest_user %}
                   <div>
-                    by
+                    Latest:
                     <a href="{{ topic.latest_user.url }}"
                        style="color: #fff">
                       {{ topic.latest_user.uname -}}
                     </a>
-                    <a href="{{ topic.latest_post.url }}">
-                      <span class="glyphicon glyphicon-link"></span>
-                      &rarr;
+                    <a href="{{ topic.latest_post.url }}"
+                       class="btn btn-default btn-xs">
+                      Go &rarr;
                     </a>
                   </div>
                   <abbr class="timeago" title="{{ topic.latest_post.created_at.toISOString() }}">
                     {{ topic.latest_post.formattedCreatedAt }}
                   </abbr>
                 {% else %}
-                  --
+                  Latest: --
                 {% endif %}
             </div>
           </div><!--/.row-->

@@ -20,7 +20,7 @@
     </ul>
   </div>
 
-  {{ ads.topLeaderboard() }}
+  {{ ads.topResponsive() }}
 
   <!-- Pagination -->
   {{ paginate.render(currPage, totalPages, ctx.request.path) }}
@@ -62,28 +62,8 @@
 
             <!-- For small devices -->
             <div class="visible-xs-block">
-              <div class="media">
-                {% if post.user.avatar_url %}
-                  <a class="media-left" href="{{ post.user.url }}">
-                    <img src="{{ post.user.avatar_url}}" alt="avatar"
-                         style="max-width: 60px">
-                  </a>
-                {% endif %}
-                <div class="media-body">
-                  <h4 class="media-heading">
-                    <a href="{{ post.user.url }}">
-                      {{ post.user.uname }}
-                    </a>
-                    {% if post.user.custom_title %}
-                      <small><span class="text-muted">{{ post.user.custom_title }}</span></small>
-                    {% endif %}
-                  </h4>
-                  <div class="pull-left">
-                    {{ post.user.role|capitalize }}<br>
-                    {{ macros.onlineStatus(post.user) }}
-                  </div>
-                </div>
-              </div>
+              {{ macros.renderUserbitSmall(post.user) }}
+              <hr class="small-userbit-divider">
             </div> <!-- /small devices -->
 
             <!-- For larger-than-smartphone devices -->

@@ -16,7 +16,7 @@
           {% set suffix = '?page=' + Math.max(currPage-1, 1) %}
         {% endif %}
         <a href="{{ baseUrl + suffix }}{{ urlFragment}}" rel="prev">
-          &larr; Prev Page
+          &larr; Prev
         </a>
       </li>
 
@@ -29,7 +29,7 @@
 
       <li {% if currPage === totalPages %} class="disabled" {% endif %}>
         <a href="{{ baseUrl + '?page=' + Math.min(currPage+1, totalPages) }}{{ urlFragment }}" rel="next">
-          Next Page &rarr;
+          Next &rarr;
         </a>
       </li>
 

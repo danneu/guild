@@ -16,7 +16,7 @@
   {{ macros.renderViewers(viewers) }}
 
   <!-- Top ad -->
-  {{ ads.topLeaderboard() }}
+  {{ ads.topResponsive() }}
 
   <!-- Page header -->
 
@@ -174,38 +174,42 @@
   <!-- Pagination -->
   {{ paginate.render(currPage, totalPages, ctx.request.path) }}
 
-  <!-- New Reply button -->
+  <div class="topic-controls text-right">
 
-  {% if ctx.can(ctx.currUser, 'CREATE_POST', topic) %}
-    <a class="btn btn-primary pull-right" href="#new-reply-form">
-      <span class="glyphicon glyphicon-pencil"></span>
-      New Reply
-    </a>
-  {% endif %}
+    <!-- New Reply button -->
 
-  <!-- Subscribe button -->
-
-  {% if ctx.can(ctx.currUser, 'SUBSCRIBE_TOPIC', topic) %}
-    {% if topic.is_subscribed %}
-      <form action="{{ topic.subscriptionUrl }}" method="post">
-        <input type="hidden" name="_method" value="delete">
-        <input type="hidden" name="return-to-topic" value="true">
-        <button type="submit" class="btn btn-danger pull-right" style="margin-right: 10px">
-          <span class="glyphicon glyphicon-remove"></span>
-          Unsubscribe
-        </button>
-      </form>
-    {% else %}
-      <form action="/me/subscriptions" method="post">
-        <input type="hidden" name="topic-id" value="{{ topic.id }}">
-        <input type="hidden" name="return-to-topic" value="true">
-        <button type="submit" class="btn btn-success pull-right" style="margin-right: 10px">
-          <span class="glyphicon glyphicon-plus"></span>
-          Subscribe
-        </button>
-      </form>
+    {% if ctx.can(ctx.currUser, 'CREATE_POST', topic) %}
+      <a class="btn btn-primary pull-right" href="#new-reply-form">
+        <span class="glyphicon glyphicon-pencil"></span>
+        New Reply
+      </a>
     {% endif %}
-  {% endif %}
+
+    <!-- Subscribe button -->
+
+    {% if ctx.can(ctx.currUser, 'SUBSCRIBE_TOPIC', topic) %}
+      {% if topic.is_subscribed %}
+        <form action="{{ topic.subscriptionUrl }}" method="post">
+          <input type="hidden" name="_method" value="delete">
+          <input type="hidden" name="return-to-topic" value="true">
+          <button type="submit" class="btn btn-danger pull-right" style="margin-right: 0px">
+            <span class="glyphicon glyphicon-remove"></span>
+            Unsubscribe
+          </button>
+        </form>
+      {% else %}
+        <form action="/me/subscriptions" method="post">
+          <input type="hidden" name="topic-id" value="{{ topic.id }}">
+          <input type="hidden" name="return-to-topic" value="true">
+          <button type="submit" class="btn btn-success pull-right" style="margin-right: 0px">
+            <span class="glyphicon glyphicon-plus"></span>
+            Subscribe
+          </button>
+        </form>
+      {% endif %}
+    {% endif %}
+
+  </div> <!--/.topic-controls-->
 
   <ul class="nav nav-tabs topic-tabs">
     {% if topic.forum.is_roleplay %}
@@ -290,31 +294,8 @@
 
             <!-- For small devices -->
             <div class="visible-xs-block">
-              <div class="media">
-                {% if post.user.avatar_url %}
-                  <a class="media-left" href="{{ post.user.url }}">
-                    <img class="avatar-img {% if ctx.currUser.is_grayscale %}desaturate{% endif %}"
-                         src="{{ post.user.avatar_url }}"
-                         alt="Avatar of {{ post.user.uname }}"
-                         title="Avatar of {{ post.user.uname }}"
-                         style="max-width: 60px">
-                  </a>
-                {% endif %}
-                <div class="media-body">
-                  <h4 class="media-heading">
-                    <a href="{{ post.user.url }}">
-                      {{ post.user.uname }}
-                    </a>
-                    {% if post.user.custom_title %}
-                      <small><span class="text-muted">{{ post.user.custom_title|replaceTitleNewlinesMobile|raw }}</span></small>
-                    {% endif %}
-                  </h4>
-                  <div class="pull-left">
-                    {{ post.user.role|capitalize }}<br>
-                    {{ macros.onlineStatus(post.user) }}
-                  </div>
-                </div>
-              </div>
+              {{ macros.renderUserbitSmall(post.user) }}
+              <hr class="small-userbit-divider">
             </div>
 
             <!-- For larger-than-smartphone devices -->

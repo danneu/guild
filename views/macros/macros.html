@@ -37,8 +37,39 @@
 
 {% macro renderSig(user) %}
   {% if ctx.currUser && !ctx.currUser.hide_sigs && user.sig_html %}
-    <div class="post-sig-legacy post-sig">{{- post.user.sig_html|safe -}}</div>
+    <div class="post-sig-legacy post-sig">
+      {{- post.user.sig_html|safe -}}
+    </div>
   {% endif %}
+{% endmacro %}
+
+{% macro renderUserbitSmall(user) %}
+    <div class="media">
+      {% if user.avatar_url %}
+        <a class="media-left" href="{{ post.user.url }}">
+          <img class="avatar-img {% if ctx.currUser.is_grayscale %}desaturate{% endif %}"
+               src="{{ post.user.avatar_url }}"
+               alt="Avatar of {{ post.user.uname }}"
+               title="Avatar of {{ post.user.uname }}"
+               style="max-width: 40px; max-height: 40px;"
+               >
+        </a>
+      {% endif %}
+      <div class="media-body" style="text-align: left;">
+        <h4 class="media-heading" style="margin-bottom: 0;">
+          <a href="{{ post.user.url }}">
+            {{ user.uname }}
+          </a>
+          {% if user.custom_title %}
+            <small><span class="text-muted">{{ user.custom_title|replaceTitleNewlinesMobile|raw }}</span></small>
+          {% endif %}
+        </h4>
+        <div class="pull-left">
+          {{ user.role|capitalize }}
+          {{ macros.onlineStatus(user) }}
+        </div>
+      </div>
+    </div>
 {% endmacro %}
 
 {% macro renderUserbitLarge(user)  %}
@@ -240,11 +271,11 @@
 
 <!-- Roleplay items -->
 {% macro renderRoleplayItemHeading(topic, forum) %}
-  <div class="col-xs-1"></div>
-  <div class="col-xs-5">Roleplays</div>
-  <div class="col-xs-1"></div>
-  <div class="col-xs-2">Posts</div>
-  <div class="col-xs-3">Latest Post</div>
+  <div class="col-xs-1 hidden-xs"></div>
+  <div class="col-xs-6 hidden-xs">Roleplays</div>
+  <div class="col-xs-5 hidden-xs text-right">Latest Post</div>
+  <div class="col-xs-6 visible-xs-block">Roleplays</div>
+  <div class="col-xs-6 visible-xs-block text-right">Latest Post</div>
 {% endmacro %}
 
 {% macro renderRoleplayItem(topic, forum) %}
@@ -255,7 +286,7 @@
                       "
                style="background-color: #3d3a3a; border: 1px solid #111; color: #fff;">
             <div class="row">
-              <div class="col-xs-1">
+              <div class="col-sm-1">
                 {% if topic.join_status %}
                   <div class="join-status join-status-{{ topic.join_status }}">
                     <abbr title="{{ topic.join_status|expandJoinStatus }}" data-toggle="tooltip">
@@ -264,7 +295,7 @@
                   </div>
                 {% endif %}
               </div>
-              <div class="col-xs-5">
+              <div class="col-sm-6">
                 <h5 class="list-group-item-heading topic-panel-title">
                   {% if topic.moved_at && topic.moved_from_forum_id === forum.id %}
                     <span class="glyphicon glyphicon-share-alt" title="Moved" data-toggle="tooltip"></span>
@@ -280,7 +311,7 @@
                   {% endif %}
                   <a href="{{ topic.url }}">{{ topic.title }}</a>
                 </h5>
-                <p class="list-group-item-text">
+                <div class="list-group-item-text">
                   <div style="margin-top: 6px;">
                     by <a href="{{ topic.user.url }}" style="color: #fff">
                       {{ topic.user.uname -}}
@@ -304,10 +335,10 @@
                       {% endfor %}
                     </ul>
                   {% endif %}
-                </p>
+                </div>
               </div> <!-- /col6 -->
               {% if topic.moved_at && topic.moved_from_forum_id === forum.id %}
-                <div class="col-xs-6">
+                <div class="col-sm-6">
                   Moved to
                   <a href="/forums/{{ topic.forum_id }}">
                     {{ topic.forum.title -}}
@@ -319,21 +350,24 @@
                   </div>
                 </div> <!-- /col-6 -->
               {% else %}
-                <div class="col-xs-1"></div>
-                <div class="col-xs-2">{{ topic.posts_count|commafy }}</div>
+                <div class="col-sm-2">
+                  <div class="text-muted">{{ topic.posts_count|commafy }} Posts</div>
+                </div>
                 <!-- Latest post -->
-                <div class="col-xs-3">
-                  <div>
-                    by <a href="{{ topic.latest_user.url }}" style="color: #fff">{{ topic.latest_user.uname }}</a>
-                  <a href="{{ topic.latest_post.url }}">
-                    <span class="glyphicon glyphicon-link"></span>
-                    &rarr;
-                  </a>
+                <div class="col-sm-3">
+                  <div class="latest-post text-right">
+                    Latest:
+                      by <a href="{{ topic.latest_user.url }}" style="color: #fff">{{ topic.latest_user.uname }}</a>
+                    <a href="{{ topic.latest_post.url }}" class="btn btn-default btn-xs">
+                      Go
+                      &rarr;
+                    </a>
+                    <br>
+                    <abbr class="timeago created-at"
+                          title="{{ topic.latest_post.created_at.toISOString() }}">
+                      {{ topic.latest_post.created_at|formatDate }}
+                    </abbr>
                   </div>
-                  <abbr class="timeago created-at"
-                        title="{{ topic.latest_post.created_at.toISOString() }}">
-                    {{ topic.latest_post.created_at|formatDate }}
-                  </abbr>
                 </div>
               {% endif %} <!-- /if moved -->
             </div> <!-- /.row -->
@@ -342,10 +376,14 @@
 
 <!-- Check items -->
 {% macro renderCheckItemHeading(topic, forum) %}
-  <div class="col-xs-6">Interest Checks</div>
-  <div class="col-xs-1"></div>
-  <div class="col-xs-2">Posts</div>
-  <div class="col-xs-3">Latest Post</div>
+  <div class="col-xs-7">
+    {% if forum.is_roleplay %}
+      Roleplays
+    {% else %}
+      Interest Checks
+    {% endif %}
+  </div>
+  <div class="col-xs-5 text-right">Latest Post</div>
 {% endmacro %}
 
 {% macro renderCheckItem(topic, forum) %}
@@ -356,7 +394,7 @@
                       "
                style="background-color: #3d3a3a; border: 1px solid #111; color: #fff;">
             <div class="row">
-              <div class="col-xs-6">
+              <div class="col-sm-6">
                 <h5 class="list-group-item-heading topic-panel-title">
                   {% if topic.moved_at && topic.moved_from_forum_id === forum.id %}
                     <span class="glyphicon glyphicon-share-alt" title="Moved" data-toggle="tooltip"></span>
@@ -372,7 +410,7 @@
                   {% endif %}
                   <a href="{{ topic.url }}">{{ topic.title }}</a>
                 </h5>
-                <p class="list-group-item-text">
+                <div class="list-group-item-text">
                   <div style="margin-top: 6px;">
                     by <a href="{{ topic.user.url }}" style="color: #fff">
                       {{ topic.user.uname -}}
@@ -383,8 +421,15 @@
                     </abbr>
                   </div>
                   <!-- List topic tags -->
-                  {% if topic.tags %}
+                  {% if topic.tags || topic.join_status %}
                     <ul class="list-inline" style="margin: 0;">
+                      {% if topic.join_status %}
+                        <li class="join-status join-status-{{ topic.join_status }}" style="padding-left: 0;">
+                          <abbr title="{{ topic.join_status|expandJoinStatus }}" data-toggle="tooltip">
+                            {{ topic.join_status|capitalize }}
+                          </abbr>
+                        </li>
+                      {% endif %}
                       {% for tag in topic.tags %}
                         <!-- Ignore tag if we're in the "tag's forum" -->
                         {% if tag.id !== forum.tag_id %}
@@ -396,10 +441,10 @@
                       {% endfor %}
                     </ul>
                   {% endif %}
-                </p>
+                </div>
               </div> <!-- /col6 -->
               {% if topic.moved_at && topic.moved_from_forum_id === forum.id %}
-                <div class="col-xs-6">
+                <div class="col-sm-6">
                   Moved to
                   <a href="/forums/{{ topic.forum_id }}">
                     {{ topic.forum.title -}}
@@ -411,33 +456,37 @@
                   </div>
                 </div> <!-- /col-6 -->
               {% else %}
-                <div class="col-xs-1"></div>
-                <div class="col-xs-2">{{ topic.posts_count|commafy }}</div>
+                <div class="col-sm-2">
+                  <div class="text-muted">{{ topic.posts_count|commafy }} Posts</div>
+                </div>
                 <!-- Latest post -->
-                <div class="col-xs-3">
-                  <div>
-                    by <a href="{{ topic.latest_user.url }}" style="color: #fff">{{ topic.latest_user.uname }}</a>
-                  <a href="{{ topic.latest_post.url }}">
-                    <span class="glyphicon glyphicon-link"></span>
-                    &rarr;
-                  </a>
+                <div class="col-sm-4">
+                  <div class="latest-post text-right">
+                    Latest:
+                      <span class="by-line">
+                        <a href="{{ topic.latest_user.url }}" style="color: #fff">{{ topic.latest_user.uname }}</a>
+                      </span>
+                    <a href="{{ topic.latest_post.url }}" class="btn btn-default btn-xs" style="margin-left: 5px;">
+                      Go
+                      &rarr;
+                    </a>
+                    <br>
+                    <abbr class="timeago created-at"
+                          title="{{ topic.latest_post.created_at.toISOString() }}">
+                      {{ topic.latest_post.created_at|formatDate }}
+                    </abbr>
                   </div>
-                  <abbr class="timeago created-at"
-                        title="{{ topic.latest_post.created_at.toISOString() }}">
-                    {{ topic.latest_post.created_at|formatDate }}
-                  </abbr>
                 </div>
               {% endif %} <!-- /if moved -->
             </div> <!-- /.row -->
           </div> <!-- /.list-group-item -->
 {% endmacro %}
 
+
 <!-- Regular topics -->
 {% macro renderTopicItemHeading(topic, forum) %}
   <div class="col-xs-6">Topics</div>
-  <div class="col-xs-1"></div>
-  <div class="col-xs-2">Posts</div>
-  <div class="col-xs-3">Latest Post</div>
+  <div class="col-xs-6 text-right">Latest Post</div>
 {% endmacro %}
 
 {% macro renderTopicItem(topic, forum) %}
@@ -448,7 +497,7 @@
                       "
                style="background-color: #3d3a3a; border: 1px solid #111; color: #fff;">
             <div class="row">
-              <div class="col-xs-6">
+              <div class="col-sm-6">
                 <h5 class="list-group-item-heading topic-panel-title">
                   {% if topic.moved_at && topic.moved_from_forum_id === forum.id %}
                     <span class="glyphicon glyphicon-share-alt" title="Moved" data-toggle="tooltip"></span>
@@ -464,7 +513,7 @@
                   {% endif %}
                   <a href="{{ topic.url }}">{{ topic.title }}</a>
                 </h5>
-                <p class="list-group-item-text">
+                <div class="list-group-item-text">
                   <div style="margin-top: 6px;">
                     by <a href="{{ topic.user.url }}" style="color: #fff">
                       {{ topic.user.uname -}}
@@ -474,24 +523,10 @@
                       {{ topic.created_at|formatDate }}
                     </abbr>
                   </div>
-                  <!-- List topic tags -->
-                  {% if topic.tags %}
-                    <ul class="list-inline" style="margin: 0;">
-                      {% for tag in topic.tags %}
-                        <!-- Ignore tag if we're in the "tag's forum" -->
-                        {% if tag.id !== forum.tag_id %}
-                          <li data-toggle="tooltip" title="{{ tag.description }}"
-                              style="padding: 0;">
-                            <span class="label label-default">{{ tag.title }}</span>
-                          </li>
-                        {% endif %}
-                      {% endfor %}
-                    </ul>
-                  {% endif %}
-                </p>
+                </div>
               </div> <!-- /col6 -->
               {% if topic.moved_at && topic.moved_from_forum_id === forum.id %}
-                <div class="col-xs-6">
+                <div class="col-sm-6">
                   Moved to
                   <a href="/forums/{{ topic.forum_id }}">
                     {{ topic.forum.title -}}
@@ -503,23 +538,76 @@
                   </div>
                 </div> <!-- /col-6 -->
               {% else %}
-                <div class="col-xs-1"></div>
-                <div class="col-xs-2">{{ topic.posts_count|commafy }}</div>
+                <div class="col-sm-2">
+                  <div class="text-muted">{{ topic.posts_count|commafy }} Posts</div>
+                </div>
                 <!-- Latest post -->
-                <div class="col-xs-3">
-                  <div>
-                    by <a href="{{ topic.latest_user.url }}" style="color: #fff">{{ topic.latest_user.uname }}</a>
-                  <a href="{{ topic.latest_post.url }}">
-                    <span class="glyphicon glyphicon-link"></span>
-                    &rarr;
-                  </a>
+                <div class="col-sm-4">
+                  <div class="latest-post text-right">
+                    Latest:
+                      <span class="by-line">
+                        <a href="{{ topic.latest_user.url }}" style="color: #fff">{{ topic.latest_user.uname }}</a>
+                      </span>
+                    <a href="{{ topic.latest_post.url }}" class="btn btn-default btn-xs" style="margin-left: 5px;">
+                      Go
+                      &rarr;
+                    </a>
+                    <br>
+                    <abbr class="timeago created-at"
+                          title="{{ topic.latest_post.created_at.toISOString() }}">
+                      {{ topic.latest_post.created_at|formatDate }}
+                    </abbr>
                   </div>
-                  <abbr class="timeago created-at"
-                        title="{{ topic.latest_post.created_at.toISOString() }}">
-                    {{ topic.latest_post.created_at|formatDate }}
-                  </abbr>
                 </div>
               {% endif %} <!-- /if moved -->
             </div> <!-- /.row -->
           </div> <!-- /.list-group-item -->
+{% endmacro %}
+
+
+<!-- USER BAR -->
+
+
+{% macro renderUserBar(clss) %}
+  <div class="btn-group btn-group-sm {{ clss }}">
+    <a href="/me/convos"
+       class="btn btn-default navbar-btn">
+      <span class="glyphicon glyphicon-envelope"></span>
+      PMs
+      {# Doing !==0 instead of >0 so user can see any bugs where
+         notification count goes negative #}
+      {% if ctx.currUser.convo_notifications_count !== 0 %}
+      <div class="badge">
+        {{ ctx.currUser.convo_notifications_count|commafy }}
+      </div>
+      {% endif %}
+    </a>
+    <a href="/me/subscriptions"
+       class="btn btn-default navbar-btn">
+      <span class="glyphicon glyphicon-list"></span>
+      Subs
+    </a>
+    {% if ctx.can(ctx.currUser, 'LEXUS_LOUNGE') %}
+      <a href="/lexus-lounge"
+         class="btn btn-default navbar-btn">
+        <span class="glyphicon glyphicon-eye-open"></span>
+        Mod
+      </a>
+    {% endif %}
+
+    <a href="/me/notifications" class="btn btn-default navbar-btn">
+      <span class="glyphicon glyphicon-bell"></span>
+      {% if ctx.currUser.notifications_count > 0 %}
+        <div class="badge">
+          {{ ctx.currUser.notifications_count|commafy }}
+        </div>
+      {% endif %}
+    </a>
+
+    <a href="/users/{{ ctx.currUser.id }}"
+       class="btn btn-default navbar-btn">
+      <span class="glyphicon glyphicon-user"></span>
+      {{ ctx.currUser.uname }}
+    </a>
+  </div>
 {% endmacro %}

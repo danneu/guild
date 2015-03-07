@@ -4,7 +4,7 @@
 
 {% block embed %}
 
-  {{ ads.topLeaderboard() }}
+  {{ ads.topResponsive() }}
 
   <div class="row">
     <div class="col-sm-9">
@@ -16,14 +16,13 @@
                 <div class="list-group category-group">
                   <div class="list-group-item category-group-heading">
                     <div class="row">
-                      <div class="col-xs-7">
-                        <h4 style="font-family: Georgia; font-size: 2.0em;">
+                      <div class="col-sm-12">
+                        <h4 class="category-title">
                           {{ category.title }}
                         </h4>
                       </div>
-                      <div class="col-xs-1 category-group-stats-heading text-muted">Topics</div>
-                      <div class="col-xs-1 category-group-stats-heading text-muted">Posts</div>
-                      <div class="col-xs-3 category-group-stats-heading text-muted">Latest Post</div>
+                      <!-- <div class="col-sm-2 category-group-stats-heading text-muted"></div> -->
+                      <!-- <div class="col-sm-3 category-group-stats-heading text-muted">Latest Post</div> -->
                     </div> <!-- /.row -->
                   </div> <!-- /.list-group-item -->
                   {% for forum in category.forums %}
@@ -31,73 +30,93 @@
                          <!-- style="background-color: #3d3a3a; border: 1px solid #111; -->
                          <!--        color: #fff;" -->
                       <div class="row">
-                        <div class="col-xs-7">
+                        <div class="col-sm-7">
                           <h5 class="list-group-item-heading forum-item-title">
                             <a href="{{ forum.url }}">{{ forum.title }}</a>
                             {% if forum.viewerCount > 0 %}
-                              <span style="font-weight: 400;">({{ forum.viewerCount }} Viewing)</span>
+                              <span style="font-weight: 400; font-size: 75%;">({{ forum.viewerCount }} Viewing)</span>
                             {% endif %}
                           </h5>
+
+                          <small class="text-muted">
+                          {{ forum.topics_count|commafy }} Topics,
+                          {{ forum.posts_count|commafy }} Posts
+                          </small>
+
                           {% if forum.description %}
-                            <p class="forum-item-description">{{ forum.description }}</p>
+                            <p class="forum-item-description hidden-xs">{{ forum.description }}</p>
                           {% endif %}
                         </div> <!-- /.col-xs-7 -->
-                        <div class="col-xs-1">{{ forum.topics_count|commafy }}</div>
-                        <div class="col-xs-1">{{ forum.posts_count|commafy }}</div>
-                        <div class="col-xs-3">
+                        <div class="col-sm-5">
                           {% if forum.latest_post %}
-                            <div>
-                              <a href="{{ forum.latest_post.url }}">
+                            <div class="latest-post well well-sm">
+                              Latest:
+                              <a href="{{ forum.latest_post.url }}" class="latest-title">
                                 {{ forum.latest_topic.title }}
                               </a>
+                              <div class="by-line">
+                                by
+                                <a href="{{ forum.latest_user.url }}" style="color: #fff;">
+                                  {{- forum.latest_user.uname -}}
+                                </a>,
+                                <abbr class="timeago"
+                                      title="{{ forum.latest_post.created_at.toISOString() }}">
+                                  {{ forum.latest_post.created_at|formatDate }}
+                                </abbr>
+                              </div>
                             </div>
-                            <div>
-                              by
-                              <a href="{{ forum.latest_user.url }}" style="color: #fff;">
-                                {{- forum.latest_user.uname -}}
-                              </a>
-                            </div>
-                            <abbr class="timeago"
-                                  title="{{ forum.latest_post.created_at.toISOString() }}">
-                              {{ forum.latest_post.created_at|formatDate }}
-                            </abbr>
                           {% else %}
                             --
                           {% endif %}
                         </div>
                       </div> <!-- /.row -->
                       <!-- Subforums -->
+                      {% if forum.forums %}
+                      <div class="" style="margin-top: 5px; margin-bottom: 5px; background-color: ##222020;">
+                      <!-- <div class="well well-sm" style="margin-top: 5px; margin-bottom: 5px; background-color: #635D5E;"> -->
+
                       {% for subforum in forum.forums %}
-                        <div class="row">
-                          <div class="col-xs-7">
-                            <img src="/img/subforum-icon.gif"
-                                 alt="Subforum Icon"
-                                 title="Subforum Icon">
-                            <a href="{{ subforum.url }}">{{ subforum.title }}</a>
-                            {% if subforum.viewerCount > 0 %}
-                              ({{ subforum.viewerCount }} Viewing)
-                            {% endif %}
+                        <div class="row" style="padding-top: 0px;">
+                          <div class="col-sm-7">
+                            <h5 class="list-group-item-heading subforum-item-title">
+                              <img src="/img/subforum-icon.gif"
+                                   alt="Subforum Icon"
+                                   title="Subforum Icon">
+                              <a href="{{ subforum.url }}">{{ subforum.title }}</a>
+                              {% if subforum.viewerCount > 0 %}
+                                ({{ subforum.viewerCount }} Viewing)
+                              {% endif %}
+                            </h5>
+                            <small class="text-muted">
+                              {{ forum.topics_count|commafy }} Topics,
+                              {{ forum.posts_count|commafy }} Posts
+                            </small>
                           </div>
-                          <div class="col-xs-1">{{ subforum.topics_count|commafy }}</div>
-                          <div class="col-xs-1">{{ subforum.posts_count|commafy }}</div>
-                          <div class="col-xs-3">
+
+                          <div class="col-sm-5">
                             {% if subforum.latest_post %}
-                              <a href="{{ subforum.latest_post.url }}">{{ subforum.latest_topic.title }}</a>
-                              <br>by
-                              <a href="{{ subforum.latest_user.url }}" style="color: #fff">
-                                {{ subforum.latest_user.uname }}
-                              </a>
-                              <br>
-                              <abbr class="timeago"
-                                    title="{{ subforum.latest_post.created_at.toISOString() }}">
-                                {{ subforum.latest_post.created_at|formatDate }}
-                              </abbr>
+                              <div class="latest-post well well-sm">
+                                Latest:
+                                <a href="{{ subforum.latest_post.url }}" class="latest-title">{{ subforum.latest_topic.title }}</a>
+                                <div class="by-line">
+                                  by
+                                  <a href="{{ subforum.latest_user.url }}" style="color: #fff;">
+                                    {{- subforum.latest_user.uname -}}
+                                  </a>,
+                                  <abbr class="timeago"
+                                        title="{{ subforum.latest_post.created_at.toISOString() }}">
+                                    {{ subforum.latest_post.created_at|formatDate }}
+                                  </abbr>
+                                </div><!--/by-line-->
+                              </div>
                             {% else %}
                               --
                             {% endif %}
                           </div>
                         </div> <!-- /.row -->
                       {% endfor %}
+                      </div><!--/well-->
+                      {% endif %}
                     </div> <!-- /.list-group-item -->
                 {% endfor %} <!-- endfor forums -->
                 </div> <!-- /.list-group -->
@@ -113,7 +132,7 @@
   </div><!--/row-->
 
   <!-- Stats box -->
-  <div class="panel panel-default" style="border: 1px solid #111">
+  <div class="panel panel-default stats-panel" style="border: 1px solid #111">
     <div class="panel-body">
       <div class="row" style="border-bottom: 1px solid #111; padding-bottom: 10px">
         <div class="col-xs-12">
@@ -132,20 +151,20 @@
           {% endfor %}
         </div>
       </div> <!--/.row-->
-      <div class="row">
-        <div class="col-xs-2 text-center">
+      <div class="row stats-panel-aggregates">
+        <div class="col-sm-2">
           <h4>Users</h4>
-          <div><b>{{ stats.usersCount|commafy }}</b> total</div>
+          <div class="text-muted"><b>{{ stats.usersCount|commafy }}</b> total</div>
         </div>
-        <div class="col-xs-2 text-center">
+        <div class="col-sm-2">
           <h4>Topics</h4>
-          <div><b>{{ stats.topicsCount|commafy }}</b> total</div>
+          <div class="text-muted"><b>{{ stats.topicsCount|commafy }}</b> total</div>
         </div>
-        <div class="col-xs-2 text-center">
+        <div class="col-sm-2">
           <h4>Posts</h4>
-          <div><b>{{ stats.postsCount|commafy }}</b> total</div>
+          <div class="text-muted"><b>{{ stats.postsCount|commafy }}</b> total</div>
         </div>
-        <div class="col-xs-2 text-center">
+        <div class="col-sm-6">
           <h4>Newest User</h4>
           <div>
             {% if stats.latestUser %}

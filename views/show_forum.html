@@ -13,14 +13,14 @@
   <!-- Viewers -->
   {{ macros.renderViewers(viewers) }}
 
-  {{ ads.topLeaderboard() }}
+  {{ ads.topResponsive() }}
 
   <!-- Page header -->
 
   <div class="page-header" style="border-color: #000">
     <h3><a href="{{ forum.url }}" style="color: #fff">{{ forum.title }}</a></h3>
     {% if forum.description %}
-      <div>{{ forum.description }}</div>
+      <div class="hidden-xs">{{ forum.description }}</div>
     {% endif %}
   </div>
 
@@ -39,18 +39,22 @@
   {{ paginate.render(currPage, totalPages, forum.url) }}
 
 
-  <!-- New Topic button -->
+  <div class="forum-controls text-right">
 
-  {% if ctx.can(ctx.currUser, 'CREATE_TOPIC', forum) %}
-    <a class="btn btn-primary pull-right" href="{{ forum.url }}/topics/new">
-      <span class="glyphicon glyphicon-pencil"></span>
-      {% if forum.is_roleplay %}
-        New Roleplay
-      {% else %}
-        New Topic
-      {% endif %}
-    </a>
-  {% endif %}
+    <!-- New Topic button -->
+
+    {% if ctx.can(ctx.currUser, 'CREATE_TOPIC', forum) %}
+      <a class="btn btn-primary new-topic-btn" href="{{ forum.url }}/topics/new">
+        <span class="glyphicon glyphicon-pencil"></span>
+        {% if forum.is_roleplay %}
+          New Roleplay
+        {% else %}
+          New Topic
+        {% endif %}
+      </a>
+    {% endif %}
+
+  </div><!--/forum-controls-->
 
   <!-- Tabs -->
 
@@ -104,7 +108,7 @@
            style="background-color: #1D1D1D; border: 1px solid #111;">
         <div class="row">
           {% if forum.is_roleplay %}
-            {{ macros.renderRoleplayItemHeading(topic, forum) }}
+            {{ macros.renderCheckItemHeading(topic, forum) }}
           {% elif forum.is_check %}
             {{ macros.renderCheckItemHeading(topic, forum) }}
           {% else %}
@@ -116,7 +120,7 @@
 
         {% if ctx.can(ctx.currUser, 'READ_TOPIC', topic) %}
           {% if forum.is_roleplay %}
-            {{ macros.renderRoleplayItem(topic, forum) }}
+            {{ macros.renderCheckItem(topic, forum) }}
           {% elif forum.is_check %}
             {{ macros.renderCheckItem(topic, forum) }}
           {% else %}

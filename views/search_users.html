@@ -1,4 +1,5 @@
 {% extends 'layouts/master.html' %}
+{% import './macros/ads.html' as ads %}
 
 {% block embed %}
   <ol class="breadcrumb">
@@ -6,11 +7,13 @@
     <li>Users</li>
   </ol>
 
+  {{ ads.topResponsive() }}
+
   <div class="page-header">
     <!-- Search bar -->
     <form name="search-bar" class="form-inline pull-right">
       <div class="form-group">
-        <input type="text" name="text" placeholder="Username (or part of one)" class="form-control" style="width: 200px;" value="{{ term }}">
+        <input type="text" name="text" placeholder="Username (or part of one)" class="form-control" style="width: 200px; display: inline-block;" value="{{ term }}">
         <input type="submit" value="Search" class="btn btn-default">
         {% if term %}
           <a href="/users" class="btn btn-danger">Clear Search</a>
