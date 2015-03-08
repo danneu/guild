@@ -43,11 +43,17 @@
       <div class="form-group">
         <label for="password1-input">Password:</label>
         <input id="password1-input" type="password" name="password1"
+               {% if ctx.flash.params %}
+                value="{{ ctx.flash.params.password1 }}"
+               {% endif %}
                class="form-control" required>
       </div>
       <div class="form-group">
         <label for="password2-input">Confirm Password:</label>
         <input id="password2-input" type="password" name="password2"
+               {% if ctx.flash.params %}
+                value="{{ ctx.flash.params.password2 }}"
+               {% endif %}
                class="form-control" required>
       </div>
       <div class="form-group" style="min-height: 78px;">
