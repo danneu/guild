@@ -180,19 +180,20 @@
         </div> <!-- /.panel -->
       </form>
 
-      <!-- Hide sigs checkbox -->
+      <!-- Hide sigs/avatars -->
 
       <form action="{{ user.url }}" method="post" class="form-horizontal">
         <input type="hidden" name="_method" value="put">
         <div class="panel panel-default no-select"
              style="border-color: #000">
-          <div class="panel-heading">Hide Signatures</div>
+          <div class="panel-heading">Hide Signatures/Avatars</div>
           <!-- PANEL BODY -->
           <div class="panel-body">
 
-            <p>Check this box if you don't want to see signatures beneath posts. Mobile users should check this to save bandwidth.</p>
+            <p>These options allow you to stop signatures and avatars from appearing/loading.</p>
 
             <input name="hide-sigs" type="hidden" value="false">
+            <input name="hide-avatars" type="hidden" value="false">
             <div class="checkbox">
               <label>
                 <input id="hide-sigs-input"
@@ -205,12 +206,23 @@
                 Hide Signatures?
               </label>
             </div>
+            <div class="checkbox">
+              <label>
+                <input id="hide-avatars-input"
+                       name="hide-avatars"
+                       type="checkbox"
+                       {% if user.hide_avatars %}
+                         checked
+                       {% endif %}
+                       >
+                Hide Avatars?
+              </label>
+            </div>
           </div> <!-- /.panel-body -->
           <!-- PANEL FOOTER -->
           <div class="panel-footer" style="border-color: #000">
             <div class="text-right">
-              <input id="email-submit" type="submit" value="Save"
-                     class="btn btn-primary">
+              <input type="submit" value="Save" class="btn btn-primary">
             </div>
           </div> <!-- /.panel-footer -->
         </div> <!-- /.panel -->

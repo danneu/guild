@@ -909,6 +909,7 @@ app.put('/api/users/:id/bio', function*() {
 // - avatar-url
 // - sig (which will pre-render sig_html field)
 // - hide-sigs
+// - hide-avatars
 // - is-ghost
 // - custom-title
 // - is-grayscale
@@ -936,6 +937,8 @@ app.put('/users/:slug', function*() {
   // Coerce checkboxes to bool only if they are defined
   if (!_.isUndefined(this.request.body['hide-sigs']))
     this.checkBody('hide-sigs').toBoolean();
+  if (!_.isUndefined(this.request.body['hide-avatars']))
+    this.checkBody('hide-avatars').toBoolean();
   if (!_.isUndefined(this.request.body['is-ghost']))
     this.checkBody('is-ghost').toBoolean();
   if (!_.isUndefined(this.request.body['is-grayscale']))
@@ -973,6 +976,9 @@ app.put('/users/:slug', function*() {
     hide_sigs: _.isBoolean(this.request.body['hide-sigs'])
                  ? this.request.body['hide-sigs']
                  : user.hide_sigs,
+    hide_avatars: _.isBoolean(this.request.body['hide-avatars'])
+                 ? this.request.body['hide-avatars']
+                 : user.hide_avatars,
     is_ghost: _.isBoolean(this.request.body['is-ghost'])
                 ? this.request.body['is-ghost']
                 : user.is_ghost,

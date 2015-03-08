@@ -45,7 +45,7 @@
 
 {% macro renderUserbitSmall(user) %}
     <div class="media">
-      {% if user.avatar_url %}
+      {% if !ctx.currUser || (user.avatar_url && !ctx.currUser.hide_avatars) %}
         <a class="media-left" href="{{ post.user.url }}">
           <img class="avatar-img {% if ctx.currUser.is_grayscale %}desaturate{% endif %}"
                src="{{ post.user.avatar_url }}"
@@ -85,7 +85,7 @@
     </div>
   {% endif %}
 
-  {% if user.avatar_url %}
+  {% if !ctx.currUser || (user.avatar_url && !ctx.currUser.hide_avatars) %}
     <div class="post-avatar"
          style="margin-top: 10px;">
       <img class="avatar-img {% if ctx.currUser.is_grayscale %}desaturate{% endif %}"
