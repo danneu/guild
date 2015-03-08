@@ -4,6 +4,11 @@ body {
     color: #fff;
 }
 
+/* Lighten muted text so it shows better on dark bgs */
+.text-muted {
+    color: #999;
+}
+
 /* Provide a gutter so that content isn't flush against the bottom of the window */
 body {
     padding-bottom: 100px;
