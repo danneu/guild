@@ -1197,6 +1197,12 @@ hr {
     /* margin-right: 10px; */
 }
 @media (max-width: 767px) {
+
+    /* Shrink bbcode headers */
+    .bb-h1 { font-size: 2.50em; }
+    .bb-h2 { font-size: 1.75em; }
+    .bb-h3 { font-size: 1.25em; }
+
     /* Shrink pager margins */
     .pager {
         margin-top: 10px;
