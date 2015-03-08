@@ -1687,10 +1687,12 @@ app.put('/topics/:topicSlug/tags', function*() {
   this.validateBody('tag-ids')
     .toInts()
     .uniq()
+    .tap(function(ids) {
+      return ids.filter(function(n) {
+        return n > 0;
+      });
+    })
     .isLength(1, 5, 'Must select 1-5 tags');
-  this.vals['tag-ids'] = this.vals['tag-ids'].filter(function(n) {
-    return n > 0;
-  });
 
   // Add this forum's tag_id if it has one
   var tagIds = _.chain(this.vals['tag-ids'])
@@ -1765,14 +1767,15 @@ app.post('/forums/:slug/topics', function*() {
   if (forum.has_tags_enabled) {
     this.validateBody('tag-ids')
       .toArray()
+      .toInts()
+      .tap(function(ids) {  // One of them will be -1
+        return ids.filter(function(n) {
+          return n > 0;
+        });
+      })
       .isLength(1, 5, 'Must select 1-5 tags')
-      .toInts();
   }
   this.validateBody('tag-ids').default([]);
-  this.vals['tag-ids'] = this.vals['tag-ids'].filter(function(n) {
-    return n > 0;
-  });
-
 
   debug({valid: this.vals, body: this.request.body});
 
