@@ -578,7 +578,7 @@ textarea {
 }
 
 #tagline {
-    color: #888;
+    color: #666;
     font-size: 1.5em;
     text-align: center;
     margin-top: 0px;
@@ -1265,3 +1265,10 @@ hr {
         padding-right: 0;
     }
 }
+
+@media (max-width: 768px) {
+    /* Shrink pbp tagline on mobile */
+    #tagline {
+        font-size: 1em;
+    }
+  }
