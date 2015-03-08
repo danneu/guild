@@ -318,6 +318,47 @@
         </div> <!-- /.panel -->
       </form>
 
+      <!-- Toggle user.force_device_width -->
+
+      <a name="force-device-width"></a>
+      <form action="{{ user.url }}" method="post">
+        <input type="hidden" name="_method" value="put">
+        <div class="panel panel-default no-select" style="border-color: #000">
+          <div class="panel-heading">Force Device Width</div>
+          <!-- PANEL BODY -->
+          <div class="panel-body">
+            <p>
+              Default: On
+            </p>
+            <p>This setting forces the website to render at your device's width. You generally want to leave this on <b>unless</b> the Guild is so broken on your smartphone/tablet that you can't do anything. Disabling this setting might help in some cases.</p>
+            <div class="form-group">
+
+              <input name="force-device-width" type="hidden" value="false">
+              <div class="checkbox">
+                <label>
+                  <input id="force-device-width-input"
+                         name="force-device-width"
+                         type="checkbox"
+                         {% if user.force_device_width %}
+                           checked
+                         {% endif %}
+                         >
+                  Force the website to scale to your device's width
+                </label>
+              </div>
+
+            </div>
+          </div> <!-- /.panel-body -->
+          <!-- PANEL FOOTER -->
+          <div class="panel-footer" style="border-color: #000">
+            <div class="text-right">
+              <input id="force-device-width-submit" type="submit" value="Save"
+                     class="btn btn-primary">
+            </div>
+          </div> <!-- /.panel-footer -->
+        </div> <!-- /.panel -->
+      </form>
+
       <!-- Toggle grayscale avatars -->
 
       <a name="grayscale-avatars"></a>

@@ -912,6 +912,7 @@ app.put('/api/users/:id/bio', function*() {
 // - is-ghost
 // - custom-title
 // - is-grayscale
+// - force-device-width
 app.put('/users/:slug', function*() {
   debug('BEFORE', this.request.body);
 
@@ -939,6 +940,8 @@ app.put('/users/:slug', function*() {
     this.checkBody('is-ghost').toBoolean();
   if (!_.isUndefined(this.request.body['is-grayscale']))
     this.checkBody('is-grayscale').toBoolean();
+  if (!_.isUndefined(this.request.body['force-device-width']))
+    this.checkBody('force-device-width').toBoolean();
 
   debug('AFTER', this.request.body);
 
@@ -975,7 +978,10 @@ app.put('/users/:slug', function*() {
                 : user.is_ghost,
     is_grayscale: _.isBoolean(this.request.body['is-grayscale'])
                  ? this.request.body['is-grayscale']
-                 : user.is_grayscale
+                 : user.is_grayscale,
+    force_device_width: _.isBoolean(this.request.body['force-device-width'])
+                 ? this.request.body['force-device-width']
+                 : user.force_device_width
   });
   user = pre.presentUser(user);
   this.flash = { message: ['success', 'User updated'] };

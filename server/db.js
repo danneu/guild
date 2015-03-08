@@ -1047,7 +1047,8 @@ SET
   is_ghost = COALESCE($6, is_ghost),
   sig_html = COALESCE($7, sig_html),
   custom_title = COALESCE($8, custom_title),
-  is_grayscale = COALESCE($9, is_grayscale)
+  is_grayscale = COALESCE($9, is_grayscale),
+  force_device_width = COALESCE($10, force_device_width)
 WHERE id = $1
 RETURNING *
   */});
@@ -1060,7 +1061,8 @@ RETURNING *
     attrs.is_ghost,
     attrs.sig_html,
     attrs.custom_title,  // $8
-    attrs.is_grayscale // $9
+    attrs.is_grayscale,  // $9
+    attrs.force_device_width  // $10
   ]);
   return result.rows[0];
 };

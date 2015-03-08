@@ -31,6 +31,7 @@ CREATE TABLE users (
   avatar_url     text      NOT NULL DEFAULT '',
   hide_sigs      boolean   NOT NULL  DEFAULT false,
   is_grayscale   boolean   NOT NULL  DEFAULT false,
+  force_device_width boolean NOT NULL DEFAULT true,
   -- Bio
   bio_markup     text      NULL,
   bio_html       text      NULL,
