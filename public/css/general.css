@@ -83,11 +83,11 @@ a {
 /* ===SHOW TOPIC==================== */
 
 /* Add some space between controls and tabs/postlist below them */
-.topic-controls {
+.topic-modkit {
     margin-bottom: 10px;
 }
 /* Put them inline  */
-.topic-controls form {
+.topic-modkit form {
     display: inline-block;
     margin-right: 10px;
 }
@@ -1192,9 +1192,24 @@ hr {
     word-wrap: break-word;
 }
 
+.topic-controls form {
+    display: inline-block;
+    /* margin-right: 10px; */
+}
 @media (max-width: 767px) {
+    /* - Shrink buttons above topic on mobile
+       - Center them
+     */
     .topic-controls {
         float: none;
+        text-align: center;
+        /* margin-bottom: 10px; */
+    }
+    .topic-controls button,
+    .topic-controls a {
+        padding: 1px 5px;
+        font-size: 12px;
+        line-height: 1.5;
     }
 
     /* Reduce post content padding in smallest width */

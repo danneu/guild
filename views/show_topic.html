@@ -55,7 +55,7 @@
     <!-- Topic state buttons -->
 
     {% if ctx.currUser && cancan.isStaffRole(ctx.currUser.role) %}
-    <div class="topic-controls topic-modkit" style="display: none;">
+    <div class="topic-modkit" style="display: none;">
 
       <!-- STICK -->
       {% if ctx.can(ctx.currUser, 'STICK_TOPIC', topic) %}
@@ -174,16 +174,7 @@
   <!-- Pagination -->
   {{ paginate.render(currPage, totalPages, ctx.request.path) }}
 
-  <div class="topic-controls text-right">
-
-    <!-- New Reply button -->
-
-    {% if ctx.can(ctx.currUser, 'CREATE_POST', topic) %}
-      <a class="btn btn-primary pull-right" href="#new-reply-form">
-        <span class="glyphicon glyphicon-pencil"></span>
-        New Reply
-      </a>
-    {% endif %}
+  <div class="topic-controls">
 
     <!-- Subscribe button -->
 
@@ -192,7 +183,7 @@
         <form action="{{ topic.subscriptionUrl }}" method="post">
           <input type="hidden" name="_method" value="delete">
           <input type="hidden" name="return-to-topic" value="true">
-          <button type="submit" class="btn btn-danger pull-right" style="margin-right: 0px">
+          <button type="submit" class="btn btn-danger" style="margin-right: 0px">
             <span class="glyphicon glyphicon-remove"></span>
             Unsubscribe
           </button>
@@ -201,12 +192,21 @@
         <form action="/me/subscriptions" method="post">
           <input type="hidden" name="topic-id" value="{{ topic.id }}">
           <input type="hidden" name="return-to-topic" value="true">
-          <button type="submit" class="btn btn-success pull-right" style="margin-right: 0px">
+          <button type="submit" class="btn btn-success" style="margin-right: 0px">
             <span class="glyphicon glyphicon-plus"></span>
             Subscribe
           </button>
         </form>
       {% endif %}
+    {% endif %}
+
+    <!-- New Reply button -->
+
+    {% if ctx.can(ctx.currUser, 'CREATE_POST', topic) %}
+      <a class="btn btn-primary" href="#new-reply-form">
+        <span class="glyphicon glyphicon-pencil"></span>
+        New Reply
+      </a>
     {% endif %}
 
   </div> <!--/.topic-controls-->
