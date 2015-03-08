@@ -122,8 +122,10 @@ a {
 
 /* Paginater adjustments taken from oldguild. */
 
-.pager li > a, .pager li > span {
-    border-radius: 0;
+/* darken hover */
+.pager li > a:hover, .pager li > a:focus {
+    background: none;
+    border-color: #222;
 }
 
 .pager li>a {
