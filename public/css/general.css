@@ -1129,7 +1129,7 @@ hr {
     margin-bottom: 0px;
     font-size: 1.3em;
     /* text-transform: uppercase; */
-    font-style: oblique;
+    /* font-style: oblique; */
     font-weight: bold;
 }
 
@@ -1138,7 +1138,7 @@ hr {
     margin-bottom: 0px;
     font-size: 1.1em;
     /* text-transform: uppercase; */
-    font-style: oblique;
+    /* font-style: oblique; */
     /* font-weight: bold; */
 }
 

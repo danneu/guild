@@ -64,7 +64,7 @@
                         </div> <!-- /.col-xs-7 -->
                         <div class="col-sm-5">
                           {% if forum.latest_post %}
-                            <div class="latest-post well well-sm">
+                            <div class="latest-post">
                               Latest:
                               <a href="{{ forum.latest_post.url }}" class="latest-title">
                                 {{ forum.latest_topic.title }}
@@ -108,6 +108,7 @@
                             </small>
                           </div>
 
+                          {#
                           <div class="col-sm-5">
                             {% if subforum.latest_post %}
                               <div class="latest-post well well-sm">
@@ -128,6 +129,7 @@
                               --
                             {% endif %}
                           </div>
+                          #}
                         </div> <!-- /.row -->
                       {% endfor %}
                       </div><!--/well-->
