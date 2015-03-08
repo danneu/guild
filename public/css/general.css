@@ -9,6 +9,11 @@ body {
     color: #999;
 }
 
+/* Darken label text so it shows better on dark bg */
+.label {
+    color: #111;
+}
+
 /* Provide a gutter so that content isn't flush against the bottom of the window */
 body {
     padding-bottom: 100px;
@@ -858,9 +863,6 @@ input[type="text"].form-control {
 .label-success {
     background-color: #3BB878;
 
-}
-.label {
-      text-shadow: 0 -1px 0 rgba(0,0,0,.2);
 }
 .bbcode-errors p {
     color: #ccc;
