@@ -99,7 +99,9 @@
                                    title="Subforum Icon">
                               <a href="{{ subforum.url }}">{{ subforum.title }}</a>
                               {% if subforum.viewerCount > 0 %}
+                                <span style="font-weight: 400; font-size: 80%;">
                                 ({{ subforum.viewerCount }} Viewing)
+                                </span>
                               {% endif %}
                             </h5>
                             <small class="text-muted">
