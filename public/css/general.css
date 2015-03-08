@@ -1190,4 +1190,13 @@ hr {
     .topic-controls {
         float: none;
     }
+
+    /* Reduce post content padding in smallest width */
+    .panel-body {
+        padding: 10px;
+    }
+    .post-content-wrapper {
+        padding-left: 0;
+        padding-right: 0;
+    }
 }
