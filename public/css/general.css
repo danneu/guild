@@ -1197,14 +1197,35 @@ hr {
     /* margin-right: 10px; */
 }
 @media (max-width: 767px) {
+    /* Shrink pager margins */
+    .pager {
+        margin-top: 10px;
+        margin-bottom: 10px;
+    }
+
+    /* Shrink topic heading */
+    .topic-heading {
+        font-size: 18px;
+    }
+    .topic-page-header {
+        margin-bottom: 0;
+    }
+    .post-type-label {
+        font-size: 18px;
+        margin-bottom: 0;
+    }
+
     /* - Shrink buttons above topic on mobile
        - Center them
      */
+    .forum-controls,
     .topic-controls {
         float: none;
         text-align: center;
         /* margin-bottom: 10px; */
     }
+    .forum-controls button,
+    .forum-controls a,
     .topic-controls button,
     .topic-controls a {
         padding: 1px 5px;

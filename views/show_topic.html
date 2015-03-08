@@ -20,8 +20,8 @@
 
   <!-- Page header -->
 
-  <div class="page-header" style="border: 0">
-    <h2>
+  <div class="page-header topic-page-header" style="border: 0;">
+    <h2 class="topic-heading">
       {% if topic.is_closed %}
         <span class="glyphicon glyphicon-lock text-muted" title="Closed" data-toggle="tooltip"></span>
       {% endif %}
@@ -40,17 +40,23 @@
           <small>Page {{ currPage }}</small>
         {% endif %}
       </a>
-
-      {% if ctx.can(ctx.currUser, 'UPDATE_TOPIC', topic) %}
-        <small class="pull-right" style="margin-left: 10px;">
-          <a href="{{ topic.url }}/edit">Edit</a>
-        </small>
-      {% endif %}
-
-      {% if ctx.currUser && cancan.isStaffRole(ctx.currUser.role) %}
-        <button type="button" id="toggle-topic-modkit" class="pull-right btn btn-default btn-xs">Toggle Modkit</button>
-      {% endif %}
     </h2>
+
+    <!-- -->
+
+    {% if ctx.can(ctx.currUser, 'UPDATE_TOPIC', topic) %}
+      <a href="{{ topic.url }}/edit" style="margin-bottom: 10px;"
+         class="btn btn-xs btn-default">Edit Topic</a>
+    {% endif %}
+
+    {% if ctx.currUser && cancan.isStaffRole(ctx.currUser.role) %}
+      <button type="button"
+              id="toggle-topic-modkit"
+              class="btn btn-default btn-xs"
+              style="margin-bottom: 10px;"
+              >Toggle Modkit</button>
+    {% endif %}
+
 
     <!-- Topic state buttons -->
 
@@ -146,7 +152,7 @@
 
     <!-- List topic GM/co-GMs -->
     {% if topic.is_roleplay %}
-      <ul class="list-inline">
+      <ul class="list-inline" style="margin-bottom: 5px;">
         <li>
           <span class="label label-primary">GM</span>
           <a href="/users/{{ topic.user.uname|slugifyUname }}">{{ topic.user.uname }}</a>
