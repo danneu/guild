@@ -1274,3 +1274,9 @@ hr {
         font-size: 1em;
     }
   }
+
+.latest-post-btn {
+    color: #ffc300;
+    padding-left: 10px;
+    padding-right: 10px;
+}
