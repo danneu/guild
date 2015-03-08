@@ -140,6 +140,10 @@ function replaceGreenText(text) {
   return text.replace(greenTextRegExp, '$1<span class="bb-greentext">$2</span>');
 }
 
+function replaceHr(text) {
+  return text.replace(/&#91;hr&#93;/g, '<hr class="bb-hr">');
+}
+
 // Replace unames
 
 
@@ -1211,6 +1215,9 @@ var XBBCODE = (function() {
     errQueue = checkParentChildRestrictions("bbcode", config.text, -1, "", "", config.text);
 
     ret.html = parse(config);
+
+    // Replace [hr] with <hr>
+    ret.html = replaceHr(ret.html);
 
     // Wrap >greentext with styling
     ret.html = replaceGreenText(ret.html);
