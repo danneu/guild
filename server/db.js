@@ -1428,6 +1428,13 @@ var getMaxUserId = function*() {
   return result.rows[0].max_id;
 };
 
+// https://web.archive.org/web/20131218103719/http://roleplayerguild.com/
+var legacyCounts = {
+  topics: 210879,
+  posts: 9243457,
+  users: 44799
+};
+
 exports.getStats = wrapTimer(getStats);
 function* getStats() {
   var results = yield {
@@ -1440,6 +1447,9 @@ function* getStats() {
     latestUser: exports.getLatestUser(),
     onlineUsers: exports.getOnlineUsers()
   };
+  results.topicsCount += legacyCounts.topics;
+  results.usersCount += legacyCounts.users;
+  results.postsCount += legacyCounts.posts;
   return results;
 }
 
