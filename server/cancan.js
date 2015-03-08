@@ -133,6 +133,9 @@ function can(user, action, target) {
       // Can rate if you're authorized to read post
       return can(user, 'READ_POST', target);
     case 'READ_USER_LIST': // no target
+      // Let guests read this for now
+      return true;
+      //
       // Only registered users can
       if (!user) return false;
       return true;
