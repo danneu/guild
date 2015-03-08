@@ -2,13 +2,15 @@
 <!doctype html>
 <html lang="en">
 <head>
-  {# Guests always get the mobile version #}
+  {# Temporarily off
+   Guests always get the mobile version
   {% if !ctx.currUser %}
     <meta name="viewport" content="width=device-width, initial-scale=1">
   {% endif %}
   {% if ctx.currUser && ctx.currUser.force_device_width %}
     <meta name="viewport" content="width=device-width, initial-scale=1">
   {% endif %}
+  #}
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="keywords" content="roleplay forum, forum based roleplay, play by post, rp forum, roleplaying forum, rpg forum">
