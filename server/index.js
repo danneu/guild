@@ -793,10 +793,10 @@ app.use(route.post('/reset-password', function*() {
 app.post('/me/subscriptions', function*() {
   this.assert(this.currUser, 404);
 
-  // Ensure user doesn't have 100 subscriptions
+  // Ensure user doesn't have 200 subscriptions
   var subs = yield db.findSubscribedTopicsForUserId(this.currUser.id);
-  if (subs.length >= 100)
-    return this.body = 'You cannot have more than 100 topic subscriptions';
+  if (subs.length >= 200)
+    return this.body = 'You cannot have more than 200 topic subscriptions';
 
   var topicId = this.request.body['topic-id'];
   this.assert(topicId, 404);
