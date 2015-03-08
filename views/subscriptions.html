@@ -140,9 +140,9 @@
                        style="color: #fff">
                       {{ topic.latest_char_user.uname -}}
                     </a>
-                    <a href="{{ topic.latest_char_post.url}}">
-                      <span class="glyphicon glyphicon-link"></span>
-                      &rarr;
+                    <a href="{{ topic.latest_char_post.url}}"
+                       class="btn btn-default btn-xs">
+                      Go &rarr;
                     </a>
                   </div>
                   <abbr class="timeago" title="{{ topic.latest_char_post.created_at.toISOString() }}">
