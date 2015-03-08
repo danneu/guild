@@ -1045,7 +1045,7 @@ hr {
 /* ===============*/
 
 .latest-post .latest-title {
-    text-overflow: ellipsis;
+    /* text-overflow: ellipsis; */
     /* white-space: nowrap; */
     /* overflow: hidden; */
     /* max-width: 100px; */
@@ -1055,7 +1055,7 @@ hr {
 .latest-post {
     /* font-size: 85%; */
     font-size: 100%;
-    white-space: nowrap;
+    /* white-space: nowrap; */
     overflow: hidden;
 }
 
