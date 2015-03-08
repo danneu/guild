@@ -568,7 +568,7 @@
 <!-- USER BAR -->
 
 
-{% macro renderUserBar(clss) %}
+{% macro renderUserBar(showUname, clss) %}
   <div class="btn-group btn-group-sm {{ clss }}">
     <a href="/me/convos"
        class="btn btn-default navbar-btn">
@@ -607,7 +607,11 @@
     <a href="/users/{{ ctx.currUser.id }}"
        class="btn btn-default navbar-btn">
       <span class="glyphicon glyphicon-user"></span>
-      You
+      {% if showUname %}
+        {{ ctx.currUser.uname }}
+      {% else %}
+        You
+      {% endif %}
     </a>
   </div>
 {% endmacro %}

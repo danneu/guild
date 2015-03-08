@@ -99,7 +99,7 @@
             </form>
 
             <div class="hidden-xs">
-              {{ macros.renderUserBar('pull-right') }}
+              {{ macros.renderUserBar(true, 'pull-right') }}
             </div>
           {% endif %}
           <!-- If user is not logged in, show login/register controls -->
@@ -121,7 +121,7 @@
     <!-- userbar for mobile users -->
     {% if ctx.currUser %}
       <div class="text-center visible-xs-block">
-        {{ macros.renderUserBar() }}
+        {{ macros.renderUserBar(false) }}
       </div>
     {% endif %}
 
