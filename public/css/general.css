@@ -1186,6 +1186,12 @@ hr {
 .topic-controls {
     float: right;
 }
+
+.post-content {
+    /* Force long things in posts to wrap */
+    word-wrap: break-word;
+}
+
 @media (max-width: 767px) {
     .topic-controls {
         float: none;
