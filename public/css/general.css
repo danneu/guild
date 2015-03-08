@@ -244,10 +244,9 @@ blockquote {
         margin-top: 10px;
     }
     .post-sig {
-        display: none;
         margin-top: 20px;
-        padding-top: 0;
-        border-top:0;
+        /* padding-top: 0; */
+        /* border-top:0; */
     }
     /* .post-avatar { */
     /*     float: left; */
