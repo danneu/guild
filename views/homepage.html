@@ -157,7 +157,7 @@
                   class="btn btn-default btn-xs pull-right">
             View All
           </button>
-          <h4>{{ stats.onlineUsers.length }} Member Online (within 15 min)</h4>
+          <h4>{{ stats.onlineUsers.length }} Members Online (within 15 min)</h4>
           <div id="whos-online-list" style="display: none;">
             {% for user in stats.onlineUsers %}
               {% if ctx.can(ctx.currUser, 'READ_USER_ONLINE_STATUS', user) %}
