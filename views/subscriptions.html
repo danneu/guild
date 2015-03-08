@@ -26,12 +26,10 @@
     <div class="list-group">
       <div class="list-group-item" style="background-color: #1d1d1d; border: 1px solid #111;">
         <div class="row">
-          <div class="col-sm-1"></div>
           <div class="col-sm-3">Roleplay</div>
-          <div class="col-sm-2 hidden-xs">Posts</div>
-          <div class="col-sm-2 hidden-xs">Latest IC</div>
-          <div class="col-sm-2 hidden-xs">Latest OOC</div>
-          <div class="col-sm-2 hidden-xs">Latest Character</div>
+          <div class="col-sm-3 hidden-xs">Latest IC</div>
+          <div class="col-sm-3 hidden-xs">Latest OOC</div>
+          <div class="col-sm-3 hidden-xs">Latest Char</div>
         </div>
       </div>
 
@@ -43,25 +41,13 @@
           <div class="list-group-item topic-panel"
              style="background-color: #3d3a3a; border: 1px solid #111; color: #fff;">
             <div class="row">
-              <div class="col-sm-1">
-
-                <form action="{{ topic.subscriptionUrl }}" method="post"
-                      class="unsub-form hidden-xs">
-                  <input type="hidden" name="_method" value="delete">
-                  <button type="submit"
-                         class="btn btn-default btn-xs">
-                    <span class="glyphicon glyphicon-remove"></span>
-                  </button>
-                </form>
-
-              </div>
               <div class="col-sm-3">
 
                 <h5 class="list-group-item-heading topic-panel-title">
 
-                  <!-- Unsub button for xs -->
+                  <!-- Unsub button -->
                   <form action="{{ topic.subscriptionUrl }}" method="post"
-                        class="unsub-form hidden-sm hidden-md hidden-lg">
+                        class="unsub-form">
                     <input type="hidden" name="_method" value="delete">
                     <button type="submit"
                             class="btn btn-default btn-xs">
@@ -70,30 +56,29 @@
                   </form>
 
                   <!-- Title -->
-                  <a href="{{ topic.url }}" style="display: inline-block;">{{ topic.title }}</a>
+                  <a href="{{ topic.url }}">{{ topic.title }}</a>
                 </h5>
+                <div class="text-muted">
+                  {{ topic.ic_posts_count }} IC,
+                  {{ topic.ooc_posts_count }} OOC,
+                  {{ topic.char_posts_count }} Char
+                </div>
                 <p class="list-group-item-text topic-panel-desc">
                   by
                   <a href="{{ topic.user.url }}" style="color: #fff">
                     {{ topic.user.uname -}}
                   </a>,
-                  <abbr class="timeago" title="{{ topic.created_at.toISOString() }}">
+                  <abbr class="timeago" title="{{ topic.created_at.toISOString() }}"
+                        style="display: inline-block;">
                     {{ topic.formattedCreatedAt }}
                   </abbr>
                 </p>
               </div><!--/.col-4-->
-              <div class="col-sm-2">
-                <small class="text-muted">
-                {{ topic.ic_posts_count }} IC,
-                {{ topic.ooc_posts_count }} OOC,
-                {{ topic.char_posts_count }} Char
-                </small>
-              </div>
               <!-- Latest IC-->
-              <div class="col-sm-2">
+              <div class="col-sm-3">
                 {% if topic.latest_ic_user %}
+                  <span class="visible-xs-inline">Latest IC:</span>
                   <div class="latest-ic">
-                    Latest IC:
                     <a href="{{ topic.latest_ic_user.url }}"
                        style="color: #fff">
                       {{ topic.latest_ic_user.uname -}}
@@ -103,39 +88,43 @@
                       &rarr;
                     </a>
                   </div>
-                  <abbr class="timeago" title="{{ topic.latest_ic_post.created_at.toISOString() }}">
+                  <abbr class="timeago" title="{{ topic.latest_ic_post.created_at.toISOString() }}"
+                        style="display: inline-block;">
                     {{ topic.latest_ic_post.formattedCreatedAt }}
                   </abbr>
                 {% else %}
-                  Latest IC: --
+                  --
                 {% endif %}
               </div>
               <!-- Latest OOC-->
-              <div class="col-sm-2">
+              <div class="col-sm-3">
                 {% if topic.latest_ooc_user %}
+                  <span class="visible-xs-inline">Latest OOC:</span>
                   <div class="latest-ooc">
-                    Latest OOC:
-                    <a href="{{ topic.latest_ooc_user.url }}"
-                       style="color: #fff">
-                      {{ topic.latest_ooc_user.uname -}}
-                    </a>
-                    <a href="{{ topic.latest_ooc_post.url}}"
-                       class="btn btn-default btn-xs latest-post-btn">
-                      &rarr;
-                    </a>
+                    <div style="display: inline-block;">
+                      <a href="{{ topic.latest_ooc_user.url }}"
+                         style="color: #fff">
+                        {{ topic.latest_ooc_user.uname -}}
+                      </a>
+                      <a href="{{ topic.latest_ooc_post.url}}"
+                         class="btn btn-default btn-xs latest-post-btn">
+                        &rarr;
+                      </a>
+                    </div>
                   </div>
-                  <abbr class="timeago" title="{{ topic.latest_ooc_post.created_at.toISOString() }}">
+                  <abbr class="timeago" title="{{ topic.latest_ooc_post.created_at.toISOString() }}"
+                        style="display: inline-block;">
                     {{ topic.latest_ooc_post.formattedCreatedAt }}
                   </abbr>
                 {% else %}
-                  Latest OOC: --
+                  --
                 {% endif %}
               </div><!--/.col-2-->
-              <!-- Latest Character-->
-              <div class="col-sm-2">
+              <!-- Latest Char-->
+              <div class="col-sm-3">
                 {% if topic.latest_char_user %}
+                  <span class="visible-xs-inline">Latest Char:</span>
                   <div class="latest-char">
-                    Latest Char:
                     <a href="{{ topic.latest_char_user.url }}"
                        style="color: #fff">
                       {{ topic.latest_char_user.uname -}}
@@ -145,11 +134,12 @@
                       &rarr;
                     </a>
                   </div>
-                  <abbr class="timeago" title="{{ topic.latest_char_post.created_at.toISOString() }}">
+                  <abbr class="timeago" title="{{ topic.latest_char_post.created_at.toISOString() }}"
+                        style="display: inline-block;">
                     {{ topic.latest_char_post.formattedCreatedAt }}
                   </abbr>
                 {% else %}
-                  Latest Char: --
+                  --
                 {% endif %}
               </div><!--/.col-2-->
             </div><!--/.row-->

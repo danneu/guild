@@ -1166,6 +1166,7 @@ hr {
 .unsub-form button,
 .unsub-form {
     display: inline-block;
+    color: #d9534f;
 }
 
 @media (max-width: 768px) {
