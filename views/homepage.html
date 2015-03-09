@@ -19,6 +19,7 @@
                       <div class="col-sm-12">
                         <button type="button"
                                 class="btn btn-default btn-xs pull-right category-toggle"
+                                title="Hide/Show Category"
                                 {% if ctx.cookies.get('collapse' + category.id) %}
                                   data-is-collapsed="true"
                                 {% endif %}
