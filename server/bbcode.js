@@ -345,6 +345,7 @@ var XBBCODE = (function() {
   };
 
   var centerSpec = {
+    trimContents: true,
     openTag: function(params,content) {
       return '<div class="bb-center">';
     },
@@ -358,6 +359,7 @@ var XBBCODE = (function() {
     // Custom BBCode for the Guild
     //
     "hider": {
+      trimContents: true,
       openTag: function(params, content) {
         var title = params ? params.slice(1) : 'Hider';
         return '<div class="hider-panel">'+
@@ -399,6 +401,7 @@ var XBBCODE = (function() {
     },
     "code": {
       noParse: true,
+      trimContents: true,
       openTag: function(params, content) {
 
         return '<code>';
@@ -409,6 +412,7 @@ var XBBCODE = (function() {
     },
     "pre": {
       noParse: true,
+      trimContents: true,
       openTag: function(params, content) {
 
         return '<pre>';
@@ -426,6 +430,7 @@ var XBBCODE = (function() {
       }
     },
     "indent": {
+      trimContents: true,
       openTag: function(params, content) {
         return '<div class="bb-indent">';
       },
@@ -434,6 +439,7 @@ var XBBCODE = (function() {
       }
     },
     "h1": {
+      trimContents: true,
       openTag: function(params, content) {
         return '<div class="bb-h1">';
       },
@@ -442,6 +448,7 @@ var XBBCODE = (function() {
       }
     },
     "h2": {
+      trimContents: true,
       openTag: function(params, content) {
         return '<div class="bb-h2">';
       },
@@ -450,6 +457,7 @@ var XBBCODE = (function() {
       }
     },
     "h3": {
+      trimContents: true,
       openTag: function(params, content) {
         return '<div class="bb-h3">';
       },
@@ -626,6 +634,7 @@ var XBBCODE = (function() {
       displayContent: false
     },
     "justify": {
+      trimContents: true,
       openTag: function(params,content) {
         return '<span class="bb-justify">';
       },
@@ -708,6 +717,7 @@ var XBBCODE = (function() {
     //   noParse: true
     // },
     "quote": {
+      trimContents: true,
       openTag: function(params,content) {
         return '<blockquote class="bb-quote">';
       },
@@ -730,6 +740,7 @@ var XBBCODE = (function() {
       }
     },
     "right": {
+      trimContents: true,
       openTag: function(params,content) {
         return '<div class="bb-right">';
       },
@@ -927,6 +938,7 @@ var XBBCODE = (function() {
     //   restrictChildrenTo: ["*", "li"]
     // },
     "url": {
+      trimContents: true,
       openTag: function(params,content) {
 
         var myUrl;
@@ -961,6 +973,7 @@ var XBBCODE = (function() {
       add will act like this and this tag is an exception to the others.
     */
     "*": {
+      trimContents: true,
       openTag: function(params,content) {
         return "<li>";
       },
@@ -1112,7 +1125,12 @@ var XBBCODE = (function() {
       processedContent = "";
     }
 
-    return openTag + processedContent.trim() + closeTag;
+    if (tags[tagName].trimContents) {
+      console.log('Trimming');
+      processedContent = processedContent.trim();
+    }
+
+    return openTag + processedContent.replace(/^\n+/, '').replace(/\n+$/, '') + closeTag;
   };
 
   function parse(config) {
@@ -1230,7 +1248,7 @@ var XBBCODE = (function() {
       ret.html = ret.html.replace(/\[.*?\]/g,"");
     }
     if (config.addInLineBreaks) {
-      ret.html = '<div style="white-space:pre-line;">' + ret.html + '</div>';
+      ret.html = '<div style="white-space:pre-wrap;">' + ret.html + '</div>';
     }
 
     // ret.html = ret.html.replace("&#91;", "["); // put ['s back in
@@ -1243,6 +1261,11 @@ var XBBCODE = (function() {
 
     // Replace [@Mentions] with a link
     ret.html = replaceMentions(ret.html);
+
+    ret.html = ret.html.replace(/\t/g,'&#9;');
+    ret.html = ret.html.replace(/\r/g, '');
+    ret.html = ret.html.replace(/\n{2,}/g, '\n\n');
+    ret.html = ret.html.replace(/\n/g, '<br>');
 
     // concat tagErrs into errQueue at the last second
     // and then reset it for next run.

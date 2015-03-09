@@ -1178,7 +1178,6 @@ app.post('/topics/:topicSlug/posts', function*() {
 
   this.checkBody('post-type').isIn(['ic', 'ooc', 'char'], 'Invalid post-type');
   this.checkBody('markup')
-    .trim()
     .isLength(config.MIN_POST_LENGTH,
               config.MAX_POST_LENGTH,
               'Post must be between ' +

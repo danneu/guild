@@ -208,10 +208,10 @@ $(function() {
     var post_url = '/pms/' + post_id + '/raw';
     $.get(post_url, function(markup) {
       console.log('returned')
-      $reply_btn.removeClass('disabled').html('Reply');
+      $reply_btn.removeClass('disabled').html('Quote');
 
       var quote_markup = '[quote=@' + uname + ']\n' +
-        extractTopLevelMarkup(markup.trim())  +
+        extractTopLevelMarkup(markup)  +
         '\n[/quote]\n';
 
       var $reply_textarea = $('#reply-form textarea');

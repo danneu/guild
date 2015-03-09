@@ -257,6 +257,19 @@ var w;
       onShow: function(e) {
         console.log('show');
         $M = e;
+
+        e.$element.on('keydown', function(ev) {
+          if (ev.keyCode === 9) {
+            ev.preventDefault();
+            var prevContent = e.getContent();
+            var start = e.getSelection().start;
+            var end = e.getSelection().end;
+            var newContent = prevContent.slice(0, start) + '\t' +
+              prevContent.slice(end);
+            e.setContent(newContent);
+            e.setSelection(start + 1, start + 1);
+          }
+        });
       },
       onPreview: function(e) {
         // if (!e.isDirty())

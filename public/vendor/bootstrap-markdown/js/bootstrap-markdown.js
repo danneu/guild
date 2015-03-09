@@ -735,34 +735,34 @@
         case 18: // alt
           break
 
-        case 9: // tab
-          var nextTab
-          if (nextTab = this.getNextTab(),nextTab != null) {
-            // Get the nextTab if exists
-            var that = this
-            setTimeout(function(){
-              that.setSelection(nextTab.start,nextTab.end)
-            },500)
+        // case 9: // tab
+        //   var nextTab
+        //   if (nextTab = this.getNextTab(),nextTab != null) {
+        //     // Get the nextTab if exists
+        //     var that = this
+        //     setTimeout(function(){
+        //       that.setSelection(nextTab.start,nextTab.end)
+        //     },500)
 
-            blocked = true
-          } else {
-            // The next tab memory contains nothing...
-            // check the cursor position to determine tab action
-            var cursor = this.getSelection()
+        //     blocked = true
+        //   } else {
+        //     // The next tab memory contains nothing...
+        //     // check the cursor position to determine tab action
+        //     var cursor = this.getSelection()
 
-            if (cursor.start == cursor.end && cursor.end == this.getContent().length) {
-              // The cursor already reach the end of the content
-              blocked = false
+        //     if (cursor.start == cursor.end && cursor.end == this.getContent().length) {
+        //       // The cursor already reach the end of the content
+        //       blocked = false
 
-            } else {
-              // Put the cursor to the end
-              this.setSelection(this.getContent().length,this.getContent().length)
+        //     } else {
+        //       // Put the cursor to the end
+        //       this.setSelection(this.getContent().length,this.getContent().length)
 
-              blocked = true
-            }
-          }
+        //       blocked = true
+        //     }
+        //   }
 
-          break
+        //   break
 
         case 13: // enter
           blocked = false

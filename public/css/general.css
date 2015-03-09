@@ -1294,5 +1294,9 @@ hr {
 }
 
 .bb-list li {
-    white-space: pre-line;
+    white-space: pre-wrap;
+}
+
+.md-editor>textarea {
+    /* font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; */
 }
