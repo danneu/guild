@@ -957,32 +957,6 @@ app.post('/topics/:topicSlug/posts', function*() {
   this.response.redirect(post.url);
 });
 
-////////////////////////////////////////////////////////////
-
-var LEGACY_VBULLETIN_PATHS = [
-  '/forumdisplay.php',
-  '/misc.php',
-  '/external.php',
-  '/showgroups.php',
-  '/register.php',
-  '/index.php',
-  '/activity.php',
-  '/forum.php',
-  '/showthread.php',
-  '/printthread.php',
-  '/private.php'
-];
-
-LEGACY_VBULLETIN_PATHS.forEach(function(legacyPath) {
-  app.get(legacyPath, function*() {
-    this.flash = { message: ['info', 'Sorry, that page does not exist anymore.'] };
-    this.status = 301;
-    this.response.redirect('/');
-  });
-});
-
-////////////////////////////////////////////////////////////
-
 // Delete all notifications
 app.delete('/me/notifications', function*() {
   // Ensure a user is logged in
