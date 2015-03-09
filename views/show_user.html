@@ -1,6 +1,10 @@
 {% extends 'layouts/master.html' %}
 {% import './macros/ads.html' as ads %}
 
+{% block head %}
+  <link rel="canonical" href="{{ ctx.config.HOST + user.url }}">
+{% endblock %}
+
 {% block embed %}
   <ol class="breadcrumb">
     <li><a href="/">Home</a></li>
