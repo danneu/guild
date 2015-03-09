@@ -301,8 +301,9 @@ function can(user, action, target) {
       // User can send pm if they're a participant
       return !!_.find(target.participants, { id: user.id });
     case 'READ_TOPIC':  // target is topic
+      assert(target.forum);
       // Only staff can read lexus lounge
-      if (target.category_id === 4)
+      if (target.forum.category_id === 4)
         return user && isStaffRole(user.role);
       // Only staff can see hidden topics
       if (target.is_hidden)
