@@ -1300,3 +1300,7 @@ hr {
 .md-editor>textarea {
     /* font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; */
 }
+
+.bb-list {
+    margin-bottom: 0;
+}

@@ -232,15 +232,25 @@
   </div>
 
   <!-- User profile tabs -->
+  <a name="tabs"></a>
   <ul class="nav nav-tabs">
-    <li class="active"><a href="{{ ctx.request.url }}">Recent Posts</a></li>
+    <li class="{% if ctx.path === user.url %}active{% endif %}">
+      <a href="{{ user.url }}#tabs">
+        Recent Posts
+      </a>
+    </li>
+    <li class="{% if ctx.path === user.url + '/recent-topics' %}active{% endif %}">
+      <a href="{{ ctx.path }}/recent-topics#tabs">
+        Recent Topics
+      </a>
+    </li>
   </ul>
   <!-- /tabs -->
 
+  {% block child %}
 
       <!-- Most recent posts -->
 
-      <a name="recent-posts"></a>
       <h3>Most Recent Posts</h3>
 
       <!-- Pagination -->
@@ -248,19 +258,19 @@
       {% if user.posts_count > 1 %}
         <ul class="pager">
           <li>
-            <a href="{{ ctx.request.path }}#recent-posts" rel="first">
+            <a href="{{ ctx.path }}#tabs" rel="first">
               First Page
             </a>
           </li>
           {% if recentPosts.length < recentPostsPerPage %}
             <li class="disabled">
-              <a href="{{ ctx.request.url }}" rel="next">
+              <a href="{{ ctx.url }}" rel="next">
                 Next Page &rarr;
               </a>
             </li>
           {% else %}
             <li>
-              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#recent-posts" rel="next">
+              <a href="{{ ctx.path }}?before-id={{ nextBeforeId }}#tabs" rel="next">
                 Next Page &rarr;
               </a>
             </li>
@@ -305,25 +315,27 @@
       {% if user.posts_count > 1 %}
         <ul class="pager">
           <li>
-            <a href="{{ ctx.request.path }}#recent-posts" rel="first">
+            <a href="{{ ctx.path }}#tabs" rel="first">
               First Page
             </a>
           </li>
           {% if recentPosts.length < recentPostsPerPage %}
             <li class="disabled">
-              <a href="{{ ctx.request.url }}" rel="next">
+              <a href="{{ ctx.url }}" rel="next">
                 Next Page &rarr;
               </a>
             </li>
           {% else %}
             <li>
-              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#recent-posts" rel="next">
+              <a href="{{ ctx.path }}?before-id={{ nextBeforeId }}#tabs" rel="next">
                 Next Page &rarr;
               </a>
             </li>
           {% endif %}
         </ul>
       {% endif %}
+
+  {% endblock %}
 
 
   <!-- These exist for storing values for ajax interaction -->

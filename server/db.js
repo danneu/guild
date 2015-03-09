@@ -389,6 +389,36 @@ LIMIT $2
   return result.rows;
 }
 
+// `beforeId` is undefined or a number
+exports.findRecentTopicsForUserId = wrapTimer(findRecentTopicsForUserId);
+function* findRecentTopicsForUserId(userId, beforeId) {
+  assert(_.isNumber(beforeId) || _.isUndefined(beforeId));
+  debug(userId, beforeId);
+  var sql = m(function() {/*
+SELECT
+  t.*,
+  to_json(f.*) "forum",
+  to_json(p.*) first_post
+FROM topics t
+JOIN forums f ON t.forum_id = f.id
+JOIN posts p ON p.id = (
+  SELECT MAX(p.id) first_post_id
+  FROM posts p
+  WHERE p.topic_id = t.id
+)
+WHERE t.user_id = $1 AND t.id < $3
+GROUP BY t.id, f.id, p.id
+ORDER BY t.id DESC
+LIMIT $2
+  */});
+  var result = yield query(sql, [
+    userId,
+    config.RECENT_POSTS_PER_PAGE,
+    beforeId || 1e9
+  ]);
+  return result.rows;
+}
+
 exports.findUser = wrapTimer(findUser);
 function *findUser(userId) {
   debug('[findUser] userId: ' + userId);

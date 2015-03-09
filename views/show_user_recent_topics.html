@@ -1,0 +1,100 @@
+{% extends 'show_user.html' %}
+
+{% block head %}
+  <link rel="canonical" href="{{ ctx.config.HOST + user.url }}">
+{% endblock %}
+
+{% block child %}
+      <!-- Most recent posts -->
+
+      <h3>Most Recent Topics</h3>
+
+      <!-- Pagination -->
+
+      {% if user.topics_count > 1 %}
+        <ul class="pager">
+          <li>
+            <a href="{{ ctx.request.path }}#tabs" rel="first">
+              First Page
+            </a>
+          </li>
+          {% if topics.length < topicsPerPage %}
+            <li class="disabled">
+              <a href="{{ ctx.request.url }}" rel="next">
+                Next Page &rarr;
+              </a>
+            </li>
+          {% else %}
+            <li>
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#tabs" rel="next">
+                Next Page &rarr;
+              </a>
+            </li>
+          {% endif %}
+        </ul>
+      {% endif %}
+
+      <!-- Recent topics list -->
+
+      {% if user.topics_count === 0 %}
+        <div class="well">
+          User hasn't made any topics, yet
+        </div>
+      {% endif %}
+
+      {% for topic in topics %}
+        <div class="panel panel-default">
+          <div class="panel-heading clearfix">
+            <a href="{{ post.url }}" style="color: #ffc300">
+              {{ topic.title }}
+            </a>
+            &mdash;
+            <abbr class="timeago" title="{{ topic.created_at.toISOString() }}">
+              {{ topic.created_at|formatDate }}
+            </abbr>
+            <span class="pull-right">
+              In
+              <a href="{{ topic.forum.url }}" style="color: #ffc300">
+                {{ topic.forum.title }}
+              </a>
+            </span>
+          </div>
+          <div class="panel-body" style="max-height: 100px; overflow: auto">
+            {% if topic.first_post.html %}
+              <div class="post-body-html">{{ topic.first_post.html|safe }}</div>
+            {% elif topic.first_post.legacy_html %}
+              <div class="post-body-html">{{ topic.first_post.legacy_html|safe }}</div>
+            {% else %}
+              <div class="post-body">{{ topic.first_post.text }}</div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+
+
+      <!-- Pagination -->
+
+      {% if user.topics_count > 1 %}
+        <ul class="pager">
+          <li>
+            <a href="{{ ctx.request.path }}#tabs" rel="first">
+              First Page
+            </a>
+          </li>
+          {% if topics.length < topicsPerPage %}
+            <li class="disabled">
+              <a href="{{ ctx.request.url }}" rel="next">
+                Next Page &rarr;
+              </a>
+            </li>
+          {% else %}
+            <li>
+              <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}#tabs" rel="next">
+                Next Page &rarr;
+              </a>
+            </li>
+          {% endif %}
+        </ul>
+      {% endif %}
+
+{% endblock %}
