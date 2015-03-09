@@ -673,7 +673,7 @@ var XBBCODE = (function() {
     // },
     "list": {
       openTag: function(params,content) {
-        return '<ul style="white-space: normal;">';
+        return '<ul class="bb-list" style="white-space: normal;">';
       },
       closeTag: function(params,content) {
         return '</ul>';

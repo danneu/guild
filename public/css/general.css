@@ -1292,3 +1292,7 @@ hr {
 .bb-hr {
     border-top: 1px solid #ccc;
 }
+
+.bb-list li {
+    white-space: pre-line;
+}
