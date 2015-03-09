@@ -1,3 +1,13 @@
+<!-- Note: this is a div, not a li -->
+{% macro renderJoinStatus(status) %}
+  {% if status %}
+    <div class="join-status join-status-{{ status }}" style="display: inline-block;">
+      <abbr title="{{ status|expandJoinStatus }}" data-toggle="tooltip">
+        {{ status|capitalize }}
+      </abbr>
+    </div>
+  {% endif %}
+{% endmacro %}
 
 {% macro onlineStatus(user) %}
   {% if user.is_ghost %}
@@ -253,6 +263,9 @@
             </span>
           </div>
           <div>
+            {% if topic.join_status %}
+              {{ renderJoinStatus(topic.join_status) }}
+            {% endif %}
             {% for tag in topic.tags %}
               <span class="label label-default" style="display: inline-block;"
                     data-toggle="tooltip" title="{{ tag.description }}">
