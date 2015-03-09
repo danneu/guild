@@ -1126,7 +1126,6 @@ var XBBCODE = (function() {
     }
 
     if (tags[tagName].trimContents) {
-      console.log('Trimming');
       processedContent = processedContent.trim();
     }
 

@@ -97,7 +97,7 @@
       });
   </script>
 <script>
-  $('#to-input').focus();
+  $('#to-input').val($('#to-input').val()).focus();
   $('#text-input').bbcode({
     charLimit: {{ ctx.config.MAX_POST_LENGTH }}
   });
