@@ -8,6 +8,8 @@ var debug = require('debug')('app:cache');
 var assert = require('better-assert');
 // 1st party
 var db = require('./db');
+var pre = require('./presenters');
+var config = require('./config');
 
 
 
@@ -100,6 +102,29 @@ module.exports = function() {
     ];
     this.set('latest-checks', results[0]);
     this.set('latest-roleplays', results[1]);
+  });
+
+  // Every 12 hours
+  cache.every(1000 * 60 * 60 * 12, function*() {
+    var MAX_SITEMAP_URLS = 50000;
+    var results = yield [
+      db.findAllPublicTopicUrls(),
+      db.findAllUsers()
+    ];
+    var publicTopicUrls = results[0];
+    var users = results[1];
+
+    var urls = users.map(function(user) {
+      return pre.presentUser(user).url;
+    }).concat(publicTopicUrls).map(function(url) {
+      return config.HOST + url;
+    });
+    console.log('Sitemap URLs: %s', urls.length);
+    if (urls.length > MAX_SITEMAP_URLS)
+      console.warn('Too many sitemap URLs, only using the first '
+                   + MAX_SITEMAP_URLS);
+
+    this.set('sitemap.txt', urls.slice(0, MAX_SITEMAP_URLS).join('\n'));
   });
 
   return cache;

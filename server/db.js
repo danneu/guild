@@ -12,6 +12,7 @@ var coParallel = require('co-parallel');
 // 1st party
 var config = require('./config');
 var belt = require('./belt');
+var pre = require('./presenters');
 
 // If a client is not provided to fn as first argument,
 // we'll pass one into it.
@@ -2328,3 +2329,21 @@ LIMIT 5
   var result = yield query(sql, [forumIds]);
   return result.rows;
 }
+
+exports.findAllPublicTopicUrls = function*() {
+  var sql = m(function() {/*
+SELECT id, title
+FROM topics
+WHERE
+  is_hidden = false
+  AND forum_id IN (
+		SELECT id
+		FROM forums
+		WHERE category_id NOT IN (4)
+  )
+  */});
+  var result = yield query(sql);
+  return result.rows.map(function(row) {
+    return pre.presentTopic(row).url;
+  });
+};

@@ -30,6 +30,7 @@ var swig = require('swig');
 var co = require('co');
 var uuid = require('node-uuid');
 var coParallel = require('co-parallel');
+var koaCompressor = require('koa-compressor');
 // 1st party
 var db = require('./db');
 var pre = require('./presenters');
@@ -2520,6 +2521,12 @@ app.get('/users/:slug/ips', function*() {
     : ip_addresses.map(function(ip_address) {
       return '<a href="/ips/' + ip_address + '">' + ip_address + '</a>';
     }).join('<br>');
+});
+
+app.get('/sitemap.txt', koaCompressor(), function*() {
+  var text = cache.get('sitemap.txt');
+  this.set('Content-Type', 'text/plain');
+  this.body = text;
 });
 
 app.listen(config.PORT);
