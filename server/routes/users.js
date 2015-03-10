@@ -3,6 +3,7 @@ var util = require('util');
 // 3rd party
 var Router = require('koa-router');
 var _ = require('lodash');
+var debug = require('debug')('app:routes:users');
 // 1st party
 var db = require('../db');
 var belt = require('../belt');
