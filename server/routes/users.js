@@ -12,6 +12,7 @@ var config = require('../config');
 var welcomePm = require('../welcome_pm');
 var cancan = require('../cancan');
 var avatar = require('../avatar');
+var bbcode = require('../bbcode');
 
 var router = new Router();
 
