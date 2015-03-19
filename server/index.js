@@ -337,8 +337,6 @@ app.get('/search', function*() {
     })
     .isIn(['relevance', 'newest-first', 'oldest-first']);
 
-  debug(this.vals);
-
   if (this.query.topic_id)
     this.validateQuery('topic_id')
       .toInt('Topic ID must be a number');
@@ -347,25 +345,29 @@ app.get('/search', function*() {
       .toArray()
       .toInts('Forum IDs must be numbers');
 
+  ////////////////////////////////////////////////////////////
   // TODO: Ensure currUser is authorized to read the results
-
-  debug(this.vals);
 
   var search = require('./search2');
 
-  var result = yield search.searchPosts({
+  var cloudArgs = {
     term: this.vals.term,
     post_types: this.vals.post_types,
     sort: this.vals.sort,
     topic_id: this.vals.topic_id,
     forum_ids: this.vals.forum_ids,
     user_ids: user_ids
-  });
+  };
+
+  var cloudParams = search.buildSearchParams(cloudArgs);
+  var result = yield search.searchPosts(cloudArgs);
 
   var postIds = _.pluck(result.hits.hit, 'id');
 
   var posts = yield db.findPostsByIds(postIds);
   posts = posts.map(pre.presentPost);
+
+  ////////////////////////////////////////////////////////////
 
   // If term was given, there will be highlight
   if (this.vals.term) {
@@ -375,26 +377,13 @@ app.get('/search', function*() {
     });
   }
 
-  // this.body = posts;
-  // return;
-
-  // var posts = yield db.searchPosts({
-  //   unames: this.vals.unames,
-  //   topic_id: this.vals.topic_id,
-  //   forum_ids: this.vals.forum_ids,
-  //   post_types: this.vals.post_types,
-  //   term: this.vals.term,
-  //   sort: this.vals.sort
-  // });
-
-  // posts = posts.map(pre.presentPost);
-
-
   yield this.render('search_results', {
     ctx: this,
     posts: posts,
     searchParams: this.vals,
+    cloudParams: cloudParams,
     className: 'search',
+    searchResultsPerPage: config.SEARCH_RESULTS_PER_PAGE,
     // Data that'll be serialized to DOM and read by our React components
     reactData: {
       searchParams: this.vals,

@@ -74,13 +74,15 @@ var buildSearchTree = function(props) {
   return q;
 };
 
+////////////////////////////////////////////////////////////
 
-exports.searchPosts = function*(props) {
-
+// Takes the same args as searchPosts, but returns the params sent to
+// CloudSearch. useful for debugging.
+exports.buildSearchParams = function(props) {
   var params = {
     // Just return document id
     return: '_no_fields',
-    size: 20
+    size: config.SEARCH_RESULTS_PER_PAGE
   };
 
   if (props.sort)
@@ -99,7 +101,6 @@ exports.searchPosts = function*(props) {
     }
   else
     params.sort = 'created_at desc';
-
 
   // params.query = query;
 
@@ -126,13 +127,21 @@ exports.searchPosts = function*(props) {
 
   debug('params:', params);
 
+  return params;
+};
+
+////////////////////////////////////////////////////////////
+
+exports.searchPosts = function(props) {
+  var params = exports.buildSearchParams(props);
+
   return new Promise(function(resolve, reject) {
     client.search(params, function(err, data) {
       if (err) return reject(err);
       return resolve(data);
     });
   });
-}
+};
 
 
 // co(function*() {

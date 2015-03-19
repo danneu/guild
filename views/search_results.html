@@ -123,8 +123,15 @@
   <!-- Page title -->
 
   {% if !_.isEmpty(searchParams) %}
+
+    <h6>Debug:</h6>
+    <pre>{{ JSON.stringify(cloudParams, null, '  ') }}</pre>
+
     <div class="page-header">
-      <h1>Search Results <small>{{ posts.length }} results (100 max)</small></h1>
+      <h1>
+        Search Results
+        <small>{{ posts.length }} results ({{ searchResultsPerPage }} max)</small>
+      </h1>
     </div>
   {% endif %}
 

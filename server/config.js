@@ -56,6 +56,9 @@ exports.CONVOS_PER_PAGE = parseInt(process.env.CONVOS_PER_PAGE, 10) || 10;
 // up with users that respond to the welcome PM
 exports.STAFF_REPRESENTATIVE_ID = parseInt(process.env.STAFF_REPRESENTATIVE_ID);
 
+// For /search endpoint
+exports.SEARCH_RESULTS_PER_PAGE = parseInt(process.env.SEARCH_RESULTS_PER_PAGE) || 50;
+
 exports.ENABLE_ADS = !!process.env.ENABLE_ADS;
 
 // newrelic
