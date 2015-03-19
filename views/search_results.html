@@ -76,21 +76,19 @@
           {% endfor %}
         </div>
       </li>
-      {% if searchParams.unames %}
-        <li>
-          Users:
-          <div id="filter-unames-list-hardpoint">
-            <ul id="filter-unames-list">
-              {% for uname in searchParams.unames %}
-                <li>
-                  <input type="hidden" name="unames" value="{{ uname }}">
-                  {{ uname }}
-                </li>
-              {% endfor %}
-            </ul>
-          </div>
-        </li>
-      {% endif %}
+      <li>
+        Users:
+        <div id="filter-unames-list-hardpoint">
+          <ul id="filter-unames-list">
+            {% for uname in searchParams.unames %}
+            <li>
+              <input type="hidden" name="unames" value="{{ uname }}">
+              {{ uname }}
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </li>
       <li>
         Keywords:
         <input type="text" name="term" value="{{ searchParams.term }}"
