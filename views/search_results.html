@@ -518,6 +518,7 @@
         queryTokenizer: Bloodhound.tokenizers.whitespace,
         limit: 5,
         prefetch: {
+          cacheKey: 'unames',
           url: '/unames.json',
           filter: function(unames) {
             return unames.map(function(uname) { return { value: uname }});
