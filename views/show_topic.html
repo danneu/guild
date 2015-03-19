@@ -182,6 +182,24 @@
 
   <div class="topic-controls">
 
+    {# Only admin can see this for now while I test #}
+    {% if ctx.currUser && ctx.currUser.role === 'admin' %}
+      <!-- Search button -->
+      <div class="btn-group">
+        <a class="btn btn-default" href="/search?topic_id={{ topic.id }}">
+          Search Topic
+        </a>
+        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+          <span class="caret"></span>
+          <span class="sr-only">Toggle Dropdown</span>
+        </button>
+        <ul class="dropdown-menu" role="menu">
+          <!-- <li class="divider"></li> -->
+          <li><a href="/search?topic_id={{ topic.id }}&unames={{ encodeURIComponent(ctx.currUser.uname) }}">Find My Posts</a></li>
+        </ul>
+      </div>
+    {% endif %}
+
     <!-- Subscribe button -->
 
     {% if ctx.can(ctx.currUser, 'SUBSCRIBE_TOPIC', topic) %}
