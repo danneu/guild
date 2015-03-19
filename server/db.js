@@ -2383,10 +2383,12 @@ exports.findPostsByIds = function*(ids) {
 SELECT
   p.*,
   to_json(t.*) topic,
-  to_json(f.*) forum
+  to_json(f.*) forum,
+  to_json(u.*) "user"
 FROM posts p
 JOIN topics t ON p.topic_id = t.id
 JOIN forums f ON t.forum_id = f.id
+JOIN users u ON p.user_id = u.id
 WHERE p.id = ANY ($1::int[])
   */});
   var result = yield query(sql, [ids]);
