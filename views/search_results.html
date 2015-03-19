@@ -422,7 +422,6 @@
 
         $(el).on('keydown', function(e) {
           var key = (e.keyCode || e.which);
-          console.log(typeof key);
           if (key == '13') {
             e.preventDefault();
             $('.new-uname-btn').click();
