@@ -317,16 +317,21 @@ app.get('/search', function*() {
 
   this.validateQuery('term').trim();
   // [String]
+  var unamesToIds = cache.get('unames->ids');
   this.validateQuery('unames')
     .toArray()
+    .uniq()
+    // Remove unames that aren't in our system
     .tap(function(unames) {
-      return belt.mapMethod(unames, 'toLowerCase');
-    })
-    .uniq();
-  var unamesToIds = cache.get('unames->ids');
+      return unames.filter(function(uname) {
+        return unamesToIds[uname.toLowerCase()];
+      });
+    });
+
   var user_ids = _.chain(this.vals.unames).map(function(u) {
     return unamesToIds[u.toLowerCase()];
   }).compact().value();
+
   // [String]
   this.validateQuery('post_types')
     .toArray();

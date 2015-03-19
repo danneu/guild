@@ -402,9 +402,35 @@
         this.setState({ uname: e.target.value });
       },
       handleSubmit: function() {
+        if (this.state.uname.trim().length === 0)
+          return;
         this.props.onSubmit(this.state.uname.trim());
         this.setState({ uname: '' });
         React.findDOMNode(this.refs.unameInput).focus();
+      },
+      componentDidMount: function() {
+        var self = this;
+        console.log('NewUnameForm did mount');
+        bindTypeahead();
+
+        var el = React.findDOMNode(this.refs.unameInput);
+
+        $(el).on('typeahead:selected typeahead:autocompleted', function(e, suggObj, datasetName) {
+          console.log(e);
+          self.setState({ uname: e.target.value });
+        });
+
+        $(el).on('keydown', function(e) {
+          var key = (e.keyCode || e.which);
+          console.log(typeof key);
+          if (key == '13') {
+            e.preventDefault();
+            $('.new-uname-btn').click();
+            $(el).typeahead('close');
+            $(el).typeahead('val', '');
+          }
+        });
+
       },
       getInitialState: function() {
         return { uname: '' };
@@ -416,11 +442,12 @@
         };
         return (
           <li>
-            <input type="text" className="form-control" style={style}
+            <input type="text" className="form-control new-uname-input"
+                   style={style}
                    ref="unameInput"
                    onChange={this.handleChange}
                    value={this.state.uname} />
-            <button type="button" className="btn btn-default"
+            <button type="button" className="btn btn-default new-uname-btn"
                     onClick={this.handleSubmit}>Add</button>
           </li>
         );
@@ -482,5 +509,40 @@
       document.getElementById('filter-unames-list-hardpoint')
     );
   </script>
+
+  <!-- Typeahead -->
+
+    <script type="text/javascript" src="/vendor/typeahead/typeahead.bundle.js"></script>
+    <script type="text/javascript">
+      var unames = new Bloodhound({
+        datumTokenizer: Bloodhound.tokenizers.obj.whitespace('value'),
+        queryTokenizer: Bloodhound.tokenizers.whitespace,
+        limit: 5,
+        prefetch: {
+          url: '/unames.json',
+          filter: function(unames) {
+            return unames.map(function(uname) { return { value: uname }});
+          }
+        }
+      });
+
+      unames.initialize();
+
+      function bindTypeahead() {
+        var $el = $('.new-uname-input');
+
+        $el.typeahead({
+          hint: true,
+          highlight: true,
+          minLength: 1
+        }, {
+          name: 'Usernames',
+          displayKey: 'value',
+          source: unames.ttAdapter()
+        });
+
+        console.log('typeahead bound');
+      }
+    </script>
 
 {% endblock %}
