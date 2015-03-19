@@ -2379,6 +2379,9 @@ WHERE
 };
 
 exports.findPostsByIds = function*(ids) {
+  assert(_.isArray(ids));
+  ids = ids.map(Number);  // Ensure ids are numbers, not strings
+
   var sql = m(function() {/*
 SELECT
   p.*,
@@ -2392,7 +2395,18 @@ JOIN users u ON p.user_id = u.id
 WHERE p.id = ANY ($1::int[])
   */});
   var result = yield query(sql, [ids]);
-  return result.rows;
+  var rows = result.rows;
+
+  // Reorder posts by the order of ids passed in
+  var out = [];
+
+  ids.forEach(function(id) {
+    var row = _.findWhere(rows, { id: id });
+    if (row)
+      out.push(row);
+  });
+
+  return out;
 };
 
 exports.getUnamesMappedToIds = function*() {
