@@ -9,6 +9,7 @@ var m = require('multiline');
 var debug = require('debug')('app:search');
 // 1st
 var db = require('./db');
+var config = require('./config');
 
 var AWS = require('aws-sdk');
 AWS.config.region = 'us-east-1';
