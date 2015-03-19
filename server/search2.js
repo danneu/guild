@@ -108,7 +108,12 @@ exports.buildSearchParams = function(props) {
     params.queryParser = 'simple';
     params.query = props.term;
     params.highlight = JSON.stringify({
-      markup: { format: 'html' }
+      markup: {
+        format: 'html',
+        max_phrases: 3, // default: 1
+        pre_tag: '<strong>',
+        post_tag: '</strong>'
+      }
     });
   } else {
     params.queryParser = 'structured';
