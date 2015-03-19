@@ -104,6 +104,12 @@ module.exports = function() {
     this.set('latest-roleplays', results[1]);
   });
 
+  // Every 60 minutes
+  cache.every(1000 * 60 * 60, function*() {
+    var unamesToIds = yield db.getUnamesMappedToIds();
+    this.set('unames->ids', unamesToIds);
+  });
+
   // Every 12 hours
   cache.every(1000 * 60 * 60 * 12, function*() {
     var MAX_SITEMAP_URLS = 50000;

@@ -2394,3 +2394,12 @@ WHERE p.id = ANY ($1::int[])
   var result = yield query(sql, [ids]);
   return result.rows;
 };
+
+exports.getUnamesMappedToIds = function*() {
+  var sql = 'SELECT uname, id FROM users';
+  var rows = (yield query(sql)).rows;
+
+  var out = {};
+  rows.forEach(function(row) { out[row.uname.toLowerCase()] = row.id; });
+  return out;
+};

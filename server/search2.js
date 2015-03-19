@@ -49,14 +49,14 @@ var buildSearchTree = function(props) {
   // if (props.term)
   //   q.push(['term', ['field', 'markup'], props.term]);
 
-  if (props.user_ids) {
+  if (!_.isEmpty(props.user_ids)) {
     var expr = ['or'];
     props.user_ids.forEach(function(id) { expr.push(['user_id', id]); });
     q.push(expr);
   }
 
   // post_types :: Array
-  if (props.post_types) {
+  if (!_.isEmpty(props.post_types)) {
     q.push(['or'].concat(props.post_types.map(function(type) {
       return ['post_type', type];
     })));
@@ -66,7 +66,7 @@ var buildSearchTree = function(props) {
     q.push(['topic_id', props.topic_id]);
   }
 
-  if (props.forum_ids) {
+  if (!_.isEmpty(props.forum_ids)) {
     q.push(['or'].concat(props.forum_ids.map(function(id) {
       return ['forum_id', id];
     })));

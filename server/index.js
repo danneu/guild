@@ -320,6 +320,10 @@ app.get('/search', function*() {
   this.validateQuery('unames')
     .toArray()
     .uniq();
+  var unamesToIds = cache.get('unames->ids');
+  var user_ids = _.chain(this.vals.unames).map(function(u) {
+    return unamesToIds[u.toLowerCase()];
+  }).compact().value();
   // [String]
   this.validateQuery('post_types')
     .toArray();
@@ -351,7 +355,8 @@ app.get('/search', function*() {
     post_types: this.vals.post_types,
     sort: this.vals.sort,
     topic_id: this.vals.topic_id,
-    forum_ids: this.vals.forum_ids
+    forum_ids: this.vals.forum_ids,
+    user_ids: user_ids
   });
 
   var postIds = _.pluck(result.hits.hit, 'id');
