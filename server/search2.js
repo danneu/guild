@@ -94,7 +94,7 @@ exports.buildSearchParams = function(props) {
         params.sort = 'created_at asc';
         break;
       case 'relevance':
-        params.sort = '_score desc';
+        params.sort = '_score desc, created_at desc';
         break;
       default:
         throw new Error(util.format('Unexpected props.sort: %j', params.sort));
