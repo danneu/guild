@@ -149,6 +149,7 @@ CREATE TABLE posts (
 );
 
 CREATE INDEX ON posts (ip_address);
+-- TODO: Remove DESC from following idx column:
 CREATE UNIQUE INDEX posts_topic_id_type_idx_idx ON posts (topic_id, type, idx DESC);
 
 -- Last post cache

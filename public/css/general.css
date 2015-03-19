@@ -1304,3 +1304,27 @@ hr {
 .bb-list {
     margin-bottom: 0;
 }
+
+
+
+/* Search page */
+
+@media (max-width: 768px) {
+  /* Shrink tab padding on mobile */
+  body.search .nav > li > a {
+    padding: 5px 10px;
+  }
+}
+
+/* Only show the multi-select-hint to people with large screens
+   - hopefully just people with keyboards */
+@media (max-width: 1199px) {
+    body.search .multi-select-hint {
+        display: none;
+    }
+}
+@media (min-width: 1200px) {
+    body.search .multi-select-hint {
+        display: block;
+    }
+}

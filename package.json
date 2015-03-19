@@ -14,6 +14,7 @@
     "url": "https://github.com/danneu/guild"
   },
   "dependencies": {
+    "aws-sdk": "^2.1.17",
     "bcryptjs": "^2.1.0",
     "better-assert": "^1.0.2",
     "cheerio": "^0.18.0",
@@ -26,7 +27,7 @@
     "gm": "^1.17.0",
     "koa": "^0.14.0",
     "koa-body": "^0.4.0",
-    "koa-bouncer": "0.0.10",
+    "koa-bouncer": "0.0.12",
     "koa-compressor": "^1.0.3",
     "koa-conditional-get": "^1.0.2",
     "koa-etag": "^2.0.0",

@@ -7,6 +7,13 @@ exports.NODE_ENV = process.env.NODE_ENV || 'development';
 exports.RECAPTCHA_SITEKEY = process.env.RECAPTCHA_SITEKEY;
 exports.RECAPTCHA_SITESECRET = process.env.RECAPTCHA_SITESECRET;
 
+// aws-sdk listens for these env vars
+// TODO: Remove my own aws env vars (AWS_SECRET, AWS_KEY) and use these
+exports.AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
+exports.AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
+exports.AWS_CLOUDSEARCH_DOCUMENT_ENDPOINT = process.env.AWS_CLOUDSEARCH_DOCUMENT_ENDPOINT;
+exports.AWS_CLOUDSEARCH_SEARCH_ENDPOINT = process.env.AWS_CLOUDSEARCH_SEARCH_ENDPOINT;
+
 // Various configurable forum settings
 exports.MIN_TOPIC_TITLE_LENGTH = parseInt(process.env.MIN_TOPIC_TITLE_LENGTH, 10) || 3;
 exports.MAX_TOPIC_TITLE_LENGTH = parseInt(process.env.MAX_TOPIC_TITLE_LENGTH, 10) || 150;
@@ -58,10 +65,22 @@ exports.NEW_RELIC_APP_NAME = process.env.NEW_RELIC_APP_NAME || 'localhost-guild'
 // Subsystem checks
 
 exports.IS_PM_SYSTEM_ONLINE = process.env.IS_PM_SYSTEM_ONLINE === 'true';
+console.log('PM system online:', exports.IS_PM_SYSTEM_ONLINE);
+
 exports.IS_EMAIL_CONFIGURED = !!(exports.HOST &&
                                  exports.AWS_KEY &&
                                  exports.AWS_SECRET &&
                                  exports.FROM_EMAIL);
+console.log('Email is configured:', exports.IS_EMAIL_CONFIGURED);
+
+exports.IS_CLOUDSEARCH_CONFIGURED = !!(
+  exports.AWS_ACCESS_KEY_ID,
+  exports.AWS_SECRET_ACCESS_KEY,
+  exports.AWS_CLOUDSEARCH_DOCUMENT_ENDPOINT,
+  exports.AWS_CLOUDSEARCH_SEARCH_ENDPOINT
+);
+console.log('Cloudsearch is configured:', exports.IS_CLOUDSEARCH_CONFIGURED);
+
 
 if (exports.NODE_ENV === 'development') {
   console.log('Config vars:');

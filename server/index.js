@@ -286,6 +286,115 @@ app.post('/test', function*() {
   this.body = JSON.stringify(this.request.body, null, '  ');
 });
 
+app.get('/search', function*() {
+  // Ensure cloudsearch is configured
+  this.assert(config.IS_CLOUDSEARCH_CONFIGURED, 400, 'Search is currently offline');
+
+  // Only admin can access for now
+  this.assert(this.currUser && this.currUser.role === 'admin', 403);
+
+  // TODO: Stop hard-coding lexus lounge authorization
+  var publicCategories = cache.get('categories').filter(function(c) {
+    return c.id !== 4;
+  });
+
+  if (_.isEmpty(this.query)) {
+    yield this.render('search_results', {
+      ctx: this,
+      posts: [],
+      searchParams: {},
+      className: 'search',
+      // Data that'll be serialized to DOM and read by our React components
+      reactData: {
+        searchParams: {},
+        categories: publicCategories
+      }
+    });
+    return;
+  }
+
+  // Validate params
+
+  this.validateQuery('term').trim();
+  // [String]
+  this.validateQuery('unames')
+    .toArray()
+    .uniq();
+  // [String]
+  this.validateQuery('post_types')
+    .toArray();
+  // String
+  this.validateQuery('sort')
+    .default(function() {
+      return (this.vals.term ? 'relevance' : 'newest-first');
+    })
+    .isIn(['relevance', 'newest-first', 'oldest-first']);
+
+  debug(this.vals);
+
+  if (this.query.topic_id)
+    this.validateQuery('topic_id')
+      .toInt('Topic ID must be a number');
+  if (this.query.forum_ids)
+    this.validateQuery('forum_ids')
+      .toArray()
+      .toInts('Forum IDs must be numbers');
+
+  // TODO: Ensure currUser is authorized to read the results
+
+  debug(this.vals);
+
+  var search = require('./search2');
+
+  var result = yield search.searchPosts({
+    term: this.vals.term,
+    post_types: this.vals.post_types,
+    sort: this.vals.sort,
+    topic_id: this.vals.topic_id,
+    forum_ids: this.vals.forum_ids
+  });
+
+  var postIds = _.pluck(result.hits.hit, 'id');
+
+  var posts = yield db.findPostsByIds(postIds);
+  posts = posts.map(pre.presentPost);
+
+  // If term was given, there will be highlight
+  if (this.vals.term) {
+    result.hits.hit.forEach(function(hit, idx) {
+      if (hit.highlights && posts[idx])
+        posts[idx].highlight = hit.highlights.markup;
+    });
+  }
+
+  // this.body = posts;
+  // return;
+
+  // var posts = yield db.searchPosts({
+  //   unames: this.vals.unames,
+  //   topic_id: this.vals.topic_id,
+  //   forum_ids: this.vals.forum_ids,
+  //   post_types: this.vals.post_types,
+  //   term: this.vals.term,
+  //   sort: this.vals.sort
+  // });
+
+  // posts = posts.map(pre.presentPost);
+
+
+  yield this.render('search_results', {
+    ctx: this,
+    posts: posts,
+    searchParams: this.vals,
+    className: 'search',
+    // Data that'll be serialized to DOM and read by our React components
+    reactData: {
+      searchParams: this.vals,
+      categories: publicCategories
+    }
+  });
+});
+
 app.use(require('./routes/users').routes());
 app.use(require('./routes/convos').routes());
 

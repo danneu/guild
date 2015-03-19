@@ -1,0 +1,481 @@
+{% extends 'layouts/master.html' %}
+
+{% block head %}
+  {# Prevent this page from being indexed, prevent links from being followed #}
+  <meta name="robots" content="noindex,nofollow">
+{% endblock %}
+
+{% block embed %}
+
+  <!-- WIP reminder -->
+
+  <div class="alert alert-info" role="alert">
+    <b>Notice:</b>
+    The search system is under construction.
+    This is an early/ugly/buggy prototype. &mdash; Mahz
+  </div>
+
+  <!-- Breadcrumbs -->
+
+  <ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li>Search</li>
+  </ol>
+
+  <!-- Search filters -->
+
+  <h2>Filters</h2>
+
+  <form class="well well-sm clearfix"
+        method="get"
+        action="/search">
+
+    <!-- Topic/Forum filter -->
+    {#
+        <!-- Destination forum -->
+         <select name="forum-id">
+           {% for c in categories %}
+            <optgroup label="{{ c.title }}"></optgroup>
+            {% for f in c.forums %}
+              <option style="padding-left: 15px" value="{{ f.id }}">
+                &mdash; {{ f.title }}
+              </option>
+            {% endfor %}
+           {% endfor %}
+         </select>
+    #}
+
+    <div id="location-filter"></div>
+
+    <!-- Data for React components -->
+    <pre id="react-data" style="display: none;">
+      {{ reactData|json }}
+    </pre>
+
+    <ul>
+      {#{% if searchParams.topic_id %}
+        <li>Topic: <a href="{{ searchParams.back_url || topic.url }}">{{ topic.title }}</a></li>
+      {% endif %}#}
+      <li>
+        Post types:
+        <div class="btn-group" data-toggle="buttons">
+          {% for post_type in ['ic', 'ooc', 'char'] %}
+            <label class="btn btn-default
+                          {% if post_type|isIn(searchParams.post_types) %}
+                            active
+                          {% endif %}">
+              <input type="checkbox" autocomplete="off"
+                     name="post_types"
+                     value="{{ post_type }}"
+                     {% if post_type|isIn(searchParams.post_types) %}
+                       checked
+                     {% endif %}
+                     >
+              {{ post_type.toUpperCase() }}
+            </label>
+          {% endfor %}
+        </div>
+      </li>
+      {% if searchParams.unames %}
+        <li>
+          Users:
+          <div id="filter-unames-list-hardpoint">
+            <ul id="filter-unames-list">
+              {% for uname in searchParams.unames %}
+                <li>
+                  <input type="hidden" name="unames" value="{{ uname }}">
+                  {{ uname }}
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </li>
+      {% endif %}
+      <li>
+        Keywords:
+        <input type="text" name="term" value="{{ searchParams.term }}"
+               class="form-control" style="width: 300px; display: inline-block;">
+      </li>
+      <li>
+        Sort:
+        <div class="btn-group" data-toggle="buttons">
+          {% for sort_type in ['newest-first', 'oldest-first', 'relevance'] %}
+            <label class="btn btn-default
+                          {% if sort_type === searchParams.sort %}
+                            active
+                          {% endif %}">
+              <input type="radio" autocomplete="off" name="sort"
+                     value="{{ sort_type }}"
+                     {% if sort_type === searchParams.sort %}
+                       checked
+                     {% endif %}
+                     >
+              {{ sort_type }}
+            </label>
+          {% endfor %}
+        </div>
+        <span class="text-muted">(Sorting by relevance only affects the results if you've entered search keywords)</span>
+      </li>
+    </ul>
+    <button type="submit" class="btn btn-primary pull-right">
+      Update Filter
+    </button>
+  </form>
+
+  <!-- Page title -->
+
+  {% if !_.isEmpty(searchParams) %}
+    <div class="page-header">
+      <h1>Search Results <small>{{ posts.length }} results (100 max)</small></h1>
+    </div>
+  {% endif %}
+
+  {% if !_.isEmpty(searchParams) && posts.length === 0 %}
+    No results
+  {% endif %}
+
+  {% if posts.length > 0 %}
+  <ul>
+    {% for post in posts %}
+      {% if !ctx.can(ctx.currUser, 'READ_POST', post) %}
+        <p>
+          {{ loop.index }}.
+          <span class="text-danger">You are not authorized to view this post</span>
+        </p>
+      {% else %}
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            {{ loop.index }}.
+            <a href="{{ post.url }}" style="color: #ffc300">Go to post</a>
+            by
+            <a href="{{ post.user.url }}">{{ post.user.uname }}</a>
+            <abbr class="timeago" title="{{ post.created_at.toISOString() }}">
+              {{ post.created_at|formatDate }}
+            </abbr>
+            &mdash; in
+            <a href="{{ post.url }}" style="color: #ffc300">
+              {{ post.topic.title }}
+            </a>
+
+            <!-- Right side of heading -->
+            <div class="pull-right">
+              {{ post.type.toUpperCase() }}
+              {% if post.headline %}
+                &mdash; {{ post.rank }}
+              {% endif %}
+            </div>
+
+          </div>
+
+          {% if post.highlight %}
+            <div class="panel-body">
+              {{ post.highlight|safe }}
+            </div>
+          {% else %}
+            <div class="panel-body" style="max-height: 100px; overflow: auto">
+              {% if post.html %}
+              <div class="post-body-html">{{ post.html|safe }}</div>
+              {% elif post.legacy_html %}
+              <div class="post-body-html">{{ post.legacy_html|safe }}</div>
+              {% else %}
+              <div class="post-body">{{ post.text }}</div>
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+    {% endfor %}
+  </ul>
+  {% endif %}
+{% endblock %}
+
+{% block scripts %}
+  <!--<script src="http://fb.me/react-0.13.0.min.js"></script>-->
+  <script src="http://fb.me/react-0.13.0.js"></script>
+  <script src="http://fb.me/JSXTransformer-0.13.0.js"></script>
+
+  <script type="text/javascript">
+    var REACT_DATA = JSON.parse($('#react-data').text());
+  </script>
+
+  <script type="text/jsx">
+
+    // props:
+    //   title: Displayed on tab
+
+    var Tab = React.createClass({
+      onTabClick: function() {
+        this.props.handleTabChange(this.props.name);
+      },
+      render: function() {
+        var classNames = this.props.active ? 'active' : '';
+        return (
+          <li className={classNames}>
+            <a href="javascript:void(0)"
+               onClick={this.onTabClick}>
+              {this.props.title}
+            </a>
+          </li>
+        );
+      }
+    });
+
+    // props
+    // - searchParams: object of query params user loaded page with
+
+    var TabContent = React.createClass({
+      handleTopicChange: function(e) {
+        this.props.handleTopicChange(e.target.value);
+      },
+      renderTopicContent: function() {
+        var style = { width: '200px', display: 'inline-block' };
+        return (
+          <div>
+            <p className="text-muted">Search in a single topic.</p>
+            Topic ID: <input type="text" name="topic_id" className="form-control" style={style} value={this.props.topic_id} onChange={this.handleTopicChange} />
+          </div>
+        );
+      },
+      renderForumContent: function() {
+        var self = this;
+        var nodes = this.props.categories.map(function(c) {
+          var subNodes = c.forums.map(function(f) {
+            var style = { paddingLeft: '15px' };
+            return (
+              <option style={style} value={f.id} key={f.id}>
+                &mdash; {f.title}
+              </option>
+            );
+          });
+          return (
+            <optgroup label={c.title} key={c.title}>
+              {subNodes}
+            </optgroup>
+          );
+        });
+
+        var style = { height: '200px' };
+        return (
+          <div>
+            <p className="text-muted">Search in specific forums.</p>
+            <p className="multi-select-hint text-muted">
+              Desktop users: Hold down the <code>cmd</code> (Mac) or <code>ctrl</code> (Windows) key to select multiple forums.
+            </p>
+            <select multiple
+                    name="forum_ids"
+                    className="form-control" style={style}
+                    ref="forumSelect"
+                    onChange={this.handleSelectChange}
+                    value={this.props.forum_ids}
+                    >
+              {nodes}
+            </select>
+          </div>
+        );
+      },
+      handleSelectChange: function() {
+        console.log('<select> changed');
+
+        var node = React.findDOMNode(this.refs.forumSelect)
+
+        var selectedForumIds = []
+        $(node).find('option:selected').each(function() {
+          selectedForumIds.push($(this).attr('value'));
+        });
+
+        console.log(selectedForumIds);
+        this.props.updateSelectedForumIds(selectedForumIds);
+      },
+      renderEverywhereContent: function() {
+        return <p className="text-muted">Search in all forums</p>;
+      },
+      render: function() {
+        var content;
+        switch(this.props.selectedTab) {
+          case 'topic':
+            content = this.renderTopicContent();
+            break;
+          case 'forum':
+            content = this.renderForumContent();
+            break;
+          default:
+            content = this.renderEverywhereContent();
+        }
+
+        var style = {
+          padding: '20px',
+          marginBottom: '20px'
+        };
+        return (
+          <div style={style}>
+            {content}
+          </div>
+        );
+      }
+    });
+
+    var TabBox = React.createClass({
+      handleTopicChange: function(newTopicId) {
+        this.setProps({ topic_id: newTopicId });
+      },
+      makeTabChangeHandler: function(tabName) {
+        var self = this;
+        return function() {
+        };
+      },
+      handleTabChange: function(tabName) {
+        this.setState({ selectedTab: tabName });
+      },
+      updateSelectedForumIds: function(ids) {
+        this.setProps({ forum_ids: ids });
+      },
+      getInitialState: function() {
+        return {
+          selectedTab: this.props.selectedTab
+        };
+      },
+      render: function() {
+        return (
+          <div className="panel panel-default">
+            <div className="panel-heading">
+              Where to search:
+            </div>
+            <div className="panel-body">
+              <ul className="nav nav-tabs">
+                <Tab title="Everywhere"
+                     name="everywhere"
+                     handleTabChange={this.handleTabChange}
+                     active={this.state.selectedTab === 'everywhere'}
+                     />
+                <Tab title="Specific Forums"
+                     name="forum"
+                     handleTabChange={this.handleTabChange}
+                     active={this.state.selectedTab === 'forum'} />
+                <Tab title="Topic"
+                     name="topic"
+                     handleTabChange={this.handleTabChange}
+                     active={this.state.selectedTab === 'topic'} />
+              </ul>
+              <TabContent selectedTab={this.state.selectedTab}
+                          topic_id={this.props.topic_id}
+                          forum_ids={this.props.forum_ids}
+                          categories={this.props.categories}
+                          updateSelectedForumIds={this.updateSelectedForumIds}
+                          handleTopicChange={this.handleTopicChange}
+                          />
+            </div>
+          </div>
+        );
+      }
+    });
+
+    var initSelectedTab = (function() {
+      if (REACT_DATA.searchParams.topic_id)
+        return 'topic';
+      else if (REACT_DATA.searchParams.forum_ids)
+        return 'forum';
+      else
+        return 'everywhere';
+    })();
+
+    console.log('initSelectedTab:', initSelectedTab);
+
+    React.render(
+      <TabBox topic_id={REACT_DATA.searchParams.topic_id}
+              forum_ids={REACT_DATA.searchParams.forum_ids}
+              selectedTab={initSelectedTab}
+              categories={REACT_DATA.categories}
+              />,
+      document.getElementById('location-filter')
+    );
+  </script>
+
+  <script type="text/jsx">
+
+    var NewUnameForm = React.createClass({
+      handleChange: function(e) {
+        this.setState({ uname: e.target.value });
+      },
+      handleSubmit: function() {
+        this.props.onSubmit(this.state.uname.trim());
+        this.setState({ uname: '' });
+        React.findDOMNode(this.refs.unameInput).focus();
+      },
+      getInitialState: function() {
+        return { uname: '' };
+      },
+      render: function() {
+        var style = {
+          display: "inline-block",
+          width: "200px"
+        };
+        return (
+          <li>
+            <input type="text" className="form-control" style={style}
+                   ref="unameInput"
+                   onChange={this.handleChange}
+                   value={this.state.uname} />
+            <button type="button" className="btn btn-default"
+                    onClick={this.handleSubmit}>Add</button>
+          </li>
+        );
+      }
+    });
+
+    var UnameNode = React.createClass({
+      removeUname: function() {
+        this.props.removeUname(this.props.uname);
+      },
+      render: function() {
+        return (
+          <li key={this.props.uname}>
+            <button type="button" className="btn btn-danger btn-xs"
+                    onClick={this.removeUname}>
+              ×
+            </button>
+            <input type="hidden" name="unames" value={this.props.uname} />
+            {this.props.uname}
+          </li>
+        );
+      }
+    });
+
+    var UnameList = React.createClass({
+      addUname: function(uname) {
+        this.setProps({ unames: this.props.unames.concat([uname]) });
+      },
+      removeUname: function(unameToRemove) {
+        this.setProps({
+          unames: this.props.unames.filter(function(uname) {
+            return uname !== unameToRemove;
+          })
+        });
+      },
+      render: function() {
+        console.log(this.props.unames);
+        var unameNodes = this.props.unames.map(function(uname) {
+          return <UnameNode key={uname}
+                            uname={uname}
+                            removeUname={this.removeUname} />;
+        }, this);
+        return (
+          <ul>
+            {unameNodes}
+            <NewUnameForm onSubmit={this.addUname} />
+          </ul>
+        );
+      }
+    });
+
+    var initUnames = [];
+    $('#filter-unames-list li').each(function() {
+      initUnames.push($(this).text().trim());
+    });
+
+    React.render(
+      <UnameList unames={initUnames} />,
+      document.getElementById('filter-unames-list-hardpoint')
+    );
+  </script>
+
+{% endblock %}
