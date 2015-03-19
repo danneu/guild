@@ -319,6 +319,9 @@ app.get('/search', function*() {
   // [String]
   this.validateQuery('unames')
     .toArray()
+    .tap(function(unames) {
+      return belt.mapMethod(unames, 'toLowerCase');
+    })
     .uniq();
   var unamesToIds = cache.get('unames->ids');
   var user_ids = _.chain(this.vals.unames).map(function(u) {

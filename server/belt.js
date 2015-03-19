@@ -366,4 +366,10 @@ exports.expandJoinStatus = function(status) {
   default:
     return '';
   }
-}
+};
+
+exports.mapMethod = function mapMethod(items, method) {
+  return items.map(function(item) {
+    return item[method]();
+  });
+};
