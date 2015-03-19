@@ -134,6 +134,14 @@ WHERE id = ANY ($1::int[])
 
 co(function*() {
   var posts = yield queries.findPostsToUpload();
+
+  // Noop if no posts found
+  if (_.isEmpty(posts)) {
+    console.log('No posts to upload');
+    return;
+  }
+
+  // Posts found, so let's upload them
   console.log('Batch uploading', posts.length, 'posts to CloudSearch...');
 
   var response = yield batchUploadPosts(posts);
@@ -146,8 +154,10 @@ co(function*() {
 }).then(
   function() {
     console.log('OK');
+    process.exit(0);
   },
   function(ex) {
     console.log('Error:', ex, ex.stack);
+    process.exit(1);
   }
 );
