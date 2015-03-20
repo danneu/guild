@@ -353,6 +353,8 @@ router.get('/users', function*() {
 
   var nextBeforeId = _.last(usersList) != null ? _.last(usersList).id : null;
 
+  this.set('X-Robots-Tag', 'noindex');
+
   yield this.render('search_users', {
     ctx: this,
     term: this.query['text'],
