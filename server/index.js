@@ -1353,6 +1353,7 @@ app.get('/posts/:id/raw', function*() {
   this.assert(post, 404);
   this.assertAuthorized(this.currUser, 'READ_POST', post);
   this.set('Cache-Control', 'no-cache');
+  this.set('X-Robots-Tag', 'noindex');
   this.body = post.markup ? post.markup : post.text;
 });
 
