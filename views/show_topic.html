@@ -203,18 +203,16 @@
 
     {% if ctx.can(ctx.currUser, 'SUBSCRIBE_TOPIC', topic) %}
       {% if topic.is_subscribed %}
-        <form action="{{ topic.subscriptionUrl }}" method="post">
+        <form action="{{ topic.subscriptionUrl }}?redirectTo={{ encodeURIComponent(ctx.url) }}" method="post">
           <input type="hidden" name="_method" value="delete">
-          <input type="hidden" name="return-to-topic" value="true">
           <button type="submit" class="btn btn-danger" style="margin-right: 0px">
             <span class="glyphicon glyphicon-remove"></span>
             Unsubscribe
           </button>
         </form>
       {% else %}
-        <form action="/me/subscriptions" method="post">
+        <form action="/me/subscriptions?redirectTo={{ encodeURIComponent(ctx.url) }}" method="post">
           <input type="hidden" name="topic-id" value="{{ topic.id }}">
-          <input type="hidden" name="return-to-topic" value="true">
           <button type="submit" class="btn btn-success" style="margin-right: 0px">
             <span class="glyphicon glyphicon-plus"></span>
             Subscribe

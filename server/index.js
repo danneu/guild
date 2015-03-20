@@ -669,7 +669,8 @@ app.delete('/me/subscriptions/:topicSlug', function*() {
     return this.response.redirect(topic.url);
 
   this.flash = { message: ['success', 'Successfully unsubscribed'] };
-  this.response.redirect('/me/subscriptions');
+  var redirectTo = this.query.redirectTo || '/me/subcriptions';
+  this.response.redirect(redirectTo);
 });
 
 //
@@ -823,7 +824,8 @@ app.post('/me/subscriptions', function*() {
   if (this.request.body['return-to-topic'])
     return this.response.redirect(topic.url);
 
-  this.response.redirect('/me/subscriptions');
+  var redirectTo = this.query.redirectTo || '/me/subcriptions';
+  this.response.redirect(redirectTo);
 });
 
 
