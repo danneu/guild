@@ -300,6 +300,8 @@ app.get('/search', function*() {
     return c.id !== 4;
   });
 
+  this.set('X-Robots-Tag', 'noindex');
+
   if (_.isEmpty(this.query)) {
     yield this.render('search_results', {
       ctx: this,
