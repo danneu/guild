@@ -206,7 +206,7 @@
           {{ latest_rpgn_topic.created_at|formatDate }}
         </abbr>
         {% if latest_rpgn_topic.created_at|isNewerThan({ days: 4 }) %}
-          <span style="color: #51e0db; font-size: 75%;"><span style="border: 1px solid #51e0db; padding: 0px 3px;">FRESH</span></span>
+          <span style="color: #00a9a9; font-size: 75%;"><span style="border: 1px solid #51e0db; padding: 0px 3px;">FRESH</span></span>
         {% endif %}
       </div>
     </div>
@@ -464,7 +464,7 @@
                       {{ topic.created_at|formatDate }}
                     </abbr>
                     {% if topic.created_at|isNewerThan({ days: 1 }) %}
-                      <span style="color: #51e0db; font-size: 75%;">&#x27F5; <span style="border: 1px solid #51e0db; padding: 0px 3px;" data-toggle="tooltip" title="Started less than 24 hours ago">FRESH</span></span>
+                      <span style="color: #00a9a9; font-size: 75%;">&#x27F5; <span style="border: 1px solid #51e0db; padding: 0px 3px;" data-toggle="tooltip" title="Started less than 24 hours ago">FRESH</span></span>
                     {% endif %}
                   </div>
                   <!-- List topic tags -->
