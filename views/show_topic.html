@@ -182,8 +182,7 @@
 
   <div class="topic-controls">
 
-    {# Only admin can see this for now while I test #}
-    {% if ctx.currUser && ctx.currUser.role === 'admin' %}
+    {% if ctx.currUser %}
       <!-- Search button -->
       <div class="btn-group">
         <a class="btn btn-default" href="/search?topic_id={{ topic.id }}">

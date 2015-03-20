@@ -290,8 +290,8 @@ app.get('/search', function*() {
   // Ensure cloudsearch is configured
   this.assert(config.IS_CLOUDSEARCH_CONFIGURED, 400, 'Search is currently offline');
 
-  // Only admin can access for now
-  this.assert(this.currUser && this.currUser.role === 'admin', 403);
+  // Must be logged in to search
+  this.assert(this.currUser, 403, 'You must be logged in to search');
 
   // TODO: Stop hard-coding lexus lounge authorization
   var publicCategories = cache.get('categories').filter(function(c) {

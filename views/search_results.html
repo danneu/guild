@@ -1,4 +1,5 @@
 {% extends 'layouts/master.html' %}
+{% import './macros/ads.html' as ads %}
 
 {% block head %}
   {# Prevent this page from being indexed, prevent links from being followed #}
@@ -6,6 +7,8 @@
 {% endblock %}
 
 {% block embed %}
+
+  {{ ads.topResponsive() }}
 
   <!-- WIP reminder -->
 
