@@ -637,10 +637,14 @@ app.use(route.get('/', function*() {
   if (stats.latestUser)
     stats.latestUser = pre.presentUser(stats.latestUser);
 
+  var latest_rpgn_topic = cache.get('latest-rpgn-topic') &&
+                          pre.presentTopic(cache.get('latest-rpgn-topic'));
+
   yield this.render('homepage', {
     ctx: this,
     categories: categories,
     stats: stats,
+    latest_rpgn_topic: latest_rpgn_topic,
     // For sidebar
     latestChecks: cache.get('latest-checks').map(pre.presentTopic),
     latestRoleplays: cache.get('latest-roleplays').map(pre.presentTopic)

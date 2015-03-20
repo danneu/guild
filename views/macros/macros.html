@@ -190,6 +190,29 @@
 
 {% macro renderSidebar(latestChecks, latestRoleplays) %}
 
+  <!-- Latest RPGN -->
+
+  {% if latest_rpgn_topic %}
+  <div class="panel panel-default" style="background: transparent;">
+    <div class="panel-body">
+      <h4 style="margin-bottom: 20px;" class="text-center">
+        Latest RPGN
+      </h4>
+      <div class="">
+        <a href="{{ latest_rpgn_topic.url }}">
+          {{ latest_rpgn_topic.title }}
+        </a><br>
+        <abbr class="timeago" title="{{ latest_rpgn_topic.created_at.toISOString() }}">
+          {{ latest_rpgn_topic.created_at|formatDate }}
+        </abbr>
+        {% if latest_rpgn_topic.created_at|isNewerThan({ days: 4 }) %}
+          <span style="color: #51e0db; font-size: 75%;"><span style="border: 1px solid #51e0db; padding: 0px 3px;" data-toggle="tooltip" title="Started less than 24 hours ago">FRESH</span></span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Current contest -->
 
   <div class="panel panel-default" style="background: transparent;">
@@ -441,7 +464,7 @@
                       {{ topic.created_at|formatDate }}
                     </abbr>
                     {% if topic.created_at|isNewerThan({ days: 1 }) %}
-                      <span style="color: #51e0db; font-size: 75%;">⟵ <span style="border: 1px solid #51e0db; padding: 0px 3px;" data-toggle="tooltip" title="Started less than 24 hours ago">FRESH</span></span>
+                      <span style="color: #51e0db; font-size: 75%;">&#x27F5; <span style="border: 1px solid #51e0db; padding: 0px 3px;" data-toggle="tooltip" title="Started less than 24 hours ago">FRESH</span></span>
                     {% endif %}
                   </div>
                   <!-- List topic tags -->

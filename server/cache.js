@@ -31,6 +31,16 @@ function Cache() {
     return val;
   };
 
+  // genFn failed
+  function errBack(err) {
+    console.error('Error', err, err.stack);
+    throw err;
+  }
+
+  this.once = function(genFn) {
+    co(genFn.bind(self)).then(_.noop, errBack);
+  };
+
   this.every = function(ms, genFn) {
     // Run the genFn on initial load, and then run it at an interval
 
@@ -44,12 +54,6 @@ function Cache() {
       self.intervals.push(interval);
     }
 
-    // genFn failed
-    function errBack(err) {
-      console.error('Error', err, err.stack);
-      throw err;
-    }
-
   };
 }
 
@@ -59,6 +63,13 @@ module.exports = function() {
   if (cache) return cache;
 
   cache = new Cache();
+
+  cache.once(function*() {
+    if (config.LATEST_RPGN_TOPIC_ID) {
+      var topic = yield db.findTopicById(config.LATEST_RPGN_TOPIC_ID);
+      this.set('latest-rpgn-topic', topic);
+    }
+  });
 
   // Every 60 seconds
   cache.every(1000 * 60, function*() {

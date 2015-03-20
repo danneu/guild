@@ -23,6 +23,8 @@ exports.MIN_UNAME_LENGTH = parseInt(process.env.MIN_UNAME_LENGTH, 10) || 2;
 exports.MAX_UNAME_LENGTH = parseInt(process.env.MAX_UNAME_LENGTH, 10) || 15;
 exports.MAX_BIO_LENGTH = parseInt(process.env.MAX_BIO_LENGTH) || 3000;
 
+exports.LATEST_RPGN_TOPIC_ID = parseInt(process.env.LATEST_RPGN_TOPIC_ID) || undefined;
+
 // These are limits on the number of notifications a user can generate from a
 // single post. If the limit of MENTIONS_PER_POST is 10 and a user mentions 15
 // people, then only the first 10 will trigger notifications.
