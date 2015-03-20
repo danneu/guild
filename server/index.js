@@ -156,6 +156,8 @@ swig.setDefaults({
   }
 });
 
+swig.setFilter('isNewerThan', belt.isNewerThan);
+
 swig.setFilter('expandJoinStatus', belt.expandJoinStatus);
 
 // {% if user.id|isIn([1, 2, 3]) %}

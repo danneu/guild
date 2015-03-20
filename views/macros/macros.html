@@ -440,6 +440,9 @@
                           title="{{ topic.created_at.toISOString() }}">
                       {{ topic.created_at|formatDate }}
                     </abbr>
+                    {% if topic.created_at|isNewerThan({ days: 1 }) %}
+                      <span style="color: #58f5ef;">&larr; Fresh</span>
+                    {% endif %}
                   </div>
                   <!-- List topic tags -->
                   {% if topic.tags || topic.join_status %}

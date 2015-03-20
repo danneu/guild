@@ -23,6 +23,36 @@ exports.dateToSeconds = function(date) {
   return Math.floor(date.getTime() / 1000);
 };
 
+function dateToUTC(date) {
+  return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds());
+}
+
+Date.prototype.toUTCDate = function() {
+  return dateToUTC(this);
+};
+
+exports.isNewerThan = function(nowDate, opts) {
+  var result = nowDate.toUTCDate() > exports.pastDate(new Date(), opts).toUTCDate();
+  debug('isNewerThan:', result);
+  return result;
+};
+
+exports.pastDate = function(nowDate, opts) {
+  if (!opts) {
+    opts = nowDate;
+    nowDate = new Date();
+  }
+
+  return new Date(nowDate.getTime() - (
+                    (opts.years   || 0) * 1000 * 60 * 60 * 24 * 365 +
+                    (opts.days    || 0) * 1000 * 60 * 60 * 24 +
+                    (opts.hours   || 0) * 1000 * 60 * 60 +
+                    (opts.minutes || 0) * 1000 * 60 +
+                    (opts.seconds || 0) * 1000 +
+                    (opts.milliseconds || 0)
+                 ));
+};
+
 exports.futureDate = function(nowDate, opts) {
   if (!opts) {
     opts = nowDate;
@@ -32,6 +62,7 @@ exports.futureDate = function(nowDate, opts) {
   return new Date(nowDate.getTime() +
                   (opts.years   || 0) * 1000 * 60 * 60 * 24 * 365 +
                   (opts.days    || 0) * 1000 * 60 * 60 * 24 +
+                  (opts.hours   || 0) * 1000 * 60 * 60 +
                   (opts.minutes || 0) * 1000 * 60 +
                   (opts.seconds || 0) * 1000 +
                   (opts.milliseconds || 0));
