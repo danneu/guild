@@ -293,9 +293,16 @@
             <a href="{{ post.url }}" style="color: #ffc300">
               {{ post.topic.title }}
             </a>
+            <a href="{{ post.url }}" class="btn btn-default btn-xs latest-post-btn" style="margin-left: 5px; color: #ffc300;">
+              &rarr;
+            </a>
             <abbr class="timeago" title="{{ post.created_at.toISOString() }}">
               {{ post.created_at|formatDate }}
             </abbr>
+
+          <span class="pull-right">
+              Forum: <a href="{{ post.forum.url }}" style="color: #ffc300">{{ post.forum.title }}</a>
+            </span>
           </div>
           <div class="panel-body" style="max-height: 100px; overflow: auto">
             {% if post.html %}
