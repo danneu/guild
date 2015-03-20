@@ -441,12 +441,12 @@
                       {{ topic.created_at|formatDate }}
                     </abbr>
                     {% if topic.created_at|isNewerThan({ days: 1 }) %}
-                      <span style="color: #51e0db;">&larr; Fresh</span>
+                      <span style="color: #51e0db; font-size: 75%;">⟵ <span style="border: 1px solid #51e0db; padding: 0px 3px;" data-toggle="tooltip" title="Started less than 24 hours ago">FRESH</span></span>
                     {% endif %}
                   </div>
                   <!-- List topic tags -->
                   {% if topic.tags || topic.join_status %}
-                    <ul class="list-inline" style="margin: 0;">
+                    <ul class="list-inline" style="margin: 2px 0 0 0;">
                       {% if topic.join_status %}
                         <li class="join-status join-status-{{ topic.join_status }}" style="padding-left: 0;">
                           <abbr title="{{ topic.join_status|expandJoinStatus }}" data-toggle="tooltip">
