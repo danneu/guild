@@ -877,21 +877,32 @@ SELECT
   to_json(u.*) "user",
   to_json(t.*) "topic",
   to_json(f.*) "forum",
+  to_json(s.*) "current_status",
   to_json(array_remove(array_agg(r.*), null)) ratings
 FROM posts p
 JOIN users u ON p.user_id = u.id
 JOIN topics t ON p.topic_id = t.id
 JOIN forums f ON t.forum_id = f.id
 LEFT OUTER JOIN ratings r ON p.id = r.post_id
+LEFT OUTER JOIN statuses s ON u.current_status_id = s.id
 WHERE p.topic_id = $1 AND p.type = $2 AND p.idx >= $3 AND p.idx < $4
-GROUP BY p.id, u.id, t.id, f.id
+GROUP BY p.id, u.id, t.id, f.id, s.id
 ORDER BY p.id
   */});
   var fromIdx = (page - 1) * config.POSTS_PER_PAGE;
   var toIdx = fromIdx + config.POSTS_PER_PAGE;
   debug('%s <= post.idx < %s', fromIdx, toIdx);
   var result = yield query(sql, [topicId, postType, fromIdx, toIdx]);
-  return result.rows;
+  return result.rows.map(function(row) {
+    // Make current_status a property of post.user where it makes more sense
+    if (row.current_status)
+      row.current_status.created_at = new Date(row.current_status.created_at);
+    row.user.current_status = row.current_status;
+    delete row.current_status;
+    if (row.user.current_status)
+      debug('curr: ', row.user.uname);
+    return row;
+  });
 };
 
 // TODO: Order by
@@ -2492,4 +2503,79 @@ WHERE tu.trophy_id = $1
   */});
   var result = yield query(sql, [trophy_id]);
   return result.rows;
+};
+
+////////////////////////////////////////////////////////////
+
+// props must have user_id (Int), text (String), html (String) properties
+exports.createStatus = function*(props) {
+  assert(Number.isInteger(props.user_id));
+  assert(typeof props.text === 'string');
+  assert(typeof props.html === 'string');
+
+  var sql = m(function() {/*
+INSERT INTO statuses (user_id, text, html)
+VALUES ($1, $2, $3)
+RETURNING *
+  */});
+
+  var result = yield query(sql, [props.user_id, props.text, props.html]);
+  return result.rows[0];
+};
+
+exports.findLatestStatusesForUserId = function*(user_id) {
+  var sql = m(function() {/*
+SELECT *
+FROM statuses
+WHERE user_id = $1
+ORDER BY created_at DESC
+LIMIT 5
+  */});
+  var result = yield query(sql, [user_id]);
+  return result.rows;
+};
+
+exports.findStatusById = function*(id) {
+  var sql = m(function() {/*
+SELECT
+  us.*,
+  to_json(u.*) "user"
+FROM statuses us
+JOIN users u ON us.user_id = u.id
+WHERE us.id = $1
+  */});
+  var result = yield query(sql, [id]);
+  return result.rows[0];
+};
+
+exports.deleteStatusById = function*(id) {
+  var sql = m(function() {/*
+DELETE FROM statuses
+WHERE id = $1
+  */});
+  yield query(sql, [id]);
+};
+
+exports.findLatestStatuses = function*() {
+  var sql = m(function() {/*
+SELECT
+  us.*,
+  to_json(u.*) "user"
+FROM statuses us
+JOIN users u ON us.user_id = u.id
+ORDER BY created_at DESC
+LIMIT 5
+  */});
+  var result = yield query(sql);
+  return result.rows;
+};
+
+exports.clearCurrentStatusForUserId = function*(user_id) {
+  assert(user_id);
+  var sql = m(function() {/*
+UPDATE users
+SET current_status_id = NULL
+WHERE id = $1
+*/});
+  yield query(sql, [user_id]);
 };

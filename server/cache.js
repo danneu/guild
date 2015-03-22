@@ -109,10 +109,12 @@ module.exports = function() {
   cache.every(1000 * 15, function*() {
     var results = yield [
       db.findLatestChecks(),
-      db.findLatestRoleplays()
+      db.findLatestRoleplays(),
+      db.findLatestStatuses()
     ];
     this.set('latest-checks', results[0]);
     this.set('latest-roleplays', results[1]);
+    this.set('latest-statuses', results[2]);
   });
 
   // Every 60 minutes

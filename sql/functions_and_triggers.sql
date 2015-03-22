@@ -393,3 +393,18 @@ CREATE TRIGGER delete_trophies_users_trigger
     AFTER DELETE ON trophies_users
     FOR EACH ROW
     EXECUTE PROCEDURE delete_trophies_users();
+
+------------------------------------------------------------
+------------------------------------------------------------
+-- Set new statuses to users.current_status_id
+
+CREATE OR REPLACE FUNCTION after_insert_statuses() RETURNS trigger AS
+$$
+  var q = 'UPDATE users SET current_status_id = $1 WHERE id = $2';
+  plv8.execute(q, [NEW.id, NEW.user_id]);
+$$ LANGUAGE 'plv8';
+DROP TRIGGER IF EXISTS after_insert_statuses_trigger ON statuses;
+CREATE TRIGGER after_insert_statuses_trigger
+    AFTER INSERT ON statuses
+    FOR EACH ROW
+    EXECUTE PROCEDURE after_insert_statuses();

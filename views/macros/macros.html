@@ -129,13 +129,45 @@
 
   <!-- User gylphs -->
 
-  {% if user.bio_markup %}
+  {% if user.bio_markup || user.current_status %}
     <div class="user-glyphs">
-      <a href="{{ user.url }}#bio">
-        <img src="/img/bio1.gif" width="22" height="12"
-             alt="Read bio of {{ user.uname }}"
-             title="Read bio of {{ user.uname }}">
-      </a>
+
+      <!-- Bio -->
+
+      {% if user.bio_markup %}
+        <a href="{{ user.url }}#bio">
+          <img src="/img/bio1.gif" width="22" height="12"
+               alt="Read bio of {{ user.uname }}"
+               title="Read bio of {{ user.uname }}">
+        </a>
+      {% endif %}
+
+      <!-- Status -->
+
+      {% if user.current_status %}
+          <div>
+            <button type="button" class="btn btn-xs btn-default status-btn"
+                    data-container="body"
+                    data-toggle="popover"
+                    data-placement="right"
+                    data-title="Status"
+                    data-text="{{ user.current_status.html }}"
+                    data-iso-string="{{ user.current_status.created_at.toISOString()}}"
+                    >
+              <span class="glyphicon glyphicon-comment"
+                    style="display: inline-block"></span>
+              {# Show timeago-xs only if created within 3 days #}
+
+              {% if user.current_status.created_at|isNewerThan({ days: 3 }) %}
+                <abbr class="timeago-xs"
+                      title="{{ user.current_status.created_at.toISOString() }}">
+                  {{ user.current_status.created_at }}
+                </abbr>
+              {% endif %}
+          </button>
+        </div>
+      {% endif %}
+
     </div>
   {% endif %}
 {% endmacro %}
@@ -241,12 +273,57 @@
     </div>
   </div>
 
-  <!-- Latest checks -->
+  <!-- Recent user statuses -->
 
   <div class="panel panel-default" style="background: transparent;">
     <div class="panel-body">
+      <h4 style="margin-bottom: 20px;" class="text-center">
+        <span class="glyphicon glyphicon-comment"></span>
+        Latest Status Updates
+      </h4>
 
-      <h4 style="margin-bottom: 20px;" class="text-center">Latest Checks</h4>
+      {% if latestStatuses.length === 0 %}
+        <div class="text-center">-- None --</div>
+      {% endif %}
+
+      {% for status in latestStatuses %}
+        <div class="media" style="margin-top: 0; margin-bottom: 10px;">
+          {% if status.user.avatar_url %}
+            <div class="media-left">
+              <a href="{{ status.user.url }}">
+                <img src="{{ status.user.avatar_url }}" width="30" class="media-object">
+              </a>
+            </div>
+          {% endif %}
+          <div class="media-body" style="vertical-align: middle; font-size: 90%;">
+            <a href="{{ status.user.url }}" style="color: #999;">{{ status.user.uname }}</a>
+            <span class="text-muted" style="display: inline-block;">
+              <abbr class="timeago-xs" title="{{ status.created_at.toISOString() }}">
+                {{ status.created_at|formatDate }}
+              </abbr>
+            </span>
+          </div>
+        </div>
+        <div style="word-wrap: break-word; font-size: 90%;">
+          {{ status.html|safe }}
+        </div>
+        {% if !loop.last %}<hr>{% endif %}
+      {% endfor %}
+    </div><!-- /panel-body -->
+  </div><!-- /panel-default -->
+
+  <!-- Latest checks -->
+
+  <div class="panel panel-default" style="background: transparent;">
+    <a name="latest-checks"></a>
+    <div class="panel-body">
+
+      <h4 style="margin-bottom: 20px;" class="text-center">
+        Latest Checks
+        <a href="/refresh-homepage/latest-checks" class="text-muted" title="Refresh" rel="nofollow">
+          <span class="glyphicon glyphicon-refresh"></span>
+        </a>
+      </h4>
       {% for topic in latestChecks %}
         <div>
           <a href="{{ topic.url }}">{{ topic.title }}</a>
@@ -277,9 +354,15 @@
   <!-- Latest Roleplays -->
 
   <div class="panel panel-default" style="background: transparent;">
+    <a name="latest-roleplays"></a>
     <div class="panel-body">
 
-      <h4 style="margin-bottom: 20px;" class="text-center">Latest Roleplays</h4>
+      <h4 style="margin-bottom: 20px;" class="text-center">
+        Latest Roleplays
+        <a href="/refresh-homepage/latest-roleplays" class="text-muted" title="Refresh" rel="nofollow">
+          <span class="glyphicon glyphicon-refresh"></span>
+        </a>
+      </h4>
       {% for topic in latestRoleplays %}
         <div>
           <a href="{{ topic.url }}">{{ topic.title }}</a>

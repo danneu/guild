@@ -11,6 +11,7 @@ var request = require('co-request');
 var _ = require('lodash');
 var uuid = require('node-uuid');
 var m = require('multiline');
+var autolinker = require('autolinker');
 // 1st party
 var config = require('./config');
 
@@ -429,4 +430,27 @@ exports.getOrdinalSuffix = function (n) {
           : (n % 10 === 3
             ? 'rd'
             : 'th')));
+};
+
+exports.autolink = function(text) {
+  return autolinker.link(text, {
+    // Strip http/https/www
+    stripPrefix: true,
+    // Add target="_blank"
+    newWindow: true,
+    // How many chars to truncate url in the anchor text
+    truncate: 30,
+    // Don't autolink twitter handles
+    twitter: false
+  });
+};
+
+// String -> String
+exports.escapeHtml = function(unsafe) {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 };

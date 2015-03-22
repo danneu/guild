@@ -177,6 +177,13 @@ exports.presentNotification = function(n) {
 
 ////////////////////////////////////////////////////////////
 
+exports.presentStatus = function(s) {
+  if (s.user)
+    s.user = exports.presentUser(s.user);
+
+  return s;
+};
+
 exports.presentTrophy = function(t) {
   t.url = '/trophies/' + t.id;
 

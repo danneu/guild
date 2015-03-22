@@ -400,6 +400,7 @@ router.get('/users/:userIdOrSlug', function*() {
   // Ensure user exists
   this.assert(user, 404);
   user = pre.presentUser(user);
+
   // OPTIMIZE: Merge into single query?
   var recentPosts = yield db.findRecentPostsForUserId(user.id,
                                                       this.query['before-id']);
@@ -419,6 +420,16 @@ router.get('/users/:userIdOrSlug', function*() {
     trophies = yield db.findTrophiesForUserId(user.id);
   trophies = trophies.map(pre.presentTrophy);
 
+  // FIXME: Way too many queries in this route.
+
+  var results = yield [
+    db.findLatestStatusesForUserId(user.id),
+    user.current_status_id ?
+      db.findStatusById(user.current_status_id) : function*(){}
+  ];
+  var statuses = results[0];
+  user.current_status = results[1];
+
   // The ?before-id=_ of the "Next" button. i.e. the lowest
   // id of the posts on the current page
   var nextBeforeId = recentPosts.length > 0 ? _.last(recentPosts).id : null;
@@ -431,6 +442,7 @@ router.get('/users/:userIdOrSlug', function*() {
     recentPosts: recentPosts,
     title: user.uname,
     trophies: trophies,
+    statuses: statuses,
     // Pagination
     nextBeforeId: nextBeforeId,
     recentPostsPerPage: config.RECENT_POSTS_PER_PAGE

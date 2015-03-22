@@ -59,6 +59,19 @@
     {% if user.custom_title %}
       <h3 style="margin-top: 0;">{{ user.custom_title|replaceTitleNewlines|raw }}</h3>
     {% endif %}
+
+    {% if user.current_status_id %}
+      {% set _s = _.findWhere(statuses, { id: user.current_status_id }) %}
+      <span class="glyphicon glyphicon-comment"></span>
+      <span class="lead" style="margin-bottom: 0;">
+        <span class="text-muted" style="font-size: 70%; font-weight: 900;">STATUS: </span>
+        {{ _s.html|safe }}
+      </span>
+      <abbr class="timeago" title="{{ _s.created_at.toISOString() }}">
+        {{ _s.created_at|formatDate }}
+      </abbr>
+    {% endif %}
+
   </div>
 
   {% if ctx.currUser && cancan.isStaffRole(ctx.currUser.role) %}
@@ -213,6 +226,89 @@
     </div> <!-- /.col-6 -->
 
     </div><!-- /row -->
+
+  <!-- Status -->
+
+  <a name="status"></a>
+  <div class="row">
+    <div class="col-sm-12">
+      <h3>
+        <span class="glyphicon glyphicon-comment"></span>
+        Status
+
+        {% if user.current_status_id %}
+          <form action="/me/current-status" method="post"
+                class="pull-right"
+                style="display: inline-block;">
+            <input type="hidden" name="_method" value="delete">
+            <button type="submit" class="btn btn-xs btn-default text-muted"
+                    style="font-size: 60%;">
+              Clear Current Status
+            </button>
+          </form>
+        {% endif %}
+      </h3>
+
+      <div class="well">
+
+        <!-- New status form -->
+        <form action="/me/statuses" method="post">
+          <input type="text" class="form-control status-text-input" name="text"
+                 style="display: inline-block;"
+                 placeholder="What's on your mind?">
+          <div class="text-right">
+            <span class="text-muted">
+              <span class="status-text-counter">0</span> / 200
+            </span>
+            <button type="submit" class="btn btn-primary">Update Status</button>
+          </div>
+        </form>
+
+        <!-- Latest statuses -->
+        {% if statuses.length > 0 %}
+          <h3>
+            Recent Statuses
+          </h3>
+
+          {% for status in statuses %}
+              <div class="status-item row">
+                <div class="col-lg-2 col-md-2 col-sm-3">
+                  <abbr class="timeago" title="{{ status.created_at.toISOString() }}">
+                    {{ status.created_at|formatDate }}
+                  </abbr>
+                  <!-- Delete button -->
+                  <form action="/statuses/{{ status.id }}" method="post"
+                        class="delete-status-form"
+                        style="visibility: hidden; display: inline-block;">
+                    <input type="hidden" name="_method" value="delete">
+                    <button type="submit" class="btn-link delete-status-btn"
+                            style="color: red">
+                      x
+                    </button>
+                  </form>
+                </div>
+                <div class="col-lg-10 col-md-10 col-sm-9">
+                  <div class="lead" style="margin-bottom: 0;">
+                    {% if user.current_status_id === status.id %}
+                      <span class="label label-primary"
+                            style="display: inline-block;">
+                        Current
+                      </span>
+                    {% endif %}
+
+                    {{ status.html|safe }}
+                  </div>
+
+                </div>
+
+            </div>
+          {% endfor %}
+
+        {% endif %}
+      </div><!--/.well-->
+    </div>
+  </div>
+
 
   <!-- BIO -->
 
@@ -465,6 +561,33 @@
       $cancelBtn.on('click', function() {
         $('.user-bio').html($('#bio-html').text() || 'User has no bio, yet');
       });
+    });
+  </script>
+
+  <script type="text/javascript">
+    $('.status-item').mouseenter(function() {
+      $(this).find('.delete-status-form').css('visibility', 'visible');
+    }).mouseleave(function() {
+      $(this).find('.delete-status-form').css('visibility', 'hidden');
+    });
+  </script>
+
+  <script type="text/javascript">
+    $('.delete-status-btn').on('click', function(e) {
+      if (!confirm('Are you sure you want to delete this status?')) {
+        e.preventDefault();
+        return false;
+      };
+    });
+
+    $('.status-text-input').on('keyup change', function(e) {
+      var len = e.target.value.length;
+      $('.status-text-counter').text(len);
+      if (len > 200)
+        $('.status-text-counter').css('color', 'red');
+      else
+        $('.status-text-counter').css('color', '#999');
+
     });
   </script>
 {% endblock %}

@@ -283,7 +283,7 @@
               &rarr;
               <span class="glyphicon glyphicon-pencil"></span>
               <abbr class="timeago" title="{{ post.updated_at.toISOString() }}">
-                {{ post.formattedUpdatedAt }}
+                {{ post.updated_at|formatDate }}
               </abbr>
             {% endif %}
           </span>
@@ -855,6 +855,29 @@ $(function () {
   <script type="text/javascript">
     // Activate tag tooltips
     $('[data-toggle="tooltip"]').tooltip()
+    // Activate user status popovers
+    $('.status-btn[data-toggle="popover"]').popover({
+      html: true,
+      template: '<div class="popover popover-user-status" role="tooltip">'+
+        '<div class="arrow"></div><h3 class="popover-title"></h3>'+
+        '<div class="popover-content"></div>'+
+        '</div>',
+      content: function() {
+        var $this = $(this);
+        var popover_id = $this.attr('aria-describedby');  // popover277632
+        var iso_string = $this.attr('data-iso-string');
+        var text = $this.attr('data-text');
+        return text + '<br>' +
+          '<div class="text-right"><abbr class="timeago" title="'+iso_string+'">'+iso_string+'</abbr></div>'
+          ;
+      }
+    }).on('show.bs.popover', function() {
+      var $this = $(this);
+      setTimeout(function() {
+         var popover_id = $this.attr('aria-describedby');
+         $('#' + popover_id).find('abbr').timeago();
+      },0);
+    });
   </script>
 
 {% endblock%}

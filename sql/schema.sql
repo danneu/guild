@@ -23,6 +23,7 @@ CREATE TABLE users (
   slug           text      NOT NULL,
   custom_title   text      NOT NULL  DEFAULT '',
   trophy_count   int       NOT NULL  DEFAULT 0,
+  current_status_id int    NULL REFERENCES statuses(id) ON DELETE SET NULL,
   -- Cache
   posts_count    int       NOT NULL  DEFAULT 0,
   pms_count      int       NOT NULL  DEFAULT 0,
@@ -417,3 +418,21 @@ CREATE TRIGGER trigger_set_pm_idx
     BEFORE INSERT ON pms
     FOR EACH ROW
     EXECUTE PROCEDURE set_pm_idx();
+
+------------------------------------------------------------
+------------------------------------------------------------
+
+-- User statuses
+
+CREATE TABLE statuses (
+  id          serial PRIMARY KEY,
+  user_id     int NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  text        text NOT NULL,
+  html        text NOT NULL,
+  created_at  timestamp with time zone NOT NULL DEFAULT NOW()
+);
+
+-- To quickly find statuses written by a user
+CREATE INDEX statuses__user_id ON statuses (user_id);
+-- To quickly find the latest X statuses sorted by created_at
+CREATE INDEX statuses__created_at ON statuses (created_at);

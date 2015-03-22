@@ -41,6 +41,24 @@ exports.can = function(user, action, target) {
 function can(user, action, target) {
   var topic;
   switch(action) {
+    case 'DELETE_USER_STATUS': // target is status
+      // Guests can't
+      if (!user) return false;
+      // Banned can't
+      if (user.role === 'banned') return false;
+      // User can delete their own statuses
+      if (user.id === target.user_id) return true;
+      // Staff can
+      if (isStaffRole(user.role)) return true;
+      return false;
+    case 'CREATE_USER_STATUS': // target is user
+      // Guests can't
+      if (!user) return false;
+      // Banned can't
+      if (user.role === 'banned') return false;
+      // User can update themself
+      if (user.id === target.id) return true;
+      return false;
     // Expresses user's ability to update any part of a topic
     // Only use this for high level checks like to see if a user
     // should see the "Edit Topic" link at all. The actual actions they

@@ -652,7 +652,8 @@ app.use(route.get('/', function*() {
     latest_rpgn_topic: latest_rpgn_topic,
     // For sidebar
     latestChecks: cache.get('latest-checks').map(pre.presentTopic),
-    latestRoleplays: cache.get('latest-roleplays').map(pre.presentTopic)
+    latestRoleplays: cache.get('latest-roleplays').map(pre.presentTopic),
+    latestStatuses: cache.get('latest-statuses').map(pre.presentStatus)
   });
 }));
 
@@ -1212,8 +1213,6 @@ app.post('/forums/:slug/topics', function*() {
       .isLength(1, 5, 'Must select 1-5 tags')
   }
   this.validateBody('tag-ids').default([]);
-
-  debug({valid: this.vals, body: this.request.body});
 
   // Validation succeeded
 
@@ -1954,6 +1953,66 @@ app.get('/trophies/:id', function*() {
     trophy: trophy,
     winners: winners
   });
+});
+
+// Create status
+//
+// Required params
+// - text: String
+app.post('/me/statuses', function*() {
+  // Ensure user is authorized
+  this.assertAuthorized(this.currUser, 'CREATE_USER_STATUS', this.currUser);
+
+  // Validate params
+  this.validateBody('text')
+    .notEmpty('text is required')
+    .trim()
+    .isLength(1, 200, 'text must be 1-200 chars');
+
+  var html = belt.autolink(belt.escapeHtml(this.vals.text));
+
+  yield db.createStatus({
+    user_id: this.currUser.id,
+    text:    this.vals.text,
+    html:    html
+  });
+
+  this.flash = { message: ['success', 'Status updated'] };
+  this.redirect('/users/' + this.currUser.slug + '#status');
+});
+
+app.del('/me/current-status', function*() {
+  // Ensure user is logged in
+  this.assert(this.currUser, 403, 'You must log in to do that');
+
+  yield db.clearCurrentStatusForUserId(this.currUser.id);
+
+  this.flash = { message: ['success', 'Current status cleared'] };
+  this.redirect('/users/' + this.currUser.slug);
+});
+
+app.del('/statuses/:status_id', function*() {
+  var status = yield db.findStatusById(this.params.status_id);
+
+  // Ensure status exists
+  this.assert(status, 404);
+  status = pre.presentStatus(status);
+
+  // Ensure user is authorized to delete it
+  this.assertAuthorized(this.currUser, 'DELETE_USER_STATUS', status);
+
+  // Delete it
+  yield db.deleteStatusById(status.id);
+
+  // Redirect back to profile
+  this.flash = { message: ['success', 'Status deleted'] };
+  this.redirect(status.user.url + '#status');
+});
+
+app.get('/refresh-homepage/:anchor_name', function*() {
+  this.set('X-Robots-Tag', 'none');
+  this.status = 301;
+  this.redirect(util.format('/#%s', this.params.anchor_name));
 });
 
 app.listen(config.PORT);

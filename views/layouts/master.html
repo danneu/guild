@@ -167,34 +167,63 @@
     <script src="/vendor/xbbcode/xbbcode/bbcode.js"></script>
     <script src="/js/bbcode_editor.js"></script>
   {% endif %}
-  <script>
-    $.timeago.settings.allowFuture = true;
-    $.timeago.settings.strings = {
-      prefixAgo: null,
-      prefixFromNow: "in",
-      suffixAgo: "ago",
-      suffixFromNow: "",
-      seconds: "<1 min",
-      minute: "1 min",
-      minutes: "%d min",
-      hour: "1 hour",
-      hours: "%d hours",
-      day: "1 day",
-      days: "%d days",
-      month: "1 month",
-      months: "%d months",
-      year: "1 year",
-      years: "%d years",
-      wordSeparator: " ",
-      numbers: []
-    };
-  </script>
-  <script>
+
+  <script type="text/javascript">
     $(function() {
+
+      var strings = {
+        verbose: {
+          prefixAgo: null,
+          prefixFromNow: "in",
+          suffixAgo: "ago",
+          suffixFromNow: "",
+          seconds: "<1 min",
+          minute: "1 min",
+          minutes: "%d min",
+          hour: "1 hour",
+          hours: "%d hours",
+          day: "1 day",
+          days: "%d days",
+          month: "1 month",
+          months: "%d months",
+          year: "1 year",
+          years: "%d years",
+          wordSeparator: " ",
+          numbers: []
+        },
+        minimal: {
+          prefixAgo: "",
+          prefixFromNow: "",
+          suffixAgo: "",
+          suffixFromNow: "",
+          seconds: "1m",
+          minute: "1m",
+          minutes: "%dm",
+          hour: "1h",
+          hours: "%dh",
+          day: "1d",
+          days: "%dd",
+          month: "1mo",
+          months: "%dmo",
+          year: "1yr",
+          years: "%dyr",
+          wordSeparator: " ",
+          numbers: []
+        }
+      };
+
+      $.timeago.settings.allowFuture = true;
+
+      $.timeago.settings.strings = strings.verbose;
       $("abbr.timeago").timeago();
+
+      $.timeago.settings.strings = strings.minimal;
+      $("abbr.timeago-xs").timeago();
+
+      $.timeago.settings.strings = strings.verbose;
     });
   </script>
-  <script>
+  <script type="text/javascript">
     // Activate cheatsheet toggle
     var isCheatsheetRendered = false;
     $('#cheatsheet-toggle-btn').on('click', function() {

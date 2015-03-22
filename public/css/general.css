@@ -1328,3 +1328,10 @@ hr {
         display: block;
     }
 }
+
+.popover-user-status {
+    font-size: 90%;
+}
+.popover-user-status .timeago {
+    color: #111;
+}
