@@ -28,6 +28,13 @@
       {% endif %}
     <h1 style="margin-bottom: 0;">
       <a href="{{ user.url }}">{{ user.uname }}</a>
+
+      {% if ctx.currUser && ctx.currUser.role === 'admin' %}
+        <span class="label label-default" style="font-size: 50%; display: inline-block;">
+          ID: {{ user.id }}
+        </span>
+      {% endif %}
+
       <small>{{ user.role|capitalize}}</small>
       {% if ctx.can(ctx.currUser, 'UPDATE_USER', user) %}
         <a href="{{ user.url }}/edit" class="btn btn-default btn-xs">
