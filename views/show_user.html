@@ -236,7 +236,8 @@
         <span class="glyphicon glyphicon-comment"></span>
         Status
 
-        {% if user.current_status_id %}
+        {% if user.current_status_id
+              && ctx.can(ctx.currUser, 'MANAGE_USER_STATUS', user) %}
           <form action="/me/current-status" method="post"
                 class="pull-right"
                 style="display: inline-block;">
@@ -252,17 +253,19 @@
       <div class="well">
 
         <!-- New status form -->
-        <form action="/me/statuses" method="post">
-          <input type="text" class="form-control status-text-input" name="text"
-                 style="display: inline-block;"
-                 placeholder="What's on your mind?">
-          <div class="text-right">
-            <span class="text-muted">
-              <span class="status-text-counter">0</span> / 200
-            </span>
-            <button type="submit" class="btn btn-primary">Update Status</button>
-          </div>
-        </form>
+        {% if ctx.can(ctx.currUser, 'MANAGE_USER_STATUS', user) %}
+          <form action="/me/statuses" method="post">
+            <input type="text" class="form-control status-text-input" name="text"
+                   style="display: inline-block;"
+                   placeholder="What's on your mind?">
+            <div class="text-right">
+              <span class="text-muted">
+                <span class="status-text-counter">0</span> / 200
+              </span>
+              <button type="submit" class="btn btn-primary">Update Status</button>
+            </div>
+          </form>
+        {% endif %}
 
         <!-- Latest statuses -->
         {% if statuses.length > 0 %}
@@ -564,13 +567,15 @@
     });
   </script>
 
-  <script type="text/javascript">
-    $('.status-item').mouseenter(function() {
-      $(this).find('.delete-status-form').css('visibility', 'visible');
-    }).mouseleave(function() {
-      $(this).find('.delete-status-form').css('visibility', 'hidden');
-    });
-  </script>
+  {% if ctx.can(ctx.currUser, 'MANAGE_USER_STATUS', user) %}
+    <script type="text/javascript">
+      $('.status-item').mouseenter(function() {
+        $(this).find('.delete-status-form').css('visibility', 'visible');
+      }).mouseleave(function() {
+        $(this).find('.delete-status-form').css('visibility', 'hidden');
+      });
+    </script>
+  {% endif %}
 
   <script type="text/javascript">
     $('.delete-status-btn').on('click', function(e) {

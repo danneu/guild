@@ -41,6 +41,7 @@ exports.can = function(user, action, target) {
 function can(user, action, target) {
   var topic;
   switch(action) {
+    // TODO: Replace this with MANAGE_USER_STATUS
     case 'DELETE_USER_STATUS': // target is status
       // Guests can't
       if (!user) return false;
@@ -48,6 +49,16 @@ function can(user, action, target) {
       if (user.role === 'banned') return false;
       // User can delete their own statuses
       if (user.id === target.user_id) return true;
+      // Staff can
+      if (isStaffRole(user.role)) return true;
+      return false;
+    case 'MANAGE_USER_STATUS': // target is user
+      // Guests can't
+      if (!user) return false;
+      // Banned can't
+      if (user.role === 'banned') return false;
+      // User can delete their own statuses
+      if (user.id === target.id) return true;
       // Staff can
       if (isStaffRole(user.role)) return true;
       return false;
