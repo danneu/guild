@@ -255,6 +255,7 @@
         <!-- New status form -->
         {% if ctx.can(ctx.currUser, 'MANAGE_USER_STATUS', user) %}
           <form action="/me/statuses" method="post">
+            <p class="text-muted">No BBCode allowed. URLs (like "example.com") will be converted into clickable links.</p>
             <input type="text" class="form-control status-text-input" name="text"
                    style="display: inline-block;"
                    placeholder="What's on your mind?">
