@@ -156,6 +156,9 @@ swig.setDefaults({
   }
 });
 
+swig.setFilter('ordinalize', belt.ordinalize);
+swig.setFilter('getOrdinalSuffix', belt.getOrdinalSuffix);
+
 swig.setFilter('isNewerThan', belt.isNewerThan);
 
 swig.setFilter('expandJoinStatus', belt.expandJoinStatus);
@@ -1912,6 +1915,45 @@ app.get('/sitemap.txt', koaCompressor(), function*() {
   var text = cache.get('sitemap.txt');
   this.set('Content-Type', 'text/plain');
   this.body = text;
+});
+
+////////////////////////////////////////////////////////////
+
+app.get('/trophies', function*() {
+  this.body = 'TODO';
+});
+
+app.get('/trophy-groups/:id', function*() {
+  var group = yield db.findTrophyGroupById(this.params.id);
+
+  // Ensure group exists
+  this.assert(group, 404);
+
+  // Fetch trophies
+  var trophies = yield db.findTrophiesByGroupId(group.id);
+
+  yield this.render('show_trophy_group', {
+    ctx: this,
+    group: group,
+    trophies: trophies
+  });
+});
+
+app.get('/trophies/:id', function*() {
+  var trophy = yield db.findTrophyById(this.params.id);
+
+  // Ensure trophy exists
+  this.assert(trophy, 404);
+  trophy = pre.presentTrophy(trophy);
+
+  // Fetch winners
+  var winners = yield db.findWinnersForTrophyId(trophy.id);
+
+  yield this.render('show_trophy', {
+    ctx: this,
+    trophy: trophy,
+    winners: winners
+  });
 });
 
 app.listen(config.PORT);

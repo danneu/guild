@@ -1,0 +1,47 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/trophies">Trophies</a></li>
+    <li>{{ group.title }}</li>
+  </ol>
+
+  <div class="page-header" style="border-color: #000">
+    <h1>{{ group.title }}</h1>
+  </div>
+
+  <!-- Group description -->
+
+  {% if group.description_html %}
+    {{ group.description_html|safe }}
+  {% endif %}
+
+  <!-- List trophies -->
+
+  <h2>Trophies</h2>
+
+  {% if trophies.length === 0 %}
+    <div class="well">
+      This trophy collection has no trophies, yet
+    </div>
+  {% endif %}
+
+  {% if trophies.length > 0 %}
+    <ul>
+      {% for trophy in trophies %}
+        <li>
+          <a href="/trophies/{{ trophy.id }}">{{ trophy.title }}</a>
+          Created
+          <abbr class="timeago" title="{{ trophy.created_at.toISOString() }}">
+            {{ trophy.created_at|formatDate }}
+          </abbr>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}

@@ -2417,3 +2417,79 @@ exports.getUnamesMappedToIds = function*() {
   rows.forEach(function(row) { out[row.uname.toLowerCase()] = row.id; });
   return out;
 };
+
+// Trophies are returned newly-awarded first
+exports.findTrophiesForUserId = function*(user_id) {
+  var sql = m(function() {/*
+SELECT
+  t.*,
+  tu.awarded_at,
+  tu.message_markup,
+  tu.message_html,
+  tu.n,
+  to_json(u1.*) awarded_by,
+  to_json(tg.*) "group"
+FROM trophies t
+JOIN trophies_users tu ON t.id = tu.trophy_id
+LEFT OUTER JOIN users u1 ON tu.awarded_by = u1.id
+LEFT OUTER JOIN trophy_groups tg ON t.group_id = tg.id
+WHERE tu.user_id = $1
+ORDER BY tu.awarded_at DESC
+  */});
+  var result = yield query(sql, [user_id]);
+  return result.rows;
+};
+
+////////////////////////////////////////////////////////////
+
+// Finds one trophy
+exports.findTrophyById = function*(trophy_id) {
+  var sql = m(function() {/*
+SELECT
+  t.*,
+  to_json(tg.*) "group"
+FROM trophies t
+LEFT OUTER JOIN trophy_groups tg ON t.group_id = tg.id
+WHERE t.id = $1
+GROUP BY t.id, tg.id
+  */});
+  var result = yield query(sql, [trophy_id]);
+  return result.rows[0];
+};
+
+exports.findTrophiesByGroupId = function*(group_id) {
+  var sql = m(function() {/*
+SELECT *
+FROM trophies t
+WHERE t.group_id = $1
+  */});
+  var result = yield query(sql, [group_id]);
+  return result.rows;
+};
+
+exports.findTrophyGroupById = function*(group_id) {
+  var sql = m(function() {/*
+SELECT *
+FROM trophy_groups tg
+WHERE tg.id = $1
+  */});
+  var result = yield query(sql, [group_id]);
+  return result.rows[0];
+};
+
+exports.findWinnersForTrophyId = function*(trophy_id) {
+  var sql = m(function() {/*
+SELECT
+  winners.id,
+  winners.uname,
+  winners.slug,
+  tu.awarded_at,
+  to_json(awarders.*) "awarded_by"
+FROM trophies_users tu
+JOIN users winners ON tu.user_id = winners.id
+LEFT OUTER JOIN users awarders ON tu.awarded_by = awarders.id
+WHERE tu.trophy_id = $1
+  */});
+  var result = yield query(sql, [trophy_id]);
+  return result.rows;
+};

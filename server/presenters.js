@@ -174,3 +174,19 @@ exports.presentNotification = function(n) {
 
   return n;
 };
+
+////////////////////////////////////////////////////////////
+
+exports.presentTrophy = function(t) {
+  t.url = '/trophies/' + t.id;
+
+  // awarded_by is normally a user_id, but it should be SELECT'd
+  // as a json object of the user that awarded the trophy
+  if (t.awarded_by)
+    t.awarded_by = exports.presentUser(t.awarded_by);
+
+  if (t.winners)
+    t.winners = t.winners.map(exports.presentUser);
+
+  return t;
+};

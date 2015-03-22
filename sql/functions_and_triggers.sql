@@ -309,3 +309,87 @@ CREATE TRIGGER update_convo_latest_pm_trigger
     AFTER INSERT ON pms
     FOR EACH ROW
     EXECUTE PROCEDURE update_convo_latest_pm();
+
+------------------------------------------------------------
+------------------------------------------------------------
+-- Executed when a user is awarded a trophy.
+-- i.e. When insertion in trophies_users table
+--
+-- Function: insert_trophies_users
+-- Trigger:  insert_trophies_users_trigger
+
+-- When a trophy is awarded,
+-- + Set NEW.n = COUNT(times this trophy has been awarded before this + 1)
+-- + Update this trophy's award_count
+-- + Update user's trophy_count
+
+CREATE OR REPLACE FUNCTION insert_trophies_users() RETURNS trigger AS
+$$
+  var q, rows;
+
+  //-- Count how many times this trophy has been awarded (BEFORE insert)
+  q = 'SELECT COUNT(tu) "count" FROM trophies_users tu WHERE tu.trophy_id = $1';
+  rows = plv8.execute(q, [NEW.trophy_id]);
+  var prev_awarded_count = rows[0].count;
+
+  //-- Update this awarding's trophy's `awarded_count`
+  q = 'UPDATE trophies SET awarded_count = $2 WHERE id = $1';
+  plv8.execute(q, [NEW.trophy_id, 1 + prev_awarded_count]);
+
+  // -- Update user.trophy_count
+  q = 'UPDATE users                       '+
+      'SET trophy_count = (               '+
+        'SELECT COUNT(tu) + 1             '+
+        'FROM trophies_users tu           '+
+        'WHERE tu.user_id = $1            '+
+      ')                                  '+
+      'WHERE id = $1;                     ';
+  plv8.execute(q, [NEW.user_id]);
+
+  //-- Update this awarding's `n`
+  NEW.n = 1 + prev_awarded_count;
+
+  return NEW;
+$$ LANGUAGE 'plv8';
+DROP TRIGGER IF EXISTS insert_trophies_users_trigger ON trophies_users;
+CREATE TRIGGER insert_trophies_users_trigger
+    BEFORE INSERT ON trophies_users
+    FOR EACH ROW
+    EXECUTE PROCEDURE insert_trophies_users();
+
+------------------------------------------------------------
+------------------------------------------------------------
+-- Run after a row from trophies_users is deleted
+-- i.e. an awarded trophy is being revoked from a user
+-- Maybe it was a mistake, they were found out to be cheating, or something
+--
+-- It updates `trophies.awarded_count` column cache
+
+CREATE OR REPLACE FUNCTION delete_trophies_users() RETURNS trigger AS
+$$
+  var q, rows;
+
+  //-- Count how many times this trophy has been awarded
+  q = 'SELECT COUNT(tu) "count" FROM trophies_users tu WHERE tu.trophy_id = $1';
+  rows = plv8.execute(q, [OLD.trophy_id]);
+  var awarded_count = rows[0].count;
+
+  // -- Update user.trophy_count (runs AFTER delete)
+  q = 'UPDATE users                       '+
+      'SET trophy_count = (               '+
+        'SELECT COUNT(tu)                 '+
+        'FROM trophies_users tu           '+
+        'WHERE tu.user_id = $1            '+
+      ')                                  '+
+      'WHERE id = $1;                     ';
+  plv8.execute(q, [OLD.user_id]);
+
+  //-- Update this awarding's trophy's `awarded_count`
+  q = 'UPDATE trophies SET awarded_count = $2 WHERE id = $1';
+  plv8.execute(q, [OLD.trophy_id, awarded_count]);
+$$ LANGUAGE 'plv8';
+DROP TRIGGER IF EXISTS delete_trophies_users_trigger ON trophies_users;
+CREATE TRIGGER delete_trophies_users_trigger
+    AFTER DELETE ON trophies_users
+    FOR EACH ROW
+    EXECUTE PROCEDURE delete_trophies_users();

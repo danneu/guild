@@ -22,6 +22,7 @@ CREATE TABLE users (
   role           role_type NOT NULL  DEFAULT 'member',
   slug           text      NOT NULL,
   custom_title   text      NOT NULL  DEFAULT '',
+  trophy_count   int       NOT NULL  DEFAULT 0,
   -- Cache
   posts_count    int       NOT NULL  DEFAULT 0,
   pms_count      int       NOT NULL  DEFAULT 0,
@@ -319,6 +320,58 @@ CREATE TABLE tags_topics (
 -- FK lookups
 CREATE INDEX ON tags_topics (topic_id);
 CREATE INDEX ON tags_topics (tag_id);
+
+--
+-- Trophies
+--
+
+CREATE TABLE trophy_groups (
+  id         serial PRIMARY KEY,
+  title      text NOT NULL,
+  description_markup     text NULL,
+  description_html       text NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE trophies (
+  id       serial PRIMARY KEY,
+  group_id int NULL REFERENCES trophy_groups(id) ON DELETE CASCADE,
+  title    text NOT NULL,
+  -- awarded_count is the number of times this trophy has been awarded
+  awarded_count int NOT NULL DEFAULT 0,
+  -- description is BBCode markup
+  description_markup text NULL,
+  description_html   text NULL,
+  image_url   text NULL,
+  -- [width, height]
+  image_dims  int[] NULL,
+  created_at  timestamp with time zone NOT NULL DEFAULT NOW()
+);
+
+-- FK indexes
+CREATE INDEX trophies__group_id ON trophies (group_id);
+
+CREATE TABLE trophies_users (
+  user_id    int NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  trophy_id  int NOT NULL REFERENCES trophies(id) ON DELETE CASCADE,
+  awarded_at timestamp with time zone NOT NULL DEFAULT NOW(),
+  awarded_by int NULL REFERENCES users(id) ON DELETE CASCADE,
+  -- n represents that this user was the awardee of this trophy
+  -- i.e. n of 42 means this is the 42nd awarding of this trophy
+  n          int NOT NULL DEFAULT 0,
+  -- message is BBCode that describes more info about
+  -- this specific awarding. Perhaps it links to the topic/post
+  -- that the receiver was awarded for. etc.
+  message_markup    text NULL,
+  message_html      text NULL,
+  -- Constraints
+  UNIQUE(trophy_id, n)
+);
+
+-- FK indexes
+CREATE INDEX trophies_users__user_id ON trophies_users (user_id);
+CREATE INDEX trophies_users__awarded_by ON trophies_users (awarded_by);
+CREATE INDEX trophies_users__awarded_at ON trophies_users (awarded_at);
 
 ------------------------------------------------------------
 ------------------------------------------------------------

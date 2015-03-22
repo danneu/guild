@@ -1,0 +1,63 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/trophies">Trophies</a></li>
+    {% if trophy.group %}
+      <li><a href="/trophy-groups/{{ trophy.group.id }}">
+        {{ trophy.group.title }}
+      </a></li>
+    {% endif %}
+    <li>{{ trophy.title }}</li>
+  </ol>
+
+  <div class="page-header" style="border-color: #000">
+    <h1>Trophy: {{ trophy.title }}</h1>
+    {% if trophy.group %}
+      Part of the
+      <a href="/trophy-groups/{{ trophy.group.id }}">{{ trophy.group.title }}</a>
+      trophy collection
+    {% endif %}
+  </div>
+
+  <!-- Trophy description -->
+
+  {% if trophy.description_html %}
+    {{ trophy.description_html|safe }}
+  {% endif %}
+
+  <!-- List winners -->
+
+  <h2>Winners</h2>
+
+  {% if winners.length === 0 %}
+    <div class="well">
+      Nobody has been awarded this trophy, yet
+    </div>
+  {% endif %}
+
+  {% if winners.length > 0 %}
+    <ul>
+      {% for winner in winners %}
+        <li>
+          <a href="/users/{{ winner.slug }}">{{ winner.uname }}</a>,
+          Awarded
+          <abbr class="timeago" title="{{ winner.awarded_at.toISOString() }}">
+            {{ winner.awarded_at|formatDate }}
+          </abbr>
+          {% if winner.awarded_by %}
+            by
+            <a href="/users/{{ winner.awarded_by.slug }}">
+              {{ winner.awarded_by.uname }}
+            </a>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}

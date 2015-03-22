@@ -404,3 +404,29 @@ exports.mapMethod = function mapMethod(items, method) {
     return item[method]();
   });
 };
+
+////////////////////////////////////////////////////////////
+
+// Number -> String
+//
+// Example:
+//
+//    ordinalize(1) -> '1st'
+//    ordinalize(12) -> '12th'
+exports.ordinalize = function(n) {
+  assert(Number.isInteger(n));
+  return n.toString() + exports.getOrdinalSuffix(n);
+};
+
+exports.getOrdinalSuffix = function (n) {
+  assert(Number.isInteger(n));
+  return Math.floor(n / 10) === 1
+      ? 'th'
+      : (n % 10 === 1
+        ? 'st'
+        : (n % 10 === 2
+          ? 'nd'
+          : (n % 10 === 3
+            ? 'rd'
+            : 'th')));
+};

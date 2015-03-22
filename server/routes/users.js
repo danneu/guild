@@ -411,6 +411,14 @@ router.get('/users/:userIdOrSlug', function*() {
   }.bind(this));
   recentPosts = recentPosts.map(pre.presentPost);
 
+  // TODO: Merge this query into the findUser query
+  // Until then, only execute query if user's column cache indicates that
+  // they actually have trophies
+  var trophies = [];
+  if (user.trophy_count > 0)
+    trophies = yield db.findTrophiesForUserId(user.id);
+  trophies = trophies.map(pre.presentTrophy);
+
   // The ?before-id=_ of the "Next" button. i.e. the lowest
   // id of the posts on the current page
   var nextBeforeId = recentPosts.length > 0 ? _.last(recentPosts).id : null;
@@ -422,6 +430,7 @@ router.get('/users/:userIdOrSlug', function*() {
     user: user,
     recentPosts: recentPosts,
     title: user.uname,
+    trophies: trophies,
     // Pagination
     nextBeforeId: nextBeforeId,
     recentPostsPerPage: config.RECENT_POSTS_PER_PAGE
