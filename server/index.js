@@ -1981,6 +1981,16 @@ app.post('/me/statuses', function*() {
   this.redirect('/users/' + this.currUser.slug + '#status');
 });
 
+// Show all statuses
+app.get('/statuses', function*() {
+  var statuses = yield db.findAllStatuses();
+  statuses = statuses.map(pre.presentStatus);
+  yield this.render('list_statuses', {
+    ctx: this,
+    statuses: statuses
+  });
+});
+
 app.del('/me/current-status', function*() {
   // Ensure user is logged in
   this.assert(this.currUser, 403, 'You must log in to do that');

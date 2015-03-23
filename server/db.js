@@ -2579,3 +2579,17 @@ WHERE id = $1
 */});
   yield query(sql, [user_id]);
 };
+
+exports.findAllStatuses = function*() {
+  var sql = m(function() {/*
+SELECT
+  s.*,
+  to_json(u.*) "user"
+FROM statuses s
+JOIN users u ON s.user_id = u.id
+ORDER BY s.created_at DESC
+LIMIT 100
+*/});
+  var result = yield query(sql, []);
+  return result.rows;
+};

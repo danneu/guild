@@ -308,6 +308,10 @@
           {{ status.html|safe }}
         </div>
         {% if !loop.last %}<hr>{% endif %}
+        {% if loop.last %}
+          <hr>
+          <a style="display: block;" class="text-center" href="/statuses">View More</a>
+        {% endif %}
       {% endfor %}
     </div><!-- /panel-body -->
   </div><!-- /panel-default -->
