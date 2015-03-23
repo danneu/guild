@@ -412,11 +412,13 @@
         Recent Posts
       </a>
     </li>
+    {#
     <li class="{% if ctx.path === user.url + '/recent-topics' %}active{% endif %}">
       <a href="{{ user.url }}/recent-topics#tabs">
         Recent Topics
       </a>
     </li>
+    #}
   </ul>
   <!-- /tabs -->
 
