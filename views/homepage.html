@@ -249,4 +249,40 @@
     });
   </script>
 
+  <script type="text/javascript">
+    $('.like-status-btn').on('click', function(e) {
+      var $this = $(this);
+      var statusId = $this.attr('data-status-id');
+      var url = '/statuses/' + statusId + '/like';
+
+      $.ajax(url, {
+        method: 'POST',
+        error: function(xhr) {
+          var json;
+          try {
+            json = JSON.parse(xhr.responseText);
+          } catch(ex) {
+            alert('Like failed. Refresh the page and try again.');
+            throw ex;
+          }
+          if (json.error === 'TOO_SOON')
+            alert('Must wait 30 seconds between status likes.');
+        },
+        success: function() {
+          console.log('Success');
+
+          $this.parent().text('You liked this -');
+          var prevCount = parseInt($('.status-' + statusId + ' .status-like-count').text().trim());
+          if (prevCount) {
+            $('.status-' + statusId + ' .status-like-count').text(prevCount + 1);
+          } else {
+            $('.status-' + statusId + ' .status-like-count').text(1);
+            $('.status-' + statusId + ' .status-like-count-suffix').text('like');
+          }
+
+        }
+      });
+    });
+  </script>
+
 {% endblock %}

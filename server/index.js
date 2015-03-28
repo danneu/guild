@@ -2025,5 +2025,29 @@ app.get('/refresh-homepage/:anchor_name', function*() {
   this.redirect(util.format('/#%s', this.params.anchor_name));
 });
 
+app.post('/statuses/:status_id/like', function*() {
+  // Load status
+  var status = yield db.findStatusById(this.params.status_id);
+  this.assert(status, 404);
+
+  // Authorize user
+  this.assertAuthorized(this.currUser, 'LIKE_STATUS', status);
+
+  // Ensure it's been 30 seconds since user's last like
+  var latestLikeAt = yield db.latestStatusLikeAt(this.currUser.id);
+  if (latestLikeAt && belt.isNewerThan(latestLikeAt, { seconds: 30 })) {
+    this.status = 400;
+    this.body = JSON.stringify({ error: 'TOO_SOON' });
+    return;
+  }
+
+  yield db.likeStatus({
+    status_id: status.id,
+    user_id:   this.currUser.id
+  });
+
+  this.status = 200;
+});
+
 app.listen(config.PORT);
 console.log('Listening on ' + config.PORT);

@@ -429,6 +429,7 @@ CREATE TABLE statuses (
   user_id     int NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   text        text NOT NULL,
   html        text NOT NULL,
+  liked_user_ids int[] NOT NULL DEFAULT array[]::int[],
   created_at  timestamp with time zone NOT NULL DEFAULT NOW()
 );
 
@@ -436,3 +437,17 @@ CREATE TABLE statuses (
 CREATE INDEX statuses__user_id ON statuses (user_id);
 -- To quickly find the latest X statuses sorted by created_at
 CREATE INDEX statuses__created_at ON statuses (created_at);
+
+------------------------------------------------------------
+
+CREATE TABLE status_likes (
+  status_id   int NOT NULL REFERENCES statuses(id) ON DELETE CASCADE,
+  user_id     int NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at  timestamp with time zone NOT NULL DEFAULT NOW(),
+  -- Constraints
+  -- A user can only like a status once
+  UNIQUE(status_id, user_id)
+);
+
+-- To quickly find latest liked status (created_at) for a user_id
+CREATE INDEX statuses_likes__created_at ON status_likes (created_at);

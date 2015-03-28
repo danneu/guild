@@ -255,7 +255,7 @@
         <!-- New status form -->
         {% if ctx.can(ctx.currUser, 'MANAGE_USER_STATUS', user) %}
           <form action="/me/statuses" method="post">
-            <p class="text-muted">No BBCode allowed. URLs (like "example.com") will be converted into clickable links.</p>
+            <p class="text-muted">No BBCode allowed. URLs (like "example.com") will be converted into clickable links. Please don't flood the homepage sidebar.</p>
             <input type="text" class="form-control status-text-input" name="text"
                    style="display: inline-block;"
                    placeholder="What's on your mind?">
@@ -302,6 +302,13 @@
 
                     {{ status.html|safe }}
                   </div>
+
+                  {% if status.liked_user_ids.length > 0 %}
+                    <div class="text-muted">
+                      {{ status.liked_user_ids.length }}
+                      like{% if status.liked_user_ids.length > 1 %}s{% endif %}
+                    </div>
+                  {% endif %}
 
                 </div>
 

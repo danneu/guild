@@ -287,31 +287,65 @@
       {% endif %}
 
       {% for status in latestStatuses %}
-        <div class="media" style="margin-top: 0; margin-bottom: 10px;">
-          {% if status.user.avatar_url %}
-            <div class="media-left">
-              <a href="{{ status.user.url }}">
-                <img src="{{ status.user.avatar_url }}" width="30" class="media-object">
-              </a>
+        <div class="status-item status-{{ status.id }}" style="font-size: 90%;">
+          <div class="media" style="margin-top: 0; margin-bottom: 10px;">
+            {% if status.user.avatar_url %}
+              <div class="media-left">
+                <a href="{{ status.user.url }}">
+                  <img src="{{ status.user.avatar_url }}" width="30" class="media-object">
+                </a>
+              </div>
+            {% endif %}
+            <div class="media-body" style="vertical-align: middle;">
+              <a href="{{ status.user.url }}" style="color: #999;">{{ status.user.uname }}</a>
+              <span class="text-muted" style="display: inline-block;">
+                <abbr class="timeago" title="{{ status.created_at.toISOString() }}">
+                  {{ status.created_at|formatDate }}
+                </abbr>
+              </span>
             </div>
-          {% endif %}
-          <div class="media-body" style="vertical-align: middle; font-size: 90%;">
-            <a href="{{ status.user.url }}" style="color: #999;">{{ status.user.uname }}</a>
-            <span class="text-muted" style="display: inline-block;">
-              <abbr class="timeago" title="{{ status.created_at.toISOString() }}">
-                {{ status.created_at|formatDate }}
-              </abbr>
-            </span>
           </div>
-        </div>
-        <div style="word-wrap: break-word; font-size: 90%;">
-          {{ status.html|safe }}
-        </div>
-        {% if !loop.last %}<hr>{% endif %}
-        {% if loop.last %}
-          <hr>
-          <a style="display: block;" class="text-center" href="/statuses">View More</a>
-        {% endif %}
+
+          <div style="word-wrap: break-word;">
+            {{ status.html|safe }}
+          </div>
+
+          <!-- Like button -->
+          <span class="like-status-action text-muted">
+            {% if ctx.currUser.id|isIn(status.liked_user_ids) %}
+              You liked this -
+            {% endif %}
+            {% if ctx.can(ctx.currUser, 'LIKE_STATUS', status) %}
+                {% if !(ctx.currUser.id|isIn(status.liked_user_ids)) %}
+                  <button type="button"
+                          class="btn btn-default btn-xs like-status-btn"
+                          data-status-id="{{ status.id }}">
+                    Like
+                  </button>
+                {% endif %}
+            {% endif %}
+          </span>
+
+          <!-- Like count -->
+          <span class="text-muted">
+            <span class="status-like-count">
+              {% if status.liked_user_ids.length > 0 %}
+                {{- status.liked_user_ids.length -}}
+              {% endif %}
+            </span>
+            <span class="status-like-count-suffix">
+              {% if status.liked_user_ids.length > 0 %}
+                like{% if status.liked_user_ids.length > 1 %}s{% endif %}
+              {% endif %}
+            </span>
+          </span>
+
+          {% if !loop.last %}<hr>{% endif %}
+          {% if loop.last %}
+            <hr>
+            <a style="display: block;" class="text-center" href="/statuses">View More</a>
+          {% endif %}
+        </div><!-- /.status-item -->
       {% endfor %}
     </div><!-- /panel-body -->
   </div><!-- /panel-default -->

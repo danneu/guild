@@ -62,6 +62,16 @@ function can(user, action, target) {
       // Staff can
       if (isStaffRole(user.role)) return true;
       return false;
+    case 'LIKE_STATUS': // target status
+      // Guests can't
+      if (!user) return false;
+      // Banned can't
+      if (user.role === 'banned') return false;
+      // Users can't like if its their own status
+      if (user.id === target.user_id) return false;
+      // Users can like it if they haven't already liked it
+      if (!_.contains(target.liked_user_ids, user.id)) return true;
+      return false;
     case 'CREATE_USER_STATUS': // target is user
       // Guests can't
       if (!user) return false;

@@ -2593,3 +2593,45 @@ LIMIT 100
   var result = yield query(sql, []);
   return result.rows;
 };
+
+exports.likeStatus = function*(props) {
+  assert(props.user_id);
+  assert(props.status_id);
+
+  yield withTransaction(function*(client) {
+
+    // 1. Create status_likes row
+
+    yield client.queryPromise(m(function*() {/*
+INSERT INTO status_likes (status_id, user_id)
+VALUES ($1, $2)
+    */}), [
+      props.status_id,
+      props.user_id
+    ]);
+
+    // 2. Update status
+
+    yield client.queryPromise(m(function*() {/*
+UPDATE statuses
+SET liked_user_ids = array_append(liked_user_ids, $2)
+WHERE id = $1
+    */}), [
+      props.status_id,
+      props.user_id
+    ]);
+  });
+};
+
+// Returns created_at Date OR null for user_id
+exports.latestStatusLikeAt = function*(user_id) {
+  assert(user_id);
+  var sql = m(function() {/*
+SELECT MAX(created_at) created_at
+FROM status_likes
+WHERE user_id = $1
+  */});
+  var result = yield query(sql, [user_id]);
+  var row = result.rows[0];
+  return row && row.created_at;
+};
