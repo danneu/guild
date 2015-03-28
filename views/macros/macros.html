@@ -135,37 +135,33 @@
       <!-- Bio -->
 
       {% if user.bio_markup %}
-        <a href="{{ user.url }}#bio">
-          <img src="/img/bio1.gif" width="22" height="12"
-               alt="Read bio of {{ user.uname }}"
-               title="Read bio of {{ user.uname }}">
+        <a href="{{ user.url }}#bio" class="btn btn-default btn-xs">
+          Bio
         </a>
       {% endif %}
 
       <!-- Status -->
 
       {% if user.current_status %}
-          <div>
-            <button type="button" class="btn btn-xs btn-default status-btn"
-                    data-container="body"
-                    data-toggle="popover"
-                    data-placement="right"
-                    data-title="Status"
-                    data-text="{{ user.current_status.html }}"
-                    data-iso-string="{{ user.current_status.created_at.toISOString()}}"
-                    >
-              <span class="glyphicon glyphicon-comment"
-                    style="display: inline-block"></span>
-              {# Show timeago only if created within 3 days #}
+        <button type="button" class="btn btn-xs btn-default status-btn"
+                data-container="body"
+                data-toggle="popover"
+                data-placement="right"
+                data-title="Status"
+                data-text="{{ user.current_status.html }}"
+                data-iso-string="{{ user.current_status.created_at.toISOString()}}"
+                >
+          <span class="glyphicon glyphicon-comment"
+                style="display: inline-block"></span>
+          {# Show timeago only if created within 3 days #}
 
-              {% if user.current_status.created_at|isNewerThan({ days: 3 }) %}
-                <abbr class="timeago"
-                      title="{{ user.current_status.created_at.toISOString() }}">
-                  {{ user.current_status.created_at }}
-                </abbr>
-              {% endif %}
-          </button>
-        </div>
+          {% if user.current_status.created_at|isNewerThan({ days: 3 }) %}
+            <abbr class="timeago"
+                  title="{{ user.current_status.created_at.toISOString() }}">
+              {{ user.current_status.created_at }}
+            </abbr>
+          {% endif %}
+        </button>
       {% endif %}
 
     </div>
