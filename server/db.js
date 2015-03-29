@@ -2765,36 +2765,41 @@ WHERE
   return row && row.post_id;
 };
 
-// exports.findFirstUnreadPostId = function*(props) {
-//   assert(props.topic_id);
-//   assert(props.post_type);
+exports.findFirstUnreadPostId = function*(props) {
+  assert(props.topic_id);
+  assert(props.post_type);
 
-//   var sql = m(function() {/*
-// SELECT COALESCE(MIN(p.id),
-//   CASE $3::post_type
-//     WHEN 'ic' THEN
-//       (SELECT t.latest_ic_post_id FROM topics t WHERE t.id = $1)
-//     WHEN 'ooc' THEN
-//       (SELECT t.latest_ooc_post_id FROM topics t WHERE t.id = $1)
-//     WHEN 'char' THEN
-//       (SELECT t.latest_char_post_id FROM topics t WHERE t.id = $1)
-//   END
-// ) post_id
-// FROM posts p
-// WHERE
-//   p.id > (
-// 		SELECT COALESCE(w.watermark_post_id, 0)
-// 		FROM topics_users_watermark w
-// 		WHERE w.topic_id = $1 AND w.user_id = $2 AND w.post_type = $3
-//   )
-//   AND p.topic_id = $1
-//   AND p.type = $3
-//   */});
-//   var result = yield query(sql, [
-//     props.topic_id,
-//     props.user_id,
-//     props.post_type
-//   ]);
-//   var row = result.rows[0];
-//   return row && row.post_id;
-// };
+  var sql = m(function() {/*
+SELECT COALESCE(MIN(p.id),
+  CASE $3::post_type
+    WHEN 'ic' THEN
+      (SELECT t.latest_ic_post_id FROM topics t WHERE t.id = $1)
+    WHEN 'ooc' THEN
+      (SELECT t.latest_ooc_post_id FROM topics t WHERE t.id = $1)
+    WHEN 'char' THEN
+      (SELECT t.latest_char_post_id FROM topics t WHERE t.id = $1)
+  END
+) post_id
+FROM posts p
+WHERE
+  p.id > COALESCE(
+		(
+			SELECT w.watermark_post_id
+			FROM topics_users_watermark w
+			WHERE w.topic_id = $1
+        AND w.user_id = $2
+        AND w.post_type = $3
+    ),
+    0
+  )
+  AND p.topic_id = $1
+  AND p.type = $3
+  */});
+  var result = yield query(sql, [
+    props.topic_id,
+    props.user_id,
+    props.post_type
+  ]);
+  var row = result.rows[0];
+  return row && row.post_id;
+};
