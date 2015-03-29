@@ -763,7 +763,7 @@ input[type="text"].form-control {
   /* background-image: linear-gradient(to bottom, #666 0%, #333 100%); */
   background-image: linear-gradient(to bottom, #666 0%, #615753 100%);
   border-color: #111;
-  color: #ccc;
+  color: #e5e5e5; /* Whiter than what was previously #ccc */
   text-shadow: 0 1px 0 #111;
   background-color: #333;
   border-radius: 0px;
@@ -1334,4 +1334,24 @@ hr {
 }
 .popover-user-status .timeago {
     color: #111;
+}
+
+.unread-posts-tag {
+    color: #65f598;
+    border: 1px solid #65f598;
+    font-size: 75%;
+    padding: 0px 3px;
+}
+
+.topic-title-link.has-unread-posts {
+    font-weight: bold;
+}
+
+.topic-tabs > li.active > a,
+.topic-tabs > li.active > a:hover,
+.topic-tabs > li.active > a:focus,
+.topic-tabs > li > a,
+.topic-tabs > li > a:hover,
+.topic-tabs > li > a:focus {
+    padding-bottom: 35px;
 }

@@ -571,7 +571,16 @@
                   {% if topic.is_sticky %}
                     <span class="glyphicon glyphicon-pushpin" style="color: #2FAECE;" title="Sticky" data-toggle="tooltip"></span>
                   {% endif %}
-                  <a href="{{ topic.url }}">{{ topic.title }}</a>
+                  <a href="{{ topic.url }}"
+                     class="topic-title-link
+                            {% if topic.unread_posts %}
+                              has-unread-posts
+                            {% endif %}
+                            "
+                  >
+                    {{ topic.title }}
+                  </a>
+
                 </h5>
                 <div class="list-group-item-text">
                   <div style="margin-top: 6px;">
@@ -623,7 +632,12 @@
                 </div> <!-- /col-6 -->
               {% else %}
                 <div class="col-sm-2">
-                  <div class="text-muted">{{ topic.posts_count|commafy }} Posts</div>
+                  <span class="text-muted">
+                    {{ topic.posts_count|commafy }} Posts
+                  </span>
+                  {% if topic.unread_posts %}
+                    <span class="unread-posts-tag">New</span>
+                  {% endif %}
                 </div>
                 <!-- Latest post -->
                 <div class="col-sm-4">
@@ -704,7 +718,10 @@
                 </div> <!-- /col-6 -->
               {% else %}
                 <div class="col-sm-2">
-                  <div class="text-muted">{{ topic.posts_count|commafy }} Posts</div>
+                  <span class="text-muted">{{ topic.posts_count|commafy }} Posts</span>
+                  {% if topic.unread_posts %}
+                    <span class="unread-posts-tag">New</span>
+                  {% endif %}
                 </div>
                 <!-- Latest post -->
                 <div class="col-sm-4">

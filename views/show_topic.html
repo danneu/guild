@@ -234,26 +234,60 @@
 
   <ul class="nav nav-tabs topic-tabs">
     {% if topic.forum.is_roleplay %}
-      <li class="{% if ctx.request.path.endsWith('/ic') %}active{% endif %}">
+      <li class="{% if ctx.request.path.endsWith('/ic') %}active{% endif %}"
+          style="position: relative;">
+        {% if topic.unread_ic %}
+          <div style="position: absolute; z-index: 9999; width: 100%; text-align: center; bottom: 5px;">
+            <a href="{{ topic.url }}/ic/first-unread" class="btn btn-default btn-xs">
+              Unread &rarr;
+            </a>
+          </div>
+        {% endif %}
         <a id="ic-tab-link" href="{{ topic.url }}/ic">
           IC <span class="badge">{{ topic.ic_posts_count|commafy }}</span>
         </a>
       </li>
-      <li class="{% if ctx.request.path.endsWith('/ooc') %}active{% endif %}">
+      <li class="{% if ctx.request.path.endsWith('/ooc') %}active{% endif %}"
+          style="position: relative;">
+        {% if topic.unread_ooc %}
+          <div style="position: absolute; z-index: 9999; width: 100%; text-align: center; bottom: 5px;">
+            <a href="{{ topic.url }}/ooc/first-unread" class="btn btn-default btn-xs">
+              Unread &rarr;
+            </a>
+          </div>
+        {% endif %}
         <a id="ooc-tab-link" href="{{ topic.url }}/ooc">
           OOC <span class="badge">{{ topic.ooc_posts_count|commafy }}</span>
         </a>
       </li>
-      <li class="{% if ctx.request.path.endsWith('/char') %}active{% endif %}">
+      <li class="{% if ctx.request.path.endsWith('/char') %}active{% endif %}"
+          style="position: relative;">
+        {% if topic.unread_char %}
+          <div style="position: absolute; z-index: 9999; width: 100%; text-align: center; bottom: 5px;">
+            <a href="{{ topic.url }}/char/first-unread" class="btn btn-default btn-xs">
+              Unread &rarr;
+            </a>
+          </div>
+        {% endif %}
         <a id="char-tab-link" href="{{ topic.url }}/char">
           Characters <span class="badge">{{ topic.char_posts_count|commafy }}</span>
         </a>
       </li>
     {% else %}
-      <li class="active">
-        <a href="{{ topic.url }}">Posts <span class="badge">
+      <li class="active" style="position: relative">
+        {% if topic.unread_ooc %}
+          <div style="position: absolute; z-index: 9999; width: 100%; text-align: center; bottom: 5px;">
+            <a href="{{ topic.url }}/ooc/first-unread" class="btn btn-default btn-xs">
+              Unread &rarr;
+            </a>
+          </div>
+        {% endif %}
+        <a href="{{ topic.url }}">
+          Posts
+          <span class="badge">
             {{ topic.posts_count|commafy }}
-        </span></a>
+          </span>
+        </a>
       </li>
     {% endif %}
   </ul>

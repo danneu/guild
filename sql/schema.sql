@@ -451,3 +451,18 @@ CREATE TABLE status_likes (
 
 -- To quickly find latest liked status (created_at) for a user_id
 CREATE INDEX statuses_likes__created_at ON status_likes (created_at);
+
+------------------------------------------------------------
+
+CREATE TABLE topics_users_watermark (
+  topic_id          int NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+  user_id           int NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  watermark_post_id int NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  post_type         post_type NOT NULL,
+  -- User can only have a watermark for each post_type in each topic
+  UNIQUE(topic_id, user_id, post_type)
+);
+
+-- Quickly fetch max watermark
+CREATE INDEX topics_users_watermark__watermark_post_id
+  ON topics_users_watermark (watermark_post_id);

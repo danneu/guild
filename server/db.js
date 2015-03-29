@@ -182,6 +182,54 @@ exports.findTopicWithIsSubscribed = wrapTimer(findTopicWithIsSubscribed);
 function* findTopicWithIsSubscribed(userId, topicId) {
   var sql = m(function() {/*
 SELECT
+  (
+    CASE
+      WHEN t.ic_posts_count = 0 THEN false
+      ELSE
+        (
+          SELECT COALESCE(
+            (
+              SELECT t.latest_ic_post_id > w.watermark_post_id
+              FROM topics_users_watermark w
+              WHERE w.topic_id = t.id AND w.post_type = 'ic' AND w.user_id = $1
+            ),
+            true
+          )
+        )
+    END
+  ) unread_ic,
+  (
+    CASE
+      WHEN t.ooc_posts_count = 0 THEN false
+      ELSE
+        (
+          SELECT COALESCE(
+            (
+              SELECT t.latest_ooc_post_id > w.watermark_post_id
+              FROM topics_users_watermark w
+              WHERE w.topic_id = t.id AND w.post_type = 'ooc' AND w.user_id = $1
+            ),
+            true
+          )
+        )
+    END
+  ) unread_ooc,
+  (
+    CASE
+      WHEN t.char_posts_count = 0 THEN false
+      ELSE
+        (
+          SELECT COALESCE(
+            (
+              SELECT t.latest_char_post_id > w.watermark_post_id
+              FROM topics_users_watermark w
+              WHERE w.topic_id = t.id AND w.post_type = 'char' AND w.user_id = $1
+            ),
+            true
+          )
+        )
+    END
+  ) unread_char,
   t.*,
   to_json(f.*) "forum",
   array_agg($1::int) @> Array[ts.user_id::int] "is_subscribed",
@@ -597,6 +645,14 @@ SELECT
   EXISTS(
     SELECT 1 FROM posts WHERE topic_id = t.id AND user_id = $4
   ) has_posted,
+  (
+    SELECT t.latest_post_id > (
+      SELECT COALESCE(MAX(w.watermark_post_id), 0)
+      FROM topics_users_watermark w
+      WHERE w.topic_id = t.id
+        AND w.user_id = $4
+    )
+  ) unread_posts,
   t.*,
   to_json(u.*) "user",
   to_json(p.*) "latest_post",
@@ -2634,4 +2690,111 @@ WHERE user_id = $1
   var result = yield query(sql, [user_id]);
   var row = result.rows[0];
   return row && row.created_at;
+};
+
+exports.updateTopicWatermark = function*(props) {
+  debug('[updateTopicWatermark] props:', props);
+  assert(props.topic_id);
+  assert(props.user_id);
+  assert(props.post_type);
+  assert(props.post_id);
+
+  try {
+    yield query(m(function() {/*
+INSERT INTO topics_users_watermark (topic_id, user_id, post_type, watermark_post_id)
+VALUES ($1, $2, $3, $4)
+    */}), [
+      props.topic_id,
+      props.user_id,
+      props.post_type,
+      props.post_id
+    ]);
+  } catch(ex) {
+    // If unique violation...
+    if (ex.code === '23505') {
+      yield query(m(function() {/*
+UPDATE topics_users_watermark
+SET watermark_post_id = GREATEST(watermark_post_id, $4)
+WHERE topic_id = $1 AND user_id = $2 AND post_type = $3
+      */}), [
+        props.topic_id,
+        props.user_id,
+        props.post_type,
+        props.post_id
+      ]);
+      return;
+    }
+    throw ex;
+  }
+};
+
+exports.findFirstUnreadPostId = function*(props) {
+  assert(props.topic_id);
+  assert(props.post_type);
+
+  var sql = m(function() {/*
+SELECT COALESCE(
+  MIN(p.id),
+  (
+    SELECT MIN(p2.id)
+    FROM posts p2
+    WHERE p2.topic_id = $1
+      AND p2.type = $3
+      AND p2.is_hidden = false
+  )
+) post_id
+FROM posts p
+WHERE
+  p.id > (
+		SELECT w.watermark_post_id
+		FROM topics_users_watermark w
+		WHERE w.topic_id = $1
+      AND w.user_id = $2
+      AND w.post_type = $3
+  )
+  AND p.topic_id = $1
+  AND p.type = $3
+  AND p.is_hidden = false
+  */});
+  var result = yield query(sql, [
+    props.topic_id,
+    props.user_id,
+    props.post_type
+  ]);
+  var row = result.rows[0];
+  return row && row.post_id;
+};
+
+exports.findFirstUnreadPostId = function*(props) {
+  assert(props.topic_id);
+  assert(props.post_type);
+
+  var sql = m(function() {/*
+SELECT COALESCE(MIN(p.id),
+  CASE $3::post_type
+    WHEN 'ic' THEN
+      (SELECT t.latest_ic_post_id FROM topics t WHERE t.id = $1)
+    WHEN 'ooc' THEN
+      (SELECT t.latest_ooc_post_id FROM topics t WHERE t.id = $1)
+    WHEN 'char' THEN
+      (SELECT t.latest_char_post_id FROM topics t WHERE t.id = $1)
+  END
+) post_id
+FROM posts p
+WHERE
+  p.id > (
+		SELECT COALESCE(w.watermark_post_id, 0)
+		FROM topics_users_watermark w
+		WHERE w.topic_id = $1 AND w.user_id = $2 AND w.post_type = $3
+  )
+  AND p.topic_id = $1
+  AND p.type = $3
+  */});
+  var result = yield query(sql, [
+    props.topic_id,
+    props.user_id,
+    props.post_type
+  ]);
+  var row = result.rows[0];
+  return row && row.post_id;
 };

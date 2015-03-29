@@ -1630,6 +1630,37 @@ app.put('/topics/:slug/edit', function*() {
   this.response.redirect(topic.url + '/edit');
 });
 
+// Go to first unread post in a topic
+// TODO: If user is not logged in, just go to last page
+app.get('/topics/:slug/:postType/first-unread', function*() {
+  // This page should not be indexed
+  this.set('X-Robots-Tag', 'noindex');
+
+  // Load topic
+  var topicId = belt.extractId(this.params.slug);
+  this.assert(topicId, 404);
+  if (this.currUser) {
+    topic = yield db.findTopicWithIsSubscribed(this.currUser.id, topicId);
+  } else {
+    topic = yield db.findTopicById(topicId);
+  }
+  this.assert(topic, 404);
+  topic = pre.presentTopic(topic);
+
+  // TODO: If user is not logged in, just go to last page
+
+  var postId = yield db.findFirstUnreadPostId({
+    topic_id: topic.id,
+    user_id: this.currUser.id,
+    post_type: this.params.postType
+  });
+
+  if (postId)
+    this.redirect('/posts/' + postId);
+  else
+    this.redirect(topic.url + '/' + this.params.postType);
+});
+
 //
 // Canonical show topic
 //
@@ -1703,6 +1734,27 @@ app.get('/topics/:slug/:postType', function*() {
       var rating = _.findWhere(post.ratings, { from_user_id: this.currUser.id });
       post.has_rated = rating;
     }, this);
+  }
+
+  // TODO: Catch errors
+  // Update watermark
+  if (this.currUser && posts.length > 0) {
+    var self = this;
+    co(function*() {
+      yield db.updateTopicWatermark({
+        topic_id: topic.id,
+        user_id: self.currUser.id,
+        post_type: self.params.postType,
+        post_id: _.last(posts).id
+      });
+    });
+  }
+
+  // If we're on the last page, remove the unread button
+  // Since we update the watermark in the background, the find-topic
+  // query doesn't consider this page read yet
+  if (page === totalPages) {
+    topic['unread_' + this.params.postType] = false;
   }
 
   topic.posts = posts.map(pre.presentPost);
