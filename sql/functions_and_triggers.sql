@@ -238,13 +238,7 @@ $$
       '    latest_post_at      = NOW()                              '+
       'WHERE id = $1                                                ';
 
-  // If NonRP, just set the latest_post_id
-  if (!NEW.is_roleplay) {
-    plv8.execute(q, [NEW.topic_id, NEW.id, null, null, null]);
-    return;
-  }
-
-  // Since it is a roleplay, update the appropriate cache
+  // Update the appropriate cache columns
   switch(NEW.type) {
     case 'ic':
       plv8.execute(q, [NEW.topic_id, NEW.id, NEW.id, null,   null]);
