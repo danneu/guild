@@ -180,6 +180,7 @@ WHERE user_id = $1 AND topic_id = $2
 // Keep in sync with db.findTopicById
 exports.findTopicWithIsSubscribed = wrapTimer(findTopicWithIsSubscribed);
 function* findTopicWithIsSubscribed(userId, topicId) {
+  debug('[findTopicWithIsSubscribed] userId %s, topicId %s:', userId, topicId)
   var sql = m(function() {/*
 SELECT
   (
@@ -205,7 +206,7 @@ SELECT
         (
           SELECT COALESCE(
             (
-              SELECT t.latest_ooc_post_id > w.watermark_post_id
+              SELECT COALESCE(t.latest_ooc_post_id, t.latest_post_id) > w.watermark_post_id
               FROM topics_users_watermark w
               WHERE w.topic_id = t.id AND w.post_type = 'ooc' AND w.user_id = $1
             ),
@@ -1237,7 +1238,7 @@ function* findCategoriesWithForums() {
   var sql = m(function() {/*
 SELECT
   c.*,
-	array_agg(
+  array_agg(
     json_build_object(
       'id', f.id,
       'title', f.title,
@@ -1281,7 +1282,7 @@ SELECT
           END
       )
     )
-	) "forums"
+  ) "forums"
 FROM categories c
 JOIN forums f ON c.id = f.category_id
 LEFT OUTER JOIN posts p ON f.latest_post_id = p.id
@@ -1851,31 +1852,31 @@ exports.parseAndCreateQuoteNotifications = function*(props) {
 exports.findReceivedNotificationsForUserId = function*(toUserId) {
   var sql = m(function() {/*
 SELECT
-	n.*,
-	to_json(u.*) "from_user",
+  n.*,
+  to_json(u.*) "from_user",
   CASE
     WHEN n.convo_id IS NOT NULL
     THEN
-			json_build_object (
-				'id', n.convo_id,
-				'title', c.title
-			)
+      json_build_object (
+        'id', n.convo_id,
+        'title', c.title
+      )
   END "convo",
   CASE
     WHEN n.topic_id IS NOT NULL
     THEN
-			json_build_object (
-				'id', n.topic_id,
-				'title', t.title
-			)
+      json_build_object (
+        'id', n.topic_id,
+        'title', t.title
+      )
   END "topic",
   CASE
     WHEN n.post_id IS NOT NULL
     THEN
-			json_build_object (
-				'id', n.post_id,
+      json_build_object (
+        'id', n.post_id,
         'html', p.html
-			)
+      )
   END "post"
 FROM notifications n
 JOIN users u ON n.from_user_id = u.id
@@ -2434,9 +2435,9 @@ FROM topics
 WHERE
   is_hidden = false
   AND forum_id IN (
-		SELECT id
-		FROM forums
-		WHERE category_id NOT IN (4)
+    SELECT id
+    FROM forums
+    WHERE category_id NOT IN (4)
   )
   */});
   var result = yield query(sql);
@@ -2746,9 +2747,9 @@ SELECT COALESCE(
 FROM posts p
 WHERE
   p.id > (
-		SELECT w.watermark_post_id
-		FROM topics_users_watermark w
-		WHERE w.topic_id = $1
+    SELECT w.watermark_post_id
+    FROM topics_users_watermark w
+    WHERE w.topic_id = $1
       AND w.user_id = $2
       AND w.post_type = $3
   )
@@ -2775,7 +2776,7 @@ SELECT COALESCE(MIN(p.id),
     WHEN 'ic' THEN
       (SELECT t.latest_ic_post_id FROM topics t WHERE t.id = $1)
     WHEN 'ooc' THEN
-      (SELECT t.latest_ooc_post_id FROM topics t WHERE t.id = $1)
+      (SELECT COALESCE(t.latest_ooc_post_id, t.latest_post_id) FROM topics t WHERE t.id = $1)
     WHEN 'char' THEN
       (SELECT t.latest_char_post_id FROM topics t WHERE t.id = $1)
   END
@@ -2783,10 +2784,10 @@ SELECT COALESCE(MIN(p.id),
 FROM posts p
 WHERE
   p.id > COALESCE(
-		(
-			SELECT w.watermark_post_id
-			FROM topics_users_watermark w
-			WHERE w.topic_id = $1
+    (
+      SELECT w.watermark_post_id
+      FROM topics_users_watermark w
+      WHERE w.topic_id = $1
         AND w.user_id = $2
         AND w.post_type = $3
     ),
