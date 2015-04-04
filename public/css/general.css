@@ -1338,9 +1338,10 @@ hr {
 
 .unread-posts-tag {
     color: #65f598;
-    border: 1px solid #65f598;
-    font-size: 75%;
-    padding: 0px 3px;
+    /* border: 1px solid #65f598; */
+    /* font-size: 75%; */
+    /* padding: 0px 3px; */
+    font-family: Courier New;
 }
 
 .topic-title-link.has-unread-posts {
