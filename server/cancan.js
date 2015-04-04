@@ -86,6 +86,18 @@ function can(user, action, target) {
     // can do to a topic will vary.
     // Use the specific checks for granular authorization.
     case 'UPDATE_TOPIC': // target is topic
+      // Guests can't
+      if (!user) return false;
+      // Banned can't
+      if (user.role === 'banned') return false;
+      // Staff can
+      if (isStaffRole(user.role)) return true;
+      // If non-staff, then cannot if topic is hidden/closed
+      if (target.is_closed || target.is_hidden) return false;
+      // GM/OP can
+      if (user.id === target.user_id) return true;
+      // TODO: Let GM/co-GMs do it
+      // FIXME: (Sloppy) Check if user is eligible for any of the types of edits
       return can(user, 'UPDATE_TOPIC_JOIN_STATUS', target) ||
              can(user, 'UPDATE_TOPIC_TAGS', target) ||
              can(user, 'UPDATE_TOPIC_CO_GMS', target);
