@@ -37,6 +37,7 @@
     "koa-methodoverride": "^0.3.1",
     "koa-route": "^2.4.0",
     "koa-router": "^4.2.0",
+    "koa-send": "^1.3.1",
     "koa-static": "^1.4.8",
     "koa-validate": "^0.2.5",
     "koa-views": "^2.1.2",

@@ -292,6 +292,10 @@ app.post('/test', function*() {
   this.body = JSON.stringify(this.request.body, null, '  ');
 });
 
+app.use(require('./legacy_router').routes());
+
+////////////////////////////////////////////////////////////
+
 app.get('/search', function*() {
   // Ensure cloudsearch is configured
   this.assert(config.IS_CLOUDSEARCH_CONFIGURED, 400, 'Search is currently offline');
