@@ -1639,6 +1639,8 @@ app.get('/topics/:slug/:postType/first-unread', function*() {
   // Load topic
   var topicId = belt.extractId(this.params.slug);
   this.assert(topicId, 404);
+
+  var topic;
   if (this.currUser) {
     topic = yield db.findTopicWithIsSubscribed(this.currUser.id, topicId);
   } else {
