@@ -234,8 +234,8 @@ SELECT
   t.*,
   to_json(f.*) "forum",
   array_agg($1::int) @> Array[ts.user_id::int] "is_subscribed",
-  (SELECT to_json(u.*) FROM users u WHERE id = t.user_id) "user",
-  (SELECT json_agg(u.uname) FROM users u WHERE id = ANY (t.co_gm_ids::int[])) co_gm_unames,
+  (SELECT to_json(u2.*) FROM users u2 WHERE u2.id = t.user_id) "user",
+  (SELECT json_agg(u3.uname) FROM users u3 WHERE u3.id = ANY (t.co_gm_ids::int[])) co_gm_unames,
   (
    SELECT json_agg(tags.*)
    FROM tags
