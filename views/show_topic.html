@@ -177,6 +177,10 @@
 
   </div><!--/.page-header-->
 
+  {% if ctx.currUser && ctx.currUser.role === 'admin' %}
+    <pre style="max-height: 300px;">{{- JSON.stringify(topic, null, '  ') -}}</pre>
+  {% endif %}
+
   <!-- Pagination -->
   {{ paginate.render(currPage, totalPages, ctx.request.path) }}
 
