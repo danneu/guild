@@ -33,7 +33,8 @@ function* resetDb() {
     console.log('Inserted dev_seeds.sql');
 
     // Insert 100 topics for forum1
-    var thunks = _.range(100).map(function(n) {
+    var thunks;
+    thunks = _.range(100).map(function(n) {
       var markup = 'Post ' + n;
       return db.createTopic({
         userId: 1, forumId: 1, ipAddress: '1.2.3.4',
@@ -45,7 +46,7 @@ function* resetDb() {
     yield coParallel(thunks, 1);
 
     // Insert 100 posts for user1, forum1
-    var thunks = _.range(100).map(function(n) {
+    thunks = _.range(100).map(function(n) {
       var markup = n.toString();
       return db.createPost({
         userId: 1, ipAddress: '1.2.3.4',

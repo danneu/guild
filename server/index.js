@@ -560,7 +560,7 @@ app.post('/sessions', function*() {
   this.validateBody('remember-me').toBoolean();
   var user = yield db.findUserByUnameOrEmail(this.vals['uname-or-email']);
   this.validate(user, 'Invalid creds');
-  this.validate(yield belt.checkPassword(this.vals['password'], user.digest), 'Invalid creds');
+  this.validate(yield belt.checkPassword(this.vals.password, user.digest), 'Invalid creds');
 
   // User authenticated
   var session = yield db.createSession({
@@ -683,8 +683,10 @@ app.delete('/me/subscriptions/:topicSlug', function*() {
 // Forgot password page
 //
 app.use(route.get('/forgot', function*() {
-  if (!config.IS_EMAIL_CONFIGURED)
-    return this.body = 'This feature is currently disabled';
+  if (!config.IS_EMAIL_CONFIGURED) {
+    this.body = 'This feature is currently disabled';
+    return;
+  }
   yield this.render('forgot', {
     ctx: this,
     title: 'Forgot Password'
@@ -695,8 +697,10 @@ app.use(route.get('/forgot', function*() {
 //
 // - Required param: email
 app.use(route.post('/forgot', function*() {
-  if (!config.IS_EMAIL_CONFIGURED)
-    return this.body = 'This feature is currently disabled';
+  if (!config.IS_EMAIL_CONFIGURED) {
+    this.body = 'This feature is currently disabled';
+    return;
+  }
 
   var email = this.request.body.email;
   if (!email) {
@@ -741,8 +745,10 @@ app.use(route.post('/forgot', function*() {
 // - This form allows a user to enter a reset token and new password
 // - The email from /forgot will link the user here
 app.use(route.get('/reset-password', function*() {
-  if (!config.IS_EMAIL_CONFIGURED)
-    return this.body = 'This feature is currently disabled';
+  if (!config.IS_EMAIL_CONFIGURED) {
+    this.body = 'This feature is currently disabled';
+    return;
+  }
   var resetToken = this.request.query.token;
   yield this.render('reset_password', {
     ctx: this,
@@ -756,8 +762,10 @@ app.use(route.get('/reset-password', function*() {
 // - password1
 // - password2
 app.use(route.post('/reset-password', function*() {
-  if (!config.IS_EMAIL_CONFIGURED)
-    return this.body = 'This feature is currently disabled';
+  if (!config.IS_EMAIL_CONFIGURED) {
+    this.body = 'This feature is currently disabled';
+    return;
+  }
   var token = this.request.body.token;
   var password1 = this.request.body.password1;
   var password2 = this.request.body.password2;
@@ -814,8 +822,10 @@ app.post('/me/subscriptions', function*() {
 
   // Ensure user doesn't have 200 subscriptions
   var subs = yield db.findSubscribedTopicsForUserId(this.currUser.id);
-  if (subs.length >= 200)
-    return this.body = 'You cannot have more than 200 topic subscriptions';
+  if (subs.length >= 200) {
+    this.body = 'You cannot have more than 200 topic subscriptions';
+    return;
+  }
 
   var topicId = this.request.body['topic-id'];
   this.assert(topicId, 404);
@@ -956,7 +966,7 @@ app.get('/forums/:forumSlug', function*() {
   this.assert(forumId, 404);
 
   this.checkQuery('page').optional().toInt();
-  this.assert(!this.errors, 400, belt.joinErrors(this.errors))
+  this.assert(!this.errors, 400, belt.joinErrors(this.errors));
 
   var forum = yield db.findForum(forumId);
   this.assert(forum, 404);
@@ -1210,7 +1220,7 @@ app.post('/forums/:slug/topics', function*() {
           return n > 0;
         });
       })
-      .isLength(1, 5, 'Must select 1-5 tags')
+      .isLength(1, 5, 'Must select 1-5 tags');
   }
   this.validateBody('tag-ids').default([]);
 
@@ -1309,7 +1319,7 @@ app.put('/posts/:id', function*() {
 
   var post = yield db.findPostById(this.params.id);
   this.assert(post, 404);
-  this.assertAuthorized(this.currUser, 'UPDATE_POST', post)
+  this.assertAuthorized(this.currUser, 'UPDATE_POST', post);
 
   // Render BBCode to html
   var html = bbcode(this.request.body.markup);
@@ -1336,7 +1346,7 @@ app.put('/pms/:id', function*() {
 
   var pm = yield db.findPmById(this.params.id);
   this.assert(pm, 404);
-  this.assertAuthorized(this.currUser, 'UPDATE_PM', pm)
+  this.assertAuthorized(this.currUser, 'UPDATE_PM', pm);
 
   // Render BBCode to html
   var html = bbcode(this.request.body.markup);
@@ -1362,8 +1372,10 @@ app.get('/posts/:id/raw', function*() {
 });
 
 app.get('/pms/:id/raw', function*() {
-  if (!config.IS_PM_SYSTEM_ONLINE)
-    return this.body = 'PM system currently disabled';
+  if (!config.IS_PM_SYSTEM_ONLINE) {
+    this.body = 'PM system currently disabled';
+    return;
+  }
 
   this.assert(this.currUser, 404);
   var pm = yield db.findPmWithConvo(this.params.id);
@@ -1393,7 +1405,7 @@ app.put('/api/posts/:id', function*() {
 
   var post = yield db.findPost(this.params.id);
   this.assert(post, 404);
-  this.assertAuthorized(this.currUser, 'UPDATE_POST', post)
+  this.assertAuthorized(this.currUser, 'UPDATE_POST', post);
 
   // Render BBCode to html
   var html = bbcode(this.request.body.markup);
@@ -1404,8 +1416,10 @@ app.put('/api/posts/:id', function*() {
 });
 
 app.put('/api/pms/:id', function*() {
-  if (!config.IS_PM_SYSTEM_ONLINE)
-    return this.body = 'PM system currently disabled';
+  if (!config.IS_PM_SYSTEM_ONLINE) {
+    this.body = 'PM system currently disabled';
+    return;
+  }
 
   this.checkBody('markup').isLength(config.MIN_POST_LENGTH,
                                     config.MAX_POST_LENGTH);
@@ -1428,7 +1442,7 @@ app.put('/api/pms/:id', function*() {
   this.assert(pm, 404);
 
   // Ensure user is allowed to update this PM
-  this.assertAuthorized(this.currUser, 'UPDATE_PM', pm)
+  this.assertAuthorized(this.currUser, 'UPDATE_PM', pm);
 
   // Render BBCode to html
   var html = bbcode(this.request.body.markup);
@@ -1498,7 +1512,7 @@ app.get('/posts/:postId', function*() {
   // Determine the topic url and page for this post
   var redirectUrl;
   if (post.idx < config.POSTS_PER_PAGE)
-    redirectUrl = post.topic.url + '/' + post.type + '#post-' + post.id
+    redirectUrl = post.topic.url + '/' + post.type + '#post-' + post.id;
   else
     redirectUrl = post.topic.url + '/' + post.type +
                   '?page=' +
@@ -1522,8 +1536,10 @@ app.get('/posts/:postId', function*() {
 // PM permalink
 // Keep this in sync with /posts/:postId
 app.get('/pms/:id', function*() {
-  if (!config.IS_PM_SYSTEM_ONLINE)
-    return this.body = 'PM system currently disabled';
+  if (!config.IS_PM_SYSTEM_ONLINE) {
+    this.body = 'PM system currently disabled';
+    return;
+  }
 
   this.assert(this.currUser, 404);
   var id = this.params.id;
@@ -1535,7 +1551,7 @@ app.get('/pms/:id', function*() {
 
   var redirectUrl;
   if (pm.idx < config.POSTS_PER_PAGE)
-    redirectUrl = pm.convo.url + '#post-' + pm.id
+    redirectUrl = pm.convo.url + '#post-' + pm.id;
   else
     redirectUrl = pm.convo.url + '?page=' +
                   Math.max(1, Math.ceil((pm.idx + 1) / config.POSTS_PER_PAGE)) +
@@ -1590,7 +1606,7 @@ app.put('/topics/:slug/edit', function*() {
 
   try {
 
-    if (this.request.body['title']) {
+    if (this.request.body.title) {
       this.assert(cancan.can(this.currUser, 'UPDATE_TOPIC_TITLE', topic));
       this.validateBody('title')
         .default(topic.title)
@@ -1605,7 +1621,7 @@ app.put('/topics/:slug/edit', function*() {
       this.assert(cancan.can(this.currUser, 'UPDATE_TOPIC_JOIN_STATUS', topic));
       this.validateBody('join-status')
         .default(topic.join_status)
-        .isIn(['jump-in', 'apply', 'full'], 'Invalid join-status')
+        .isIn(['jump-in', 'apply', 'full'], 'Invalid join-status');
     }
 
   } catch(ex) {
@@ -1670,7 +1686,7 @@ app.get('/topics/:slug/:postType/first-unread', function*() {
 app.get('/topics/:slug/:postType', function*() {
   this.assert(_.contains(['ic', 'ooc', 'char'], this.params.postType), 404);
   this.checkQuery('page').optional().toInt();
-  this.assert(!this.errors, 400, belt.joinErrors(this.errors))
+  this.assert(!this.errors, 400, belt.joinErrors(this.errors));
   var topicId = belt.extractId(this.params.slug);
   this.assert(topicId, 404);
 

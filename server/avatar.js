@@ -7,7 +7,7 @@ var gm = require('gm').subClass({ imageMagick: true });
 var co = require('co');
 var promissory = require('promissory');
 var debug = require('debug')('app:avatar');
-var Uploader = require('s3-streaming-upload').Uploader
+var Uploader = require('s3-streaming-upload').Uploader;
 var uuidGen = require('node-uuid');
 // 1st party
 var config = require('./config');

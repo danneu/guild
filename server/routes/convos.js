@@ -26,8 +26,10 @@ var router = new Router();
 // - 'markup'
 //
 router.post('/convos', function*() {
-  if (!config.IS_PM_SYSTEM_ONLINE)
-    return this.body = 'PM system currently disabled';
+  if (!config.IS_PM_SYSTEM_ONLINE) {
+    this.body = 'PM system currently disabled';
+    return;
+  }
 
   var ctx = this;
   this.assertAuthorized(this.currUser, 'CREATE_CONVO');
@@ -122,8 +124,10 @@ router.post('/convos', function*() {
 //
 // TODO: Implement typeahead
 router.get('/convos/new', function*() {
-  if (!config.IS_PM_SYSTEM_ONLINE)
-    return this.body = 'PM system currently disabled';
+  if (!config.IS_PM_SYSTEM_ONLINE) {
+    this.body = 'PM system currently disabled';
+    return;
+  }
 
   this.assertAuthorized(this.currUser, 'CREATE_CONVO');
   // TODO: Validation, Error msgs, preserve params
@@ -142,8 +146,10 @@ router.get('/convos/new', function*() {
 // - markup
 //
 router.post('/convos/:convoId/pms', function*() {
-  if (!config.IS_PM_SYSTEM_ONLINE)
-    return this.body = 'PM system currently disabled';
+  if (!config.IS_PM_SYSTEM_ONLINE) {
+    this.body = 'PM system currently disabled';
+    return;
+  }
 
   var ctx = this;
 
@@ -204,10 +210,12 @@ router.post('/convos/:convoId/pms', function*() {
 // Show convo
 //
 router.get('/convos/:convoId', function*() {
-  var convoId = this.params.convoId
+  var convoId = this.params.convoId;
 
-  if (!config.IS_PM_SYSTEM_ONLINE)
-    return this.body = 'PM system currently disabled';
+  if (!config.IS_PM_SYSTEM_ONLINE) {
+    this.body = 'PM system currently disabled';
+    return;
+  }
 
   this.assert(this.currUser, 404);
   var convo = yield db.findConvo(convoId);
@@ -265,8 +273,10 @@ router.get('/convos/:convoId', function*() {
 // Show convos
 //
 router.get('/me/convos', function*() {
-  if (!config.IS_PM_SYSTEM_ONLINE)
-    return this.body = 'PM system currently disabled';
+  if (!config.IS_PM_SYSTEM_ONLINE) {
+    this.body = 'PM system currently disabled';
+    return;
+  }
 
   if (this.query['before-id'])
     this.validateQuery('before-id').toInt();  // undefined || Number

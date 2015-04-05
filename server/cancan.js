@@ -184,8 +184,8 @@ function can(user, action, target) {
       return true;
       //
       // Only registered users can
-      if (!user) return false;
-      return true;
+      // if (!user) return false;
+      // return true;
     case 'UPDATE_TOPIC_TITLE': // target is topic
       if (!user) return false;
       // Banned users can't update their old topics
@@ -332,6 +332,7 @@ function can(user, action, target) {
         return !!_.contains(['mod', 'smod', 'admin'], user.role);
       else
         return true;
+      return false;
     case 'UNSUBSCRIBE_TOPIC':
       // A user can unsubscribe from a topic if they're logged in
       return !!user;

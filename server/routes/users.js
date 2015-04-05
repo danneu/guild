@@ -183,7 +183,7 @@ router.delete('/users/:slug/legacy-sig', function*() {
 router.put('/api/users/:id/bio', function*() {
   // Validation markup
   this.checkBody('markup')
-    .trim()
+    .trim();
     //// FIXME: Why does isLength always fail despite the optional()?
     // .isLength(0, config.MAX_BIO_LENGTH,
     //           'Bio must be 0-' + config.MAX_BIO_LENGTH + ' chars');
@@ -240,15 +240,15 @@ router.put('/users/:slug', function*() {
     .optional()
     .isEmail('Invalid email address');
   this.checkBody('sig')
-    .optional()
+    .optional();
   this.checkBody('avatar-url')
-    .optional()
+    .optional();
   this.checkBody('custom-title')
-    .optional()
+    .optional();
   if (this.request.body['custom-title'])
     this.checkBody('custom-title')
       .trim()
-      .isLength(0, 50, 'custom-title can be up to 50 chars. Yours was ' + this.request.body['custom-title'].length + '.')
+      .isLength(0, 50, 'custom-title can be up to 50 chars. Yours was ' + this.request.body['custom-title'].length + '.');
   if (this.request.body['avatar-url'] && this.request.body['avatar-url'].length > 0)
     this.checkBody('avatar-url')
       .trim()
@@ -268,7 +268,7 @@ router.put('/users/:slug', function*() {
   debug('AFTER', this.request.body);
 
   if (this.errors) {
-    this.flash = { message: ['danger', belt.joinErrors(this.errors)] }
+    this.flash = { message: ['danger', belt.joinErrors(this.errors)] };
     this.response.redirect(this.request.path + '/edit');
     return;
   }
@@ -322,7 +322,7 @@ router.get('/users', function*() {
   // undefined || String
   this.checkQuery('text')
     .optional()
-    .isLength(3, 15, 'Username must be 3-15 chars')
+    .isLength(3, 15, 'Username must be 3-15 chars');
   this.checkQuery('before-id').optional().toInt();  // undefined || Number
 
   if (this.errors) {
@@ -351,7 +351,7 @@ router.get('/users', function*() {
 
   usersList = usersList.map(pre.presentUser);
 
-  var nextBeforeId = _.last(usersList) != null ? _.last(usersList).id : null;
+  var nextBeforeId = _.last(usersList) !== null ? _.last(usersList).id : null;
 
   this.set('X-Robots-Tag', 'noindex');
 
@@ -542,7 +542,7 @@ router.post('/users/:slug/avatar', function*() {
   var avatarUrl = yield avatar.handleAvatar(
     user.id,
     this.request.body.files.avatar.path
-  )
+  );
 
   // Save new avatar url to db
   yield db.updateUser(user.id, { avatar_url: avatarUrl });

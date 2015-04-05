@@ -1,3 +1,4 @@
+/*jshint -W002 */
 // Node deps
 var path = require('path');
 var fs = require('co-fs');
@@ -26,8 +27,8 @@ function wrapOptionalClient(fn) {
         return yield fn.apply(null, [client].concat(args));
       });
     }
-  }
-};
+  };
+}
 
 // Wraps generator function in one that prints out the execution time
 // when app is run in development mode.
@@ -180,7 +181,7 @@ WHERE user_id = $1 AND topic_id = $2
 // Keep in sync with db.findTopicById
 exports.findTopicWithIsSubscribed = wrapTimer(findTopicWithIsSubscribed);
 function* findTopicWithIsSubscribed(userId, topicId) {
-  debug('[findTopicWithIsSubscribed] userId %s, topicId %s:', userId, topicId)
+  debug('[findTopicWithIsSubscribed] userId %s, topicId %s:', userId, topicId);
   var sql = m(function() {/*
 SELECT
   (
@@ -250,7 +251,7 @@ GROUP BY t.id, f.id, ts.user_id
   */});
   var result = yield query(sql, [userId, topicId]);
   return result.rows[0];
-};
+}
 
 exports.updateUserBio = function*(userId, bioMarkup, bioHtml) {
   assert(_.isString(bioMarkup));
@@ -276,7 +277,7 @@ WHERE t.id = $1
   */});
   var result = yield query(sql, [topicId]);
   return result.rows[0];
-};
+}
 
 exports.deleteResetTokens = function*(userId) {
   assert(_.isNumber(userId));
@@ -494,7 +495,7 @@ WHERE lower(u.uname) = ANY ($1::text[])
   */});
   var result = yield query(sql, [unames]);
   return result.rows;
-};
+}
 
 // If toUsrIds is not given, then it's a self-convo
 // TODO: Wrap in transaction, Document the args of this fn
@@ -600,7 +601,7 @@ RETURNING *
     props.userId, uuid, props.ipAddress, props.interval
   ]);
   return result.rows[0];
-};
+}
 
 // Sync with db.findTopicsWithHasPostedByForumId
 exports.findTopicsByForumId = wrapTimer(findTopicsByForumId);
@@ -632,7 +633,7 @@ OFFSET $3
   */});
   var result = yield query(sql, [forumId, limit, offset]);
   return result.rows;
-};
+}
 
 // Sync with db.findTopicsByForumId
 // Same as db.findTopicsByForumId except each forum has a has_posted boolean
@@ -737,7 +738,7 @@ WHERE p.id = $1
   */});
   var result = yield query(sql, [postId]);
   return result.rows[0];
-};
+}
 
 // Keep findPost and findPm in sync
 exports.findPostById = wrapTimer(findPost);
@@ -755,7 +756,7 @@ WHERE p.id = $1
   */});
   var result = yield query(sql, [postId]);
   return result.rows[0];
-};
+}
 exports.findPmById = wrapTimer(findPm);
 exports.findPm = wrapTimer(findPm);
 function* findPm(id) {
@@ -769,7 +770,7 @@ WHERE pms.id = $1
   */});
   var result = yield query(sql, [id]);
   return result.rows[0];
-};
+}
 
 exports.findUsersContainingString = wrapTimer(findUsersContainingString);
 function* findUsersContainingString(searchTerm) {
@@ -885,7 +886,7 @@ LIMIT $3
 
     return row;
   });
-};
+}
 
 exports.findConvo = wrapTimer(findConvo);
 function* findConvo(convoId) {
@@ -904,7 +905,7 @@ GROUP BY c.id, u1.id
   */});
   var result = yield query(sql, [convoId]);
   return result.rows[0];
-};
+}
 
 exports.findPmsByConvoId = function*(convoId, page) {
   var sql = m(function() {/*
@@ -960,7 +961,7 @@ ORDER BY p.id
       debug('curr: ', row.user.uname);
     return row;
   });
-};
+}
 
 // TODO: Order by
 // TODO: Pagination
@@ -983,7 +984,7 @@ GROUP BY f.id
   // none, so compact it to just `[]`.
   forum.topics = _.compact(forum.topics);
   return forum;
-};
+}
 
 // Keep findPostWithTopic and findPmWithConvo in sync
 exports.findPostWithTopic = wrapTimer(findPostWithTopic);
@@ -999,7 +1000,7 @@ GROUP BY p.id, t.id
   */});
   var result = yield query(sql, [postId]);
   return result.rows[0];
-};
+}
 
 // Keep findPostWithTopic and findPmWithConvo in sync
 exports.findPmWithConvo = wrapTimer(findPmWithConvo);
@@ -1018,7 +1019,7 @@ GROUP BY pms.id, c.id
   */});
   var result = yield query(sql, [pmId]);
   return result.rows[0];
-};
+}
 
 // Returns created PM
 exports.createPm = function*(props) {
@@ -1195,7 +1196,7 @@ GROUP BY f.id, f2.id, f3.id
   */});
   var result = yield query(sql, [forumId]);
   return result.rows[0];
-};
+}
 
 exports.findLatestUsers = wrapTimer(findLatestUsers);
 function* findLatestUsers(limit) {
@@ -1207,7 +1208,7 @@ LIMIT $1
   */});
   var result = yield query(sql, [limit || 25]);
   return result.rows;
-};
+}
 
 // Also has cat.forums array
 exports.findModCategory = function*() {
@@ -1231,7 +1232,7 @@ ORDER BY c.pos
   */});
   var result = yield query(sql);
   return result.rows;
-};
+}
 
 exports.findCategoriesWithForums = findCategoriesWithForums;
 function* findCategoriesWithForums() {
@@ -1342,7 +1343,7 @@ RETURNING *;
 
     return { user: user, session: session };
   });
-};
+}
 
 exports.logoutSession = logoutSession;
 function *logoutSession(userId, sessionId) {
@@ -1353,7 +1354,7 @@ DELETE FROM sessions
 WHERE user_id = $1 AND id = $2
   */});
   return yield query(sql, [userId, sessionId]);
-};
+}
 
 // Sort them by latest_posts first
 exports.findSubscribedTopicsForUserId = wrapTimer(findSubscribedTopicsForUserId);
@@ -1458,7 +1459,7 @@ ORDER BY t.latest_post_id DESC
   */});
   var result = yield query(sql, [userId]);
   return result.rows;
-};
+}
 
 exports.findForums = wrapTimer(findForums);
 function* findForums(categoryIds) {
@@ -1587,7 +1588,7 @@ RETURNING *
     opts.from_user_id, opts.to_user_id, opts.convo_id
   ]);
   return result.rows;
-};
+}
 
 // Tries to create a convo notification.
 // If to_user_id already has a convo notification for this convo, then
@@ -1604,7 +1605,7 @@ function* createPmNotification(opts) {
         from_user_id: opts.from_user_id,
         to_user_id: opts.to_user_id,
         convo_id: opts.convo_id
-      })
+      });
     } catch(ex) {
       // Unique constraint violation
       if (ex.code === '23505') {
@@ -1620,7 +1621,7 @@ function* createPmNotification(opts) {
       throw ex;
     }
   });
-};
+}
 
 exports.findParticipantIds = function*(convoId) {
   var sql = m(function() {/*
@@ -1629,7 +1630,7 @@ exports.findParticipantIds = function*(convoId) {
     WHERE convo_id = $1
   */});
   var result = yield query(sql, [convoId]);
-  return _.pluck(result.rows, 'user_id')
+  return _.pluck(result.rows, 'user_id');
 };
 
 exports.findNotificationsForUserId = function*(toUserId) {
@@ -1671,8 +1672,8 @@ exports.clearNotifications = function*(toUserId) {
       convo_notifications_count = 0
     WHERE id = $1
   */});
-  yield query(sql1, [toUserId])
-  yield query(sql2, [toUserId])
+  yield query(sql1, [toUserId]);
+  yield query(sql2, [toUserId]);
 };
 
 exports.clearConvoNotifications = function*(toUserId) {
@@ -1954,7 +1955,7 @@ VALUES ($1, $2, $3, NOW())
         // Only return if we actually updated something
         // Else, loop back so we can insert it
         if (result.rowCount > 0)
-          return
+          return;
       } else {
         throw ex;
       }
@@ -2402,7 +2403,7 @@ LIMIT 5
   */});
   var result = yield query(sql, [forumIds]);
   return result.rows;
-}
+};
 
 // Returns latest 5 unhidden roleplays
 exports.findLatestRoleplays = function*() {
@@ -2426,7 +2427,7 @@ LIMIT 5
   */});
   var result = yield query(sql, [forumIds]);
   return result.rows;
-}
+};
 
 exports.findAllPublicTopicUrls = function*() {
   var sql = m(function() {/*
