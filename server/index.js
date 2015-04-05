@@ -1101,7 +1101,7 @@ app.delete('/me/notifications', function*() {
   this.flash = {
     message: ['success', 'Notifications cleared']
   };
-  var redirectTo = this.request.body['redirect-to'] || '/';
+  var redirectTo = this.request.body['redirect-to'] || '/me/notifications';
   this.response.redirect(redirectTo);
 });
 
