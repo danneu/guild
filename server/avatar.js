@@ -71,6 +71,7 @@ exports.handleAvatar = function*(userId, fullInPath) {
 
   var hashPromise = calcStreamHash(nodeFs.createReadStream(fullInPath));
 
+  // FIXME: reject undefined. why did I write this?
   hashPromise.catch(function(ex) {
     return reject(ex);
   });

@@ -45,8 +45,6 @@ function Cache() {
   this.every = function(ms, genFn) {
     // Run the genFn on initial load, and then run it at an interval
 
-    co(genFn.bind(self)).then(succBack, errBack);
-
     // Initial run successful, so create an interval
     function succBack() {
       var interval = setInterval(function() {
@@ -55,6 +53,7 @@ function Cache() {
       self.intervals.push(interval);
     }
 
+    co(genFn.bind(self)).then(succBack, errBack);
   };
 }
 

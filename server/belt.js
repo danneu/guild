@@ -69,10 +69,9 @@ exports.futureDate = function(nowDate, opts) {
                   (opts.milliseconds || 0));
 };
 
-exports.md5 = md5;
-function md5(s) {
+exports.md5 = function(s) {
   return crypto.createHash('md5').update(s).digest('hex');
-}
+};
 
 // {{ 'firetruck'|truncate(5) }}  -> 'firet...'
 // {{ 'firetruck'|truncate(6) }}  -> 'firetruck'
@@ -134,16 +133,14 @@ var bcrypt = {
 };
 
 // String (Text) -> String (Hex)
-exports.hashPassword = hashPassword;
-function* hashPassword(password) {
+exports.hashPassword = function*(password) {
   return yield bcrypt.hash(password, 4);
-}
+};
 
 // String -> String -> Bool
-exports.checkPassword = checkPassword;
-function* checkPassword(password, digest) {
+exports.checkPassword = function*(password, digest) {
   return yield bcrypt.compare(password, digest);
-}
+};
 
 ////////////////////////////////////////////////////////////
 
@@ -247,14 +244,6 @@ exports.slugifyUname = function(uname) {
 
 var MAX_SLUG_LENGTH = 80;
 var slugify = exports.slugify = function() {
-  var args = Array.prototype.slice.call(arguments, 0);
-
-  return slugifyString(
-    args.map(function(x) { return x.toString(); })
-      .join('-')
-      .slice(0, MAX_SLUG_LENGTH)
-  );
-
   // Slugifies one string
   function slugifyString(x) {
     return x.toString()
@@ -271,6 +260,14 @@ var slugify = exports.slugify = function() {
       .replace(/^[-]+|[-]+$/, '')
       .toLowerCase();
   }
+  
+  var args = Array.prototype.slice.call(arguments, 0);
+
+  return slugifyString(
+    args.map(function(x) { return x.toString(); })
+      .join('-')
+      .slice(0, MAX_SLUG_LENGTH)
+  );
 };
 
 // Returns Int | null

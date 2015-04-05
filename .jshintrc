@@ -4,5 +4,8 @@
   "laxbreak": true,
   "sub": true,
   "node": true,
-  "strict": true
+  "strict": true,
+  "undef": true,
+  "eqeqeq": true,
+  "forin": true,
 }
