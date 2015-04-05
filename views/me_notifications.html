@@ -26,7 +26,12 @@
 
   <ul>
     {% for n in notifications %}
-      <li>
+      <li data-notification-id="{{ n.id }}">
+        <button type="button"
+                class="btn btn-default btn-sm delete-notification-btn"
+        >
+          X
+        </button>
         <abbr class="timeago" title="{{ n.created_at.toISOString() }}">
           {{ n.created_at|formatDate }}
         </abbr>
@@ -83,4 +88,26 @@
 {% endblock %}
 
 {% block scripts %}
+<script type="text/javascript">
+  $('.delete-notification-btn').on('click', function() {
+    var confirmed = confirm('Are you sure want to delete this notification?');
+    if (!confirmed)
+      return false;
+
+    var $this = $(this);
+    var notificationId = $this.parent().attr('data-notification-id');
+    var url = '/api/me/notifications/' + notificationId;
+
+    $.ajax(url, {
+      method: 'POST',
+      headers: { 'X-HTTP-Method-Override': 'DELETE' },
+      error: function(xhr, textStatus, errorThrown) {
+        alert('Error deleting this status. Refresh page and try again.');
+      },
+      success: function() {
+        $this.parent().remove();
+      }
+    });
+  });
+</script>
 {% endblock %}

@@ -41,6 +41,14 @@ exports.can = function(user, action, target) {
 };
 function can(user, action, target) {
   switch(action) {
+    case 'DELETE_NOTIFICATION':  // target is notification
+      // Guests can't
+      if (!user) return false;
+      // Banned can't
+      if (user.role === 'banned') return false;
+      // User can if it's their notification
+      if (user.id === target.to_user_id) return true;
+      return false;
     // TODO: Replace this with MANAGE_USER_STATUS
     case 'DELETE_USER_STATUS': // target is status
       // Guests can't

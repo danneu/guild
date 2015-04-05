@@ -2806,3 +2806,23 @@ WHERE
   var row = result.rows[0];
   return row && row.post_id;
 };
+
+exports.deleteNotificationForUserIdAndId = function*(userId, id) {
+  var sql = m(function() {/*
+DELETE FROM notifications
+WHERE
+  to_user_id = $1
+  AND id = $2
+  */});
+  yield query(sql, [userId, id]);
+};
+
+exports.findNotificationById = function*(id) {
+  var sql = m(function() {/*
+SELECT *
+FROM notifications
+WHERE id = $1
+  */});
+  var result = yield query(sql, [id]);
+  return result.rows[0];
+};

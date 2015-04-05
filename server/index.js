@@ -1093,6 +1093,21 @@ app.post('/topics/:topicSlug/posts', function*() {
   this.response.redirect(post.url);
 });
 
+// (AJAX)
+// Delete specific notification
+app.del('/api/me/notifications/:id', function*() {
+  this.validateParam('id');
+  var n = yield db.findNotificationById(this.vals.id);
+  // Ensure exists
+  this.assert(n, 404);
+  // Ensure user authorized;
+  this.assert(cancan.can(this.currUser, 'DELETE_NOTIFICATION', n), 403);
+  // Delete it
+  yield db.deleteNotificationForUserIdAndId(this.currUser.id, n.id);
+  // Return success
+  this.status = 200;
+});
+
 // Delete all notifications
 app.delete('/me/notifications', function*() {
   // Ensure a user is logged in
