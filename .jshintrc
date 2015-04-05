@@ -7,5 +7,5 @@
   "strict": true,
   "undef": true,
   "eqeqeq": true,
-  "forin": true,
+  "forin": true
 }
