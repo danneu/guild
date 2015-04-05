@@ -1,0 +1,6 @@
+{
+  "esnext": true,
+  "noyield": true,
+  "laxbreak": true,
+  "sub": true
+}
