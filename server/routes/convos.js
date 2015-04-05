@@ -1,3 +1,4 @@
+"use strict";
 // 3rd party
 var Router = require('koa-router');
 var _ = require('lodash');

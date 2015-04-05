@@ -1,3 +1,4 @@
+"use strict";
 // Node
 var util = require('util');
 // 1st party

@@ -2,5 +2,7 @@
   "esnext": true,
   "noyield": true,
   "laxbreak": true,
-  "sub": true
+  "sub": true,
+  "node": true,
+  "strict": true
 }

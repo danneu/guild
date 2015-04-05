@@ -1,3 +1,4 @@
+"use strict";
 exports.PORT = parseInt(process.env.PORT, 10) || 3000;
 // Format: postgres://<user>:<pass>@<host>:<port>/<dbname>
 exports.DATABASE_URL = process.env.DATABASE_URL || 'postgres://localhost:5432/guild';

@@ -1,3 +1,4 @@
+"use strict";
 // Node deps
 var path = require('path');
 var fs = require('co-fs');

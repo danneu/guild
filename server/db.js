@@ -1,3 +1,4 @@
+"use strict";
 /*jshint -W002 */
 // Node deps
 var path = require('path');
@@ -1968,7 +1969,7 @@ VALUES ($1, $2, $3, NOW())
 // Returns map of ForumId->Int
 exports.getForumViewerCounts = function*() {
   // Query returns { forum_id: Int, viewers_count: Int } for every forum
-  sql = m(function() {/*
+  var sql = m(function() {/*
 SELECT
   f.id "forum_id",
   COUNT(v.*) "viewers_count"

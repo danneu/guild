@@ -1,3 +1,4 @@
+"use strict";
 // Node
 var util = require('util');
 // 3rd party
@@ -31,7 +32,7 @@ exports.can = function(user, action, target) {
   debug('[cancan] %s %s %s %s %s: %s',
         (user && util.format('%s [%d]', user.uname, user.id)) || '<Guest>',
         // can/cannot
-        (result ? '\033[1;32m can' : '\033[1;31m cannot') + ' \033[0m',
+        (result ? '\u001b[1;32m can' : '\u001b[1;31m cannot') + ' \u001b[0m',
         action,
         target && util.format('[%s]', target.id),
         (target && JSON.stringify(target) || 'undefined').slice(0, 50)

@@ -1,3 +1,4 @@
+"use strict";
 // 3rd party
 var nodemailer = require('nodemailer');
 var ses = require('nodemailer-ses-transport');

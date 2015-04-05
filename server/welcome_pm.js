@@ -1,3 +1,4 @@
+"use strict";
 // 3rd party
 var m = require('multiline');
 // 1st party
