@@ -1656,10 +1656,15 @@ exports.deleteConvoNotification = function*(toUserId, convoId) {
 
 // Deletes all rows in notifications table for user,
 // and also resets the counter caches
-exports.clearNotifications = function*(toUserId) {
+exports.clearNotifications = function*(toUserId, notificationIds) {
+  assert(Number.isInteger(toUserId));
+  assert(Array.isArray(notificationIds));
+
   var sql1 = m(function() {/*
-    DELETE FROM notifications
-    WHERE to_user_id = $1
+DELETE FROM notifications
+WHERE
+  to_user_id = $1
+  AND id = ANY ($2::int[])
   */});
 
   // TODO: Remove
@@ -1667,13 +1672,23 @@ exports.clearNotifications = function*(toUserId) {
   // notification system doesn't create negative notification counts
 
   var sql2 = m(function() {/*
-    UPDATE users
-    SET
-      notifications_count = 0,
-      convo_notifications_count = 0
-    WHERE id = $1
+UPDATE users
+SET
+	notifications_count = sub.notifications_count,
+	convo_notifications_count = sub.convo_notifications_count
+FROM (
+	SELECT
+		n.to_user_id,
+		COUNT(*) notifications_count,
+		COUNT(*) FILTER(WHERE n.type = 'CONVO') convo_notifications_count
+	FROM notifications n
+	WHERE n.to_user_id = $1
+	GROUP BY n.to_user_id
+) sub
+WHERE users.id = $1
+  AND sub.to_user_id = $1
   */});
-  yield query(sql1, [toUserId]);
+  yield query(sql1, [toUserId, notificationIds]);
   yield query(sql2, [toUserId]);
 };
 

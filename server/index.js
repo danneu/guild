@@ -1108,14 +1108,32 @@ app.del('/api/me/notifications/:id', function*() {
   this.status = 200;
 });
 
-// Delete all notifications
-app.delete('/me/notifications', function*() {
+// Delete many notifications
+//
+// Required body params:
+// ids: [Integer] - The notification ids to delete
+//   - May contain `-1` to force the array from the form
+//     Anything non-positive will simply be filtered out first
+//   - The purpose of passing in notifications ids instead of just
+//     clearing all of a user's notifications is so that clicking the
+//     "clear notifications" button only deletes the notifications the
+//     user has on screen and not any notifications they may've received
+//     in the meantime.
+app.del('/me/notifications', function*() {
+
+  this.validateBody('ids')
+    .toInts()
+    .tap(function(ids) {
+      debug(ids);
+      return ids.filter(function(n) { return n > 0; });
+    });
+
   // Ensure a user is logged in
   this.assert(this.currUser, 404);
-  yield db.clearNotifications(this.currUser.id);
-  this.flash = {
-    message: ['success', 'Notifications cleared']
-  };
+
+  yield db.clearNotifications(this.currUser.id, this.vals.ids);
+
+  this.flash = { message: ['success', 'Notifications cleared'] };
   var redirectTo = this.request.body['redirect-to'] || '/me/notifications';
   this.response.redirect(redirectTo);
 });

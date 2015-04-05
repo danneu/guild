@@ -12,8 +12,13 @@
   <div class="page-header" style="border-color: #000">
     <form action="/me/notifications" method="post" class="pull-right">
       <input type="hidden" name="_method" value="delete">
-      <input type="submit" value="Clear All Notifications"
-             class="btn btn-default btn-xs">
+      <input type="hidden" name="ids[]" value="-1">
+      {% for n in notifications %}
+        <input type="hidden" name="ids[]" value="{{ n.id }}">
+      {% endfor %}
+      <button type="submit" class="btn btn-default btn-xs">
+        Clear All Notifications
+      </button>
     </form>
     <h3>My Notifications</h3>
   </div>
