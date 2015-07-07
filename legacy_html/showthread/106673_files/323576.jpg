@@ -1,0 +1,332 @@
+<html>
+<head>
+
+
+<script type="text/javascript" src="/static/js/analytics.js"></script>
+<script type="text/javascript">archive_analytics.values.server_name="wwwb-app1.us.archive.org";archive_analytics.values.server_ms=0;</script>
+<link type="text/css" rel="stylesheet" href="/static/css/banner-styles.css"/>
+
+
+<title>Sakuma Jirou/#323576 - Zerochan</title>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<link href="/save/_embed/http://s1.zerochan.net/v2.css?34" type="text/css" rel="stylesheet" />
+<style type="text/css">
+#header, #body { background-image: url(/save/_embed/http://s1.zerochan.net/header-1.jpg?3); }
+body, #footer { background-image: url(/save/_embed/http://s1.zerochan.net/bg-1.jpg?2); }
+
+#share-form input[type=text] { width: 95%; }
+#large a { position: relative; }
+#large a div { position: absolute; border: 1px none #fff }
+#large a span { position: absolute; top: 100%; left: -1px; background: #000; color: #fff; padding: 1px 5px; margin-top: 1px; display: none; }
+#large a:hover div { border-style: dotted; }
+#large a:hover span { display: block; }
+.smallthumbs li, #menu .smallthumbs li { border: 1px solid #eee; background: #fff; color: #aaa;
+	text-align: center; font: 12pt Trebuchet MS; font-weight: bold; }
+.smallthumbs li a { opacity: .5; }
+#menu .smallthumbs .active, #menu .smallthumbs li:hover { border: 1px solid #000; }
+.smallthumbs li:hover a { opacity: 1; }
+
+
+</style>
+<script type="text/javascript">
+              window._taboola = window._taboola || [];
+              _taboola.push({photo:'auto'});
+              !function (e, f, u) {
+                  e.async = 1;
+                  e.src = u;
+                  f.parentNode.insertBefore(e, f);
+              }(document.createElement('script'), document.getElementsByTagName('script')[0], '/save/_embed/http://cdn.taboola.com/libtrc/zerochan-network/loader.js');
+</script>
+</head>
+
+<body>
+<script> if (window.archive_analytics) { window.archive_analytics.values['server_name']="wwwb-app1.us.archive.org";}; </script>
+
+<!-- Start of Record Banner output -->
+<wb_div id="__wb_record_overlay_div" class="__wb_overlay">
+</wb_div>
+
+<wb_div class="__wb_record_content" id="__wb_record_content_loader">
+<wb_h1 id="_wb_load_msg">Saving page now...</wb_h1>
+<wb_p id="_wb_curr_url">http://www.zerochan.net/323576</wb_p>
+<wb_p>As it appears live April 5, 2015 8:33:05 AM UTC</wb_p>
+
+
+
+<wb_div id="__wb_spinningSquaresG">
+<wb_div id="__wb_spinningSquaresG_1" class="__wb_spinningSquaresG">
+</wb_div>
+<wb_div id="__wb_spinningSquaresG_2" class="__wb_spinningSquaresG">
+</wb_div>
+<wb_div id="__wb_spinningSquaresG_3" class="__wb_spinningSquaresG">
+</wb_div>
+<wb_div id="__wb_spinningSquaresG_4" class="__wb_spinningSquaresG">
+</wb_div>
+<wb_div id="__wb_spinningSquaresG_5" class="__wb_spinningSquaresG">
+</wb_div>
+<wb_div id="__wb_spinningSquaresG_6" class="__wb_spinningSquaresG">
+</wb_div>
+<wb_div id="__wb_spinningSquaresG_7" class="__wb_spinningSquaresG">
+</wb_div>
+<wb_div id="__wb_spinningSquaresG_8" class="__wb_spinningSquaresG">
+</wb_div>
+</wb_div>
+
+<img id="_wb_logo" src="/static/images/logo_WM.png"/>
+</wb_div>
+
+<script type="text/javascript" src="/static/js/disclaim-element.js" ></script>
+<script type="text/javascript">
+  function doRedir()
+  {   
+    var redirUrl = "/web/20150405083305/http://www.zerochan.net/323576";
+    var textElem = document.getElementById("_wb_load_msg");
+    if (textElem) {
+      textElem.innerHTML = "Loading Saved Page...";
+    }
+    window.location.replace(redirUrl);  
+  }
+  
+  function redirToCapture()
+  {
+    window.setTimeout(doRedir, 1000);
+  }
+
+  
+  if ( window != window.top ) {
+    
+    var wmOverlay = document.getElementById("__wb_record_overlay");
+    
+    if (wmOverlay) {
+      wmOverlay.style.display = "none";
+    }
+    
+  } else {
+    
+    if (window.addEventListener) {
+      window.addEventListener('load', redirToCapture, false);
+    } else if (window.attachEvent) {
+      window.attachEvent('onload', redirToCapture);
+    }
+    
+    // Just in case, redir after 90 secs
+    window.setTimeout(doRedir, 90000);
+  }
+</script>
+
+<!-- End of Record Banner Output output -->
+
+<div id="wrapper">
+<div id="header">
+<ul>
+	<li><a href="/save/_embed/http://www.zerochan.net/">Browse</a></li>
+	<li><a href="/save/_embed/http://www.zerochan.net/upload">Upload</a></li>
+	<li><a href="/save/_embed/http://www.zerochan.net/login?ref=%2F323576">Login</a></li>
+	<li><a href="/save/_embed/http://www.zerochan.net/register">Register</a></li>
+</ul>
+	<div id="leaderboard"></div>
+	<strong onclick="top.location = '/';">zero<b>chan</b></strong>
+</div>
+<div id="skyscraper"></div>
+<div id="body">
+<form id="search" action="/save/_embed/http://www.zerochan.net/search"><fieldset>
+	<input type="text" id="q" name="q" size="40" tabindex="1" value="" />
+	<input type="submit" value="Search" />
+</fieldset></form>
+<div id="content">
+<ul id="tabs">
+<li style="visibility: hidden; "><a>View</a></li></ul>
+<h1><a
+	href="/save/_embed/http://www.zerochan.net/">zerochan</a>/<a href="/save/_embed/http://www.zerochan.net/Inazuma+Eleven">Inazuma Eleven</a>/<a
+	href="/save/_embed/http://www.zerochan.net/Sakuma+Jirou">Sakuma Jirou</a>/#323576</h1>
+
+<p>
+	Entry by <a href="/save/_embed/http://www.zerochan.net/user/minem">minem</a>
+	 on Wed Oct 27 23:11:21 2010</p>
+
+
+<div id="large">
+<img
+	src="/save/_embed/http://static.zerochan.net/Sakuma.Jirou.full.323576.jpg"
+	alt="Tags: Anime, Inazuma Eleven, Sakuma Jirou"
+	title="No larger size available"
+	style="width: 600px; height: 600px; border: 1px solid #000; " />
+<p style="font-size: 10pt; color:#000; ">Inazuma Eleven, Sakuma Jirou</p>
+
+<p>600x600<br /><span>123kB</span></p>
+<p>
+<iframe src="/save/_embed/http://www.facebook.com/plugins/like.php?href=http%3A%2F%2Fwww.zerochan.net%2F323576&amp;layout=button_count&amp;show_faces=false&amp;width=80&amp;action=like&amp;colorscheme=light&amp;height=21"
+	scrolling="no" frameborder="0" style="border:none; overflow:hidden; width:80px; height:21px; position: relative; top: 4px; margin-left: 5px; " allowTransparency="true"></iframe>
+<span  style="position: relative; top: 3px; " ><a href="/save/_embed/http://www.pinterest.com/pin/create/button/?url=http%3A%2F%2Fwww.zerochan.net%2F323576&amp;media=http://static.zerochan.net/Sakuma.Jirou.full.323576.jpg&amp;description=Pinterest" 
+	data-pin-do="buttonPin" data-pin-config="beside" data-pin-color="grey"><img 
+	src="/save/_embed/http://assets.pinterest.com/images/pidgets/pinit_fg_en_rect_red_20.png" /></a></span>
+</p>
+
+<div style="text-align: center; margin-top: 30px; ">
+<script type="text/javascript"><!--
+google_ad_client = "ca-pub-3000346950361353";
+/* zerochan.net leaderboard text */
+google_ad_slot = "1459369627";
+google_ad_width = 728;
+google_ad_height = 90;
+//-->
+</script>
+<script type="text/javascript" src="/save/_embed/http://pagead2.googlesyndication.com/pagead/show_ads.js"></script>
+</div>
+
+</div>
+
+</div>
+
+<div id="menu">
+<ul class="smallthumbs">
+	<li><a href="/save/_embed/http://www.zerochan.net/321365" style="background: url(/save/_embed/http://s1.zerochan.net/75/15/27/321365.jpg) center; " tabindex="1"></a></li>
+	<li class="active"><a style="background-image: url(/save/_embed/http://s1.zerochan.net/75/26/21/323576.jpg); "></a></li>
+	<li><a href="/save/_embed/http://www.zerochan.net/324986" style="background: url(/save/_embed/http://s1.zerochan.net/75/36/49/324986.jpg) center; " tabindex="1"></a></li>
+</ul>
+<h2>Tags</h2>
+<ul id="tags">
+	<li><a href="/save/_embed/http://www.zerochan.net/Inazuma+Eleven" title="Added by minem">Inazuma Eleven</a> Series, Game</li>
+	<li><a href="/save/_embed/http://www.zerochan.net/Sakuma+Jirou" style="font-weight: bold; " title="Added by minem">Sakuma Jirou</a> Character</li>
+</ul>
+<h2>Share</h2>
+<form id="share-form">
+<label>Direct Link</label>
+<input type="text" readonly="readonly" name="permalink"
+	value="http://www.zerochan.net/323576" />
+<label>BBCode/Forum Thumbnail</label>
+<input type="text" readonly="readonly" name="bbthumb"
+	value="[URL=http://www.zerochan.net/323576][IMG]http://s3.zerochan.net/Sakuma.Jirou.240.323576.jpg[/IMG][/URL]" />
+<label>HTML Thumbnail</label>
+<input type="text" readonly="readonly" name="htmlthumb"
+	value="&lt;a href=&quot;http://www.zerochan.net/323576&quot;&gt;&lt;img src=&quot;http://s3.zerochan.net/Sakuma.Jirou.240.323576.jpg&quot; alt=&quot;Sakuma Jirou&quot; /&gt;&lt;/a&gt;" />
+</form>
+<h2>Stats</h2>
+<p>24 favorites. </p>
+<h2>Advertisement</h2><div id="rectangle"></div></div>
+
+<div id="footer" style="margin-bottom: 80px; ">
+<form id="language-form" action="/save/_embed/http://www.zerochan.net/language" method="get"><fieldset>
+<input type="hidden" name="url" value="/323576" />
+<select name="language">
+	<option value="id" >Bahasa Indonesia</option>
+	<option value="de" >Deutsch</option>
+	<option value="en" selected="selected">English</option>
+	<option value="es" >Espa&ntilde;ol</option>
+	<option value="fr" >Fran&ccedil;ais</option>
+	<option value="it" >Italiano</option>
+	<option value="pl" >Polski</option>
+	<option value="ru" >&#1056;&#1091;&#1089;&#1089;&#1082;&#1080;&#1081;</option>
+</select>
+</fieldset></form>
+<p>&copy; 2008-2015 Zerochan.
+	<a href="/save/_embed/http://www.zerochan.net/about">About</a> |
+	<a href="/save/_embed/http://www.zerochan.net/privacy">Privacy</a> |
+	<a href="/save/_embed/http://www.minitokyo.net/">Minitokyo</a>
+</p>
+
+</div>
+</div>
+</div>
+<div id="loader"></div>
+<script type="text/javascript" src="/save/_embed/http://s1.zerochan.net/jquery.js?2"></script>
+<script type="text/javascript" src="/save/_embed/http://s1.zerochan.net/jquery.autocomplete.js?1"></script>
+<script type="text/javascript" src="/save/_embed/http://s1.zerochan.net/lite.js?21"></script>
+<script type="text/javascript" src="/save/_embed/http://www.google-analytics.com/ga.js"></script>
+<script type="text/javascript" async defer src="/save/_embed/http://assets.pinterest.com/js/pinit.js"></script>
+<script type="text/javascript">
+/* <![CDATA[ */
+
+function editPost(id) {
+	$('#edit-post' + id).show();
+	$('#edit-post' + id + ' + p').hide();
+	return false;
+}
+$('#posts form').each(function() {
+	$(this).submit(function() {
+		id = $('input[name=id]', this).attr('value');
+		$('input', this).attr('readonly', 'readonly');
+		$.post('/editpost', $(this).serialize() + '&ajax=1', function(html) {
+			$('#edit-post' + id + ' input').removeAttr('readonly');
+			$('#edit-post' + id).hide();
+			$('#edit-post' + id + ' + p').show();
+			$('#edit-post' + id + ' + p').html(html);
+		});
+		return false;
+	});
+});
+
+
+labels = ''; 
+
+$('#fav-link').click(function() {
+	$('#fav-link').html('Working...');
+	$.post('/fav', {id: 323576, ajax: 1}, function(html) {
+		$('#fav-link').html(html);
+	});
+	return false;
+});
+
+id = 323576;
+level = 0;
+tx = 600;
+ty = 600;
+x = 600;
+y = 600;
+local1 = 'Click to view image only';
+local2 = 'Scaled to fit your screen';
+local3 = 'Revert to small';
+local4 = 'Entry by';
+staticServer = '/save/_embed/http://s1.zerochan.net/';
+htmlName = 'minem';
+uriName = 'minem';
+largeThumbUrl = '/save/_embed/http://s1.zerochan.net/Sakuma.Jirou.600.323576.jpg';
+fullsizeUrl = '/save/_embed/http://static.zerochan.net/Sakuma.Jirou.full.323576.jpg';
+
+hash = '';
+function monitor() {
+	if (window.location.hash != hash) {
+		if (level == 1 && window.location.hash != '#full') {
+			decrease();
+		}
+		if (level == 0 && window.location.hash == '#full') {
+			enlarge();
+		}
+		hash = window.location.hash;
+	}
+}
+window.setInterval(monitor, 100);
+
+$('#large > a').click(enlarge);
+
+$('#share-form').prepend('<p>If you want to share this image on other websites/forums, use the following:</p>');
+$('#share-form input').focus(function() {
+	this.select();
+});
+$('#share-form input').mouseup(function(e) {
+	e.preventDefault();
+});
+$(document).ready(function() {
+	var pageTracker = _gat._getTracker("UA-274405-4"); pageTracker._trackPageview();
+});
+$('#skyscraper').html('<iframe src="/save/_embed/http://www.zerochan.net/dfp-skyscraper.html" style="width: 160px; height: 600px; border: none; overflow: hidden; " border="0" frameborder="0" scrolling="no"></iframe>');
+$('#leaderboard').html('<iframe src="/save/_embed/http://www.zerochan.net/dfp-leaderboard.html" style="width: 729px; height: 90px; border: none; overflow: hidden; " border="0" frameborder="0" scrolling="no"></iframe>');
+$('#rectangle').html('<iframe src="/save/_embed/http://www.zerochan.net/dfp-rectangle.html" style="width: 300px; height: 250px; border: none; overflow: hidden; " border="0" frameborder="0" scrolling="no"></iframe>');
+/* ]]> */
+</script>
+<script type="text/javascript">ggv2id='cd47aa51';</script>
+<script type="text/javascript" src="/save/_embed/http://g2.gumgum.com/javascripts/ggv2.js"></script>
+</body></html>
+
+
+
+
+
+<!--
+     FILE ARCHIVED ON 8:33:05 Apr 5, 2015 AND RETRIEVED FROM THE
+     INTERNET ARCHIVE ON 8:33:05 Apr 5, 2015.
+     JAVASCRIPT APPENDED BY WAYBACK MACHINE, COPYRIGHT INTERNET ARCHIVE.
+
+     ALL OTHER CONTENT MAY ALSO BE PROTECTED BY COPYRIGHT (17 U.S.C.
+     SECTION 108(a)(3)).
+-->

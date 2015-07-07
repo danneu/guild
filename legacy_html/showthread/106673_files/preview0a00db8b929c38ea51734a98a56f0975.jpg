@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]> <html class="no-js ie6 oldie" lang="en-US"> <![endif]-->
+<!--[if IE 7]>    <html class="no-js ie7 oldie" lang="en-US"> <![endif]-->
+<!--[if IE 8]>    <html class="no-js ie8 oldie" lang="en-US"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en-US"> <!--<![endif]-->
+<head>
+
+
+<script type="text/javascript" src="/static/js/analytics.js"></script>
+<script type="text/javascript">archive_analytics.values.server_name="wwwb-app1.us.archive.org";archive_analytics.values.server_ms=0;</script>
+<link type="text/css" rel="stylesheet" href="/static/css/banner-styles.css"/>
+
+
+<title>Access denied | c3.sankakucomplex.com used CloudFlare to restrict hotlinking</title>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+<link rel="stylesheet" id="cf_styles-css" href="/save/_embed/http://c3.sankakucomplex.com/cdn-cgi/styles/cf.errors.css" type="text/css" media="screen,projection" />
+<!--[if lt IE 9]><link rel="stylesheet" id='cf_styles-ie-css' href="/cdn-cgi/styles/cf.errors.ie.css" type="text/css" media="screen,projection" /><![endif]-->
+<style type="text/css">body{margin:0;padding:0}</style>
+<!--[if lte IE 9]><script type="text/javascript" src="/cdn-cgi/scripts/jquery.min.js"></script><![endif]-->
+<!--[if gte IE 10]><!--><script type="text/javascript" src="/save/_embed/http://c3.sankakucomplex.com/cdn-cgi/scripts/zepto.min.js"></script><!--<![endif]-->
+<script type="text/javascript" src="/save/_embed/http://c3.sankakucomplex.com/cdn-cgi/scripts/cf.common.js"></script>
+
+</head>
+<body>
+<script> if (window.archive_analytics) { window.archive_analytics.values['server_name']="wwwb-app1.us.archive.org";}; </script>
+
+<!-- Start of Record Banner output -->
+<wb_div id="__wb_record_overlay_div" class="__wb_overlay">
+</wb_div>
+
+<wb_div class="__wb_record_content" id="__wb_record_content_loader">
+<wb_h1 id="_wb_load_msg">Saving page now...</wb_h1>
+<wb_p id="_wb_curr_url">http://c3.sankakucomplex.com/data/sample/0a/00/preview0a00db8b929c38ea51734a98a56f0975.jpg</wb_p>
+<wb_p>As it appears live April 5, 2015 8:33:01 AM UTC</wb_p>
+
+
+
+<wb_div id="__wb_spinningSquaresG">
+<wb_div id="__wb_spinningSquaresG_1" class="__wb_spinningSquaresG">
+</wb_div>
+<wb_div id="__wb_spinningSquaresG_2" class="__wb_spinningSquaresG">
+</wb_div>
+<wb_div id="__wb_spinningSquaresG_3" class="__wb_spinningSquaresG">
+</wb_div>
+<wb_div id="__wb_spinningSquaresG_4" class="__wb_spinningSquaresG">
+</wb_div>
+<wb_div id="__wb_spinningSquaresG_5" class="__wb_spinningSquaresG">
+</wb_div>
+<wb_div id="__wb_spinningSquaresG_6" class="__wb_spinningSquaresG">
+</wb_div>
+<wb_div id="__wb_spinningSquaresG_7" class="__wb_spinningSquaresG">
+</wb_div>
+<wb_div id="__wb_spinningSquaresG_8" class="__wb_spinningSquaresG">
+</wb_div>
+</wb_div>
+
+<img id="_wb_logo" src="/static/images/logo_WM.png"/>
+</wb_div>
+
+<script type="text/javascript" src="/static/js/disclaim-element.js" ></script>
+<script type="text/javascript">
+  function doRedir()
+  {   
+    var redirUrl = "/web/20150405083301/http://c3.sankakucomplex.com/data/sample/0a/00/preview0a00db8b929c38ea51734a98a56f0975.jpg";
+    var textElem = document.getElementById("_wb_load_msg");
+    if (textElem) {
+      textElem.innerHTML = "Loading Saved Page...";
+    }
+    window.location.replace(redirUrl);  
+  }
+  
+  function redirToCapture()
+  {
+    window.setTimeout(doRedir, 1000);
+  }
+
+  
+  if ( window != window.top ) {
+    
+    var wmOverlay = document.getElementById("__wb_record_overlay");
+    
+    if (wmOverlay) {
+      wmOverlay.style.display = "none";
+    }
+    
+  } else {
+    
+    if (window.addEventListener) {
+      window.addEventListener('load', redirToCapture, false);
+    } else if (window.attachEvent) {
+      window.attachEvent('onload', redirToCapture);
+    }
+    
+    // Just in case, redir after 90 secs
+    window.setTimeout(doRedir, 90000);
+  }
+</script>
+
+<!-- End of Record Banner Output output -->
+
+  <div id="cf-wrapper">
+    <div class="cf-alert cf-alert-error cf-cookie-error" id="cookie-alert" data-translate="enable_cookies">Please enable cookies.</div>
+    <div id="cf-error-details" class="cf-error-details-wrapper">
+      <div class="cf-wrapper cf-header cf-error-overview">
+        <h1>
+          <span class="cf-error-type" data-translate="error">Error</span>
+          <span class="cf-error-code">1011</span>
+          <small class="heading-ray-id">Ray ID: 1d23e7dee53311fb &bull; 2015-04-05 08:33:01 UTC</small>
+        </h1>
+        <h2 class="cf-subheadline" data-translate="error_desc">Access denied</h2>
+      </div><!-- /.header -->
+
+      <section></section><!-- spacer -->
+
+      <div class="cf-section cf-wrapper">
+        <div class="cf-columns two">
+          <div class="cf-column">
+            <h2 data-translate="what_happened">What happened?</h2>
+            <p>The owner of this website (c3.sankakucomplex.com) does not allow hotlinking to that resource (/data/sample/0a/00/preview0a00db8b929c38ea51734a98a56f0975.jpg).</p>
+          </div>
+
+          
+        </div>
+      </div><!-- /.section -->
+
+      <div class="cf-error-footer cf-wrapper">
+  <p>
+    <span class="cf-footer-item">CloudFlare Ray ID: <strong>1d23e7dee53311fb</strong></span>
+    <span class="cf-footer-separator">&bull;</span>
+    <span class="cf-footer-item"><span data-translate="your_ip">Your IP</span>: 207.241.229.237</span>
+    <span class="cf-footer-separator">&bull;</span>
+    <span class="cf-footer-item"><span data-translate="performance_security_by">Performance &amp; security by</span> <a data-orig-proto="https" data-orig-ref="www.cloudflare.com/5xx-error-landing" id="brand_link" target="_blank">CloudFlare</a></span>
+    
+  </p>
+</div><!-- /.error-footer -->
+
+
+    </div><!-- /#cf-error-details -->
+  </div><!-- /#cf-wrapper -->
+
+  <script type="text/javascript">
+  window._cf_translation = {};
+  
+  
+</script>
+
+</body>
+</html>
+
+
+
+
+
+<!--
+     FILE ARCHIVED ON 8:33:01 Apr 5, 2015 AND RETRIEVED FROM THE
+     INTERNET ARCHIVE ON 8:33:01 Apr 5, 2015.
+     JAVASCRIPT APPENDED BY WAYBACK MACHINE, COPYRIGHT INTERNET ARCHIVE.
+
+     ALL OTHER CONTENT MAY ALSO BE PROTECTED BY COPYRIGHT (17 U.S.C.
+     SECTION 108(a)(3)).
+-->

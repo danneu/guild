@@ -1,0 +1,225 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<html><head>
+
+
+<script type="text/javascript" src="/static/js/analytics.js"></script>
+<script type="text/javascript">archive_analytics.values.server_name="wwwb-app14.us.archive.org";archive_analytics.values.server_ms=166;</script>
+<link type="text/css" rel="stylesheet" href="/static/css/banner-styles.css"/>
+
+
+<title>400 Bad Request</title>
+</head><body>
+
+
+<!-- BEGIN WAYBACK TOOLBAR INSERT -->
+<script type="text/javascript" src="/static/js/disclaim-element.js" ></script>
+<script type="text/javascript" src="/static/js/graph-calc.js" ></script>
+<script type="text/javascript" src="/static/jflot/jquery.min.js" ></script>
+<script type="text/javascript">//<![CDATA[
+var __wm = (function(){
+var wbPrefix = "/web/";
+var wbCurrentUrl = "http://roleplayerguild.com/customavatars/avatar24561_5.gif";
+
+var firstYear = 1996;
+var imgWidth = 500,imgHeight = 27;
+var yearImgWidth = 25,monthImgWidth = 2;
+var displayDay = "19";
+var displayMonth = "May";
+var displayYear = "2012";
+var prettyMonths = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+var $D=document,$=function(n){return document.getElementById(n)};
+var trackerVal,curYear = -1,curMonth = -1;
+var yearTracker,monthTracker;
+function showTrackers(val) {
+  if (val===trackerVal) return;
+  var $ipp=$("wm-ipp");
+  var $y=$("displayYearEl"),$m=$("displayMonthEl"),$d=$("displayDayEl");
+  if (val) {
+    $ipp.className="hi";
+  } else {
+    $ipp.className="";
+    $y.innerHTML=displayYear;$m.innerHTML=displayMonth;$d.innerHTML=displayDay;
+  }
+  yearTracker.style.display=val?"inline":"none";
+  monthTracker.style.display=val?"inline":"none";
+  trackerVal = val;
+}
+function getElementX2(obj) {
+  var $e=jQuery(obj);
+  return (typeof $e=="undefined"||typeof $e.offset=="undefined")?
+    getElementX(obj):Math.round($e.offset().left);
+}
+function trackMouseMove(event,element) {
+  var eventX = getEventX(event);
+  var elementX = getElementX2(element);
+  var xOff = Math.min(Math.max(0, eventX - elementX),imgWidth);
+  var monthOff = xOff % yearImgWidth;
+
+  var year = Math.floor(xOff / yearImgWidth);
+  var monthOfYear = Math.min(11,Math.floor(monthOff / monthImgWidth));
+  // 1 extra border pixel at the left edge of the year:
+  var month = (year * 12) + monthOfYear;
+  var day = monthOff % 2==1?15:1;
+  var dateString = zeroPad(year + firstYear) + zeroPad(monthOfYear+1,2) +
+    zeroPad(day,2) + "000000";
+
+  $("displayYearEl").innerHTML=year+firstYear;
+  $("displayMonthEl").innerHTML=prettyMonths[monthOfYear];
+  // looks too jarring when it changes..
+  //$("displayDayEl").innerHTML=zeroPad(day,2);
+  var url = wbPrefix + dateString + '/' +  wbCurrentUrl;
+  $("wm-graph-anchor").href=url;
+
+  if(curYear != year) {
+    var yrOff = year * yearImgWidth;
+    yearTracker.style.left = yrOff + "px";
+    curYear = year;
+  }
+  if(curMonth != month) {
+    var mtOff = year + (month * monthImgWidth) + 1;
+    monthTracker.style.left = mtOff + "px";
+    curMonth = month;
+  }
+}
+function hideToolbar() {
+  $("wm-ipp").style.display="none";
+}
+function bootstrap() {
+  var $spk=$("wm-ipp-sparkline");
+  yearTracker=$D.createElement('div');
+  yearTracker.className='yt';
+  with(yearTracker.style){
+    display='none';width=yearImgWidth+"px";height=imgHeight+"px";
+  }
+  monthTracker=$D.createElement('div');
+  monthTracker.className='mt';
+  with(monthTracker.style){
+    display='none';width=monthImgWidth+"px";height=imgHeight+"px";
+  }
+  $spk.appendChild(yearTracker);
+  $spk.appendChild(monthTracker);
+
+  var $ipp=$("wm-ipp");
+  $ipp&&disclaimElement($ipp);
+}
+return{st:showTrackers,mv:trackMouseMove,h:hideToolbar,bt:bootstrap};
+})();//]]>
+</script>
+<style type="text/css">
+body {
+  margin-top:0 !important;
+  padding-top:0 !important;
+  min-width:800px !important;
+}
+</style>
+<div id="wm-ipp" lang="en" style="display:none;">
+
+<div style="position:fixed;left:0;top:0;width:100%!important">
+<div id="wm-ipp-inside">
+   <table style="width:100%;"><tbody><tr>
+   <td id="wm-logo">
+       <a href="/web/" title="Wayback Machine home page"><img src="/static/images/toolbar/wayback-toolbar-logo.png" alt="Wayback Machine" width="110" height="39" border="0" /></a>
+   </td>
+   <td class="c">
+       <table style="margin:0 auto;"><tbody><tr>
+       <td class="u" colspan="2">
+       <form target="_top" method="get" action="/web/form-submit.jsp" name="wmtb" id="wmtb"><input type="text" name="url" id="wmtbURL" value="http://roleplayerguild.com/customavatars/avatar24561_5.gif" style="width:400px;" onfocus="this.focus();this.select();" /><input type="hidden" name="type" value="replay" /><input type="hidden" name="date" value="20120519095351" /><input type="submit" value="Go" /><span id="wm_tb_options" style="display:block;"></span></form>
+       </td>
+       <td class="n" rowspan="2">
+           <table><tbody>
+           <!-- NEXT/PREV MONTH NAV AND MONTH INDICATOR -->
+           <tr class="m">
+           	<td class="b" nowrap="nowrap">
+		
+		    Apr
+		
+		</td>
+		<td class="c" id="displayMonthEl" title="You are here: 9:53:51 May 19, 2012">MAY</td>
+		<td class="f" nowrap="nowrap">
+		
+		    Jun
+		
+                </td>
+	    </tr>
+           <!-- NEXT/PREV CAPTURE NAV AND DAY OF MONTH INDICATOR -->
+           <tr class="d">
+               <td class="b" nowrap="nowrap">
+               
+                       <img src="/static/images/toolbar/wm_tb_prv_off.png" alt="Previous capture" width="14" height="16" border="0" />
+               
+               </td>
+               <td class="c" id="displayDayEl" style="width:34px;font-size:24px;" title="You are here: 9:53:51 May 19, 2012">19</td>
+	       <td class="f" nowrap="nowrap">
+               
+                   <img src="/static/images/toolbar/wm_tb_nxt_off.png" alt="Next capture" width="14" height="16" border="0"/>
+               
+	       </td>
+           </tr>
+           <!-- NEXT/PREV YEAR NAV AND YEAR INDICATOR -->
+           <tr class="y">
+	       <td class="b" nowrap="nowrap">
+               
+                   2011
+               
+               </td>
+               <td class="c" id="displayYearEl" title="You are here: 9:53:51 May 19, 2012">2012</td>
+	       <td class="f" nowrap="nowrap">
+               
+                   2013
+               
+	       </td>
+           </tr>
+           </tbody></table>
+       </td>
+       </tr>
+       <tr>
+       <td class="s">
+           <a class="t" href="/web/20120519095351*/http://roleplayerguild.com/customavatars/avatar24561_5.gif" title="See a list of every capture for this URL">1 captures</a>
+           <div class="r" title="Timespan for captures of this URL">19 May 12 - 19 May 12</div>
+       </td>
+       <td class="k">
+       <a href="" id="wm-graph-anchor">
+       <div id="wm-ipp-sparkline" title="Explore captures for this URL">
+	 <img id="sparklineImgId" alt="sparklines"
+		 onmouseover="__wm.st(1)" onmouseout="__wm.st(0)"
+		 onmousemove="__wm.mv(event,this)"
+		 width="500"
+		 height="27"
+		 border="0"
+		 src="/web/jsp/graph.jsp?graphdata=500_27_1996:-1:000000000000_1997:-1:000000000000_1998:-1:000000000000_1999:-1:000000000000_2000:-1:000000000000_2001:-1:000000000000_2002:-1:000000000000_2003:-1:000000000000_2004:-1:000000000000_2005:-1:000000000000_2006:-1:000000000000_2007:-1:000000000000_2008:-1:000000000000_2009:-1:000000000000_2010:-1:000000000000_2011:-1:000000000000_2012:4:000010000000_2013:-1:000000000000_2014:-1:000000000000_2015:-1:000000000000" />
+       </div>
+       </a>
+       </td>
+       </tr></tbody></table>
+   </td>
+   <td class="r">
+       <a href="#close" onclick="__wm.h();return false;" style="background-image:url(/static/images/toolbar/wm_tb_close.png);top:5px;" title="Close the toolbar">Close</a>
+       <a href="http://faq.web.archive.org/" style="background-image:url(/static/images/toolbar/wm_tb_help.png);bottom:5px;" title="Get some help using the Wayback Machine">Help</a>
+   </td>
+   </tr></tbody></table>
+</div>
+</div>
+</div>
+<script type="text/javascript">__wm.bt();</script>
+<!-- END WAYBACK TOOLBAR INSERT -->
+
+<h1>Bad Request</h1>
+<p>Your browser sent a request that this server could not understand.<br />
+Size of a request header field exceeds server limit.<br />
+<pre>
+Cookie: bbforum_view=dc2e0277c1ad2aa2d2f55e8812662492695db3cea-33-%7Bi-53_i-1336617388_i-57_i-1336758602_i-3_i-1336717922_i-4_i-1336719658_i-2_i-1336710492_i-26_i-1336753732_i-17_i-1336760189_i-44_i-1336761901_i-31_i-1336833740_i-36_i-1336767554_i-43_i-1336798990_i-28_i-1336833740_i-13_i-1336833707_i-27_i-1336833740_i-45_i-1336834599_i-54_i-1336709721_i-60_i-1336616117_i-58_i-1336616117_i-59_i-1336616117_i-55_i-1336709721_i-42_i-1336813086_i-5_i-1336709721_i-15_i-1336809494_i-8_i-1336711423_i-14_i-1336812001_i-9_i-1336713318_i-18_i-1336756350_i-7_i-1336713533_i-62_i-1336719547_i-46_i-1336800261_i-34_i-1336769579_i-35_i-1336824667_i-33_i-1336769579_%7D; bblastactivity=0; bblastvisit=1336103266; bbsessionhash=067a56fb5584a8d76db5790dd86f0916; bbthread_lastview=2689d2ab67c5a76d6594b8bad6d2ec7ed98e7cbaa-337-%7Bi-106673_i-1336159891_i-148163_i-1336078556_i-148192_i-1336187422_i-148254_i-1336157290_i-148273_i-1336157152_i-146233_i-1336177037_i-4280_i-1336171913_i-52616_i-1336314029_i-802_i-1336335392_i-148096_i-1336146316_i-148107_i-1336200149_i-146097_i-1336158183_i-148029_i-1336185683_i-135145_i-1336277043_i-146204_i-1336391862_i-130280_i-1336293041_i-145320_i-1336183477_i-148169_i-1336186586_i-142801_i-1336238226_i-145566_i-1336750784_i-147026_i-1336581501_i-83545_i-1336266629_i-27232_i-1336344244_i-140183_i-1336202042_i-8662_i-1336596364_i-148248_i-1336257263_i-148412_i-1336317606_i-113100_i-1336278426_i-147996_i-1336203724_i-148399_i-1336246671_i-148463_i-1336274082_i-148480_i-1336276021_i-148449_i-1336267739_i-148476_i-1336278667_i-101539_i-1336554781_i-136434_i-1336274764_i-138232_i-1336199094_i-148336_i-1336226497_i-148551_i-1336356977_i-148585_i-1336351883_i-147836_i-1336155384_i-148539_i-1336512531_i-148485_i-1336278543_i-148233_i-1336216486_i-148540_i-1336557721_i-148489_i-1336357112_i-147714_i-1336355225_i-148641_i-1336406242_i-122583_i-1336405884_i-148595_i-1336358037_i-144914_i-1336517844_i-141972_i-1336457351_i-70770_i-1336609908_i-146698_i-1336703135_i-148532_i-1336586667_i-148553_i-1336344499_i-146948_i-1336160325_i-146697_i-1336527664_i-146699_i-1336688771_i-148859_i-1336567113_i-142640_i-1336511065_i-148809_i-1336577675_i-148739_i-1336528568_i-148791_i-1336498279_i-146700_i-1336790963_i-120846_i-1336617857_i-148606_i-1336454650_i-148171_i-1336203504_i-42423_i-1336121008_i-131925_i-1336322654_i-148176_i-1336212377_i-148127_i-1336183362_i-147944_i-1336326717_i-148175_i-1336156371_i-142631_i-1336347051_i-128817_i-1336143466_i-148179_i-1336439712_i-147946_i-1336144688_i-122377_i-1336671036_i-145293_i-1336123371_i-147592_i-1336495906_i-147588_i-1336670940_i-148106_i-1336362295_i-145743_i-1336239450_i-147897_i-1336444084_i-145706_i-1336622424_i-147444_i-1336426763_i-144593_i-1336487475_i-148132_i-1336206360_i-107039_i-1336451632_i-141916_i-1336104098_i-147871_i-1336611389_i-148047_i-1336623853_i-147640_i-1336187303_i-143261_i-1336187351_i-83051_i-1336680456_i-148115_i-1336417466_i-145183_i-1336251806_i-145587_i-1336137967_i-116095_i-1336158448_i-144385_i-1336589235_i-102629_i-1336130069_i-144098_i-1336110096_i-144145_i-1336491245_i-146543_i-1336238353_i-146894_i-1336464896_i-146016_i-1336264994_i-143390_i-1336256201_i-147962_i-1336688413_i-131321_i-1336539920_i-127641_i-1336545088_i-106968_i-1336672825_i-137559_i-1336442959_i-42989_i-1336168203_i-146862_i-1336180424_i-145248_i-1336107294_i-110558_i-1336167837_i-148028_i-1336116894_i-146417_i-1336328922_i-49130_i-1336597590_i-98497_i-1336681275_i-121235_i-1336244316_i-148156_i-1336358988_i-120577_i-1336175790_i-146911_i-1336182271_i-133498_i-1336572066_i-148044_i-1336403706_i-147995_i-1336171474_i-146516_i-1336117432_i-110971_i-1336363300_i-147203_i-1336614755_i-115343_i-1336242423_i-146529_i-1336349269_i-144724_i-1336659987_i-139374_i-1336633621_i-131394_i-1336439290_i-147025_i-1336359218_i-143737_i-1336136475_i-146426_i-1336152639_i-136942_i-1336319833_i-142604_i-1336181657_i-96737_i-1336621215_i-148055_i-1336166007_i-147844_i-1336170925_i-18124_i-1336492531_i-145340_i-1336198620_i-148094_i-1336121641_i-135245_i-1336438109_i-147670_i-1336161210_i-140081_i-1336121139_i-147445_i-1336598374_i-136868_i-1336188577_i-126277_i-1336443741_i-141405_i-1336752754_i-147736_i-1336503736_i-126988_i-1336752790_i-141452_i-1336752798_i-147645_i-1336180626_i-140191_i-1336752773_i-147404_i-1336622074_i-143163_i-1336364090_i-140203_i-1336591756_i-99341_i-1336752685_i-92157_i-1336705892_i-147265_i-1336316331_i-146342_i-1336671790_i-144209_i-1336139800_i-147822_i-1336354699_i-147396_i-1336600161_i-147793_i-1336361648_i-147489_i-1336178767_i-147423_i-1336686516_i-136941_i-1336656868_i-148027_i-1336161905_i-147621_i-1336741703_i-147818_i-1336138988_i-145767_i-1336739993_i-147914_i-1336433846_i-135413_i-1336633588_i-143519_i-1336398658_i-146035_i-1336400913_i-146735_i-1336266701_i-147075_i-1336389846_i-147006_i-1336322689_i-144117_i-1336442964_i-148045_i-1336183174_i-148095_i-1336431991_i-147688_i-1336403095_i-148089_i-1336264513_i-148088_i-1336530964_i-147992_i-1336189716_i-148144_i-1336171056_i-148085_i-1336103814_i-147982_i-1336221597_i-147600_i-1336318158_i-148016_i-1336492131_i-147213_i-1336422315_i-147843_i-1336146553_i-147869_i-1336605209_i-144247_i-1336172742_i-148065_i-1336669322_i-148025_i-1336239061_i-147894_i-1336163262_i-147323_i-1336143447_i-145307_i-1336174320_i-148111_i-1336178288_i-142411_i-1336169715_i-147346_i-1336732282_i-148624_i-1336712471_i-146081_i-1336268217_i-148165_i-1336403024_i-148126_i-1336131855_i-135202_i-1336333942_i-147969_i-1336110325_i-142867_i-1336198724_i-148064_i-1336158963_i-91496_i-1336310947_i-114806_i-1336273070_i-119921_i-1336513164_i-142913_i-1336188809_i-147406_i-1336732509_i-147460_i-1336175050_i-142660_i-1336251448_i-140676_i-1336427499_i-148181_i-1336330214_i-133591_i-1336166840_i-148050_i-1336116212_i-148174_i-1336113284_i-146907_i-1336370948_i-14</pre>
+</p>
+</body></html>
+
+
+
+
+
+<!--
+     FILE ARCHIVED ON 9:53:51 May 19, 2012 AND RETRIEVED FROM THE
+     INTERNET ARCHIVE ON 9:34:21 Apr 5, 2015.
+     JAVASCRIPT APPENDED BY WAYBACK MACHINE, COPYRIGHT INTERNET ARCHIVE.
+
+     ALL OTHER CONTENT MAY ALSO BE PROTECTED BY COPYRIGHT (17 U.S.C.
+     SECTION 108(a)(3)).
+-->
