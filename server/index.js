@@ -575,7 +575,7 @@ app.post('/sessions', function*() {
   });
 
   this.cookies.set('sessionId', session.id, {
-    expires: this.vals['remember-me'] ? belt.futureDate({ years: 1 }) : undefined
+    expires: this.vals['remember-me'] ? belt.cookieDate(belt.futureDate({ years: 1 })) : undefined
   });
   this.flash = { message: ['success', 'Logged in successfully'] };
   this.response.redirect('/');

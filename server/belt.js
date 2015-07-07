@@ -451,3 +451,40 @@ exports.escapeHtml = function(unsafe) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 };
+
+// Apparently the Expires date string needs to have hyphens between the dd-mmm-yyyy.
+// Koa's underlying cookie library just uses .toUTCString() which does not
+// output a string with those hyphens
+// - Source: https://github.com/pillarjs/cookies/blob/master/lib/cookies.js
+// So instead this function returns an object with a .toUTCString() function
+// that returns the patched string since that's the only method the cookies.js
+// library calls on the value (Date) you provide to the `expires` key.
+//
+// Usage:
+//
+//     this.cookies.set('sessionId', session.id, {
+//       expires: belt.cookieDate(belt.futureDate({ years: 1 }))
+//     });
+//
+exports.cookieDate = function(date) {
+  var padNum = function(n) {
+    return n < 10 ? '0' + n : n;
+  };
+
+  var days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  var outString = '' +
+    ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][date.getUTCDay()] + ', ' +
+    padNum(date.getUTCDate()) + '-' +
+    months[date.getUTCMonth()] + '-' +
+    date.getUTCFullYear() + ' ' +
+    padNum(date.getUTCHours()) + ':' +
+    padNum(date.getUTCMinutes()) + ':' +
+    padNum(date.getUTCSeconds()) + ' GMT';
+
+  return {
+    toUTCString: function() { return outString; }
+  };
+};
