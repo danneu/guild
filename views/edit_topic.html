@@ -23,7 +23,6 @@
   {% if ctx.can(ctx.currUser, 'UPDATE_TOPIC_JOIN_STATUS', topic) %}
     <form action="{{ topics.url }}" method="post">
       <input name="_method" type="hidden" value="put">
-      <input name="join-status" type="hidden" value="">
 
       <div class="panel panel-default no-select" style="border-color: #000">
         <!-- PANEL HEADING -->
