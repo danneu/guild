@@ -1,0 +1,26 @@
+
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li>
+      <a href="/">Home</a>
+    </li>
+    <li class="active">Trophies</li>
+  </ol>
+
+  <div class="page-header" style="border-color: #000">
+    <h3>Trophy Groups</h3>
+  </div>
+
+  <ul>
+    {% for group in groups %}
+      <li>
+        <a href="/trophy-groups/{{ group.id }}">{{ group.title }}</a>
+        {% if group.description_html %}
+          &mdash; {{ group.description_html|raw }}
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% endblock %}
