@@ -349,11 +349,13 @@
                 {% if trophy.image_url %}
                   <a href="{{ trophy.url }}">
                     <img src="{{ trophy.image_url }}"
-                         style="max-width: 8.33333333%;"
-                         {% if trophy.image_dims %}
-                           width="{{ trophy.image_dims[0] }}"
-                           height="{{ trophy.image_dims[1] }}"
-                         {% endif %}
+                         style="width: 100%;"
+                         {#
+                          {% if trophy.image_dims %}
+                            width="{{ trophy.image_dims[0] }}"
+                            height="{{ trophy.image_dims[1] }}"
+                          {% endif %}
+                         #}
                          >
                   </a>
                   <br>
