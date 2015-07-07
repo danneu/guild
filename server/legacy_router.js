@@ -1,8 +1,10 @@
+'use strict';
 // Node
 // 3rd party
 var Router = require('koa-router');
 var _ = require('lodash');
 var koaSend = require('koa-send');
+var debug = require('debug')('app:legacy_router.js');
 // 1st party
 
 var router = new Router();
@@ -14,7 +16,7 @@ var uidTable = {
 };
 
 router.get('/member.php', function*() {
-  var redirectTo = uidTable[this.params.u];
+  var redirectTo = uidTable[this.query.u];
   this.assert(redirectTo, 404);
 
   this.status = 301;
