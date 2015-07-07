@@ -1,0 +1,25 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/trophies">Trophies</a></li>
+    <li>{{ group.title }}</li>
+  </ol>
+
+  <div class="page-header" style="border-color: #000">
+    <h1>{{ group.title }}</h1>
+  </div>
+
+  <form method="POST" action="/trophy-groups/{{ group.id }}">
+    <input type="hidden" name="_method" value="PUT">
+    Title: <input type="text" name="title" class="form-control" value="{{ group.title }}">
+    Description (BBCode):
+    <textarea name="description-markup" class="form-control">{{ group.description_markup }}</textarea>
+    <button type="submit" class="btn btn-primary">Save</button>
+  </form>
+
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}

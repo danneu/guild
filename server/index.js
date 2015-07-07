@@ -2040,6 +2040,88 @@ app.get('/trophy-groups', function*() {
   });
 });
 
+// Create trophy group
+app.post('/trophy-groups', function*() {
+  // Only admin can create trophy groups
+  // TODO: Move to cancan.js
+  this.assert(this.currUser && this.currUser.role === 'admin', 403);
+
+  this.validateBody('title')
+    .notEmpty('Title required')
+    .trim()
+    .isLength(3, 50, 'Title must be 3-50 chars');
+
+  this.validateBody('description-markup');
+  if (this.request.body['description-markup']) {
+    this.validateBody('description-markup')
+      .trim()
+      .isLength(3, 3000, 'Description must be 3-3000 chars');
+  }
+
+  var description_html;
+  if (this.vals['description-markup']) {
+    description_html = bbcode(this.vals['description-markup']);
+  }
+
+  var group = yield db.createTrophyGroup(
+    this.vals.title,
+    this.vals['description-markup'],
+    description_html
+  );
+
+  this.flash = { message: ['success', 'Trophy group created'] };
+  this.redirect('/trophy-groups');
+});
+
+app.put('/trophy-groups/:id', function*() {
+  // Ensure admin
+  this.assert(this.currUser && this.currUser.role === 'admin', 403);
+
+  var group = yield db.findTrophyGroupById(this.params.id);
+  this.assert(group, 404);
+
+  this.validateParam('id').toInt();
+
+  this.validateBody('title')
+    .notEmpty('Title required')
+    .trim()
+    .isLength(3, 50, 'Title must be 3-50 chars');
+
+  this.validateBody('description-markup');
+  if (this.request.body['description-markup']) {
+    this.validateBody('description-markup')
+      .trim()
+      .isLength(3, 3000, 'Description must be 3-3000 chars');
+  }
+
+  var description_html;
+  if (this.vals['description-markup']) {
+    description_html = bbcode(this.vals['description-markup']);
+  }
+
+  yield db.updateTrophyGroup(
+    this.vals.id,
+    this.vals.title,
+    this.vals['description-markup'],
+    description_html
+  );
+
+  this.redirect('/trophy-groups/' + group.id);
+});
+
+app.get('/trophy-groups/:id/edit', function*() {
+  // Ensure admin
+  this.assert(this.currUser && this.currUser.role === 'admin', 403);
+
+  var group = yield db.findTrophyGroupById(this.params.id);
+  this.assert(group, 404);
+
+  yield this.render('edit_trophy_group', {
+    ctx: this,
+    group: group
+  });
+});
+
 app.get('/trophy-groups/:id', function*() {
   var group = yield db.findTrophyGroupById(this.params.id);
 

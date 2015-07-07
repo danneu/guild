@@ -23,4 +23,18 @@
       </li>
     {% endfor %}
   </ul>
+
+  {% if ctx.currUser && ctx.currUser.role === 'admin' %}
+    <hr>
+
+    <h4>New Trophy Group</h4>
+
+    <form method="POST" action="/trophy-groups">
+      Title: <input type="text" name="title" class="form-control">
+      Description (BBCode):
+      <textarea name="description-markup" class="form-control"></textarea>
+      <button type="submit" class="btn btn-primary">Create</button>
+    </form>
+  {% endif %}
+
 {% endblock %}

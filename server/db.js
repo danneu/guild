@@ -2582,6 +2582,23 @@ WHERE tg.id = $1
   return result.rows[0];
 };
 
+// title Required
+// description_markup Optional
+// description_html Optional
+exports.updateTrophyGroup = function*(id, title, desc_markup, desc_html) {
+  var sql = m(function() {/*
+UPDATE trophy_groups
+SET
+  title = $2,
+  description_markup = $3,
+  description_html = $4
+WHERE id = $1
+RETURNING *
+  */});
+
+  return yield queryOne(sql, [id, title, desc_markup, desc_html]);
+};
+
 exports.findWinnersForTrophyId = function*(trophy_id) {
   var sql = m(function() {/*
 SELECT
@@ -2597,6 +2614,27 @@ WHERE tu.trophy_id = $1
   */});
   var result = yield query(sql, [trophy_id]);
   return result.rows;
+};
+
+// description_markup and _html are optional
+//
+// Returns created trophy group
+exports.createTrophyGroup = function*(title, description_markup, description_html) {
+  assert(_.isString(title));
+  assert(_.isUndefined(description_markup) || _.isString(description_markup));
+  assert(_.isUndefined(description_html) || _.isString(description_html));
+
+  var sql = m(function() {/*
+INSERT INTO trophy_groups (title, description_markup, description_html)
+VALUES ($1, $2, $3)
+RETURNING *
+  */});
+
+  return yield queryOne(sql, [
+    title,
+    description_markup,
+    description_html
+  ]);
 };
 
 ////////////////////////////////////////////////////////////

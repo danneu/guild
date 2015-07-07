@@ -8,6 +8,13 @@
   </ol>
 
   <div class="page-header" style="border-color: #000">
+    {% if ctx.currUser && ctx.currUser.role === 'admin' %}
+      <a href="/trophy-groups/{{ group.id }}/edit"
+         class="btn btn-default btn-xs pull-right"
+      >
+        Edit
+      </a>
+    {% endif %}
     <h1>{{ group.title }}</h1>
   </div>
 
