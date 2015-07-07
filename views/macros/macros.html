@@ -220,6 +220,14 @@
 
 {% macro renderSidebar(latestChecks, latestRoleplays) %}
 
+  {# Only show this if within 3 days of this deploy #}
+
+  {% if Date.now() - 1436243708720 < 1000 * 60 * 60 * 24 * 3%}
+    <p style="color: #65f598;" class="text-center">
+      Sidebar Updated!
+    </p>
+  {% endif %}
+
   <!-- Latest RPGN -->
 
   {% if latest_rpgn_topic %}
