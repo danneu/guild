@@ -41,7 +41,13 @@
     <ul>
       {% for winner in winners %}
         <li>
-          <a href="/users/{{ winner.slug }}">{{ winner.uname }}</a>,
+          {% if winner.is_anon %}
+            <span class="text-muted" style="font-style: italic;">
+              Anonymous
+            </span>,
+          {% else %}
+            <a href="/users/{{ winner.slug }}">{{ winner.uname }}</a>,
+          {% endif %}
           Awarded
           <abbr class="timeago" title="{{ winner.awarded_at.toISOString() }}">
             {{ winner.awarded_at|formatDate }}

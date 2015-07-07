@@ -372,6 +372,10 @@ CREATE TABLE trophies_users (
   UNIQUE(trophy_id, n)
 );
 
+-- is recipient anonymous?
+ALTER TABLE trophies_users
+ADD COLUMN is_anon boolean NOT NULL DEFAULT false;
+
 -- FK indexes
 CREATE INDEX trophies_users__user_id ON trophies_users (user_id);
 CREATE INDEX trophies_users__awarded_by ON trophies_users (awarded_by);

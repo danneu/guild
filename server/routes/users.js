@@ -419,7 +419,11 @@ router.get('/users/:userIdOrSlug', function*() {
   var trophies = [];
   if (user.trophy_count > 0)
     trophies = yield db.findTrophiesForUserId(user.id);
-  trophies = trophies.map(pre.presentTrophy);
+  // Hide anon trophies from their list
+  // TODO: Display anon trophies as a mysterious trophy
+  trophies = trophies.filter(function(t) {
+    return !t.is_anon;
+  }).map(pre.presentTrophy);
 
   // FIXME: Way too many queries in this route.
 

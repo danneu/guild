@@ -2518,6 +2518,7 @@ exports.getUnamesMappedToIds = function*() {
 exports.findTrophiesForUserId = function*(user_id) {
   var sql = m(function() {/*
 SELECT
+  tu.is_anon,
   t.*,
   tu.awarded_at,
   tu.message_markup,
@@ -2630,6 +2631,7 @@ LIMIT 1
 exports.findWinnersForTrophyId = function*(trophy_id) {
   var sql = m(function() {/*
 SELECT
+  tu.is_anon,
   winners.id,
   winners.uname,
   winners.slug,
