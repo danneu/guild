@@ -194,6 +194,11 @@ blockquote {
     .post-avatar img {
         max-width: 90px;
     }
+
+    /* shrink cyberpunk userbit text */
+    .cyberpunk {
+        font-size: 75%;
+    }
 }
 
 @media (max-width: 768px) {
