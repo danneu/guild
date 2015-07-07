@@ -96,6 +96,12 @@
     </div>
   {% endif %}
 
+  {% if user.active_trophy_id === 2 %}
+    <div style="color: #e67e22; font-weight: bold;">
+      Nemean Assassin
+    </div>
+  {% endif %}
+
   {% if !ctx.currUser || (user.avatar_url && !ctx.currUser.hide_avatars) %}
     <div class="post-avatar"
          style="margin-top: 10px;">

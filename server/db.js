@@ -2599,6 +2599,34 @@ RETURNING *
   return yield queryOne(sql, [id, title, desc_markup, desc_html]);
 };
 
+exports.updateUserActiveTrophyId = function*(user_id, trophy_id) {
+  assert(_.isNumber(user_id));
+  assert(_.isNumber(trophy_id));
+
+  var sql = m(function() {/*
+UPDATE users
+SET active_trophy_id = $2
+WHERE id = $1
+  */});
+
+  return yield queryOne(sql, [user_id, trophy_id]);
+};
+
+exports.findTrophyByIdAndUserId = function*(trophy_id, user_id) {
+  assert(_.isNumber(user_id));
+  assert(_.isNumber(trophy_id));
+
+  var sql = m(function() {/*
+SELECT trophies.*
+FROM trophies_users
+JOIN trophies ON trophies_users.trophy_id = trophies.id
+WHERE trophies_users.trophy_id = $1 AND trophies_users.user_id = $2
+LIMIT 1
+  */});
+
+  return yield queryOne(sql, [trophy_id, user_id]);
+};
+
 exports.findWinnersForTrophyId = function*(trophy_id) {
   var sql = m(function() {/*
 SELECT

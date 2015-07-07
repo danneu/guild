@@ -349,6 +349,9 @@ CREATE TABLE trophies (
   created_at  timestamp with time zone NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE users
+ADD COLUMN active_trophy_id int NULL REFERENCES trophies(id);
+
 -- FK indexes
 CREATE INDEX trophies__group_id ON trophies (group_id);
 

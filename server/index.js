@@ -2109,6 +2109,36 @@ app.put('/trophy-groups/:id', function*() {
   this.redirect('/trophy-groups/' + group.id);
 });
 
+// Update user active_trophy_id
+//
+// Body:
+// - trophy_id: Required Int
+app.put('/users/:user_id/active-trophy', function*() {
+  // Ensure user is logged in
+  this.assert(this.currUser, 403);
+
+  this.validateParam('user_id').toInt();
+  this.validateBody('trophy_id')
+    .notEmpty('trophy_id required')
+    .toInt();
+
+  // Ensure user exists
+  var user = yield db.findUserById(this.vals.user_id);
+  this.assert(user, 404);
+  user = pre.presentUser(user);
+
+  // Ensure user owns this trophy
+  var trophy = yield db.findTrophyByIdAndUserId(this.vals.trophy_id, user.id);
+  this.assert(trophy, 404);
+
+  // Update user's active_trophy_id
+  yield db.updateUserActiveTrophyId(user.id, trophy.id);
+
+  // Return user to profile
+  this.flash = { message: ['success', 'Trophy activated'] };
+  this.redirect(user.url);
+});
+
 app.get('/trophy-groups/:id/edit', function*() {
   // Ensure admin
   this.assert(this.currUser && this.currUser.role === 'admin', 403);

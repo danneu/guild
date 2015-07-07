@@ -362,6 +362,22 @@
                 {% endif %}
               </div>
               <div class="col-sm-5">
+
+                {% if ctx.currUser && ctx.currUser.id === user.id %}
+                  {% if user.active_trophy_id === trophy.id %}
+                    <span class="label label-success">Active</span>
+                  {% else %}
+                    <form method="POST" action="/users/{{ user.id }}/active-trophy"
+                          style="display: inline-block;">
+                      <input type="hidden" name="_method" value="PUT">
+                      <input type="hidden" name="trophy_id" value="{{ trophy.id }}">
+                      <button class="btn btn-default btn-xs"
+                              type="submit"
+                      >Activate</button>
+                    </form>
+                  {% endif %}
+                {% endif %}
+
                 <a href="{{ trophy.url }}" style="text-decoration: underline;">
                   {{ trophy.title -}}
                 </a>
@@ -369,6 +385,7 @@
                 <span class="text-muted">
                   of {{ trophy.awarded_count }} awarded
                 </span>
+
                 <br>
                 {% if trophy.group %}
                   This trophy is part of the
