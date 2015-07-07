@@ -2596,6 +2596,18 @@ RETURNING *
   return yield queryOne(sql, [id, title, desc_markup, desc_html]);
 };
 
+exports.deactivateCurrentTrophyForUserId = function*(user_id) {
+  assert(_.isNumber(user_id));
+
+  var sql = m(function() {/*
+UPDATE users
+SET active_trophy_id = NULL
+WHERE id = $1
+  */});
+
+  yield queryOne(sql, [user_id]);
+};
+
 exports.updateUserActiveTrophyId = function*(user_id, trophy_id) {
   assert(_.isNumber(user_id));
   assert(_.isNumber(trophy_id));

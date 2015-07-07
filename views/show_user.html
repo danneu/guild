@@ -344,6 +344,18 @@
         <h3>
           Trophies
           <small>{{ user.trophy_count}} total</small>
+
+          {% if ctx.currUser && ctx.currUser.id === user.id && ctx.currUser.active_trophy_id %}
+            <form method="POST" action="/users/{{ user.id }}/active-trophy"
+                  style="display: inline-block;"
+            >
+              <input type="hidden" name="_method" value="DELETE">
+              <button type="submit" class="btn btn-danger btn-xs">
+                Deactivate Current Trophy
+              </button>
+            </form>
+          {% endif %}
+
         </h3>
         <div class="well trophy-box clearfix" style="max-height: 200px; overflow-y: auto;">
           {% for trophy in trophies %}

@@ -2109,6 +2109,26 @@ app.put('/trophy-groups/:id', function*() {
   this.redirect('/trophy-groups/' + group.id);
 });
 
+// Delete active trophy
+app.del('/users/:user_id/active-trophy', function*() {
+  // Ensure user is logged in
+  this.assert(this.currUser, 403);
+
+  this.validateParam('user_id').toInt();
+
+  // Ensure user exists
+  var user = yield db.findUserById(this.vals.user_id);
+  this.assert(user, 404);
+  user = pre.presentUser(user);
+
+  // Deactivate trophy
+  yield db.deactivateCurrentTrophyForUserId(this.vals.user_id);
+
+  // Redirect
+  this.flash = { message: ['success', 'Trophy deactivated'] };
+  this.redirect(user.url);
+});
+
 // Update user active_trophy_id
 //
 // Body:
