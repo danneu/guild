@@ -69,6 +69,17 @@ function *query(sql, params) {
   }
 }
 
+var queryOne = function*(sql, params) {
+  var result = yield query(sql, params);
+  assert(result.rows.length <= 1);
+  return result.rows[0];
+};
+
+var queryMany = function*(sql, params) {
+  var result = yield query(sql, params);
+  return result.rows;
+};
+
 // `runner` is a function that takes the pg client as an argument.
 //
 // Ex:
@@ -2550,6 +2561,15 @@ WHERE t.group_id = $1
   */});
   var result = yield query(sql, [group_id]);
   return result.rows;
+};
+
+exports.findTrophyGroups = function*() {
+  var sql = m(function() {/*
+SELECT *
+FROM trophy_groups
+ORDER BY id DESC
+  */});
+  return yield queryMany(sql);
 };
 
 exports.findTrophyGroupById = function*(group_id) {

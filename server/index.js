@@ -2030,6 +2030,16 @@ app.get('/trophies', function*() {
   this.body = 'TODO';
 });
 
+// List all trophy groups
+app.get('/trophy-groups', function*() {
+  var groups = yield db.findTrophyGroups();
+
+  yield this.render('list_trophy_groups', {
+    ctx: this,
+    groups: groups
+  });
+});
+
 app.get('/trophy-groups/:id', function*() {
   var group = yield db.findTrophyGroupById(this.params.id);
 
