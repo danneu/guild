@@ -83,7 +83,75 @@
     </div>
 {% endmacro %}
 
-{% macro renderUserbitLarge(user)  %}
+{% macro renderCyberpunkUserbitLarge(user) %}
+  <fieldset class="cyberpunk">
+    <legend>
+      <a href="{{ user.url }}">
+        {{ user.uname }}
+      </a>
+    </legend>
+    {% if user.custom_title %}
+      <span class="user-custom-title negate-bg">
+        {{ user.custom_title|replaceTitleNewlines|raw -}}
+      </span><br>
+    {% endif %}
+
+
+    {% if !ctx.currUser || (user.avatar_url && !ctx.currUser.hide_avatars) %}
+      <div class="post-avatar"
+           style="margin-top: 10px;">
+        <img class="avatar-img {% if ctx.currUser.is_grayscale %}desaturate{% endif %}"
+             src="{{ user.avatar_url}}"
+             alt="Avatar of {{ user.uname }}"
+             title="Avatar of {{ user.uname }}">
+      </div>
+    {% endif %}
+
+    <table style="width: 100%;">
+      <tr>
+        <td class="L">Role</td>
+        <td class="R">{{ user.role|capitalize }}</td>
+      </td>
+      <tr>
+        <td class="L">Posts</td>
+        <td class="R">{{ user.posts_count }}</td>
+      </td>
+      <tr>
+        <td class="L">Days</td>
+        <td class="R"> {{ user.created_at|daysAgo}}</td>
+      </td>
+    </table>
+
+    {% if user.is_ghost %}
+      {% if ctx.can(ctx.currUser, 'READ_USER_ONLINE_STATUS', user) %}
+        <span class="negate-bg" style="color: white;">INVISIBLE</span>
+      {% endif %}
+    {% else %}
+      {% if Date.now() - user.last_online_at.getTime() < 1000 * 60 * 15 %}
+        <span class="warn">ONLINE</span>
+      {% else %}
+        {% if user.last_online_at %}
+          <span class="negate-bg" style="color: white;">
+            LAST SEEN
+            <abbr class="timeago"
+                  style="display: inline-block; text-transform: uppercase; border: none; color: white;"
+                  title="{{ user.last_online_at.toISOString() }}">
+              {{ user.last_online_at|formatDate }}
+            </abbr>
+          </span>
+        {% else %}
+          <span class="negate-bg" style="color: #555">
+            OFFLINE SINCE RELAUNCH
+          </span>
+        {% endif %}
+      {% endif %}
+    {% endif %}
+
+
+  </fieldset>
+{% endmacro %}
+
+{% macro renderOriginalUserbitLarge(user) %}
   <div class="user-uname">
     <a href="{{ user.url }}">
       {{ user.uname }}
@@ -129,9 +197,18 @@
     <div style="display: inline-block;">in {{ user.created_at|daysAgo}} days</div>
   </div>
 
-  <!-- Online status -->
+<!-- Online status -->
 
   {{ onlineStatus(user) }}
+{% endmacro %}
+
+{% macro renderUserbitLarge(user)  %}
+
+  {% if user.active_trophy_id === 1 %}
+    {{ renderCyberpunkUserbitLarge(user) }}
+  {% else %}
+    {{ renderOriginalUserbitLarge(user) }}
+  {% endif %}
 
   <!-- User gylphs -->
 

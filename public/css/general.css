@@ -1356,3 +1356,45 @@ hr {
 .topic-tabs > li > a:focus {
     padding-bottom: 35px;
 }
+
+/* Cyberpunk effect for "Benevolent Cyberpunk" trophy (id = 1) */
+
+.cyberpunk td.L { text-align: left; }
+.cyberpunk td.R { text-align: right; }
+.cyberpunk table {
+    color: rgb(50, 255, 50);
+}
+.cyberpunk .negate-bg {
+  background: rgb(0,10,0);
+}
+.cyberpunk .danger {
+ 	color: rgb(255,50,50);
+  background: rgb(0,10,0);
+}
+.cyberpunk .warn {
+  color: rgb(255,255,50);
+  background: rgb(0,10,0);
+}
+.cyberpunk {
+    font-family: monospace;
+}
+.cyberpunk legend a {
+    color: rgb(0,10,0);
+}
+.cyberpunk legend {
+    /* color: rgb(50,255,50); /* #32ff32 */
+    font-size: 14px;
+    background: rgb(50,255,50);
+    color: rgb(0,10,0);
+    width: auto;
+    padding: 0 5px;
+    border: 0;
+    margin-bottom: 5px;
+}
+fieldset.cyberpunk {
+    margin: 15px 0;
+    border: 3px double rgb(50,255,50);
+    padding: 2px;
+    color: #197F19;
+    background-image: url('/img/cyberpunk-bg.png');
+}
