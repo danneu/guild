@@ -2116,6 +2116,10 @@ app.del('/users/:user_id/active-trophy', function*() {
 
   this.validateParam('user_id').toInt();
 
+  // Ensure currUser is only trying to operate on themselves
+  // TODO: Make cancan.js rule
+  this.assert(this.currUser.id === this.vals.user_id, 403);
+
   // Ensure user exists
   var user = yield db.findUserById(this.vals.user_id);
   this.assert(user, 404);
