@@ -13,7 +13,6 @@ var ANTI_NECRO_FORUMS = [
   32, // Member Lounge
   33, // Off-topic
   9, // Bugs/feature requests
-  44, // Writing contests
   36, // Need help?
   1, // News
   2, // Introduce yourself
