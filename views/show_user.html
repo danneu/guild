@@ -341,7 +341,10 @@
     <a name="trophies"></a>
     <div class="row">
       <div class="col-sm-12">
-        <h3>Trophies <small>{{ user.trophy_count}} total</small></h3>
+        <h3>
+          Trophies
+          <small>{{ user.trophy_count}} total</small>
+        </h3>
         <div class="well trophy-box clearfix" style="max-height: 200px; overflow-y: auto;">
           {% for trophy in trophies %}
           <div class="row" {% if !loop.last %}style="margin-bottom: 20px;"{% endif %}>

@@ -425,6 +425,13 @@ router.get('/users/:userIdOrSlug', function*() {
     return !t.is_anon;
   }).map(pre.presentTrophy);
 
+  trophies = _.sortByAll(trophies, [
+    // Put the activeTrophy on top if there is one
+    function(t) { return t.id === user.active_trophy_id ? 0 : 1; },
+    // Sort the rest by newest first
+    function(t) { return -t.awarded_at; }
+  ]);
+
   // FIXME: Way too many queries in this route.
 
   var results = yield [

@@ -2533,8 +2533,7 @@ LEFT OUTER JOIN trophy_groups tg ON t.group_id = tg.id
 WHERE tu.user_id = $1
 ORDER BY tu.awarded_at DESC
   */});
-  var result = yield query(sql, [user_id]);
-  return result.rows;
+  return yield queryMany(sql, [user_id]);
 };
 
 ////////////////////////////////////////////////////////////
@@ -2550,8 +2549,7 @@ LEFT OUTER JOIN trophy_groups tg ON t.group_id = tg.id
 WHERE t.id = $1
 GROUP BY t.id, tg.id
   */});
-  var result = yield query(sql, [trophy_id]);
-  return result.rows[0];
+  return yield queryOne(sql, [trophy_id]);
 };
 
 exports.findTrophiesByGroupId = function*(group_id) {
@@ -2560,8 +2558,7 @@ SELECT *
 FROM trophies t
 WHERE t.group_id = $1
   */});
-  var result = yield query(sql, [group_id]);
-  return result.rows;
+  return yield queryMany(sql, [group_id]);
 };
 
 exports.findTrophyGroups = function*() {
@@ -2579,8 +2576,7 @@ SELECT *
 FROM trophy_groups tg
 WHERE tg.id = $1
   */});
-  var result = yield query(sql, [group_id]);
-  return result.rows[0];
+  return yield queryOne(sql, [group_id]);
 };
 
 // title Required
@@ -2642,8 +2638,7 @@ JOIN users winners ON tu.user_id = winners.id
 LEFT OUTER JOIN users awarders ON tu.awarded_by = awarders.id
 WHERE tu.trophy_id = $1
   */});
-  var result = yield query(sql, [trophy_id]);
-  return result.rows;
+  return yield queryMany(sql, [trophy_id]);
 };
 
 // description_markup and _html are optional
