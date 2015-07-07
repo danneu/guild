@@ -357,6 +357,13 @@
           {% endif %}
 
         </h3>
+
+        {% if ctx.currUser && ctx.currUser.id === user.id %}
+          <p>
+            You can activate any single trophy at a time to boast it around the guild. Some trophies have special effects while active.
+          </p>
+        {% endif %}
+
         <div class="well trophy-box clearfix" style="max-height: 200px; overflow-y: auto;">
           {% for trophy in trophies %}
           <div class="row" {% if !loop.last %}style="margin-bottom: 20px;"{% endif %}>
@@ -410,6 +417,7 @@
                   trophy set
                   <br>
                 {% endif %}
+
                 Awarded
                 <abbr class="timeago" title="{{ trophy.awarded_at.toISOString() }}">
                   {{ trophy.awarded_at|formatDate }}
@@ -420,6 +428,14 @@
                     {{ trophy.awarded_by.uname }}
                   </a>
                 {% endif %}
+
+                <div>
+                  {% if trophy.special_effect %}
+                    <span style="color:#3498db;">Special Effect:</span>
+                    {{ trophy.special_effect }}
+                  {% endif %}
+                </div>
+
 
               </div><!--/col-->
               <div class="col-sm-6">

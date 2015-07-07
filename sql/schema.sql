@@ -349,6 +349,11 @@ CREATE TABLE trophies (
   created_at  timestamp with time zone NOT NULL DEFAULT NOW()
 );
 
+-- When set, it's the description of the effect when activated.
+-- If null, then trophie has no special effect when activated.
+ALTER TABLE trophies
+ADD COLUMN special_effect text NULL;
+
 ALTER TABLE users
 ADD COLUMN active_trophy_id int NULL REFERENCES trophies(id);
 
