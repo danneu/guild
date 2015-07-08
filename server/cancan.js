@@ -18,7 +18,18 @@ var ANTI_NECRO_FORUMS = [
   2, // Introduce yourself
 ];
 
+var CONTEST_FORUMS = [
+  45,
+  44
+];
+
 // Applies to anyone above member
+//
+// TODO: Now that I've added the 'conmod' role, this function doesn't make
+// much sense since many times I use this function (like to restrict LexusLounge
+// access) I don't want to include conmods. But I would still consider them staff.
+// I think I should replace this function with explicitly inlining the
+// _.contains([x, y, z], role) call and removing this function.
 exports.isStaffRole = isStaffRole;
 function isStaffRole(role) {
   return _.contains(['mod', 'smod', 'admin'], role);
@@ -40,6 +51,15 @@ exports.can = function(user, action, target) {
 };
 function can(user, action, target) {
   switch(action) {
+    case 'CREATE_TROPHY_GROUP': // no target
+    case 'UPDATE_TROPHY_GROUP': // target is trophy-group
+      // Guests can't
+      if (!user) return false;
+      // Conmods can
+      if (user.role === 'conmod') return true;
+      // Admin can
+      if (user.role === 'admin') return true;
+      return false;
     case 'DELETE_NOTIFICATION':  // target is notification
       // Guests can't
       if (!user) return false;
@@ -269,6 +289,13 @@ function can(user, action, target) {
       if (user.role === 'banned') return false;
       // Staff can always create posts anywhere
       if (isStaffRole(user.role)) return true;
+      // Conmods can always post in contest subforums
+      if (user.role === 'conmod') {
+        if (_.contains(CONTEST_FORUMS, target.id)) return true;
+        // conmods can't lexus lounge
+        if (target.category_id === 4) return false;
+        return true;
+      }
       // Members can post as long as it's outside the lexus lounge,
       // the topic is open, and the topic is visible
       if (user.role === 'member') {
@@ -347,7 +374,7 @@ function can(user, action, target) {
     case 'SUBSCRIBE_TOPIC':  // target is topic
       if (!user) return false;
       // Members and up can subscribe if they can read the topic
-      if (_.contains(['member', 'mod', 'smod', 'admin'], user.role))
+      if (_.contains(['member', 'mod', 'smod', 'admin', 'conmod'], user.role))
         return can(user, 'READ_TOPIC', target);
       return false;
     case 'CREATE_PM': // target is convo w/ participants prop
@@ -364,6 +391,9 @@ function can(user, action, target) {
       if (target.is_hidden)
         return user && isStaffRole(user.role);
       if (!target.is_hidden) return true;
+      // Conmods can read any topic in the contest forums
+      if (user.role === 'conmod')
+        return _.contains(CONTEST_FORUMS, target.forum_id);
       return false;
     case 'CREATE_CONVO':  // no target
       if (!user) return false;
@@ -376,11 +406,8 @@ function can(user, action, target) {
       // Members can create topics in any category that's not Lexus Lounge
       if (user.role === 'member') return target.category_id !== 4;
       // Only staff can create topics in lexus lounge
-      if (target.id === 4) {
-        return isStaffRole(user.role);
-      } else {
-        return _.contains(['member', 'mod', 'smod', 'admin'], user.role);
-      }
+      if (target.id === 4) return isStaffRole(user.role);
+      if (user.role === 'conmod') return true;
       if (user.role === 'member') return true;
       return false;
     case 'UPDATE_PM':  // target is pm with pm.convo and pm.participants
@@ -399,10 +426,6 @@ function can(user, action, target) {
       if (user.role === 'admin') return true;
       // TODO: Create rules for other staff roles
       if (user.id === target.user_id) return true;
-      return false;
-    case 'CREATE_CONVO':
-      if (!user) return false;
-      if (user.role === 'member') return true;
       return false;
     case 'READ_CONVO':
       // Banned members can't

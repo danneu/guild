@@ -9,6 +9,7 @@ CREATE SCHEMA public;
 CREATE EXTENSION IF NOT EXISTS plv8;
 
 CREATE TYPE role_type AS ENUM ('admin', 'smod', 'mod', 'member', 'banned');
+ALTER TYPE role_type ADD VALUE 'conmod';
 
 CREATE TABLE users (
   id             serial PRIMARY KEY,

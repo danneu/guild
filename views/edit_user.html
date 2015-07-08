@@ -72,6 +72,11 @@
                             >
                       Mod
                     </option>
+                    <option value="conmod"
+                            {% if user.role === 'conmod' %}selected{% endif %}
+                            >
+                      Contest Mod
+                    </option>
                     <option value="member"
                             {% if user.role === 'member' %}selected{% endif %}
                             >

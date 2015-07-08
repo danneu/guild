@@ -35,7 +35,7 @@
         </span>
       {% endif %}
 
-      <small>{{ user.role|capitalize}}</small>
+      <small>{{ user.role|presentUserRole }}</small>
       {% if ctx.can(ctx.currUser, 'UPDATE_USER', user) %}
         <a href="{{ user.url }}/edit" class="btn btn-default btn-xs">
           Edit

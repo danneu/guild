@@ -9,6 +9,9 @@
 
   <div class="page-header" style="border-color: #000">
     <h3>Forum Staff</h3>
+    <small>
+      The Guild has a very hands-off approach to community management, so we try to chill behind the scenes and let you be you. However, please contact us if you experience issues of any sort. We're here to help.
+    </small>
   </div>
 
   <div class="row">
@@ -20,6 +23,9 @@
         <div class="panel panel-default no-select" style="border-color: #000">
           <div class="panel-heading">
             Admins
+            <small style="display: block;">
+              The benevolent dictator for life.
+            </small>
           </div>
           <div class="panel-body">
             <ul>
@@ -38,6 +44,9 @@
           <div class="panel panel-default no-select" style="border-color: #000">
             <div class="panel-heading">
               Super Mods
+              <small style="display: block;">
+                Strong, faster, harder moderators.
+              </small>
             </div>
             <div class="panel-body">
               <ul>
@@ -56,10 +65,34 @@
           <div class="panel panel-default no-select" style="border-color: #000">
             <div class="panel-heading">
               Mods
+              <small style="display: block;">
+                Here to assist users in general matters of support and keep the forum running smoothly.
+              </small>
             </div>
             <div class="panel-body">
               <ul>
               {% for user in mods %}
+                <li>
+                  <a href="{{ user.url }}">{{ user.uname }}</a>
+                </li>
+              {% endfor %}
+              </ul>
+            </div>
+          </div> <!-- /.panel -->
+        {% endif %}
+
+        <!-- Contest Mods -->
+        {% if conmods.length > 0 %}
+          <div class="panel panel-default no-select" style="border-color: #000">
+            <div class="panel-heading">
+              Contest Mods
+              <small style="display: block;">
+                Specialized moderators that focus on operating the writing contests.
+              </small>
+            </div>
+            <div class="panel-body">
+              <ul>
+              {% for user in conmods %}
                 <li>
                   <a href="{{ user.url }}">{{ user.uname }}</a>
                 </li>

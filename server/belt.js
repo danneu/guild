@@ -260,7 +260,7 @@ var slugify = exports.slugify = function() {
       .replace(/^[-]+|[-]+$/, '')
       .toLowerCase();
   }
-  
+
   var args = Array.prototype.slice.call(arguments, 0);
 
   return slugifyString(
@@ -487,4 +487,21 @@ exports.cookieDate = function(date) {
   return {
     toUTCString: function() { return outString; }
   };
+};
+
+// Pretty-/human- version of each role.
+//
+// Example:
+//
+//     presentUserRole('conmod') => 'Contest Mod'
+//
+exports.presentUserRole = function(role) {
+  assert(_.isString(role));
+
+  switch(role) {
+    case 'conmod':
+      return 'Contest Mod';
+    default:
+      return _.capitalize(role);
+  }
 };

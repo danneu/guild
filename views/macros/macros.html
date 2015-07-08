@@ -76,7 +76,7 @@
           {% endif %}
         </h4>
         <div class="pull-left">
-          {{ user.role|capitalize }}
+          {{ user.role|presentUserRole }}
           {{ macros.onlineStatus(user) }}
         </div>
       </div>
@@ -111,7 +111,7 @@
     <table style="width: 100%;">
       <tr>
         <td class="L">Role</td>
-        <td class="R">{{ user.role|capitalize }}</td>
+        <td class="R">{{ user.role|presentUserRole }}</td>
       </td>
       <tr>
         <td class="L">Posts</td>
@@ -195,7 +195,7 @@
       <img src="/bling/10-sora/forever.gif">
     {% elif user.role === 'member' %}
     {% else %}
-      {{ user.role|capitalize }}
+      {{ user.role|presentUserRole }}
     {% endif %}
   </div>
 

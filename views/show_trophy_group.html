@@ -8,7 +8,7 @@
   </ol>
 
   <div class="page-header" style="border-color: #000">
-    {% if ctx.currUser && ctx.currUser.role === 'admin' %}
+    {% if ctx.can(ctx.currUser, 'UPDATE_TROPHY_GROUP', group) %}
       <a href="/trophy-groups/{{ group.id }}/edit"
          class="btn btn-default btn-xs pull-right"
       >
@@ -20,13 +20,17 @@
 
   <!-- Group description -->
 
+
   {% if group.description_html %}
-    {{ group.description_html|safe }}
+    <h4>Description:</h4>
+    <div style="margin-left: 20px;">
+      {{ group.description_html|raw }}
+    </div>
   {% endif %}
 
   <!-- List trophies -->
 
-  <h2>Trophies</h2>
+  <h2>Trophies in this group</h2>
 
   {% if trophies.length === 0 %}
     <div class="well">

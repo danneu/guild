@@ -1579,7 +1579,7 @@ exports.findStaffUsers = function*() {
   var sql = m(function(){/*
 SELECT u.*
 FROM users u
-WHERE u.role IN ('mod', 'smod', 'admin')
+WHERE u.role IN ('mod', 'smod', 'admin', 'conmod')
   */});
   var result = yield query(sql);
   return result.rows;

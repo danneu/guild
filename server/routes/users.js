@@ -155,7 +155,7 @@ router.post('/users', function*() {
 // checked
 router.put('/users/:slug/role', function*() {
   this.checkBody('role')
-    .isIn(['banned', 'member', 'mod', 'smod', 'admin'], 'Invalid role');
+    .isIn(['banned', 'member', 'mod', 'conmod', 'smod', 'admin'], 'Invalid role');
   this.assert(!this.errors, 400, belt.joinErrors(this.errors));
   // TODO: Authorize role param against role of both parties
   var user = yield db.findUserBySlug(this.params.slug);

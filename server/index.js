@@ -245,6 +245,7 @@ function commafy(n) {
 swig.setFilter('commafy', commafy);
 swig.setFilter('formatDate', pre.formatDate);
 swig.setFilter('slugifyUname', belt.slugifyUname);
+swig.setFilter('presentUserRole', belt.presentUserRole);
 
 ////////////////////////////////////////////////////////////
 
@@ -1890,7 +1891,8 @@ app.get('/staff', function*() {
     ctx: this,
     mods: _.filter(staffUsers, { role: 'mod' }),
     smods: _.filter(staffUsers, { role: 'smod' }),
-    admins: _.filter(staffUsers, { role: 'admin' })
+    admins: _.filter(staffUsers, { role: 'admin' }),
+    conmods: _.filter(staffUsers, { role: 'conmod' }),
   });
 });
 
@@ -2042,9 +2044,8 @@ app.get('/trophy-groups', function*() {
 
 // Create trophy group
 app.post('/trophy-groups', function*() {
-  // Only admin can create trophy groups
-  // TODO: Move to cancan.js
-  this.assert(this.currUser && this.currUser.role === 'admin', 403);
+  // Authorize
+  this.assertAuthorized(this.currUser, 'CREATE_TROPHY_GROUP');
 
   this.validateBody('title')
     .notEmpty('Title required')
@@ -2073,12 +2074,14 @@ app.post('/trophy-groups', function*() {
   this.redirect('/trophy-groups');
 });
 
+// Update trophy-group
 app.put('/trophy-groups/:id', function*() {
-  // Ensure admin
-  this.assert(this.currUser && this.currUser.role === 'admin', 403);
-
+  // Load
   var group = yield db.findTrophyGroupById(this.params.id);
   this.assert(group, 404);
+
+  // Authorize
+  this.assertAuthorized(this.currUser, 'UPDATE_TROPHY_GROUP', group);
 
   this.validateParam('id').toInt();
 
@@ -2164,11 +2167,12 @@ app.put('/users/:user_id/active-trophy', function*() {
 });
 
 app.get('/trophy-groups/:id/edit', function*() {
-  // Ensure admin
-  this.assert(this.currUser && this.currUser.role === 'admin', 403);
-
+  // Load
   var group = yield db.findTrophyGroupById(this.params.id);
   this.assert(group, 404);
+
+  // Authorize
+  this.assertAuthorized(this.currUser, 'UPDATE_TROPHY_GROUP', group);
 
   yield this.render('edit_trophy_group', {
     ctx: this,

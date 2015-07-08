@@ -18,23 +18,38 @@
       <li>
         <a href="/trophy-groups/{{ group.id }}">{{ group.title }}</a>
         {% if group.description_html %}
-          &mdash; {{ group.description_html|raw }}
+          <div>{{ group.description_html|raw }}</div>
         {% endif %}
       </li>
     {% endfor %}
   </ul>
 
-  {% if ctx.currUser && ctx.currUser.role === 'admin' %}
+  {% if ctx.can(ctx.currUser, 'CREATE_TROPHY_GROUP') %}
     <hr>
 
     <h4>New Trophy Group</h4>
 
     <form method="POST" action="/trophy-groups">
       Title: <input type="text" name="title" class="form-control">
+
       Description (BBCode):
-      <textarea name="description-markup" class="form-control"></textarea>
+      <textarea id="markup-input"
+                placeholder="Click here and begin writing"
+                name="description-markup"
+                rows=10
+                class="form-control"
+      ></textarea>
+
       <button type="submit" class="btn btn-primary">Create</button>
     </form>
   {% endif %}
 
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    $('#markup-input').bbcode({
+      charLimit: 3000
+    });
+  </script>
 {% endblock %}
