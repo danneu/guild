@@ -435,7 +435,7 @@ function can(user, action, target) {
       if (user.role === 'member') return target.category_id !== 4;
       // Only staff can create topics in lexus lounge
       if (target.id === 4) return isStaffRole(user.role);
-      if (user.role === 'conmod') return true;
+      if (_.contains(['mod', 'conmod', 'smod', 'admin'], user.role)) return true;
       if (user.role === 'member') return true;
       return false;
     case 'UPDATE_PM':  // target is pm with pm.convo and pm.participants
