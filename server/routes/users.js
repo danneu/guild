@@ -381,11 +381,17 @@ router.get('/users/:userIdOrSlug', function*() {
   // which is not possible anymore since unames require at least one a-z letter.
   var user;
   if (/^\d+$/.test(this.params.userIdOrSlug)) {
-    user = yield db.findUser(this.params.userIdOrSlug);
-    this.assert(user, 404);
-    this.status = 301;
-    this.response.redirect('/users/' + user.slug);
-    return;
+
+    // First, see if it's one of the users with all-digit usernames (legacy)
+    user = yield db.findUserByUname(this.params.userIdOrSlug);
+
+    if (!user) {
+      user = yield db.findUser(this.params.userIdOrSlug);
+      this.assert(user, 404);
+      this.status = 301;
+      this.response.redirect('/users/' + user.slug);
+      return;
+    }
   }
 
   this.checkQuery('before-id').optional().toInt();  // will be undefined or number
