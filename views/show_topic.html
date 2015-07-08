@@ -49,7 +49,7 @@
          class="btn btn-xs btn-default">Edit Topic</a>
     {% endif %}
 
-    {% if ctx.currUser && cancan.isStaffRole(ctx.currUser.role) %}
+    {% if ctx.can(ctx.currUser, 'ACCESS_TOPIC_MODKIT', topic) %}
       <button type="button"
               id="toggle-topic-modkit"
               class="btn btn-default btn-xs"
@@ -60,7 +60,7 @@
 
     <!-- Topic state buttons -->
 
-    {% if ctx.currUser && cancan.isStaffRole(ctx.currUser.role) %}
+    {% if ctx.can(ctx.currUser, 'ACCESS_TOPIC_MODKIT', topic) %}
     <div class="topic-modkit" style="display: none;">
 
       <!-- STICK -->

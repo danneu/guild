@@ -51,6 +51,12 @@ exports.can = function(user, action, target) {
 };
 function can(user, action, target) {
   switch(action) {
+    case 'ACCESS_TOPIC_MODKIT': // target is topic
+      if (!user) return false;
+      if (_.contains(['mod', 'smod', 'admin'], user.role)) return true;
+      if (user.role === 'conmod' && _.contains(CONTEST_FORUMS, target.forum_id))
+        return true;
+      return false;
     case 'CREATE_TROPHY_GROUP': // no target
     case 'UPDATE_TROPHY_GROUP': // target is trophy-group
       // Guests can't
@@ -119,6 +125,10 @@ function can(user, action, target) {
       if (user.role === 'banned') return false;
       // Staff can
       if (isStaffRole(user.role)) return true;
+      // Conmod can if it's in contest forums
+      if (user.role === 'conmod'
+          && _.contains(CONTEST_FORUMS, target.forum_id))
+        return true;
       // If non-staff, then cannot if topic is hidden/closed
       if (target.is_closed || target.is_hidden) return false;
       // GM/OP can
@@ -166,8 +176,8 @@ function can(user, action, target) {
     case 'UPDATE_USER_CUSTOM_TITLE': // target is user
       // Guests cannot
       if (!user) return false;
-      // Members can change their own
-      if (user.role === 'member')
+      // Members and Conmods can only change their own
+      if (_.contains(['member', 'conmod'], user.role))
         return user.id === target.id;
       // Mods can change their own title and the title of any non-staff
       if (user.role === 'mod')
@@ -186,6 +196,8 @@ function can(user, action, target) {
       if (!user) return false;
       // Staff can
       if (isStaffRole(user.role)) return true;
+      // Conmods can
+      if (user.role === 'conmod') return true;
       return false;
     // The ratings table is on the user profile
     case 'READ_USER_RATINGS_TABLE': // target is user
@@ -193,8 +205,9 @@ function can(user, action, target) {
       if (!user) return false;
       // Banned cannot
       if (user.role === 'banned') return false;
-      // Members can only read their own
-      if (user.role === 'member' && user.id === target.id) return true;
+      // Members and conmods can only read their own
+      if (_.contains(['member', 'conmod'], user.role) && user.id === target.id)
+        return true;
       // Staff can read everyone's
       if (isStaffRole(user.role)) return true;
       return false;
@@ -224,12 +237,15 @@ function can(user, action, target) {
       if (user.id === target.user_id) return true;
       // Co-GMs can also edit topic title
       if (_.contains(target.co_gm_ids, user.id)) return true;
+      // Conmods can edit any topic in contest forums
+      if (user.role === 'conmod' && _.contains(CONTEST_FORUMS, target.forum_id))
+        return true;
       return false;
     case 'READ_USER_ONLINE_STATUS': // target is user
       // Guests and members can see status if target isn't in invisible mode.
       if (!user) return !target.is_ghost;
-      // Members can see themselves regardless of ghost status
-      if (user.role === 'member')
+      // Members & conmods can see themselves regardless of ghost status
+      if (_.contains(['member', 'conmod'], user.role))
         return target.id === user.id || !target.is_ghost;
       // Staff can see ghosts
       if (isStaffRole(user.role)) return true;
@@ -270,6 +286,8 @@ function can(user, action, target) {
       if (!user) return false;
       // Staff can hide/unhide
       if (isStaffRole(user.role)) return true;
+      // So can conmods
+      if (user.role === 'conmod') return true;
       return false;
     // Topic state
     case 'STICK_TOPIC':
@@ -283,6 +301,9 @@ function can(user, action, target) {
       if (!user) return false;
       // Only staff can do this
       if (isStaffRole(user.role)) return true;
+      // Conmods can manage topics in contest forums
+      if (user.role === 'conmod' && _.contains(CONTEST_FORUMS, target.forum_id))
+        return true;
       return false;
     case 'CREATE_POST': // target is topic
       if (!user) return false;
@@ -326,6 +347,10 @@ function can(user, action, target) {
       assert(target.forum, 'post.forum is missing');
       // Staff can read all posts
       if (user && isStaffRole(user.role)) return true;
+      // conmods can read all posts in contest forums
+      if (user.role === 'conmod'
+          && _.contains(CONTEST_FORUMS, target.topic.forum_id))
+        return true;
       // Everyone else can read a post as long as it's not hidden,
       // the topic is not hidden, and the topic is not in lexus lounge
       return !target.is_hidden &&
@@ -387,6 +412,9 @@ function can(user, action, target) {
       // Only staff can read lexus lounge
       if (target.forum.category_id === 4)
         return user && isStaffRole(user.role);
+      // conmod can read any topic in contests forum
+      if (user.role === 'conmod' && _.contains(CONTEST_FORUMS, target.forum_id))
+        return true;
       // Only staff can see hidden topics
       if (target.is_hidden)
         return user && isStaffRole(user.role);
