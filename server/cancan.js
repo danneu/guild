@@ -348,7 +348,8 @@ function can(user, action, target) {
       // Staff can read all posts
       if (user && isStaffRole(user.role)) return true;
       // conmods can read all posts in contest forums
-      if (user.role === 'conmod'
+      if (user
+          && user.role === 'conmod'
           && _.contains(CONTEST_FORUMS, target.topic.forum_id))
         return true;
       // Everyone else can read a post as long as it's not hidden,
@@ -413,7 +414,7 @@ function can(user, action, target) {
       if (target.forum.category_id === 4)
         return user && isStaffRole(user.role);
       // conmod can read any topic in contests forum
-      if (user.role === 'conmod' && _.contains(CONTEST_FORUMS, target.forum_id))
+      if (user && user.role === 'conmod' && _.contains(CONTEST_FORUMS, target.forum_id))
         return true;
       // Only staff can see hidden topics
       if (target.is_hidden)
