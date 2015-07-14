@@ -48,8 +48,12 @@
                  placeholder="Topic Title"
                  name="title"
                  value="{{ initTitle }}"
-                 class="form-control">
-          <div class="help-block">3-50 characters</div>
+                 class="form-control"
+                 pattern=".{3,150}"
+                 title="Title must be 3-150 chars"
+                 required
+          >
+          <div class="help-block">3-150 characters</div>
         </div>
       </div><!--/div[css="margin-bottom: _"]-->
 
@@ -125,7 +129,7 @@
 
           <!-- Tags selection-->
           <div style="margin-bottom: 30px;">
-            <h4>Tags: (5 Max)
+            <h4>Tags: (1-5 Required)
               <small>Tags describe your roleplay or interest-check and allow other players to find it by using tag filters.</small>
 
             </h4>
@@ -174,11 +178,12 @@
                       name="markup"
                       class="form-control"
                       value="{{ ctx.flash.params && ctx.flash.params.markup }}"
-                      placeholder="Click here and begin writing">{{ ctx.flash.params && ctx.flash.params.markup }}</textarea>
+                      placeholder="Click here and begin writing"
+                      required>{{ ctx.flash.params && ctx.flash.params.markup }}</textarea>
           </div><!--/form-group-->
       <div class="form-controls">
         <a href="{{ forum.url }}" class="btn btn-default">Cancel</a>
-        <input type="submit" class="btn btn-primary" value="Create Topic">
+        <input type="submit" id="create-topic-btn" class="btn btn-primary" value="Create Topic">
       </div>
     </form>
 
@@ -199,7 +204,7 @@
   </script>
 
   <script>
-      $('input[type="submit"]').on('click', function(e) {
+      $('input[type="submit"].prevent-double-click').on('click', function(e) {
         var $this = $(this);
         if ($this.data('already-clicked'))
           return false;
@@ -211,6 +216,32 @@
       $('#reply-input').bbcode({
         charLimit: {{ ctx.config.MAX_POST_LENGTH }}
       });
+    });
+  </script>
+
+  <script type="text/javascript">
+    //$('#create-topic-btn').on('submit');
+    //$('[name="tag-ids[]"]:checked').length
+    $('#new-topic-form').on('submit', function(e) {
+
+      // If the form has no tags, just continue
+      if ($('[name="tag-ids[]"]').length === 0) {
+        return true;
+      }
+
+      var selectedTagCount = $('[name="tag-ids[]"]:checked').length;
+      if (selectedTagCount === 0) {
+        alert('Must select at least one tag');
+        return false;
+      }
+
+      if (selectedTagCount > 5) {
+        alert('Must select only 1-5 tags. You have ' + selectedTagCount + ' selected.');
+        return false;
+      }
+
+      return true;
+
     });
   </script>
 {% endblock %}
