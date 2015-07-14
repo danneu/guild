@@ -176,7 +176,7 @@
     $(function() {
 
       var strings = {
-        verbose: {
+        simple: {
           prefixAgo: null,
           prefixFromNow: "in",
           suffixAgo: "ago",
@@ -184,33 +184,14 @@
           seconds: "<1 min",
           minute: "1 min",
           minutes: "%d min",
-          hour: "1 hour",
-          hours: "%d hours",
+          hour: "1 hr",
+          hours: "%d hrs",
           day: "1 day",
           days: "%d days",
-          month: "1 month",
-          months: "%d months",
-          year: "1 year",
-          years: "%d years",
-          wordSeparator: " ",
-          numbers: []
-        },
-        minimal: {
-          prefixAgo: "",
-          prefixFromNow: "",
-          suffixAgo: "",
-          suffixFromNow: "",
-          seconds: "1m",
-          minute: "1m",
-          minutes: "%dm",
-          hour: "1h",
-          hours: "%dh",
-          day: "1d",
-          days: "%dd",
-          month: "1mo",
-          months: "%dmo",
-          year: "1yr",
-          years: "%dyr",
+          month: "1 mo",
+          months: "%d mos",
+          year: "1 yr",
+          years: "%d yrs",
           wordSeparator: " ",
           numbers: []
         }
@@ -218,7 +199,7 @@
 
       $.timeago.settings.allowFuture = true;
 
-      $.timeago.settings.strings = strings.verbose;
+      $.timeago.settings.strings = strings.simple;
       $("abbr.timeago").timeago();
     });
   </script>
