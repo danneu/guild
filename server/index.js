@@ -1256,8 +1256,9 @@ app.post('/forums/:slug/topics', function*() {
     this.validateBody('is_ranked')
       .toBoolean();
   } else {
-    this.check(_.isUndefined(this.request.body.is_ranked),
-               'You may only specify Ranked vs Unranked for Arena Roleplays');
+    this.vals.is_ranked = false;
+    // this.check(_.isUndefined(this.request.body.is_ranked),
+    //            'You may only specify Ranked vs Unranked for Arena Roleplays');
   }
 
   if (forum.is_roleplay) {
