@@ -191,6 +191,10 @@
                 <li>
                   <a href="/users/{{ o.uname|slugifyUname }}">{{ o.uname }}</a>
                   {{ o.outcome|outcomeToElement|raw }}
+                  <span class="text-muted">
+                    &mdash; Awarded by
+                    <a href="/users/{{ o.inserted_by_uname|slugifyUname }}">{{ o.inserted_by_uname }}</a>
+                  </span>
                 </li>
               {% endfor %}
             </ul>

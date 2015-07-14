@@ -1805,7 +1805,7 @@ app.post('/topics/:slug/arena-outcomes', function*() {
     .check(user, 'User not found with username: "' + this.vals.uname + '"');
 
   // Create arena outcome
-  var ao = yield db.createArenaOutcome(topic.id, user.id, this.vals.outcome);
+  var ao = yield db.createArenaOutcome(topic.id, user.id, this.vals.outcome, this.currUser.id);
 
   this.flash = { message: ['success', 'Arena outcome added'] };
   this.redirect(topic.url + '/edit');

@@ -259,9 +259,10 @@ SELECT
   (
     SELECT COALESCE(json_agg(sub.*), '{}'::json)
     FROM (
-			SELECT users.uname, arena_outcomes.outcome
+			SELECT users.uname, arena_outcomes.outcome, u2.uname inserted_by_uname
       FROM arena_outcomes
       JOIN users ON arena_outcomes.user_id = users.id
+      JOIN users u2 ON arena_outcomes.inserted_by = u2.id
       WHERE arena_outcomes.topic_id = t.id
     ) sub
   ) arena_outcomes
@@ -1784,9 +1785,10 @@ SELECT
   (
     SELECT COALESCE(json_agg(sub.*), '{}'::json)
     FROM (
-			SELECT users.uname, arena_outcomes.outcome, arena_outcomes.id
+			SELECT users.uname, arena_outcomes.outcome, u2.uname inserted_by_uname
       FROM arena_outcomes
       JOIN users ON arena_outcomes.user_id = users.id
+      JOIN users u2 ON arena_outcomes.inserted_by = u2.id
       WHERE arena_outcomes.topic_id = t.id
     ) sub
   ) arena_outcomes
@@ -2998,14 +3000,16 @@ WHERE id = $1
   return result.rows[0];
 };
 
-exports.createArenaOutcome = function*(topic_id, user_id, outcome) {
+// - inserted_by is user_id of ARENA_MOD that is adding this outcome
+exports.createArenaOutcome = function*(topic_id, user_id, outcome, inserted_by) {
   assert(_.isNumber(topic_id));
   assert(_.isNumber(user_id));
   assert(_.contains(['WIN', 'LOSS', 'DRAW'], outcome));
+  assert(_.isNumber(inserted_by));
 
   var sql = m(function() {/*
-INSERT INTO arena_outcomes (topic_id, user_id, outcome, profit)
-VALUES ($1, $2, $3, $4)
+INSERT INTO arena_outcomes (topic_id, user_id, outcome, profit, inserted_by)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING *
   */});
 
@@ -3024,7 +3028,7 @@ RETURNING *
     throw new Error('Unhandled outcome: ' + outcome);
   }
 
-  return yield queryOne(sql, [topic_id, user_id, outcome, profit]);
+  return yield queryOne(sql, [topic_id, user_id, outcome, profit, inserted_by]);
 };
 
 exports.deleteArenaOutcome = function*(topic_id, outcome_id) {
