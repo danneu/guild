@@ -3042,3 +3042,27 @@ WHERE topic_id = $1 and id = $2
 
   return yield query(sql, [topic_id, outcome_id]);
 };
+
+// Query is more complex than necessary to make it idempotent
+exports.promoteArenaRoleplayToRanked = function*(topic_id) {
+  assert(_.isNumber(topic_id));
+
+  var sql = m(function() {/*
+UPDATE topics
+SET is_ranked = true
+WHERE
+  id = $1
+  AND is_ranked = false
+  AND EXISTS (
+    SELECT 1
+    FROM forums
+    WHERE
+      is_arena_rp = true
+      AND id = (SELECT forum_id FROM topics WHERE id = $1)
+  )
+RETURNING *
+  */});
+
+  var result = yield query(sql, [topic_id]);
+  return result.rows;
+};

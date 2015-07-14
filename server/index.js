@@ -1749,6 +1749,26 @@ app.get('/topics/:slug/:postType/first-unread', function*() {
 });
 
 //
+// Promote an arena roleplay to ranked
+//
+app.post('/topics/:slug/promote-to-ranked', function*() {
+  // Load topic
+  var topicId = belt.extractId(this.params.slug);
+  this.assert(topicId, 404);
+  var topic = yield db.findTopicById(topicId);
+  this.assert(topic, 404);
+  topic = pre.presentTopic(topic);
+
+  // Check currUser authorization
+  this.assertAuthorized(this.currUser, 'UPDATE_TOPIC_ARENA_OUTCOMES', topic);
+
+  yield db.promoteArenaRoleplayToRanked(topic.id);
+
+  this.redirect(topic.url + '/edit#arena-outcome');
+
+});
+
+//
 // Delete arena outcome
 //
 app.del('/topics/:slug/arena-outcomes', function*() {

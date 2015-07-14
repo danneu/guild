@@ -248,6 +248,14 @@
     {% if !topic.is_ranked %}
       <div class="panel-body">
         Only ranked fights can have outcomes. This fight is unranked.
+
+        <form method="POST" action="{{ topic.url }}/promote-to-ranked">
+          <button type="submit" class="btn btn-warning">
+            <span class="glyphicon glyphicon-fire"></span>
+            Promote to Ranked
+          </button>
+        </form>
+
       </div>
     {% else %}
       <div class="panel-body">
