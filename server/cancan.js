@@ -248,8 +248,13 @@ function can(user, action, target) {
         return true;
       return false;
     case 'UPDATE_TOPIC_ARENA_OUTCOMES':  // target is topic
+      // Guests can't
       if (!user)
         return false;
+      // Admin can
+      if (user.role === 'admin')
+        return true;
+      // Arena mods can if topic is in arena forum
       if (target.forum.is_arena_rp && _.contains(user.roles, 'ARENA_MOD'))
         return true;
       return false;
