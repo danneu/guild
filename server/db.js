@@ -2816,14 +2816,23 @@ exports.findAllStatuses = function*() {
   var sql = m(function() {/*
 SELECT
   s.*,
-  to_json(u.*) "user"
+  to_json(u.*) "user",
+  json_agg(likers.uname) "likers"
 FROM statuses s
 JOIN users u ON s.user_id = u.id
+LEFT OUTER JOIN status_likes ON s.id = status_likes.status_id
+LEFT OUTER JOIN users likers ON status_likes.user_id = likers.id
+GROUP BY s.id, u.id
 ORDER BY s.created_at DESC
 LIMIT 100
+
 */});
   var result = yield query(sql, []);
-  return result.rows;
+  var statuses = result.rows.map(function(r) {
+    r.likers = r.likers.filter(Boolean);
+    return r;
+  });
+  return statuses;
 };
 
 exports.likeStatus = function*(props) {

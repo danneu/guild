@@ -2400,6 +2400,40 @@ app.get('/refresh-homepage/:anchor_name', function*() {
   this.redirect(util.format('/#%s', this.params.anchor_name));
 });
 
+// This is browser endpoint
+// TODO: remove /browser/ scope once i add /api/ scope to other endpoint
+// Sync with POST /api/statuses/:status_id/like
+app.post('/browser/statuses/:status_id/like', function*() {
+  // Load status
+  var status = yield db.findStatusById(this.params.status_id);
+  this.assert(status, 404);
+
+  // Authorize user
+  this.assertAuthorized(this.currUser, 'LIKE_STATUS', status);
+
+  // Ensure it's been 30 seconds since user's last like
+  var latestLikeAt = yield db.latestStatusLikeAt(this.currUser.id);
+  if (latestLikeAt && belt.isNewerThan(latestLikeAt, { seconds: 30 })) {
+    this.check(false, 'Can only like a status once every 30 seconds. Don\'t wear \'em out!');
+    return;
+  }
+
+  // Create like
+  yield db.likeStatus({
+    status_id: status.id,
+    user_id:   this.currUser.id
+  });
+
+  // Redirect
+  this.flash = {
+    message: ['success', 'Success. Imagine how much that\'s gonna brighten their day!']
+  };
+  this.redirect('/statuses');
+});
+
+// This is AJAX endpoint
+// TODO: scope to /api/statuses/...
+// Sync with POST /browser/statuses/:status_id/like
 app.post('/statuses/:status_id/like', function*() {
   // Load status
   var status = yield db.findStatusById(this.params.status_id);

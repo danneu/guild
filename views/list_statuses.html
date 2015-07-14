@@ -30,9 +30,40 @@
             </span>
           </div>
         </div>
-        <div style="word-wrap: break-word; font-size: 90%;">
+
+        <div style="word-wrap: break-word; font-size: 90%; margin-bottom: 6px;" >
           {{ status.html|safe }}
         </div>
+
+        <!-- Like button -->
+
+        {% if ctx.currUser %}
+          {% if ctx.currUser.uname|isIn(status.likers) %}
+            <span style="font-size: 90%;" class="text-muted">
+              You like this &mdash;
+            </span>
+          {% else %}
+            {% if ctx.can(ctx.currUser, 'LIKE_STATUS', status) %}
+              <form method="POST" action="/browser/statuses/{{ status.id }}/like">
+                <button type="submit" class="btn btn-default btn-xs like-status-btn">
+                  Like
+                </button>
+              </form>
+            {% endif %}
+          {% endif %}
+        {% endif %}
+
+        <!-- Likes and likers -->
+
+        {% if status.likers.length > 0 %}
+          <span style="font-size: 90%;" class="text-muted">
+            {{ status.likers.length }} like{% if status.likers.length > 1%}s{% endif %}:
+            {% for uname in status.likers %}
+              <a href="/users/{{ uname|slugifyUname }}" class="text-muted" style="text-decoration: underline;">{{ uname }}</a>{% if !loop.last %},{% endif %}
+            {% endfor %}
+          </span>
+        {% endif %}
+
         {% if !loop.last %}<hr>{% endif %}
       {% endfor %}
     </div><!-- /panel-body -->
