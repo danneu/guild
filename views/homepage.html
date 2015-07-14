@@ -6,6 +6,30 @@
 
   {{ ads.topResponsive() }}
 
+  {% if ftopic %}
+    <div class="panel panel-default" style="border: 2px solid #8e44ad">
+
+
+      <div class="panel-body">
+        <h4 style="font-family: Georgia; margin-bottom: 20px;" class="text-muted">Feedback Request
+          <small>All responses are kept private and only read by Mahz</small>
+        </h4>
+
+      <p class="lead">
+      {{ ftopic.html|raw }}
+      </p>
+
+      <form method="POST" action="/current-feedback-topic/replies">
+        <div class="form-group">
+          <input name="text" type="text" class="form-control" placeholder="Type a short response here or just click ignore" maxlength="3000">
+        </div>
+        <button name="commit" value="ignore" type="submit" class="btn btn-default">Ignore</button>
+        <button name="commit" value="send" type="submit" class="btn btn-primary">Send Feedback</button>
+      </form>
+      </div>
+    </div>
+  {% endif %}
+
   {# Important changes #}
 
   {#

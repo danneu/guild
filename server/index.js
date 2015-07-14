@@ -663,11 +663,19 @@ app.use(route.get('/', function*() {
   var latest_rpgn_topic = cache.get('latest-rpgn-topic') &&
                           pre.presentTopic(cache.get('latest-rpgn-topic'));
 
+  // The unacknowledged feedback_topic for the current user
+  // Will be undefined if user has no feedback to respond to
+  var ftopic;
+  if (config.CURRENT_FEEDBACK_TOPIC_ID && this.currUser) {
+    ftopic = yield db.findUnackedFeedbackTopic(config.CURRENT_FEEDBACK_TOPIC_ID, this.currUser.id);
+  }
+
   yield this.render('homepage', {
     ctx: this,
     categories: categories,
     stats: stats,
     latest_rpgn_topic: latest_rpgn_topic,
+    ftopic: ftopic,
     // For sidebar
     latestChecks: cache.get('latest-checks').map(pre.presentTopic),
     latestRoleplays: cache.get('latest-roleplays').map(pre.presentTopic),
@@ -2456,6 +2464,54 @@ app.post('/statuses/:status_id/like', function*() {
   });
 
   this.status = 200;
+});
+
+app.get('/current-feedback-topic', function*() {
+  // ensure user is logged in and admin
+  this.assert(this.currUser && this.currUser.role === 'admin', 403);
+  // ensure a feedback topic is set
+  if (!config.CURRENT_FEEDBACK_TOPIC_ID) {
+    this.body = 'CURRENT_FEEDBACK_TOPIC_ID is not set';
+    return;
+  }
+
+  // Load ftopic
+  var ftopic = yield db.findFeedbackTopicById(config.CURRENT_FEEDBACK_TOPIC_ID);
+  this.assert(ftopic, 404);
+  var replies = yield db.findFeedbackRepliesByTopicId(config.CURRENT_FEEDBACK_TOPIC_ID);
+
+  yield this.render('show_feedback_topic', {
+    ctx: this,
+    ftopic: ftopic,
+    replies: replies
+  });
+
+});
+
+// text: String
+app.post('/current-feedback-topic/replies', function*() {
+  // user must be logged in
+  this.assert(this.currUser, 403);
+  // user must not be banned
+  this.assert(this.currUser.banned !== 'banned', 403);
+  // ensure a feedback topic is set
+  this.assert(config.CURRENT_FEEDBACK_TOPIC_ID, 404);
+  // ensure user hasn't already acked the ftopic
+  var ftopic = yield db.findUnackedFeedbackTopic(config.CURRENT_FEEDBACK_TOPIC_ID, this.currUser.id);
+  this.assert(ftopic, 404);
+
+  // Validate form
+  this.validateBody('commit').isIn(['send', 'ignore']);
+  if (this.vals.commit === 'send') {
+    this.validateBody('text')
+      .trim()
+      .isLength(0, 3000, 'Message may be up to 3000 chars');
+  }
+
+  yield db.insertReplyToUnackedFeedbackTopic(ftopic.id, this.currUser.id, this.vals.text, this.vals.commit === 'ignore');
+
+  this.flash = { message: ['success', 'Thanks for the feedback <3'] };
+  this.redirect('/');
 });
 
 app.listen(config.PORT);

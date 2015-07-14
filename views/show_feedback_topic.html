@@ -1,0 +1,28 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+
+<p class="lead">
+  <span style="font-family: Georgia;" class="text-muted">Feedback Topic:</span>
+  <br>
+  {{ ftopic.html|raw }}
+</p>
+
+<ul>
+  {% for reply in replies %}
+    <li>
+      <a href="/users/{{ reply.uname|slugifyUname }}">{{ reply.uname }}</a>
+      <abbr class="timeago" title="{{ reply.created_at.toISOString() }}">
+        {{ reply.created_at|formatDate }}
+      </abbr>
+      {% if reply.ignored %}
+        <span class="label label-default">Ignored</span>
+      {% endif %}
+      <br><p>{{ reply.text }}</p>
+    </li>
+  {% endfor %}
+</ul>
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}

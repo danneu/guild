@@ -3075,3 +3075,72 @@ RETURNING *
   var result = yield query(sql, [topic_id]);
   return result.rows;
 };
+
+// Returns the current feedback topic only if:
+// - User has not already replied to it (or clicked ignore)
+exports.findUnackedFeedbackTopic = function*(feedback_topic_id, user_id) {
+  assert(_.isNumber(feedback_topic_id));
+  assert(_.isNumber(user_id));
+
+  var sql = m(function() {/*
+SELECT *
+FROM feedback_topics
+WHERE
+  id = $1
+  AND NOT EXISTS (
+    SELECT 1
+    FROM feedback_replies fr
+    WHERE fr.feedback_topic_id = $1 AND fr.user_id = $2
+  )
+  */});
+
+  return yield queryOne(sql, [feedback_topic_id, user_id]);
+};
+
+////////////////////////////////////////////////////////////
+
+exports.findFeedbackTopicById = function*(ftopic_id) {
+  assert(_.isNumber(ftopic_id));
+
+  var sql = m(function() {/*
+SELECT feedback_topics.*
+FROM feedback_topics
+WHERE id = $1
+  */});
+
+  return yield queryOne(sql, [ftopic_id]);
+};
+
+////////////////////////////////////////////////////////////
+
+exports.findFeedbackRepliesByTopicId = function*(ftopic_id) {
+  assert(_.isNumber(ftopic_id));
+
+  var sql = m(function() {/*
+SELECT
+  fr.*,
+  u.uname
+FROM feedback_replies fr
+JOIN users u ON fr.user_id = u.id
+WHERE fr.feedback_topic_id = $1
+ORDER BY id DESC
+  */});
+
+  return yield queryMany(sql, [ftopic_id]);
+};
+
+////////////////////////////////////////////////////////////
+
+exports.insertReplyToUnackedFeedbackTopic = function*(feedback_topic_id, user_id, text, ignored) {
+  assert(_.isNumber(feedback_topic_id));
+  assert(_.isNumber(user_id));
+  assert(_.isBoolean(ignored));
+
+  var sql = m(function() {/*
+INSERT INTO feedback_replies (user_id, ignored, text, feedback_topic_id)
+VALUES ($1, $2, $3, $4)
+RETURNING *
+  */});
+
+  return yield queryOne(sql, [user_id, ignored, text, feedback_topic_id]);
+};
