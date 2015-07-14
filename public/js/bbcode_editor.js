@@ -294,7 +294,10 @@ var w;
           e.$editor.find('.bbcode-errors p').append(' <span class="label label-success">None</span>');
         }
 
-        return result.html;
+        // window.autolinkerOpts defined in bbcode.js which must
+        // load before this file on client side
+        var outputHtml = Autolinker.link(result.html, window.autolinkerOpts);
+        return outputHtml;
       },
       buttons: [[]],
       // hiddenButtons: ['cmdBold', 'cmdItalic', 'cmdHeading',

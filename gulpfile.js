@@ -37,6 +37,9 @@ gulp.task('build-js', function() {
     'public/vendor/bootstrap-markdown/js/bootstrap-markdown.js',
     'public/vendor/jquery-appear/jquery.appear.js',
     'public/vendor/bootstrap/js/bootstrap.js',
+    'public/vendor/js/bootstrap.js',
+    // Symlinked to node_modules/autolinker
+    'public/vendor/autolinker/dist/Autolinker.js',
     'public/vendor/xbbcode/xbbcode/bbcode.js', // Symlinked to server/bbcode.js
     // Don't bundle typeahead since it's just used on edit_topic.js right now
     // 'public/vendor/typeahead/typeahead.bundle.js',

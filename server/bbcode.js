@@ -13,6 +13,7 @@ if (isServer) {
   util = require('util');
   // 3rd party
   cheerio = require('cheerio');
+  var Autolinker = require('autolinker');
   // 1st party
   cache = require('./cache')();
 }
@@ -1280,23 +1281,40 @@ var XBBCODE = (function() {
   return me;
 })();
 
+var autolinkerOpts = {
+  stripPrefix: true,
+  truncate: 30,
+  email: false,
+  phone: false,
+  twitter: false,
+  hashtag: false
+};
+
+// Allow bbcode_editor.js to access it
+if (isBrowser) {
+  window.autolinkerOpts = autolinkerOpts;
+}
+
 if (typeof window === 'undefined') {
   // We're on the server, so export module
   module.exports = function(markup) {
     var result, start = Date.now();
     result = XBBCODE.process({ text: markup, addInLineBreaks: true });
+    // Linkify URLs
+    var html = Autolinker.link(result.html, autolinkerOpts);
     var diff = Date.now() - start;
     console.log(util.format('[bbcode.js] Rendered %s chars of BBCode in %sms', markup.length, diff));
     console.log('[bbcode.js] result.error:', result.error);
     console.log('[bbcode.js] result.errorQueue',result.errorQueue);
-    return result.html;
+
+    return html;
   };
 } else {
   // We're on the client so export to window
   window.bbcode = function(markup) {
-    var result;
-    result = XBBCODE.process({ text: markup, addInLineBreaks: true });
-    return result.html;
+    var result = XBBCODE.process({ text: markup, addInLineBreaks: true });
+    var html = Autolinker.link(result.html, autolinkerOpts);
+    return html;
   };
 }
 
