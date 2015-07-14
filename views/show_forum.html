@@ -168,5 +168,31 @@
   <script type="text/javascript">
     // Activate tag tooltips
     $('[data-toggle="tooltip"]').tooltip()
+
+    var outcomeToHtml = function(outcome) {
+      switch(outcome) {
+        case 'WIN':
+          return '<span class="green-glow">Win</span>';
+        case 'LOSS':
+          return '<span class="red-glow">Loss</span>';
+        case 'DRAW':
+          return 'Draw';
+      }
+    };
+
+    $('.arena-outcome-badge').popover({
+      trigger: 'hover',
+      html: true,
+      title: 'Results:',
+      content: function() {
+        var $this = $(this);
+        var outcomes = JSON.parse($this.attr('data-outcomes'));
+        var html = '';
+        outcomes.forEach(function(o) {
+          html += o.uname + ' &mdash; ' + outcomeToHtml(o.outcome) + '<br>';
+        });
+        return html;
+      }
+    })
   </script>
 {% endblock %}

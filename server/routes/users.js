@@ -233,6 +233,7 @@ router.put('/api/users/:id/bio', function*() {
 // - custom-title
 // - is-grayscale
 // - force-device-width
+// - show_arena_stats
 // checked
 router.put('/users/:slug', function*() {
   debug('BEFORE', this.request.body);
@@ -265,6 +266,8 @@ router.put('/users/:slug', function*() {
     this.checkBody('is-grayscale').toBoolean();
   if (!_.isUndefined(this.request.body['force-device-width']))
     this.checkBody('force-device-width').toBoolean();
+  if (!_.isUndefined(this.request.body.show_arena_stats))
+    this.checkBody('show_arena_stats').toBoolean();
 
   debug('AFTER', this.request.body);
 
@@ -307,7 +310,10 @@ router.put('/users/:slug', function*() {
                  : user.is_grayscale,
     force_device_width: _.isBoolean(this.request.body['force-device-width'])
                  ? this.request.body['force-device-width']
-                 : user.force_device_width
+                 : user.force_device_width,
+    show_arena_stats: _.isBoolean(this.request.body.show_arena_stats)
+                 ? this.request.body.show_arena_stats
+                 : user.show_arena_stats
   });
   user = pre.presentUser(user);
   this.flash = { message: ['success', 'User updated'] };

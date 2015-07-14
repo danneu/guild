@@ -247,6 +247,18 @@ swig.setFilter('formatDate', pre.formatDate);
 swig.setFilter('slugifyUname', belt.slugifyUname);
 swig.setFilter('presentUserRole', belt.presentUserRole);
 
+// String -> String
+swig.setFilter('outcomeToElement', function(outcome) {
+  switch(outcome) {
+  case 'WIN':
+    return '<span class="green-glow">Win</span>';
+  case 'LOSS':
+    return '<span class="red-glow">Loss</span>';
+  case 'DRAW':
+    return '<span style="color: #999">Draw</span>';
+  }
+});
+
 ////////////////////////////////////////////////////////////
 
 // Configure templating system to use `swig`
@@ -953,6 +965,7 @@ app.get('/forums/:forumSlug/topics/new', function*() {
     ctx: this,
     forum: forum,
     tagGroups: tagGroups,
+    is_ranked: (this.flash.params && this.flash.params.is_ranked) || false,
     postType: (this.flash.params && this.flash.params['post-type']) || 'ooc',
     initTitle: this.flash.params && this.flash.params.title,
     selectedTagIds: (
@@ -1239,6 +1252,14 @@ app.post('/forums/:slug/topics', function*() {
     .notEmpty()
     .toInt();
 
+  if (forum.is_arena_rp) {
+    this.validateBody('is_ranked')
+      .toBoolean();
+  } else {
+    this.check(_.isUndefined(this.request.body.is_ranked),
+               'You may only specify Ranked vs Unranked for Arena Roleplays');
+  }
+
   if (forum.is_roleplay) {
     this.validateBody('post-type')
       .notEmpty()
@@ -1287,7 +1308,8 @@ app.post('/forums/:slug/topics', function*() {
     postType: postType,
     isRoleplay: forum.is_roleplay,
     tagIds: tagIds,
-    joinStatus: this.vals['join-status']
+    joinStatus: this.vals['join-status'],
+    is_ranked: this.vals.is_ranked
   });
   topic = pre.presentTopic(topic);
   this.response.redirect(topic.url);
@@ -1618,11 +1640,19 @@ app.get('/topics/:slug/edit', function*() {
   // Get tag groups
   var tagGroups = yield db.findAllTagGroups();
 
+  // Arena outcomes
+  var arenaOutcomes = [];
+  if (topic.forum.is_arena_rp) {
+    arenaOutcomes = yield db.findArenaOutcomesForTopicId(topic.id);
+    arenaOutcomes = arenaOutcomes.map(pre.presentArenaOutcome);
+  }
+
   yield this.render('edit_topic', {
     ctx: this,
     topic: topic,
     selectedTagIds: _.pluck(topic.tags, 'id'),
     tagGroups: tagGroups,
+    arenaOutcomes: arenaOutcomes,
     className: 'edit-topic'
   });
 });
@@ -1716,6 +1746,69 @@ app.get('/topics/:slug/:postType/first-unread', function*() {
     this.redirect('/posts/' + postId);
   else
     this.redirect(topic.url + '/' + this.params.postType);
+});
+
+//
+// Delete arena outcome
+//
+app.del('/topics/:slug/arena-outcomes', function*() {
+  // Load topic
+  var topicId = belt.extractId(this.params.slug);
+  this.assert(topicId, 404);
+  var topic = yield db.findTopicById(topicId);
+  this.assert(topic, 404);
+  topic = pre.presentTopic(topic);
+
+  // Check currUser authorization
+  this.assertAuthorized(this.currUser, 'UPDATE_TOPIC_ARENA_OUTCOMES', topic);
+
+  // Ensure topic is ranked
+  this.assert(topic.is_ranked, 404);
+
+  // Validation
+  this.validateBody('outcome_id').notEmpty().toInt();
+
+  // Create arena outcome
+  yield db.deleteArenaOutcome(topic.id, this.vals.outcome_id);
+
+  this.flash = { message: ['success', 'Arena outcome deleted'] };
+  this.redirect(topic.url + '/edit');
+});
+
+//
+// Add arena outcome
+//
+app.post('/topics/:slug/arena-outcomes', function*() {
+
+  // Load topic
+  var topicId = belt.extractId(this.params.slug);
+  this.assert(topicId, 404);
+  var topic = yield db.findTopicById(topicId);
+  this.assert(topic, 404);
+  topic = pre.presentTopic(topic);
+
+  // Check currUser authorization
+  this.assertAuthorized(this.currUser, 'UPDATE_TOPIC_ARENA_OUTCOMES', topic);
+
+  // Ensure topic is ranked
+  this.assert(topic.is_ranked, 404);
+
+  // Validation
+  this.validateBody('uname')
+    .notEmpty()
+    .isString();
+  this.validateBody('outcome').notEmpty().isIn(['WIN', 'LOSS', 'DRAW']);
+
+  // Validate that uname belongs to a user
+  var user = yield db.findUserByUname(this.vals.uname);
+  this.validateBody('uname')
+    .check(user, 'User not found with username: "' + this.vals.uname + '"');
+
+  // Create arena outcome
+  var ao = yield db.createArenaOutcome(topic.id, user.id, this.vals.outcome);
+
+  this.flash = { message: ['success', 'Arena outcome added'] };
+  this.redirect(topic.url + '/edit');
 });
 
 //
@@ -1893,6 +1986,9 @@ app.get('/staff', function*() {
     smods: _.filter(staffUsers, { role: 'smod' }),
     admins: _.filter(staffUsers, { role: 'admin' }),
     conmods: _.filter(staffUsers, { role: 'conmod' }),
+    arena_mods: _.filter(staffUsers, function(u) {
+      return _.contains(u.roles, 'ARENA_MOD');
+    })
   });
 });
 

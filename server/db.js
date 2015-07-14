@@ -11,6 +11,7 @@ var _ = require('lodash');
 var assert = require('better-assert');
 var debug = require('debug')('app:db');
 var coParallel = require('co-parallel');
+var pgArray = require('postgres-array');
 // 1st party
 var config = require('./config');
 var belt = require('./belt');
@@ -254,7 +255,16 @@ SELECT
    FROM tags
    JOIN tags_topics ON tags.id = tags_topics.tag_id
    WHERE tags_topics.topic_id = t.id
-  ) tags
+  ) tags,
+  (
+    SELECT COALESCE(json_agg(sub.*), '{}'::json)
+    FROM (
+			SELECT users.uname, arena_outcomes.outcome
+      FROM arena_outcomes
+      JOIN users ON arena_outcomes.user_id = users.id
+      WHERE arena_outcomes.topic_id = t.id
+    ) sub
+  ) arena_outcomes
 FROM topics t
 JOIN forums f ON t.forum_id = f.id
 LEFT OUTER JOIN topic_subscriptions ts ON t.id = ts.topic_id AND ts.user_id = $1
@@ -593,7 +603,10 @@ WHERE id = (
 )
 RETURNING *
   */});
-  return (yield query(sql, [sessionId])).rows[0];
+  var user = yield queryOne(sql, [sessionId]);
+  if (user)
+    user.roles = pgArray.parse(user.roles, _.identity);
+  return user;
 }
 
 exports.createSession = wrapOptionalClient(createSession);
@@ -632,7 +645,16 @@ SELECT
    FROM tags
    JOIN tags_topics ON tags.id = tags_topics.tag_id
    WHERE tags_topics.topic_id = t.id
-  ) tags
+  ) tags,
+  (
+    SELECT COALESCE(json_agg(sub.*), '{}'::json)
+    FROM (
+			SELECT users.uname, arena_outcomes.outcome
+      FROM arena_outcomes
+      JOIN users ON arena_outcomes.user_id = users.id
+      WHERE arena_outcomes.topic_id = t.id
+    ) sub
+  ) arena_outcomes
 FROM topics t
 JOIN users u ON t.user_id = u.id
 LEFT JOIN posts p ON t.latest_post_id = p.id
@@ -677,7 +699,16 @@ SELECT
    FROM tags
    JOIN tags_topics ON tags.id = tags_topics.tag_id
    WHERE tags_topics.topic_id = t.id
-  ) tags
+  ) tags,
+  (
+    SELECT COALESCE(json_agg(sub.*), '{}'::json)
+    FROM (
+			SELECT users.uname, arena_outcomes.outcome
+      FROM arena_outcomes
+      JOIN users ON arena_outcomes.user_id = users.id
+      WHERE arena_outcomes.topic_id = t.id
+    ) sub
+  ) arena_outcomes
 FROM topics t
 JOIN users u ON t.user_id = u.id
 LEFT JOIN posts p ON t.latest_post_id = p.id
@@ -1088,6 +1119,7 @@ RETURNING *
 // - isRoleplay Required Boolean
 // - tagIds     Optional [Int]
 // - joinStatus Optional String (Required if roleplay)
+// - is_ranked  Optional Boolean (if set, forum.is_arena_rp must === true)
 //
 exports.createTopic = function*(props) {
   debug('[createTopic]', props);
@@ -1107,8 +1139,8 @@ exports.createTopic = function*(props) {
     assert(_.isUndefined(props.joinStatus));
 
   var topicSql = m(function() {/*
-INSERT INTO topics (forum_id, user_id, title, is_roleplay, join_status)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO topics (forum_id, user_id, title, is_roleplay, join_status, is_ranked)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *
   */});
   var postSql = m(function() {/*
@@ -1120,7 +1152,8 @@ RETURNING *
   return yield withTransaction(function*(client) {
     // Create topic
     var topicResult = yield client.queryPromise(topicSql, [
-      props.forumId, props.userId, props.title, props.isRoleplay, props.joinStatus
+      props.forumId, props.userId, props.title,
+      props.isRoleplay, props.joinStatus, props.is_ranked
     ]);
     var topic = topicResult.rows[0];
     // Create topic's first post
@@ -1161,7 +1194,8 @@ SET
   custom_title = COALESCE($8, custom_title),
   is_grayscale = COALESCE($9, is_grayscale),
   force_device_width = COALESCE($10, force_device_width),
-  hide_avatars = COALESCE($11, hide_avatars)
+  hide_avatars = COALESCE($11, hide_avatars),
+  show_arena_stats = COALESCE($12, show_arena_stats)
 WHERE id = $1
 RETURNING *
   */});
@@ -1176,7 +1210,8 @@ RETURNING *
     attrs.custom_title,  // $8
     attrs.is_grayscale,  // $9
     attrs.force_device_width,  // $10
-    attrs.hide_avatars  // $11
+    attrs.hide_avatars,  // $11
+    attrs.show_arena_stats // $12
   ]);
   return result.rows[0];
 };
@@ -1579,7 +1614,9 @@ exports.findStaffUsers = function*() {
   var sql = m(function(){/*
 SELECT u.*
 FROM users u
-WHERE u.role IN ('mod', 'smod', 'admin', 'conmod')
+WHERE
+  u.role IN ('mod', 'smod', 'admin', 'conmod')
+  OR 'ARENA_MOD' = ANY (u.roles)
   */});
   var result = yield query(sql);
   return result.rows;
@@ -1743,7 +1780,16 @@ SELECT
    FROM tags
    JOIN tags_topics ON tags.id = tags_topics.tag_id
    WHERE tags_topics.topic_id = t.id
-  ) tags
+  ) tags,
+  (
+    SELECT COALESCE(json_agg(sub.*), '{}'::json)
+    FROM (
+			SELECT users.uname, arena_outcomes.outcome, arena_outcomes.id
+      FROM arena_outcomes
+      JOIN users ON arena_outcomes.user_id = users.id
+      WHERE arena_outcomes.topic_id = t.id
+    ) sub
+  ) arena_outcomes
 FROM topics t
 JOIN forums f ON t.forum_id = f.id
 WHERE t.id = $1
@@ -1751,6 +1797,21 @@ GROUP BY t.id, f.id
   */});
   var result = yield query(sql, [topicId]);
   return result.rows[0];
+};
+
+exports.findArenaOutcomesForTopicId = function*(topic_id) {
+  assert(_.isNumber(topic_id));
+
+  var sql = m(function() {/*
+    SELECT
+      arena_outcomes.*,
+      to_json(users.*) "user"
+    FROM arena_outcomes
+    JOIN users ON arena_outcomes.user_id = users.id
+    WHERE topic_id = $1
+  */});
+
+  return yield queryMany(sql, [topic_id]);
 };
 
 // props:
@@ -2935,4 +2996,45 @@ WHERE id = $1
   */});
   var result = yield query(sql, [id]);
   return result.rows[0];
+};
+
+exports.createArenaOutcome = function*(topic_id, user_id, outcome) {
+  assert(_.isNumber(topic_id));
+  assert(_.isNumber(user_id));
+  assert(_.contains(['WIN', 'LOSS', 'DRAW'], outcome));
+
+  var sql = m(function() {/*
+INSERT INTO arena_outcomes (topic_id, user_id, outcome, profit)
+VALUES ($1, $2, $3, $4)
+RETURNING *
+  */});
+
+  var profit;
+  switch(outcome) {
+  case 'WIN':
+    profit = 100;
+    break;
+  case 'DRAW':
+    profit = 50;
+    break;
+  case 'LOSS':
+    profit = 0;
+    break;
+  default:
+    throw new Error('Unhandled outcome: ' + outcome);
+  }
+
+  return yield queryOne(sql, [topic_id, user_id, outcome, profit]);
+};
+
+exports.deleteArenaOutcome = function*(topic_id, outcome_id) {
+  assert(_.isNumber(topic_id));
+  assert(_.isNumber(outcome_id));
+
+  var sql = m(function() {/*
+DELETE FROM arena_outcomes
+WHERE topic_id = $1 and id = $2
+  */});
+
+  return yield query(sql, [topic_id, outcome_id]);
 };

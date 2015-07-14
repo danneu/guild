@@ -129,6 +129,9 @@ function can(user, action, target) {
       if (user.role === 'conmod'
           && _.contains(CONTEST_FORUMS, target.forum_id))
         return true;
+      // Arena Mod can if it's in ArenaRP forum
+      if (_.contains(user.roles, 'ARENA_MOD'))
+        return true;
       // If non-staff, then cannot if topic is hidden/closed
       if (target.is_closed || target.is_hidden) return false;
       // GM/OP can
@@ -239,6 +242,15 @@ function can(user, action, target) {
       if (_.contains(target.co_gm_ids, user.id)) return true;
       // Conmods can edit any topic in contest forums
       if (user.role === 'conmod' && _.contains(CONTEST_FORUMS, target.forum_id))
+        return true;
+      // Arena mods can edit topic titles in arena forum
+      if (target.forum.is_arena_rp && _.contains(user.roles, 'ARENA_MOD'))
+        return true;
+      return false;
+    case 'UPDATE_TOPIC_ARENA_OUTCOMES':  // target is topic
+      if (!user)
+        return false;
+      if (target.forum.is_arena_rp && _.contains(user.roles, 'ARENA_MOD'))
         return true;
       return false;
     case 'READ_USER_ONLINE_STATUS': // target is user

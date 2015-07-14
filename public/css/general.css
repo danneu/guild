@@ -1404,3 +1404,12 @@ fieldset.cyberpunk {
     color: #197F19;
     background-image: url('/img/cyberpunk-bg.png');
 }
+
+.green-glow {
+    color: #3bb878;
+    text-shadow: 0px 0px 1px #3bb878;
+}
+.red-glow {
+    color: #e74c3c;
+    text-shadow: 0px 0px 1px #e74c3c;
+}

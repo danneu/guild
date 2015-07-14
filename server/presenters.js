@@ -198,3 +198,10 @@ exports.presentTrophy = function(t) {
 
   return t;
 };
+
+exports.presentArenaOutcome = function(o) {
+  if (o.user)
+    o.user = exports.presentUser(o.user);
+
+  return o;
+};

@@ -53,6 +53,41 @@
         </div>
       </div><!--/div[css="margin-bottom: _"]-->
 
+        {% if forum.is_arena_rp %}
+          <!-- Arena Ranked/Unranked -->
+          <div style="margin-bottom: 30px;">
+            <h4>
+              (Arena Only) Unranked vs Ranked:
+              <small>
+                Only the outcomes of Ranked fights affect your Win/Loss rating.
+              </small>
+            </h4>
+
+            <div class="post-type-btn-group btn-group" data-toggle="buttons" style="display: inline-block;">
+              <label class="btn btn-default {% if !is_ranked %} active {% endif %}">
+                <input type="radio" name="is_ranked"
+                       value=""
+                       id="option2" autocomplete="off"
+                         {% if !is_ranked  %}
+                           checked
+                         {% endif %}
+                       > Unranked
+              </label>
+              <label class="btn btn-default {% if is_ranked %} active {% endif %}">
+                <input type="radio" name="is_ranked"
+                       value="true"
+                       id="option1" autocomplete="off"
+                         {% if is_ranked  %}
+                           checked
+                         {% endif %}> Ranked
+              </label>
+            </div>
+            <span class="text-muted">
+              You can only change this in the future with a mod's approval
+            </span>
+        </div><!--/div[css="margin-bottom: _"]-->
+        {% endif %}
+
         {% if forum.is_roleplay %}
           <!-- Join status -->
           <div style="margin-bottom: 30px;">

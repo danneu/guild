@@ -13,6 +13,27 @@
 
   {{ ads.topResponsive() }}
 
+  {% if user.uname === 'Mahz' %}
+    <div class="alert alert-info">
+      <img src="http://imgur.com/GuZN5tA.png">
+      {{ user.uname }} is the admin. He's the man with the plan and the guild's head honcho.
+    </div>
+  {% endif %}
+
+  {% if user.role === 'mod' %}
+    <div class="alert alert-info">
+      <img src="http://i.imgur.com/w3t5YqA.png">
+      {{ user.uname }} is a Moderator. They assist users and keep the forum running smoothly. They have power across all forums.
+    </div>
+  {% endif %}
+
+  {% if _.contains(user.roles, 'ARENA_MOD') %}
+    <div class="alert alert-info">
+      <img src="http://i.imgur.com/5xQBdAv.png">
+      {{ user.uname }} is an Arena Moderator
+    </div>
+  {% endif %}
+
   <div class="page-header">
       <!-- PM button -->
       {% if ctx.can(ctx.currUser, 'CREATE_CONVO') %}
@@ -334,6 +355,36 @@
       </div>
     </div>
   </div>
+
+  <!-- Arena stats -->
+
+  {% if ctx.currUser.id === user.id || user.show_arena_stats %}
+    <a name="arena-stats"></a>
+    <div class="row">
+      <div class="col-sm-12">
+        <h3>
+          Arena Stats
+          {% if ctx.currUser.id === user.id %}
+            <small>
+              {% if user.show_arena_stats %}
+                Public
+              {% else %}
+                Private
+              {% endif %}
+              <a href="{{ user.url }}/edit#arena-stats">&larr; Edit</a>
+            </small>
+          {% endif %}
+        </h3>
+        <div class="well text-muted">
+          <span class="green-glow">{{ user.arena_wins }} Wins</span> /
+          <span class="red-glow">{{ user.arena_losses }} Losses</span> /
+          <span class="text-muted">{{ user.arena_draws }} Draws</span>
+          <br>
+          {{ user.arena_points }} points
+        </div>
+      </div>
+    </div>
+  {% endif %} {# /if should show arena stats #}
 
   <!-- Trophy Box -->
 

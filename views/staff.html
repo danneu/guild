@@ -22,6 +22,7 @@
         {% if admins.length > 0 %}
         <div class="panel panel-default no-select" style="border-color: #000">
           <div class="panel-heading">
+            <img src="http://i.imgur.com/GuZN5tA.png">
             Admins
             <small style="display: block;">
               The benevolent dictator for life.
@@ -64,6 +65,7 @@
         {% if mods.length > 0 %}
           <div class="panel panel-default no-select" style="border-color: #000">
             <div class="panel-heading">
+              <img src="http://i.imgur.com/w3t5YqA.png">
               Mods
               <small style="display: block;">
                 Here to assist users in general matters of support and keep the forum running smoothly.
@@ -85,6 +87,7 @@
         {% if conmods.length > 0 %}
           <div class="panel panel-default no-select" style="border-color: #000">
             <div class="panel-heading">
+              <img src="http://i.imgur.com/MHfplla.gif">
               Contest Mods
               <small style="display: block;">
                 Specialized moderators that focus on operating the writing contests.
@@ -93,6 +96,28 @@
             <div class="panel-body">
               <ul>
               {% for user in conmods %}
+                <li>
+                  <a href="{{ user.url }}">{{ user.uname }}</a>
+                </li>
+              {% endfor %}
+              </ul>
+            </div>
+          </div> <!-- /.panel -->
+        {% endif %}
+
+        <!-- Arena Mods -->
+        {% if arena_mods.length > 0 %}
+          <div class="panel panel-default no-select" style="border-color: #000">
+            <div class="panel-heading">
+              <img src="http://i.imgur.com/5xQBdAv.png">
+              Arena Mods
+              <small style="display: block;">
+                Specialized moderators that focus on the Arena/PvP forums and manage the ranking system.
+              </small>
+            </div>
+            <div class="panel-body">
+              <ul>
+              {% for user in arena_mods %}
                 <li>
                   <a href="{{ user.url }}">{{ user.uname }}</a>
                 </li>

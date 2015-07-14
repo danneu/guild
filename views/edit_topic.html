@@ -231,6 +231,84 @@
   </form>
   {% endif %}
 
+  <!-- ====================================================== -->
+  <!-- Ranked Arena Outcome -->
+  <!-- ====================================================== -->
+
+  {% if topic.forum.is_arena_rp %}
+  <a name="arena-outcome"></a>
+  <div class="panel panel-default no-select" style="border-color: #000">
+    <!-- PANEL HEADER -->
+    <div class="panel-heading">
+      <h4>Ranked Arena Outcomes</h4>
+    </div>
+
+
+    <!-- PANEL BODY -->
+    {% if !topic.is_ranked %}
+      <div class="panel-body">
+        Only ranked fights can have outcomes. This fight is unranked.
+      </div>
+    {% else %}
+      <div class="panel-body">
+        Outcomes:
+        {% if arenaOutcomes.length === 0 %}
+          Not outcomes, yet
+        {% else %}
+          <ul>
+            {% for outcome in arenaOutcomes %}
+              <li>
+                <a href="{{ outcome.user.url }}">{{ outcome.user.uname }}</a>
+                {{ outcome.outcome|outcomeToElement|raw }}
+
+                <form method="POST" action="{{ topic.url }}/arena-outcomes"
+                      style="display: inline-block;"
+                >
+                  <input type="hidden" name="_method" value="DELETE">
+                  <input type="hidden" name="outcome_id" value="{{ outcome.id }}">
+                  <button type="submit" class="btn btn-danger btn-xs">
+                    Delete
+                  </button>
+                </form>
+
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+
+        <hr>
+
+        <form method="POST" action="/topics/{{ topic.id }}/arena-outcomes">
+
+        Username:
+        <input type="text" name="uname"
+               class="form-control outcome-uname-input"
+               required
+        >
+
+        Outcome:
+        <select name="outcome" required>
+          <option value="">-- Pick One --</option>
+          <option value="WIN">Win</option>
+          <option value="LOSS">Loss</option>
+          <option value="DRAW">Draw</option>
+        </select>
+    </div>
+
+    <!-- PANEL FOOTER -->
+    <div class="panel-footer" style="border-color: #000">
+      <div class="text-right">
+        <input id="topic-submit" type="submit" value="Add Outcome"
+               class="btn btn-primary"
+        >
+      </div>
+    </div> <!-- /.panel-footer -->
+
+    </form>
+    {% endif %} {# /if topic.is_ranked #}
+  </div><!-- /.panel -->
+  {% endif %} {# endif topic.forum.is_arena_rp #}
+
 {% endblock %}
 
 {% block scripts %}
@@ -239,7 +317,7 @@
     $('[data-toggle="tooltip"]').tooltip();
   </script>
 
-  {% if ctx.can(ctx.currUser, 'UPDATE_TOPIC_CO_GMS', topic) %}
+  {% if ctx.can(ctx.currUser, 'UPDATE_TOPIC_CO_GMS', topic) || ctx.can(ctx.currUser, 'UPDATE_TOPIC_ARENA_OUTCOMES', topic) %}
     <script type="text/javascript" src="/vendor/typeahead/typeahead.bundle.js"></script>
     <script type="text/javascript">
       var unames = new Bloodhound({
@@ -258,6 +336,16 @@
       unames.initialize();
 
       $('.co-gm-input').typeahead({
+        hint: true,
+        highlight: true,
+        minLength: 1
+      }, {
+        name: 'Usernames',
+        displayKey: 'value',
+        source: unames.ttAdapter()
+      });
+
+      $('.outcome-uname-input').typeahead({
         hint: true,
         highlight: true,
         minLength: 1

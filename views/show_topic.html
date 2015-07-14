@@ -175,6 +175,32 @@
       </div>
     {% endif %}
 
+    <!-- Ranked & Arena Outcomes -->
+
+    {% if topic.forum.is_arena_rp %}
+      <div>
+        Ranked:
+        {% if topic.is_ranked %}
+          <span style="color:#e67e22;">
+            <span class="glyphicon glyphicon-fire"></span>Yes
+          </span>
+
+          {% if topic.arena_outcomes.length > 0 %}
+            <ul>
+              {% for o in topic.arena_outcomes %}
+                <li>
+                  <a href="/users/{{ o.uname|slugifyUname }}">{{ o.uname }}</a>
+                  {{ o.outcome|outcomeToElement|raw }}
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% else %}
+          No
+        {% endif %}
+      </div>
+    {% endif %}
+
   </div><!--/.page-header-->
 
   <!-- Pagination -->
