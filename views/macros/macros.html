@@ -261,7 +261,10 @@
       {% if user.show_arena_stats %}
         <div class="text-muted" style="margin-top: 15px; border: 1px solid #999; position: relative; padding-top: 10px;">
           <div style="position: absolute; top: -10px; left: 0; right: 0;">
-            <span style="background-color: #2E2B2B; padding-left: 5px; padding-right: 5px;">Arena:</span>
+            <span style="background-color: #2E2B2B; padding-left: 5px; padding-right: 5px;">
+              <span class="glyphicon glyphicon-fire" style="color: #e67e22;"></span>
+              Arena:
+            </span>
           </div>
           <span class="green-glow">{{ user.arena_wins }}</span> /
           <span class="red-glow">{{ user.arena_losses }}</span> /
