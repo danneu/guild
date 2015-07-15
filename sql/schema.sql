@@ -479,3 +479,24 @@ CREATE TABLE topics_users_watermark (
 -- Quickly fetch max watermark
 CREATE INDEX topics_users_watermark__watermark_post_id
   ON topics_users_watermark (watermark_post_id);
+
+
+------------------------------------------------------------
+------------------------------------------------------------
+------------------------------------------------------------
+
+-- Friendships are really just one-way.
+-- Consider changing this table name to 'stalkings'
+CREATE TABLE friendships (
+  id           serial PRIMARY KEY,
+  from_user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  to_user_id   integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at   timestamp with time zone NOT NULL DEFAULT NOW(),
+  -- Only one link may exist between two users
+  UNIQUE (from_user_id, to_user_id),
+  -- user cannot befriend themself
+  CHECK (from_user_id != to_user_id)
+);
+
+CREATE INDEX ON friendships (from_user_id);
+CREATE INDEX ON friendships (to_user_id);

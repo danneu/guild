@@ -3144,3 +3144,58 @@ RETURNING *
 
   return yield queryOne(sql, [user_id, ignored, text, feedback_topic_id]);
 };
+
+////////////////////////////////////////////////////////////
+
+// Defaults to the most active 10 friends
+exports.findFriendshipsForUserId = function*(user_id, limit) {
+  assert(_.isNumber(user_id));
+
+  var sql = m(function() {/*
+SELECT
+  friendships.*,
+  json_build_object(
+    'uname', u1.uname,
+    'last_online_at', u1.last_online_at,
+    'avatar_url', u1.avatar_url,
+    'slug', u1.slug
+  ) "to_user"
+FROM friendships
+JOIN users u1 ON friendships.to_user_id = u1.id
+WHERE from_user_id = $1
+ORDER BY u1.last_online_at DESC NULLS LAST
+LIMIT $2
+  */});
+
+  return yield queryMany(sql, [user_id, limit || 10]);
+};
+
+exports.findFriendshipBetween = function*(from_id, to_id) {
+  var sql = m(function() {/*
+SELECT friendships
+FROM friendships
+WHERE from_user_id = $1 AND to_user_id = $2
+  */});
+
+  return yield queryOne(sql, [from_id, to_id]);
+};
+
+exports.createFriendship = function*(from_id, to_id) {
+  assert(_.isNumber(from_id));
+  assert(_.isNumber(to_id));
+  var sql = m(function() {/*
+INSERT INTO friendships (from_user_id, to_user_id)
+VALUES ($1, $2)
+  */});
+  return yield query(sql, [from_id, to_id]);
+};
+exports.deleteFriendship = function*(from_id, to_id) {
+  assert(_.isNumber(from_id));
+  assert(_.isNumber(to_id));
+  var sql = m(function() {/*
+DELETE FROM friendships
+WHERE from_user_id = $1 AND to_user_id = $2
+  */});
+
+  return yield query(sql, [from_id, to_id]);
+};

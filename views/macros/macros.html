@@ -9,7 +9,9 @@
   {% endif %}
 {% endmacro %}
 
-{% macro onlineStatus(user) %}
+{# minimal is optional boolean #}
+
+{% macro onlineStatus(user, minimal) %}
   {% if user.is_ghost %}
     {% if ctx.can(ctx.currUser, 'READ_USER_ONLINE_STATUS', user) %}
       <span class="text-muted">Invisible</span>
@@ -20,7 +22,7 @@
     {% else %}
       {% if user.last_online_at %}
         <span class="text-muted">
-          Seen
+          {% if !minimal %}Seen{% endif %}
           <abbr class="timeago"
                 style="display: inline-block;"
                 title="{{ user.last_online_at.toISOString() }}">
@@ -29,7 +31,11 @@
         </span>
       {% else %}
         <span style="color: #555">
-          Offline since relaunch
+          {% if minimal %}
+            MIA
+          {% else %}
+            Offline since relaunch
+          {% endif %}
         </span>
       {% endif %}
     {% endif %}
@@ -413,6 +419,40 @@
       </div>
     </div>
   </div>
+
+  <!-- Friends -->
+
+  {% if friendships && friendships.length > 0 %}
+  <div class="panel panel-default" style="background: transparent;">
+    <div class="panel-body">
+      <h4 style="margin-bottom: 20px;" class="text-center">
+        Your Friends
+        <br>
+        <small>10 Most Recent</small>
+      </h4>
+      <table style="width: 100%;">
+      {% for friendship in friendships %}
+        {% set friend = friendship.to_user %}
+        <tr>
+          <td>
+            <a href="{{ friend.url }}" style="color: #999; display: inline-block; width: 100px;">
+              {{ friend.uname }}
+            </a>
+          </td>
+          <td class="text-right">
+            <small>{{ macros.onlineStatus(friend, true) }}</small>
+          </td>
+        </tr>
+      {% endfor %}
+      </table>
+      {% set friend = undefined %}
+
+      <div style="color: #1abc9c; font-size: 90%;" class="text-center">Under Construction</div>
+
+    </div><!-- /panel-body -->
+  </div><!-- /panel -->
+  {% endif %}
+
 
   <!-- Recent user statuses -->
 

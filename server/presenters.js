@@ -205,3 +205,10 @@ exports.presentArenaOutcome = function(o) {
 
   return o;
 };
+
+exports.presentFriendship = function(f) {
+  if (f.to_user)
+    f.to_user = exports.presentUser(f.to_user);
+
+  return f;
+};

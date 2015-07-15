@@ -35,6 +35,7 @@
   {% endif %}
 
   <div class="page-header">
+
       <!-- PM button -->
       {% if ctx.can(ctx.currUser, 'CREATE_CONVO') %}
         <a class="btn btn-primary pull-right"
@@ -47,6 +48,25 @@
           {% endif %}
         </a>
       {% endif %}
+
+      <!-- Friend/Unfriend Button -->
+      {% if ctx.currUser && ctx.currUser.role !== 'banned' && ctx.currUser.id !== user.id %}
+        <div class="pull-right" style="margin-right: 10px; display: inline-block;">
+          <form method="POST" action="/me/friendships">
+            <input type="hidden" name="to_user_id" value="{{ user.id }}">
+            {% if friendship %}
+              <button type="submit" class="btn btn-danger" name="commit" value="remove">
+                Unfriend
+              </button>
+            {% else %}
+              <button type="submit" class="btn btn-success" name="commit" value="add">
+                Add Friend
+              </button>
+            {% endif %}
+          </form>
+        </div>
+      {% endif %}
+
     <h1 style="margin-bottom: 0;">
       <a href="{{ user.url }}">{{ user.uname }}</a>
 

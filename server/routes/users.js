@@ -449,10 +449,13 @@ router.get('/users/:userIdOrSlug', function*() {
   var results = yield [
     db.findLatestStatusesForUserId(user.id),
     user.current_status_id ?
-      db.findStatusById(user.current_status_id) : function*(){}
+      db.findStatusById(user.current_status_id) : function*(){},
+    this.currUser ?
+      db.findFriendshipBetween(this.currUser.id, user.id) : function*(){}
   ];
   var statuses = results[0];
   user.current_status = results[1];
+  var friendship = results[2];
 
   // The ?before-id=_ of the "Next" button. i.e. the lowest
   // id of the posts on the current page
@@ -467,6 +470,7 @@ router.get('/users/:userIdOrSlug', function*() {
     title: user.uname,
     trophies: trophies,
     statuses: statuses,
+    friendship: friendship,
     // Pagination
     nextBeforeId: nextBeforeId,
     recentPostsPerPage: config.RECENT_POSTS_PER_PAGE

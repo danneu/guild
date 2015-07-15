@@ -670,12 +670,20 @@ app.use(route.get('/', function*() {
     ftopic = yield db.findUnackedFeedbackTopic(config.CURRENT_FEEDBACK_TOPIC_ID, this.currUser.id);
   }
 
+  // Get users friends for the sidebar
+  var friendships;
+  if (this.currUser) {
+    friendships = yield db.findFriendshipsForUserId(this.currUser.id);
+    friendships = friendships.map(pre.presentFriendship);
+  }
+
   yield this.render('homepage', {
     ctx: this,
     categories: categories,
     stats: stats,
     latest_rpgn_topic: latest_rpgn_topic,
     ftopic: ftopic,
+    friendships: friendships,
     // For sidebar
     latestChecks: cache.get('latest-checks').map(pre.presentTopic),
     latestRoleplays: cache.get('latest-roleplays').map(pre.presentTopic),
@@ -2513,6 +2521,35 @@ app.post('/current-feedback-topic/replies', function*() {
   this.flash = { message: ['success', 'Thanks for the feedback <3'] };
   this.redirect('/');
 });
+
+////////////////////////////////////////////////////////////
+// Friendships
+// - to_user_id Int
+// - commit: Required 'add' | 'remove'
+
+app.post('/me/friendships', function*() {
+  // ensure user logged in
+  this.assert(this.currUser, 404);
+  this.assert(this.currUser.role !== 'banned', 404);
+
+  // validate body
+  this.validateBody('commit').isIn(['add', 'remove']);
+  this.validateBody('to_user_id').toInt();
+
+  // update db
+  if (this.vals.commit === 'add') {
+    yield db.createFriendship(this.currUser.id, this.vals.to_user_id);
+    this.flash = { message: ['success', 'Friendship added'] };
+  } else {
+    yield db.deleteFriendship(this.currUser.id, this.vals.to_user_id);
+    this.flash = { message: ['success', 'Friendship removed'] };
+  }
+
+  // redirect
+  this.redirect('/users/' + this.vals.to_user_id);
+});
+
+////////////////////////////////////////////////////////////
 
 app.listen(config.PORT);
 console.log('Listening on ' + config.PORT);

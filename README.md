@@ -88,3 +88,4 @@ It will run with the default variables, but some features are turned off until t
 - Fix slow BBCode tags like [tabs] so that I can possibly render BBCode on the fly instead of pre-baking it in the `html` columns
 - Finish BBCode support in convos
 - Create cronjob (Heroku Scheduler) for db.clearExpiredViews
+- I'm sorting friendships by latest_online_at DESC NULLS LAST on homeage. Do I have an index on that in prod?
