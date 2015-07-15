@@ -599,44 +599,35 @@ $('#new-reply').submit(function() {
 </script>
 
   {% if ctx.can(ctx.currUser, 'CREATE_POST', topic) %}
-    <script>
+    <script type="text/javascript">
       // Turn the new post editor into a bbcode editor
 
+      var $M = $('#markup-input').bbcode({
+        charLimit: {{ ctx.config.MAX_POST_LENGTH }},
+        storageKey: 'topic:{{ topic.id }}:{{ postType }}'
+      });
 
-      $(function() {
-        $('#markup-input').bbcode({
-          charLimit: {{ ctx.config.MAX_POST_LENGTH }}
-        });
+      $('.post-mention-btn').on('click', function(e) {
+        e.preventDefault();
+        var $this = $(this);
+        var postId = parseInt($this.attr('data-post-id'), 10);
+        var uname = $this.attr('data-post-uname');
+
+        var mention_markup = '[@' + uname + ']';
+
+        var selected = $M.getSelection();
+        $M.replaceSelection(mention_markup);
+        var newPos = selected.start + mention_markup.length;
+        $M.setSelection(newPos, newPos);
+
+        $('html, body').animate({
+          scrollTop: $('a[name="new-reply-form"]').offset().top
+        }, 100);
+
+        $M.$element.focus();
       });
     </script>
   {% endif %}
-
-  <script type="text/javascript">
-    $('.post-mention-btn').on('click', function(e) {
-      e.preventDefault();
-      var $this = $(this);
-      var postId = parseInt($this.attr('data-post-id'), 10);
-      var uname = $this.attr('data-post-uname');
-
-      var mention_markup = '[@' + uname + ']';
-
-      var $editor_textarea = $('#markup-input');
-      var prev_content = $editor_textarea.val().trim();
-      // Only add \n\n padding if there was already content in textarea
-      var padding = (function() {
-        if (prev_content.length === 0) {
-          return '';
-        }
-        return ''
-      })();
-      $editor_textarea.focus().val('').val(prev_content + padding + mention_markup);
-      $editor_textarea.scrollTop($editor_textarea[0].scrollHeight);
-
-      $('html, body').animate({
-        scrollTop: $('a[name="new-reply-form"]').offset().top
-      }, 100);
-    });
-  </script>
 
   {#
           REPLY BUTTON

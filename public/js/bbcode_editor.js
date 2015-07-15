@@ -396,8 +396,9 @@ var w;
     });
 
     // Expose $M for debugging
-    window.$M = $M;
+    // window.$M = $M;
 
-    return this;
+    //return this;
+    return $M;
   };
 })( jQuery );
