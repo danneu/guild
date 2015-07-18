@@ -511,3 +511,15 @@ CREATE TABLE chat_mutes (
 );
 
 CREATE UNIQUE INDEX ON chat_mutes (user_id);
+
+------------------------------------------------------------
+
+CREATE TABLE chat_messages (
+  id         serial PRIMARY KEY,
+  -- System messages do not have a user
+  user_id    integer NULL REFERENCES users(id),
+  text       text    NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX ON chat_messages (user_id);

@@ -131,6 +131,7 @@ var App = React.createClass({
   componentDidMount: function() {
     var self = this;
     this.state.socket.on('reconnect', function() { console.log('Reconnect'); });
+    this.state.socket.on('disconnect', function() { console.log('Disconnect'); });
     this.state.socket.on('user_unmuted', function(uname) {
       delete self.state.muteList[uname];
       self.setState({});
@@ -144,7 +145,6 @@ var App = React.createClass({
     });
     this.state.socket.on('connect', function() {
       console.log('connected');
-      self.state.socket.on('disconnect', function(){console.log('disconn');});
       self.state.socket.emit('auth', { session_id: self.state.session_id }, function(err, data) {
         if (err) {
           console.log('Error:', err);
@@ -258,7 +258,7 @@ var App = React.createClass({
       el.div(
         {className: 'row'},
         el.div(
-          {className: 'col-md-8'},
+          {className: 'col-md-9'},
           el.div(
             {className: 'panel panel-default'},
             // panel-body
@@ -282,8 +282,9 @@ var App = React.createClass({
                     },
                     el.code(
                       null,
-                      helpers.formatMessageDate(m.when)
+                      helpers.formatMessageDate(m.created_at)
                     ),
+                    ' ',
                     m.system ?
                       el.code(null, m.text) :
                       el.a(
@@ -295,7 +296,7 @@ var App = React.createClass({
                       ),
                     m.system ?
                       '' :
-                      m.text
+                      ' ' + m.text
                   );
                 })
               )
@@ -356,7 +357,7 @@ var App = React.createClass({
         ),
         el.div(
           // UserList
-          {className: 'col-md-4'},
+          {className: 'col-md-3'},
           React.createElement(UserList, {
             userList: this.state.userList,
             receivedServerPayload: this.state.receivedServerPayload
