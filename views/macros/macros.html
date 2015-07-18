@@ -737,8 +737,12 @@
                       {% if topic.has_posted %}
                         topic-item-current-user-posted
                       {% endif %}
+                      {% if topic.is_sticky %}
+                        topic-item-sticky
+                      {% endif %}
+
                       "
-               style="background-color: #3d3a3a; border: 1px solid #111; color: #fff;">
+          >
             <div class="row">
               <div class="col-sm-6">
                 <h5 class="list-group-item-heading topic-panel-title">
@@ -872,8 +876,11 @@
                       {% if topic.has_posted %}
                         topic-item-current-user-posted
                       {% endif %}
+                      {% if topic.is_sticky %}
+                        topic-item-sticky
+                      {% endif %}
                       "
-               style="background-color: #3d3a3a; border: 1px solid #111; color: #fff;">
+          >
             <div class="row">
               <div class="col-sm-6">
                 <h5 class="list-group-item-heading topic-panel-title">

@@ -1413,3 +1413,15 @@ fieldset.cyberpunk {
     color: #e74c3c;
     text-shadow: 0px 0px 1px #e74c3c;
 }
+
+.topic-item {
+    /* deault bg color for tpics in a topic list */
+    background-color: #3d3a3a;
+    border: 1px solid #111;
+    color: #fff;
+}
+
+/* for topics in the topic list (show forum) that are stickied */
+.topic-item-sticky {
+    background-color: #12424e;
+}
