@@ -159,7 +159,7 @@ var App = React.createClass({
     return {
       text: '',
       user: undefined,
-      messages: new CBuffer(250),
+      messages: new CBuffer(100),
       // String or undefined
       session_id: $('#session-id').attr('data-session-id'),
       socket: undefined,
@@ -202,7 +202,7 @@ var App = React.createClass({
         });
 
         // HACK: Mutating state outside of setState
-        var messages = new CBuffer(250);
+        var messages = new CBuffer(100);
         // Autolink them if user messages
         data.messages.forEach(function(m) {
           if (m.user) {
