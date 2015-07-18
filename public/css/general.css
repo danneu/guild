@@ -1425,3 +1425,7 @@ fieldset.cyberpunk {
 .topic-item-sticky {
     background-color: #12424e;
 }
+
+.permalink-input:hover {
+    cursor: pointer;
+}

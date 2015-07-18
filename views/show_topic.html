@@ -353,7 +353,9 @@
           </span>
           <div class="pull-right post-header">
             <a href="{{ post.url }}/raw" rel="nofollow">View Raw</a> -
-            <a href="{{ post.url }}" rel="nofollow">
+            <a href="{{ post.url }}" rel="nofollow" class="post-permalink"
+               data-post-id="{{ post.id }}"
+            >
               <span class="glyphicon glyphicon-link"></span>
             </a>
           </div>
@@ -934,6 +936,39 @@ $(function () {
          var popover_id = $this.attr('aria-describedby');
          $('#' + popover_id).find('abbr').timeago();
       },0);
+    });
+  </script>
+
+  <script>
+    var buildPopoverContent = function() {
+      var post_id = $(this).attr('data-post-id');
+      var html = '<input class="form-control permalink-input" type="text" value="http://www.roleplayerguild.com/posts/' + post_id + '" readonly><br><small>Use this to link people directly to this post</small><br><div class="text-center"><button type="button" class="permalink-close btn btn-default btn-xs">Close</button></div>';
+      return html;
+    }
+
+    $(document).on('click', '.permalink-input', function(e) {
+        $(e.target).focus().select();
+    });
+
+    $('.post-permalink').popover({
+      html: true,
+      content: buildPopoverContent,
+      trigger: 'click',
+      placement: 'bottom',
+      title: 'Permalink to this post'
+    });
+
+    $('.post-permalink').on('shown.bs.popover', function(e) {
+      var popover_id = $(this).attr('aria-describedby');
+      $('#' + popover_id + ' .permalink-input').focus().select();
+    });
+
+    $(document).on('click', '.permalink-close', function() {
+      $('.post-permalink').popover('hide');
+    });
+
+    $('.post-permalink').on('click', function(e) {
+      e.preventDefault();
     });
   </script>
 
