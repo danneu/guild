@@ -66,6 +66,8 @@ exports.SEARCH_RESULTS_PER_PAGE = parseInt(process.env.SEARCH_RESULTS_PER_PAGE) 
 
 exports.ENABLE_ADS = !!process.env.ENABLE_ADS;
 
+exports.CHAT_SERVER_URL = process.env.CHAT_SERVER_URL || 'http://localhost:3001';
+
 // newrelic
 exports.NEW_RELIC_LICENSE_KEY = process.env.NEW_RELIC_LICENSE_KEY;
 exports.NEW_RELIC_APP_NAME = process.env.NEW_RELIC_APP_NAME || 'localhost-guild';

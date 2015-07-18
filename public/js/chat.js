@@ -1,0 +1,275 @@
+'use strict';
+
+////////////////////////////////////////////////////////////
+
+var el = React.DOM;
+
+var hex = {
+  'red': '#e74c3c'
+};
+
+var helpers = {};
+helpers.isTextValid = function(text) {
+  return text.trim().length >= 1 && text.trim().length <= 300;
+};
+// String (Date JSON) -> String
+helpers.formatMessageDate = function(dateJson) {
+  var date = new Date(dateJson);
+  return _.padLeft(date.getHours().toString(), 2, '0') +
+    ':' +
+    _.padLeft(date.getMinutes().toString(), 2, '0');
+};
+
+// props: {
+//   userList: { Uname -> User }
+//   receivedServerPayload: Bool
+// }
+var UserList = React.createClass({
+  render: function() {
+    return el.div(
+      null,
+      'Users online: ',
+      !this.props.receivedServerPayload ?
+        '--' :
+        _.keys(this.props.userList).length,
+      !this.props.receivedServerPayload ?
+        '' :
+        el.ul(
+          null,
+          _.values(this.props.userList).map(function(u) {
+            return el.li(
+              null,
+              el.a(
+                {
+                  href: '/users/' + u.slug
+                },
+                u.uname
+              )
+            );
+          })
+        )
+    );
+  }
+});
+
+var App = React.createClass({
+  getInitialState: function() {
+    return {
+      text: '',
+      user: undefined,
+      messages: new CBuffer(250),
+      // String or undefined
+      session_id: $('#session-id').attr('data-session-id'),
+      socket: undefined,
+      userList: {},
+      receivedServerPayload: false
+    };
+  },
+  componentWillMount: function() {
+    var chat_server_url = $('#chat-server-url').attr('data-chat-server-url');
+    this.setState({ socket: io(chat_server_url) });
+  },
+  componentDidMount: function() {
+    var self = this;
+    this.state.socket.on('reconnect', function() { console.log('Reconnect'); });
+    this.state.socket.on('connect', function() {
+      console.log('connected');
+      self.state.socket.on('disconnect', function(){console.log('disconn');});
+      self.state.socket.emit('auth', { session_id: self.state.session_id }, function(err, data) {
+        if (err) {
+          console.log('Error:', err);
+          return;
+        }
+        console.log('server responded to auth with payload:', data);
+
+        var userList = {};
+        data.users.forEach(function(u) {
+          userList[u.uname] = u;
+        });
+
+        // HACK: Mutating state outside of setState
+        self.state.messages.push.apply(self.state.messages, data.messages)
+
+        self.setState({
+          user: data.user,
+          //messages: data.messages,
+          userList: userList,
+          receivedServerPayload: true
+        }, self._scrollToBottom);
+      });
+
+      ////////////////////////////////////////////////////////////
+
+      self.state.socket.on('new_message', function(message) {
+        // Hack
+        self.state.messages.push(message);
+        self.setState({
+          //messages: self.state.messages.concat([message])
+          lol: 2
+        }, function() {
+          self._scrollToBottom();
+        });
+      });
+
+      ////////////////////////////////////////////////////////////
+
+      self.state.socket.on('user_joined', function(user) {
+        console.log('[received user_joined]', user.uname);
+
+        var userList2 = _.cloneDeep(self.state.userList);
+        userList2[user.uname] = user;
+
+        self.setState({ userList: userList2 });
+      });
+
+      ////////////////////////////////////////////////////////////
+
+      self.state.socket.on('user_left', function(user) {
+        console.log('[received user_left]', user.uname);
+
+        // Is there a sane way to non-destructively remove a key in JS?
+        var userList2 = _.cloneDeep(self.state.userList);
+        delete userList2[user.uname];
+
+        self.setState({
+          userList: userList2
+        });
+      });
+
+    });
+  },
+  _scrollToBottom: function() {
+    $('.messages li').last().focus();
+  },
+  _onInputChange: function(e) {
+    this.setState({ text: e.target.value });
+  },
+  _onInputKeyDown: function(e) {
+    var ENTER = 13;
+    if (e.which === ENTER && this.state.user) {
+      this._submitMessage();
+    }
+  },
+  _submitMessage: function() {
+    var self = this;
+    this.state.socket.emit('new_message', this.state.text, function(errString) {
+      if (errString) {
+        alert('Error: ' + errString);
+        return;
+      }
+      self.setState({ text:  '' }, function() {
+        self.refs.input.getDOMNode().focus();
+      });
+    });
+  },
+  render: function() {
+    return el.div(
+      null,
+      el.div(
+        {className: 'row'},
+        el.div(
+          {className: 'col-md-8'},
+          el.div(
+            {className: 'panel panel-default'},
+            // panel-body
+            el.div(
+              {className: 'panel-body'},
+              el.ul(
+                {
+                  className: 'list-unstyled messages',
+                  style: {
+                    overflowY: 'scroll',
+                    height: '300px',
+                    wordWrap: 'break-word'
+                  }
+                },
+                this.state.messages.toArray().map(function(m) {
+                  return el.li(
+                    {
+                      key: m.id,
+                      tabIndex: 1
+                    },
+                    el.code(
+                      null,
+                      helpers.formatMessageDate(m.when)
+                    ),
+                    el.a(
+                      {href: '/users/' + m.user.slug},
+                      el.code(null, m.user.uname + ':')
+                    ),
+                    m.text
+                  );
+                })
+              )
+            ),
+            // panel-footer
+            el.div(
+              {className: 'panel-footer'},
+              el.div(
+                null,
+                el.div(
+                  {className: 'row'},
+                  el.div(
+                    {className: 'col-md-9'},
+                    el.input(
+                      {
+                        type: 'text',
+                        placeholder: 'Click here and begin typing...',
+                        className: 'form-control',
+                        ref: 'input',
+                        value: this.state.text,
+                        onChange: this._onInputChange,
+                        onKeyDown: this._onInputKeyDown
+                      }
+                    )
+                  ),
+                  el.div(
+                    {className: 'col-md-3'},
+                    el.button(
+                      {
+                        type: 'button',
+                        className: 'btn btn-default btn-block',
+                        onClick: this._submitMessage,
+                        disabled: !helpers.isTextValid(this.state.text) || !this.state.user
+                      },
+                      this.state.user ? 'Send' : 'Login to chat'
+                    )
+                  )
+                ),
+                // Row 2 of footer
+                el.div(
+                  {className: 'row'},
+                  el.div(
+                    {className: 'col-md-12'},
+                    el.div(
+                      {
+                        className: 'text-counter' +
+                          this.state.text && this.state.text.length > 300 ?
+                          ' text-counter-error ' : ''
+                      },
+                      this.state.text.length + '/300'
+                    )
+                  )
+                )
+              )
+            )
+
+          )
+        ),
+        // UserList
+        el.div(
+          {className: 'col-md-4'},
+          React.createElement(UserList, {
+            userList: this.state.userList,
+            receivedServerPayload: this.state.receivedServerPayload
+          })
+        )
+      )
+    );
+  }
+});
+
+React.render(
+  React.createElement(App),
+  document.getElementById('app')
+);

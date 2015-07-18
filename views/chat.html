@@ -1,0 +1,49 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li>
+      <a href="/">Home</a>
+    </li>
+  </ol>
+
+  {% if ctx.currUser && ctx.currUser.role === 'banned' %}
+    <div class="alert alert-danger">
+      You cannot participate in chat because you're banned from the guild.
+    </div>
+  {% endif %}
+
+  <div class="page-header" style="border-color: #000">
+    <h3>Chat</h3>
+  </div>
+
+  <p class="lead text-center">
+    Welcome to the Guild's chat. All Guild rules apply here. Be cool or get banned. <img src="http://i.imgur.com/MJSGzeo.gif">
+  </p>
+
+  {% if session_id %}
+    <div id="session-id" data-session-id="{{ session_id }}"></div>
+  {% endif %}
+
+  <div id="chat-server-url" data-chat-server-url="{{ chat_server_url }}"></div>
+
+  <style>
+    .text-counter-error {
+      color: #e74c3c;
+      text-shadow: 1px 1px 0 #333;
+    }
+    .messages li:focus {
+      outline: 0;
+    }
+  </style>
+
+  <div id="app"></div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/3.10.0/lodash.min.js"></script>
+  <script src="/vendor/cbuffer.js"></script>
+  <script src="/vendor/socket.io-client/socket.io.js"></script>
+  <script src="https://fb.me/react-0.13.3.min.js"></script>
+  <script src="/js/chat.js" type="text/javascript"></script>
+{% endblock %}

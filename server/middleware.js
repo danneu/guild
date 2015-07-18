@@ -20,6 +20,7 @@ exports.currUser = function() {
 
     var user = yield db.findUserBySessionId(sessionId);
     this.currUser = user && pre.presentUser(user);  // or null
+    this.state.session_id = sessionId;
     // this.log = this.log.child({ currUser: user });
     yield next;
   };

@@ -2522,6 +2522,14 @@ app.post('/current-feedback-topic/replies', function*() {
   this.redirect('/');
 });
 
+app.get('/chat', function*() {
+  yield this.render('chat', {
+    ctx: this,
+    session_id: this.state.session_id,
+    chat_server_url: config.CHAT_SERVER_URL
+  });
+});
+
 ////////////////////////////////////////////////////////////
 // Friendships
 // - to_user_id Int
