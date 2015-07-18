@@ -3199,3 +3199,17 @@ WHERE from_user_id = $1 AND to_user_id = $2
 
   return yield query(sql, [from_id, to_id]);
 };
+
+
+exports.getAllChatMessages = function*() {
+  var sql = m(function() {/*
+SELECT
+  chat_messages.*,
+  to_json(u.*) "user"
+FROM chat_messages
+LEFT OUTER JOIN users u ON chat_messages.user_id = u.id
+ORDER BY id ASC
+  */});
+
+  return yield queryMany(sql);
+};

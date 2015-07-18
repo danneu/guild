@@ -2562,5 +2562,41 @@ app.post('/me/friendships', function*() {
 
 ////////////////////////////////////////////////////////////
 
+// Helper function for formatting chat messages for the log.txt
+var formatChatDate = function(date) {
+  var monthNames = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
+
+  return date.getDate() +
+    '/' + monthNames[date.getMonth()] +
+    '/' + date.getFullYear().toString().slice(2, 4) +
+    ' ' +
+    _.padLeft(date.getHours().toString(), 2, '0') +
+    ':' +
+    _.padLeft(date.getMinutes().toString(), 2, '0');
+};
+
+app.get('/chatlog.txt', function*() {
+  this.type = 'text/plain';
+  var messages = yield db.getAllChatMessages();
+  var text = messages.map(function(m) {
+    if (m.user) { // User message
+      return [
+        formatChatDate(m.created_at),
+        '<' +m.user.uname + '>',
+        m.text
+      ].join(' ');
+    } else { // System message
+      return [formatChatDate(m.created_at), '::', m.text].join(' ');
+    }
+  }).join('\n');
+
+  this.body = text;
+});
+
+////////////////////////////////////////////////////////////
+
 app.listen(config.PORT);
 console.log('Listening on ' + config.PORT);
