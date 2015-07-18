@@ -359,6 +359,16 @@ var App = React.createClass({
                               // color: helpers.lightenColor(helpers.toMD5HexColor(m.user.uname), -25)
                             }
                           },
+                          m.user && m.user.role === 'admin' ?
+                            el.span(
+                              {
+                                className: 'glyphicon glyphicon-star',
+                                style: {
+                                  color: '#f1c40f'
+                                }
+                              }
+                            ) : '',
+                          m.user && m.user.role === 'admin' ? ' ' : '',
                           m.user.uname + ':'
                         )
                       ),
