@@ -33,6 +33,17 @@ helpers.slugifyUname = function(uname) {
 
   return slug;
 };
+helpers.escapeHtml = function(unsafe) {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+helpers.safeAutolink = function(text) {
+  return Autolinker.link(helpers.escapeHtml(text), autolinkerOpts);
+};
 
 // props:
 // - muteList
@@ -159,6 +170,12 @@ var App = React.createClass({
 
         // HACK: Mutating state outside of setState
         var messages = new CBuffer(250);
+        // Autolink them if user messages
+        data.messages.forEach(function(m) {
+          if (m.user) {
+            m.html = helpers.safeAutolink(m.text);
+          }
+        });
         messages.push.apply(messages, data.messages);
         //self.state.messages.push.apply(self.state.messages, data.messages);
 
@@ -174,6 +191,11 @@ var App = React.createClass({
       ////////////////////////////////////////////////////////////
 
       self.state.socket.off('new_message').on('new_message', function(message) {
+        // autolinkerOpts available from bbcode.js
+        // Only autolink non-system messages
+        if (message.user) {
+          message.html = helpers.safeAutolink(message.text);
+        }
         // Hack
         self.state.messages.push(message);
         self.setState({
@@ -296,7 +318,13 @@ var App = React.createClass({
                       ),
                     m.system ?
                       '' :
-                      ' ' + m.text
+                      el.span(
+                        {
+                          dangerouslySetInnerHTML: {
+                            __html: ' ' + m.html
+                          }
+                        }
+                      )
                   );
                 })
               )
