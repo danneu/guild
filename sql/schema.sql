@@ -500,3 +500,14 @@ CREATE TABLE friendships (
 
 CREATE INDEX ON friendships (from_user_id);
 CREATE INDEX ON friendships (to_user_id);
+
+------------------------------------------------------------
+
+CREATE TABLE chat_mutes (
+  id serial PRIMARY KEY,
+  user_id integer NOT NULL REFERENCES users(id),
+  expires_at timestamp with time zone NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX ON chat_mutes (user_id);

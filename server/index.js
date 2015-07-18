@@ -79,7 +79,8 @@ co(function*() {
   }
   dist = {
     css: manifest['all.css'],
-    js: manifest['all.js']
+    js: manifest['all.js'],
+    chatjs: manifest['chat.js']
   };
 }).then(function() {
   console.log('dist set', dist);
@@ -2526,7 +2527,9 @@ app.get('/chat', function*() {
   yield this.render('chat', {
     ctx: this,
     session_id: this.state.session_id,
-    chat_server_url: config.CHAT_SERVER_URL
+    chat_server_url: config.CHAT_SERVER_URL,
+    //
+    title: 'Chat'
   });
 });
 

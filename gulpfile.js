@@ -51,12 +51,22 @@ gulp.task('build-js', function() {
       .pipe(gulp.dest('./dist/'));
 });
 
+gulp.task('build-chat-js', function() {
+  var paths = [
+    'public/js/chat.js'
+  ];
+  gulp.src(paths)
+    .pipe(concat('chat.js'))
+    .pipe(uglifyJS())
+    .pipe(gulp.dest('./dist/'));
+});
+
 //
 // Note: I usually have to run `gulp build-assets` twice for it
 // to work. Need to look into why.
 //
-gulp.task('build-assets', ['build-css', 'build-js'], function() {
-  gulp.src(['dist/all.css', 'dist/all.js'])
+gulp.task('build-assets', ['build-css', 'build-js', 'build-chat-js'], function() {
+  gulp.src(['dist/all.css', 'dist/all.js', 'dist/chat.js'])
   .pipe(rev())
   .pipe(gulp.dest('dist'))
   .pipe(rev.manifest())

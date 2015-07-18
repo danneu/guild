@@ -19,6 +19,64 @@ helpers.formatMessageDate = function(dateJson) {
     ':' +
     _.padLeft(date.getMinutes().toString(), 2, '0');
 };
+helpers.generateUuid = function() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+    return v.toString(16);
+  });
+};
+helpers.slugifyUname = function(uname) {
+  var slug = uname
+    .trim()
+    .toLowerCase()
+    .replace(/ /g, '-');
+
+  return slug;
+};
+
+// props:
+// - muteList
+// - receivedServerPayload
+var MuteList = React.createClass({
+  componentDidUpdate: function() {
+    $("abbr.timeago").timeago();
+  },
+  render: function() {
+    return el.div(
+      null,
+      'Mute list: ' + _.keys(this.props.muteList).length,
+      el.ul(
+        null,
+        _.pairs(this.props.muteList).map(function(pair) {
+          var uname = pair[0];
+          var duration = pair[1];
+          if (duration) {
+            duration = new Date(pair[1]);
+          }
+          return el.li(
+            { key: uname },
+            el.a(
+              {href: '/users/' + helpers.slugifyUname(uname)},
+              uname
+            ),
+            duration === null ?
+              ' - ' :
+              el.span({ className: 'text-muted' }, ' - Expires '),
+            duration === null ?
+              el.span({className: 'text-muted'}, 'Forever') :
+              el.abbr(
+                {
+                  className: 'timeago',
+                  title: duration.toISOString()
+                },
+                duration.toISOString()
+              )
+          );
+        })
+      )
+    );
+  }
+});
 
 // props: {
 //   userList: { Uname -> User }
@@ -62,6 +120,7 @@ var App = React.createClass({
       session_id: $('#session-id').attr('data-session-id'),
       socket: undefined,
       userList: {},
+      muteList: {},
       receivedServerPayload: false
     };
   },
@@ -72,6 +131,17 @@ var App = React.createClass({
   componentDidMount: function() {
     var self = this;
     this.state.socket.on('reconnect', function() { console.log('Reconnect'); });
+    this.state.socket.on('user_unmuted', function(uname) {
+      delete self.state.muteList[uname];
+      self.setState({});
+    });
+    this.state.socket.on('user_muted', function(uname, expires_at) {
+      if (expires_at) {
+        expires_at = new Date(expires_at);
+      }
+      self.state.muteList[uname] = expires_at;
+      self.setState({});
+    });
     this.state.socket.on('connect', function() {
       console.log('connected');
       self.state.socket.on('disconnect', function(){console.log('disconn');});
@@ -88,24 +158,26 @@ var App = React.createClass({
         });
 
         // HACK: Mutating state outside of setState
-        self.state.messages.push.apply(self.state.messages, data.messages)
+        var messages = new CBuffer(250);
+        messages.push.apply(messages, data.messages);
+        //self.state.messages.push.apply(self.state.messages, data.messages);
 
         self.setState({
           user: data.user,
-          //messages: data.messages,
+          messages: messages,
           userList: userList,
+          muteList: data.muteList,
           receivedServerPayload: true
         }, self._scrollToBottom);
       });
 
       ////////////////////////////////////////////////////////////
 
-      self.state.socket.on('new_message', function(message) {
+      self.state.socket.off('new_message').on('new_message', function(message) {
         // Hack
         self.state.messages.push(message);
         self.setState({
           //messages: self.state.messages.concat([message])
-          lol: 2
         }, function() {
           self._scrollToBottom();
         });
@@ -113,7 +185,7 @@ var App = React.createClass({
 
       ////////////////////////////////////////////////////////////
 
-      self.state.socket.on('user_joined', function(user) {
+      self.state.socket.off('user_joined').on('user_joined', function(user) {
         console.log('[received user_joined]', user.uname);
 
         var userList2 = _.cloneDeep(self.state.userList);
@@ -124,7 +196,7 @@ var App = React.createClass({
 
       ////////////////////////////////////////////////////////////
 
-      self.state.socket.on('user_left', function(user) {
+      self.state.socket.off('user_left').on('user_left', function(user) {
         console.log('[received user_left]', user.uname);
 
         // Is there a sane way to non-destructively remove a key in JS?
@@ -193,11 +265,18 @@ var App = React.createClass({
                       null,
                       helpers.formatMessageDate(m.when)
                     ),
-                    el.a(
-                      {href: '/users/' + m.user.slug},
-                      el.code(null, m.user.uname + ':')
-                    ),
-                    m.text
+                    m.system ?
+                      el.code(null, m.text) :
+                      el.a(
+                        {
+                          href: '/users/' + m.user.slug,
+                          target: '_blank'
+                        },
+                        el.code(null, m.user.uname + ':')
+                      ),
+                    m.system ?
+                      '' :
+                      m.text
                   );
                 })
               )
@@ -256,11 +335,16 @@ var App = React.createClass({
 
           )
         ),
-        // UserList
         el.div(
+          // UserList
           {className: 'col-md-4'},
           React.createElement(UserList, {
             userList: this.state.userList,
+            receivedServerPayload: this.state.receivedServerPayload
+          }),
+          // MuteList
+          React.createElement(MuteList, {
+            muteList: this.state.muteList,
             receivedServerPayload: this.state.receivedServerPayload
           })
         )
