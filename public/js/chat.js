@@ -324,6 +324,7 @@ var App = React.createClass({
                   ref: 'chatListRef',
                   className: 'list-unstyled messages',
                   style: {
+                    resize: 'vertical',
                     overflowY: 'scroll',
                     height: '300px',
                     wordWrap: 'break-word'
