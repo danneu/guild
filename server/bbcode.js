@@ -1283,7 +1283,7 @@ var XBBCODE = (function() {
 
 var autolinkerOpts = {
   stripPrefix: true,
-  truncate: 30,
+  truncate: 40,
   email: false,
   phone: false,
   twitter: false,
