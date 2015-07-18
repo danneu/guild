@@ -44,6 +44,9 @@ helpers.escapeHtml = function(unsafe) {
 helpers.safeAutolink = function(text) {
   return Autolinker.link(helpers.escapeHtml(text), autolinkerOpts);
 };
+helpers.toMD5HexColor = function(s) {
+  return '#' + md5(s).slice(0, 6);
+};
 
 // props:
 // - muteList
@@ -314,7 +317,15 @@ var App = React.createClass({
                           href: '/users/' + m.user.slug,
                           target: '_blank'
                         },
-                        el.code(null, m.user.uname + ':')
+                        el.code(
+                          {
+                            className: 'message-uname',
+                            style: {
+                              color: helpers.toMD5HexColor(m.user.uname)
+                            }
+                          },
+                          m.user.uname + ':'
+                        )
                       ),
                     m.system ?
                       '' :
