@@ -168,7 +168,7 @@ var App = React.createClass({
           userList: userList,
           muteList: data.muteList,
           receivedServerPayload: true
-        }, self._scrollToBottom);
+        }, self._scrollChat);
       });
 
       ////////////////////////////////////////////////////////////
@@ -179,7 +179,7 @@ var App = React.createClass({
         self.setState({
           //messages: self.state.messages.concat([message])
         }, function() {
-          self._scrollToBottom();
+          self._onNewMessage();
         });
       });
 
@@ -210,9 +210,6 @@ var App = React.createClass({
 
     });
   },
-  _scrollToBottom: function() {
-    $('.messages li').last().focus();
-  },
   _onInputChange: function(e) {
     this.setState({ text: e.target.value });
   },
@@ -234,6 +231,27 @@ var App = React.createClass({
       });
     });
   },
+  // New messages should only force scroll if user is scrolled near the bottom
+  // already. This allows users to scroll back to earlier convo without being
+  // forced to scroll to bottom when new messages arrive
+  _onNewMessage: function() {
+    var node = this.refs.chatListRef.getDOMNode();
+
+    // Only scroll if user is within 100 pixels of last message
+    var shouldScroll = function() {
+      var distanceFromBottom = node.scrollHeight - ($(node).scrollTop() + $(node).innerHeight());
+      console.log('DistanceFromBottom:', distanceFromBottom);
+      return distanceFromBottom <= 100;
+    };
+
+    if (shouldScroll()) {
+      this._scrollChat();
+    }
+  },
+  _scrollChat: function() {
+    var node = this.refs.chatListRef.getDOMNode();
+    $(node).scrollTop(node.scrollHeight);
+  },
   render: function() {
     return el.div(
       null,
@@ -248,6 +266,7 @@ var App = React.createClass({
               {className: 'panel-body'},
               el.ul(
                 {
+                  ref: 'chatListRef',
                   className: 'list-unstyled messages',
                   style: {
                     overflowY: 'scroll',
