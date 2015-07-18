@@ -333,7 +333,8 @@ var App = React.createClass({
                   return el.li(
                     {
                       key: m.id,
-                      tabIndex: 1
+                      tabIndex: 1,
+                      className: 'message-item'
                     },
                     el.code(
                       null,
@@ -341,7 +342,7 @@ var App = React.createClass({
                     ),
                     ' ',
                     m.system ?
-                      el.code(null, m.text) :
+                      el.code({clasName: 'message-text'}, m.text) :
                       el.a(
                         {
                           href: '/users/' + m.user.slug,
@@ -364,6 +365,7 @@ var App = React.createClass({
                       '' :
                       el.span(
                         {
+                          className: 'message-text',
                           dangerouslySetInnerHTML: {
                             __html: ' ' + m.html
                           }
@@ -386,7 +388,7 @@ var App = React.createClass({
                       {
                         type: 'text',
                         placeholder: 'Click here and begin typing...',
-                        className: 'form-control',
+                        className: 'form-control message-input',
                         ref: 'input',
                         value: this.state.text,
                         onChange: this._onInputChange,
