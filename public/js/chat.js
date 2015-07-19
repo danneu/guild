@@ -76,7 +76,19 @@ helpers.shadeBlend = function(p,c0,c1) {
         var f=w(c0.slice(1),16),t=w((c1?c1:p<0?"#000000":"#FFFFFF").slice(1),16),R1=f>>16,G1=f>>8&0x00FF,B1=f&0x0000FF;
         return "#"+(0x1000000+(u(((t>>16)-R1)*n)+R1)*0x10000+(u(((t>>8&0x00FF)-G1)*n)+G1)*0x100+(u(((t&0x0000FF)-B1)*n)+B1)).toString(16).slice(1)
     }
-}
+};
+helpers.extractMentions = function(text) {
+  var re = /\[@([a-z0-9 ]+)\]/gi;
+
+  var unames = [];
+
+  var match;
+  while (match = re.exec(text)) {
+    unames.push(match[1].toLowerCase().trim());
+  }
+
+  return _.uniq(unames);
+};
 
 // props:
 // - muteList
@@ -141,6 +153,16 @@ var UserList = React.createClass({
           _.values(this.props.userList).map(function(u) {
             return el.li(
               null,
+              u.role === 'admin' ?
+                el.span(
+                  {
+                    className: 'glyphicon glyphicon-star',
+                    style: {
+                      color: '#f1c40f'
+                    }
+                  }
+                ) : '',
+              u.role === 'admin' ? ' ' : '',
               el.a(
                 {
                   href: '/users/' + u.slug
@@ -153,6 +175,23 @@ var UserList = React.createClass({
     );
   }
 });
+
+// if currUname is not given, then currUser is guest
+helpers.makeMessagePresenter = function(currUname) {
+  return function(m) {
+    if (currUname) {
+      m.mentions_user = _.contains(
+        helpers.extractMentions(m.text), currUname.toLowerCase()
+      );
+    }
+
+    if (m.user) {
+      m.html = helpers.safeAutolink(m.text);
+    }
+
+    return m;
+  };
+};
 
 var App = React.createClass({
   getInitialState: function() {
@@ -203,12 +242,8 @@ var App = React.createClass({
 
         // HACK: Mutating state outside of setState
         var messages = new CBuffer(100);
-        // Autolink them if user messages
-        data.messages.forEach(function(m) {
-          if (m.user) {
-            m.html = helpers.safeAutolink(m.text);
-          }
-        });
+        data.messages = data.messages.map(helpers.makeMessagePresenter(data.user.uname));
+
         messages.push.apply(messages, data.messages);
         //self.state.messages.push.apply(self.state.messages, data.messages);
 
@@ -224,11 +259,8 @@ var App = React.createClass({
       ////////////////////////////////////////////////////////////
 
       self.state.socket.off('new_message').on('new_message', function(message) {
-        // autolinkerOpts available from bbcode.js
-        // Only autolink non-system messages
-        if (message.user) {
-          message.html = helpers.safeAutolink(message.text);
-        }
+        message = helpers.makeMessagePresenter(self.state.user.uname)(message);
+
         // Hack
         self.state.messages.push(message);
         self.setState({
@@ -331,11 +363,12 @@ var App = React.createClass({
                   }
                 },
                 this.state.messages.toArray().map(function(m) {
+                  var class1 = m.mentions_user ? ' mentions-user ' : '';
                   return el.li(
                     {
                       key: m.id,
                       tabIndex: 1,
-                      className: 'message-item'
+                      className: 'message-item ' + class1
                     },
                     el.code(
                       null,
