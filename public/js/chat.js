@@ -193,8 +193,14 @@ var UserList = React.createClass({
       !this.props.receivedServerPayload ?
         '' :
         el.ul(
-          {className: 'list-unstyled'},
-          _.values(this.props.userList).map(function(u) {
+          {
+            className: 'list-unstyled',
+            style: {
+              overflowY: 'auto',
+              maxHeight: '400px'
+            }
+          },
+          _.chain(this.props.userList).values().sortByAll(function(u) { return u.role === 'admin' ? 0 : 1; }, function(u) { return u.uname.toLowerCase(); }).map(function(u) {
             return el.li(
               { key: u.uname },
               u.role === 'admin' ?
@@ -227,7 +233,7 @@ var UserList = React.createClass({
                 '[profile]'
               )
             );
-          }, this)
+          }, this).value()
         )
     );
   }
