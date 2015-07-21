@@ -75,11 +75,17 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="/">
+          <a class="navbar-brand" href="/" style="padding:10px 15px; height:auto;">
             {% if ctx.config.NODE_ENV === 'production' %}
-              Roleplayer Guild
+              <h2 style="margin:0;font-size:14px;">
+                <img src="/img/redPANDA-logo.png" alt="Roleplayer Guild"
+                     width="196"
+                     height="28">
+              </h2>
             {% else %}
-              {{ ctx.config.NODE_ENV }}-guild
+              <div style="margin-top: 5px; display: inline-block;">
+                {{ ctx.config.NODE_ENV }}-guild
+              </div>
             {% endif %}
           </a>
         </div>
