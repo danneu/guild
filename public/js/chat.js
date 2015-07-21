@@ -250,7 +250,7 @@ var App = React.createClass({
     return {
       text: '',
       user: undefined,
-      messages: new CBuffer(100),
+      messages: new CBuffer(250),
       // String or undefined
       session_id: $('#session-id').attr('data-session-id'),
       socket: undefined,
@@ -328,7 +328,7 @@ var App = React.createClass({
         });
 
         // HACK: Mutating state outside of setState
-        var messages = new CBuffer(100);
+        var messages = new CBuffer(250);
         data.messages = data.messages.map(helpers.makeMessagePresenter(data.user && data.user.uname));
 
         messages.push.apply(messages, data.messages);
@@ -448,7 +448,6 @@ var App = React.createClass({
     // Only scroll if user is within 100 pixels of last message
     var shouldScroll = function() {
       var distanceFromBottom = node.scrollHeight - ($(node).scrollTop() + $(node).innerHeight());
-      console.log('DistanceFromBottom:', distanceFromBottom);
       return distanceFromBottom <= 100;
     };
 
