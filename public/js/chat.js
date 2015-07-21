@@ -222,7 +222,9 @@ var App = React.createClass({
       userList: {},
       muteList: {},
       receivedServerPayload: false,
-      waitingOnServer: false
+      waitingOnServer: false,
+      windowIsFocused: true,
+      unreadMentions: 0
     };
   },
   componentWillMount: function() {
@@ -231,6 +233,28 @@ var App = React.createClass({
   },
   componentDidMount: function() {
     var self = this;
+
+    window.onfocus = function() {
+      self.setState({
+        windowIsFocused: true,
+        unreadMentions: 0
+      });
+      document.title = 'Chat — Roleplayer Guild';
+    };
+    window.onblur = function() {
+      self.setState({ windowIsFocused: false });
+    };
+
+    setInterval(function() {
+      if (!self.state.windowIsFocused && self.state.unreadMentions > 0) {
+        if (document.title[0] === '*') {
+          document.title = document.title.slice(1);
+        } else {
+          document.title = '* ' + document.title;
+        }
+      }
+    }, 500);
+
     this.state.socket.on('reconnect', function() { console.log('Reconnect'); });
     this.state.socket.on('disconnect', function() { console.log('Disconnect'); });
     this.state.socket.on('user_unmuted', function(uname) {
@@ -278,6 +302,14 @@ var App = React.createClass({
 
       self.state.socket.off('new_message').on('new_message', function(message) {
         message = helpers.makeMessagePresenter(self.state.user.uname)(message);
+
+        if (message.mentions_user && !self.state.windowIsFocused) {
+          self.setState({
+            unreadMentions: self.state.unreadMentions + 1
+          }, function() {
+            document.title = '[' + self.state.unreadMentions + '] Chat — Roleplayer Guild';
+          });
+        }
 
         // Hack
         self.state.messages.push(message);
