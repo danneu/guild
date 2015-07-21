@@ -203,12 +203,47 @@ helpers.makeMessagePresenter = function(currUname) {
     }
 
     if (m.user) {
-      m.html = helpers.safeAutolink(m.text);
+      m.html = replaceSmilies(helpers.safeAutolink(m.text));
     }
 
     return m;
   };
 };
+
+// props:
+// - _makeSmilieClickHandler: fn
+var SmilieList = React.createClass({
+  render: function() {
+    return el.div(
+      null,
+      'Click to add: ',
+      smilies.map(function(smilieName) {
+        return el.div(
+          {
+            key: smilieName,
+            onClick: this.props._makeSmilieClickHandler(smilieName),
+            'data-smilie-name': smilieName,
+            className: 'smilie-box',
+            title: ':' + smilieName,
+            style: {
+              display: 'inline-block',
+              marginRight: '10px'
+            }
+          },
+          el.span(
+            {className: 'label label-default'},
+            el.img(
+              {
+                src: '/smilies/' + smilieName + '.gif',
+                alt: ':' + smilieName
+              }
+            )
+          )
+        );
+      }, this)
+    );
+  }
+});
 
 var App = React.createClass({
   getInitialState: function() {
@@ -418,6 +453,19 @@ var App = React.createClass({
     });
     return false;
   },
+  _makeSmilieClickHandler: function(smilieName) {
+    var self = this;
+
+    return function() {
+      var shouldPad = self.state.text.length > 0 && self.state.text.slice(-1) !== ' ';
+      self.setState({
+        text: self.state.text +
+          (shouldPad ? ' :' + smilieName : ':' + smilieName) + ' '
+      }, function() {
+        self.refs.input.getDOMNode().focus();
+      });
+    };
+  },
   //
   // Message formatting
   //
@@ -619,7 +667,11 @@ var App = React.createClass({
               )
             )
 
-          )
+          ),
+          // Smilie bar
+          React.createElement(SmilieList, {
+            _makeSmilieClickHandler: this._makeSmilieClickHandler
+          })
         ),
         el.div(
           // UserList
