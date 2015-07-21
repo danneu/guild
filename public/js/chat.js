@@ -499,12 +499,11 @@ var App = React.createClass({
             },
             m.user.uname
           ),
-          ' ',
           el.span(
             {
               className: 'message-text',
               dangerouslySetInnerHTML: {
-                __html: ' ' + m.html.replace(/^\/me /i, '')
+                __html: m.html.replace(/^\/me/i, '')
               }
             }
           )
@@ -515,7 +514,7 @@ var App = React.createClass({
   _renderMessage: function(m) {
     if (m.system) {
       return this._renderSystemMessage(m);
-    } else if (m.text.startsWith('/me ')) {
+    } else if (m.text.startsWith('/me')) {
       return this._renderEmoteMessage(m);
     } else {
       return this._renderChatMessage(m);
