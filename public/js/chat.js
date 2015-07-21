@@ -221,7 +221,8 @@ var App = React.createClass({
       socket: undefined,
       userList: {},
       muteList: {},
-      receivedServerPayload: false
+      receivedServerPayload: false,
+      waitingOnServer: false
     };
   },
   componentWillMount: function() {
@@ -325,7 +326,19 @@ var App = React.createClass({
   },
   _submitMessage: function() {
     var self = this;
+
+    if (!helpers.isTextValid(this.state.text)) {
+      return;
+    }
+
+    if (this.state.waitingOnServer) {
+      return;
+    }
+
+    self.setState({ waitingOnServer: true });
+
     this.state.socket.emit('new_message', this.state.text, function(errString) {
+      self.setState({ waitingOnServer: false });
       if (errString) {
         alert('Error: ' + errString);
         return;
@@ -530,7 +543,8 @@ var App = React.createClass({
                         ref: 'input',
                         value: this.state.text,
                         onChange: this._onInputChange,
-                        onKeyDown: this._onInputKeyDown
+                        onKeyDown: this._onInputKeyDown,
+                        readOnly: this.state.waitingOnServer
                       }
                     )
                   ),
@@ -541,9 +555,11 @@ var App = React.createClass({
                         type: 'button',
                         className: 'btn btn-default btn-block',
                         onClick: this._submitMessage,
-                        disabled: !helpers.isTextValid(this.state.text) || !this.state.user
+                        disabled: !helpers.isTextValid(this.state.text) || !this.state.user || this.state.waitingOnServer
                       },
-                      this.state.user ? 'Send' : 'Login to chat'
+                      this.state.user ?
+                        (this.state.waitingOnServer ? 'Submitting...' : 'Send') :
+                        'Login to chat'
                     )
                   )
                 ),
