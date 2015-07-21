@@ -262,7 +262,7 @@ var App = React.createClass({
       windowIsFocused: true,
       unreadMentions: 0,
       //
-      soundEnabled: true
+      soundEnabled: !localStorage.getItem('chat-sound-disabled')
     };
   },
   componentWillMount: function() {
@@ -430,6 +430,11 @@ var App = React.createClass({
     });
   },
   _onSoundClick: function() {
+    if (this.state.soundEnabled) {
+      localStorage.setItem('chat-sound-disabled', 'true');
+    } else {
+      localStorage.removeItem('chat-sound-disabled');
+    }
     this.setState({
       soundEnabled: !this.state.soundEnabled
     });
