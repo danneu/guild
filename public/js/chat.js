@@ -370,15 +370,27 @@ var App = React.createClass({
     this.state.socket.on('reconnect', function() { console.log('Reconnect'); });
     this.state.socket.on('disconnect', function() { console.log('Disconnect'); });
     this.state.socket.on('user_unmuted', function(uname) {
-      delete self.state.muteList[uname];
-      self.setState({});
+      //delete self.state.muteList[uname];
+
+      var muteList2 = _.clone(self.state.muteList, true);
+      delete muteList2[uname];
+
+      self.setState({
+        muteList: muteList2
+      });
     });
     this.state.socket.on('user_muted', function(uname, expires_at) {
       if (expires_at) {
         expires_at = new Date(expires_at);
       }
-      self.state.muteList[uname] = expires_at;
-      self.setState({});
+      //self.state.muteList[uname] = expires_at;
+
+      var muteList2 = _.clone(self.state.muteList, true);
+      muteList2[uname] = expires_at;
+
+      self.setState({
+        muteList: muteList2
+      });
     });
     this.state.socket.on('connect', function() {
       console.log('connected');
