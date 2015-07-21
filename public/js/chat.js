@@ -252,37 +252,62 @@ helpers.makeMessagePresenter = function(currUname) {
 // props:
 // - _makeSmilieClickHandler: fn
 var SmilieList = React.createClass({
-  shouldComponentUpdate: function() {
-    return false;
+  getInitialState: function() {
+    return {
+      show: false
+    };
+  },
+  shouldComponentUpdate: function(_, nextState) {
+    return this.state.show !== nextState.show;
+  },
+  _onToggleClick: function() {
+    this.setState({ show: !this.state.show });
   },
   render: function() {
     return el.div(
       null,
-      'Click to add: ',
-      smilies.map(function(smilieName) {
-        return el.div(
-          {
-            key: smilieName,
-            onClick: this.props._makeSmilieClickHandler(smilieName),
-            'data-smilie-name': smilieName,
-            className: 'smilie-box',
-            title: ':' + smilieName,
-            style: {
-              display: 'inline-block',
-              marginRight: '10px'
-            }
-          },
-          el.span(
-            {className: 'label label-default'},
-            el.img(
-              {
-                src: '/smilies/' + smilieName + '.gif',
-                alt: ':' + smilieName
+      el.button(
+        {
+          type: 'button',
+          className: 'btn btn-default btn-xs',
+          onClick: this._onToggleClick
+        },
+        el.img({src: '/img/smile.gif'}),
+        ' ',
+        this.state.show ? 'Hide Smilies' : 'Show Smilies'
+      ),
+      el.div(
+        {
+          style: {
+            display: this.state.show ? 'block' : 'none'
+          }
+        },
+        'Click to add: ',
+        smilies.map(function(smilieName) {
+          return el.div(
+            {
+              key: smilieName,
+              onClick: this.props._makeSmilieClickHandler(smilieName),
+              'data-smilie-name': smilieName,
+              className: 'smilie-box',
+              title: ':' + smilieName,
+              style: {
+                display: 'inline-block',
+                marginRight: '10px'
               }
+            },
+            el.span(
+              {className: 'label label-default'},
+              el.img(
+                {
+                  src: '/smilies/' + smilieName + '.gif',
+                  alt: ':' + smilieName
+                }
+              )
             )
-          )
-        );
-      }, this)
+          );
+        }, this)
+      )
     );
   }
 });
