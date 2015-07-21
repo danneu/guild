@@ -258,8 +258,11 @@ var App = React.createClass({
       muteList: {},
       receivedServerPayload: false,
       waitingOnServer: false,
+      //
       windowIsFocused: true,
-      unreadMentions: 0
+      unreadMentions: 0,
+      //
+      soundEnabled: true
     };
   },
   componentWillMount: function() {
@@ -351,7 +354,9 @@ var App = React.createClass({
           }, function() {
             document.title = '[' + self.state.unreadMentions + '] Chat — Roleplayer Guild';
           });
-          $('#notify-sound').get(0).play();
+          if (self.state.soundEnabled) {
+            $('#notify-sound').get(0).play();
+          }
         }
 
         // Hack
@@ -421,6 +426,11 @@ var App = React.createClass({
       self.setState({ text:  '' }, function() {
         self.refs.input.getDOMNode().focus();
       });
+    });
+  },
+  _onSoundClick: function() {
+    this.setState({
+      soundEnabled: !this.state.soundEnabled
     });
   },
   // New messages should only force scroll if user is scrolled near the bottom
@@ -652,9 +662,14 @@ var App = React.createClass({
                 ),
                 // Row 2 of footer
                 el.div(
-                  {className: 'row'},
+                  {
+                    className: 'row',
+                    style: {
+                      marginTop: '10px'
+                    }
+                  },
                   el.div(
-                    {className: 'col-md-12'},
+                    {className: 'col-md-6'},
                     el.div(
                       {
                         className: 'text-counter' +
@@ -663,6 +678,33 @@ var App = React.createClass({
                       },
                       this.state.text.length + '/300'
                     )
+                  ),
+                  // Sound option
+                  el.div(
+                    {className: 'col-md-6 text-right'},
+                      el.button(
+                        {
+                          type: 'button',
+                          className: 'btn btn-default btn-xs sound-btn',
+                          onClick: this._onSoundClick
+                        },
+                        'Sound ',
+                        this.state.soundEnabled ?
+                          el.span(
+                            {
+                              className: 'label label-success',
+                              style: { color: '#fff' }
+                            },
+                            'ON'
+                          ) :
+                          el.span(
+                            {
+                              className: 'label label-default',
+                              style: { color: '#fff' }
+                            },
+                            'OFF'
+                          )
+                      )
                   )
                 )
               )
