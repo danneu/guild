@@ -146,5 +146,10 @@ module.exports = function() {
     this.set('sitemap.txt', urls.slice(0, MAX_SITEMAP_URLS).join('\n'));
   });
 
+  // Every hour
+  cache.every(1000 * 60 * 60 * 1, function*() {
+    this.set('arena-leaderboard', yield db.getMiniArenaLeaderboard());
+  });
+
   return cache;
 };

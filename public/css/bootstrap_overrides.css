@@ -17,3 +17,26 @@ body {
 a:hover {
     color: #cc9c00;
 }
+
+/* Allow .table-borderless to turn off the borders that class="table" adds. */
+.table-borderless > thead > tr > th {
+    border-bottom: none;
+}
+.table-borderless > thead > tr > th,
+.table-borderless > tbody > tr > th,
+.table-borderless > tfoot > tr > th,
+.table-borderless > thead > tr > td,
+.table-borderless > tbody > tr > td,
+.table-borderless > tfoot > tr > td {
+    border-top: none;
+}
+
+/* Add class .table-super-condensed for an even more condensed option */
+.table-super-condensed > thead > tr > th,
+.table-super-condensed > tbody > tr > th,
+.table-super-condensed > tfoot > tr > th,
+.table-super-condensed > thead > tr > td,
+.table-super-condensed > tbody > tr > td,
+.table-super-condensed > tfoot > tr > td {
+    padding: 0;
+}

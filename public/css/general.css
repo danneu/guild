@@ -1429,3 +1429,16 @@ fieldset.cyberpunk {
 .permalink-input:hover {
     cursor: pointer;
 }
+
+/* For mini arena leaderboard at top of Arena */
+
+.arena-leaderboard {
+    border: 3px dotted #666;
+    padding: 0 10px;
+}
+.arena-leaderboard table {
+    margin-bottom: 10px;
+}
+.arena-leaderboard table thead {
+    color: #999;
+}

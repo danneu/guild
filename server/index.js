@@ -1036,6 +1036,12 @@ app.get('/forums/:forumSlug', function*() {
   viewers = results[0];
   topics = results[1];
 
+  // If arena, then expose the mini arena leaderboard
+  var arenaLeaderboard;
+  if (forum.is_arena_rp || (forum.parent_forum && forum.parent_forum.is_arena_rp)) {
+    arenaLeaderboard = cache.get('arena-leaderboard');
+  }
+
   forum.topics = topics;
   forum = pre.presentForum(forum);
   yield this.render('show_forum', {
@@ -1045,6 +1051,7 @@ app.get('/forums/:forumSlug', function*() {
     totalPages: pager.totalPages,
     title: forum.title,
     className: 'show-forum',
+    arenaLeaderboard: arenaLeaderboard,
     // Viewers
     viewers: viewers
   });

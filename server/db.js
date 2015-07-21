@@ -3213,3 +3213,25 @@ ORDER BY id ASC
 
   return yield queryMany(sql);
 };
+
+exports.getMiniArenaLeaderboard = function*() {
+  var sql = m(function() {/*
+    SELECT
+      uname,
+      slug,
+      arena_wins,
+      arena_losses,
+      arena_draws,
+      arena_points
+    FROM users
+    WHERE (arena_wins > 0 OR arena_losses > 0 OR arena_draws > 0)
+    ORDER BY
+      arena_points DESC,
+      arena_wins DESC,
+      arena_losses ASC,
+      arena_draws DESC
+    LIMIT 5
+  */});
+
+  return yield queryMany(sql);
+};
