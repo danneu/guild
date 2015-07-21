@@ -179,6 +179,9 @@ var UserList = React.createClass({
 // if currUname is not given, then currUser is guest
 helpers.makeMessagePresenter = function(currUname) {
   return function(m) {
+
+    m.id = helpers.generateUuid();
+
     if (currUname) {
       m.mentions_user = _.contains(
         helpers.extractMentions(m.text), currUname.toLowerCase()
