@@ -2586,6 +2586,10 @@ var formatChatDate = function(date) {
 };
 
 app.get('/chatlog.txt', function*() {
+  // Temporarily disable
+  this.body = 'Chatlog disabled until I implement pagination for it';
+  return;
+
   this.type = 'text/plain';
   var messages = yield db.getAllChatMessages();
   var text = messages.map(function(m) {
