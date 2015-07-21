@@ -55,7 +55,32 @@
     }
   </style>
 
-  <div id="app"></div>
+  <button type="button" class="chat-help-btn btn btn-default btn-xs">Show Chat Help</button>
+  <div class="chat-help" style="border: 2px dotted #999; padding: 5px; display: none;">
+    <li>
+      <strong>Emote:</strong> <code>/me claps excitedly</code>
+      <div style="display: inline-block;">
+        &rarr;
+        <img src="https://dl.dropboxusercontent.com/spa/quq37nq1583x0lf/rutlz-cn.png">
+      </div>
+    </li>
+    <li>
+      <strong>@Mention:</strong> Notify the people that you're talking to.
+      <ul>
+        <li>Click on any username (from sidebar or chatbox) to add mentions to your message.</li>
+        <li>
+          When someone is mentioned, the message is highlighted on their screen:
+          <img src="https://dl.dropboxusercontent.com/spa/quq37nq1583x0lf/u_48_ck8.png">
+        </li>
+        <li>
+          Their browser tab will blink with unread mention count until they visit the tab.
+          <img src="https://dl.dropboxusercontent.com/spa/quq37nq1583x0lf/uaxz_u52.png">
+        </li>
+      </ul>
+    </li>
+  </div>
+
+  <div id="app" style="margin-top: 10px;"></div>
 
 
   <ul class="text-muted">
@@ -87,6 +112,18 @@
   <script src="/vendor/socket.io-client/socket.io.js"></script>
   <script src="https://fb.me/react-0.13.3.min.js"></script>
   <script src="/vendor/md5.js"></script>
+
+  <script type="text/javascript">
+    $('.chat-help-btn').on('click', function() {
+      if ($('.chat-help').css('display') === 'none') {
+        $('.chat-help').show();
+        $('.chat-help-btn').text('Hide Chat Help');
+      } else {
+        $('.chat-help').hide();
+        $('.chat-help-btn').text('Show Chat Help');
+      }
+    });
+  </script>
 
   {% if ctx.dist && ctx.dist.chatjs %}
     <script src="/{{ ctx.dist.chatjs }}" type="text/javascript"></script>
