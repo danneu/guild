@@ -245,7 +245,7 @@ var App = React.createClass({
 
         // HACK: Mutating state outside of setState
         var messages = new CBuffer(100);
-        data.messages = data.messages.map(helpers.makeMessagePresenter(data.user.uname));
+        data.messages = data.messages.map(helpers.makeMessagePresenter(data.user && data.user.uname));
 
         messages.push.apply(messages, data.messages);
         //self.state.messages.push.apply(self.state.messages, data.messages);
