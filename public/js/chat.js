@@ -238,14 +238,21 @@ var App = React.createClass({
       self.setState({
         windowIsFocused: true,
         unreadMentions: 0
+      }, function() {
+        document.title = 'Chat — Roleplayer Guild';
       });
-      document.title = 'Chat — Roleplayer Guild';
     };
     window.onblur = function() {
       self.setState({ windowIsFocused: false });
     };
 
     setInterval(function() {
+      // Ensure title is sync'd. Should prob just not use setState for this.
+      if (self.state.windowIsFocused && document.title[0] !== 'C') {
+        document.title = 'Chat — Roleplayer Guild';
+        return;
+      }
+
       if (!self.state.windowIsFocused && self.state.unreadMentions > 0) {
         if (document.title[0] === '*') {
           document.title = document.title.slice(1);
