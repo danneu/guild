@@ -410,13 +410,20 @@ var App = React.createClass({
           userList[u.uname] = u;
         });
 
+        var muteList = {};
+        _.pairs(data.muteList).map(function(pair) {
+          var uname = pair[0];
+          var utcString = pair[1];
+          muteList[uname] = utcString ? new Date(utcString) : null
+        });
+
         data.messages = _.takeRight(data.messages, config.HISTORY_SIZE).map(helpers.makeMessagePresenter(data.user && data.user.uname));
 
         self.setState({
           user: data.user,
           messages: data.messages,
           userList: userList,
-          muteList: data.muteList,
+          muteList: muteList,
           receivedServerPayload: true
         }, self._scrollChat);
       });
