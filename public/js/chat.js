@@ -346,7 +346,7 @@ var App = React.createClass({
       ////////////////////////////////////////////////////////////
 
       self.state.socket.off('new_message').on('new_message', function(message) {
-        message = helpers.makeMessagePresenter(self.state.user.uname)(message);
+        message = helpers.makeMessagePresenter(self.state.user && self.state.user.uname)(message);
 
         if (message.mentions_user && !self.state.windowIsFocused) {
           self.setState({
