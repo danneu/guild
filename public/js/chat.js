@@ -137,6 +137,7 @@ var MuteList = React.createClass({
 // props: {
 //   userList: { Uname -> User }
 //   receivedServerPayload: Bool
+//   onUnameClick: fn
 // }
 var UserList = React.createClass({
   render: function() {
@@ -165,12 +166,26 @@ var UserList = React.createClass({
               u.role === 'admin' ? ' ' : '',
               el.a(
                 {
-                  href: '/users/' + u.slug
+                  //href: '/users/' + u.slug,
+                  href: '#',
+                  onClick: this.props.onUnameClick
                 },
                 u.uname
+              ),
+              ' ',
+              el.a(
+                {
+                  href: '/users/' + u.slug,
+                  className: 'text-muted',
+                  target: '_blank',
+                  style: {
+                    fontSize: '90%'
+                  }
+                },
+                '[profile]'
               )
             );
-          })
+          }, this)
         )
     );
   }
@@ -342,6 +357,16 @@ var App = React.createClass({
     var node = this.refs.chatListRef.getDOMNode();
     $(node).scrollTop(node.scrollHeight);
   },
+  _onUnameClick: function(e) {
+    var self = this;
+    var uname = ($(e.target).text().trim().replace(/:/, ''));
+    this.setState({
+      text: this.state.text + '[@' + uname + ']'
+    }, function() {
+      self.refs.input.getDOMNode().focus();
+    });
+    return false;
+  },
   render: function() {
     return el.div(
       null,
@@ -382,8 +407,8 @@ var App = React.createClass({
                       el.code({clasName: 'message-text'}, m.text) :
                       el.a(
                         {
-                          href: '/users/' + m.user.slug,
-                          target: '_blank'
+                          href: '#',
+                          onClick: this._onUnameClick
                         },
                         el.code(
                           {
@@ -419,7 +444,7 @@ var App = React.createClass({
                         }
                       )
                   );
-                })
+                }, this)
               )
             ),
             // panel-footer
@@ -481,7 +506,8 @@ var App = React.createClass({
           {className: 'col-md-3'},
           React.createElement(UserList, {
             userList: this.state.userList,
-            receivedServerPayload: this.state.receivedServerPayload
+            receivedServerPayload: this.state.receivedServerPayload,
+            onUnameClick: this._onUnameClick
           }),
           // MuteList
           React.createElement(MuteList, {
