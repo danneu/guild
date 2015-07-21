@@ -102,7 +102,7 @@ var MuteList = React.createClass({
       null,
       'Mute list: ' + _.keys(this.props.muteList).length,
       el.ul(
-        null,
+        {className: 'list-unstyled'},
         _.pairs(this.props.muteList).map(function(pair) {
           var uname = pair[0];
           var duration = pair[1];
@@ -150,7 +150,7 @@ var UserList = React.createClass({
       !this.props.receivedServerPayload ?
         '' :
         el.ul(
-          null,
+          {className: 'list-unstyled'},
           _.values(this.props.userList).map(function(u) {
             return el.li(
               null,
