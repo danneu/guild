@@ -110,7 +110,12 @@
             <li>
               <a href="/chat">
                 <span class="glyphicon glyphicon-comment"></span>
-                Chat <span class="label label-primary">New</span>
+                Chat
+                {% if ctx.cache.get('chat-server-stats').member_count > 0 %}
+                  <span class="label label-primary" style="color: #fff;">
+                    {{- ctx.cache.get('chat-server-stats').member_count -}}
+                  </span>
+                {% endif %}
               </a>
             </li>
           </ul>

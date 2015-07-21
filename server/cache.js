@@ -7,12 +7,11 @@ var co = require('co');
 var RegexTrie = require('regex-trie');
 var debug = require('debug')('app:cache');
 var assert = require('better-assert');
+var request = require('co-request');
 // 1st party
 var db = require('./db');
 var pre = require('./presenters');
 var config = require('./config');
-
-
 
 // TODO: Handle failure
 function Cache() {
@@ -150,6 +149,27 @@ module.exports = function() {
   cache.every(1000 * 60 * 60 * 1, function*() {
     this.set('arena-leaderboard', yield db.getMiniArenaLeaderboard());
   });
+
+  // Every 12 seconds
+  if (config.CHAT_SERVER_URL) {
+    cache.every(1000 * 12, function*() {
+      // Initialize if it's not set
+      if (typeof this.get('chat-server-stats') === 'undefined') {
+        this.set('chat-server-stats', {
+          member_count: 0
+        });
+      }
+
+      var response = yield request(config.CHAT_SERVER_URL + '/stats');
+
+      // Only update on response success
+      if (response.statusCode === 200) {
+        this.set('chat-server-stats', JSON.parse(response.body));
+      }
+    });
+  } else {
+    console.log('[cache.js] Skipping chat-server stats ping since CHAT_SERVER_URL is not set');
+  }
 
   return cache;
 };

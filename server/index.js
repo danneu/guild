@@ -104,6 +104,7 @@ app.use(function*(next) {
 // Expose config to view layer
 app.use(function*(next) {
   this.config = config;
+  this.cache = cache;
   yield next;
 });
 
