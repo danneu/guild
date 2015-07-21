@@ -48,7 +48,7 @@ CREATE TABLE users (
 
 CREATE UNIQUE INDEX unique_username ON users USING btree (lower(uname));
 CREATE UNIQUE INDEX unique_email ON users USING btree (lower(email));
-CREATE UNIQUE INDEX unique_slug ON users USING btree (lower(slug));
+CREATE UNIQUE INDEX unique_slug ON users (slug);
 
 CREATE TABLE reset_tokens (
   user_id int  NOT NULL  REFERENCES users(id)  ON DELETE CASCADE,
