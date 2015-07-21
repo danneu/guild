@@ -166,8 +166,7 @@ var UserList = React.createClass({
               u.role === 'admin' ? ' ' : '',
               el.a(
                 {
-                  //href: '/users/' + u.slug,
-                  href: '#',
+                  href: 'javascript:void(0)',
                   onClick: this.props.onUnameClick
                 },
                 u.uname
@@ -367,6 +366,112 @@ var App = React.createClass({
     });
     return false;
   },
+  //
+  // Message formatting
+  //
+  //
+  // Lightened. Up = lighter
+  // color: helpers.shadeBlend(0.30, helpers.toMD5HexColor(m.user.uname), '#ffffff')
+  // color: helpers.lightencolor(helpers.tomd5hexcolor(m.user.uname), 25)
+  // color: helpers.lightenColor(helpers.toMD5HexColor(m.user.uname), -25)
+  _renderSystemMessage: function(m) {
+    return el.code({clasName: 'message-text'}, m.text);
+  },
+  _renderChatMessage: function(m) {
+    return el.span(
+      null,
+      el.a(
+        {
+          href: 'javascript:void(0)',
+          onClick: this._onUnameClick
+        },
+        el.code(
+          {
+            className: 'message-uname',
+            style: {
+              color: helpers.shadeBlend(0.30, helpers.toMD5HexColor(m.user.uname), '#ffffff')
+            }
+          },
+          m.user && m.user.role === 'admin' ?
+            el.span(
+              {
+                className: 'glyphicon glyphicon-star',
+                style: {
+                  color: '#f1c40f'
+                }
+              }
+            ) : '',
+          m.user && m.user.role === 'admin' ? ' ' : '',
+          m.user.uname + ':'
+        )
+      ),
+      el.span(
+        {
+          className: 'message-text',
+          dangerouslySetInnerHTML: {
+            __html: ' ' + m.html
+          }
+        }
+      )
+    );
+  },
+  _renderEmoteMessage: function(m) {
+    return el.span(
+      null,
+      el.code(
+        {
+          className: 'message-uname',
+          style: {
+            color: helpers.shadeBlend(0.30, helpers.toMD5HexColor(m.user.uname), '#ffffff')
+          }
+        },
+        m.user && m.user.role === 'admin' ?
+          el.span(
+            {
+              className: 'glyphicon glyphicon-star',
+              style: {
+                color: '#f1c40f'
+              }
+            }
+          ) : '',
+        m.user && m.user.role === 'admin' ? ' ' : '',
+        el.span(
+          null,
+          el.a(
+            {
+              href: 'javascript:void(0)',
+              onClick: this._onUnameClick,
+              style: {
+                color: 'inherit'
+              }
+            },
+            m.user.uname
+          ),
+          ' ',
+          el.span(
+            {
+              className: 'message-text',
+              dangerouslySetInnerHTML: {
+                __html: ' ' + m.html.replace(/^\/me /i, '')
+              }
+            }
+          )
+        )
+      )
+    );
+  },
+  _renderMessage: function(m) {
+    if (m.system) {
+      return this._renderSystemMessage(m);
+    } else if (m.text.startsWith('/me ')) {
+      return this._renderEmoteMessage(m);
+    } else {
+      return this._renderChatMessage(m);
+    }
+  },
+  //
+  // Render
+  //
   render: function() {
     return el.div(
       null,
@@ -403,46 +508,7 @@ var App = React.createClass({
                       helpers.formatMessageDate(m.created_at)
                     ),
                     ' ',
-                    m.system ?
-                      el.code({clasName: 'message-text'}, m.text) :
-                      el.a(
-                        {
-                          href: '#',
-                          onClick: this._onUnameClick
-                        },
-                        el.code(
-                          {
-                            className: 'message-uname',
-                            style: {
-                              // Lightened. Up = lighter
-                              color: helpers.shadeBlend(0.30, helpers.toMD5HexColor(m.user.uname), '#ffffff')
-                              // color: helpers.lightencolor(helpers.tomd5hexcolor(m.user.uname), 25)
-                              // color: helpers.lightenColor(helpers.toMD5HexColor(m.user.uname), -25)
-                            }
-                          },
-                          m.user && m.user.role === 'admin' ?
-                            el.span(
-                              {
-                                className: 'glyphicon glyphicon-star',
-                                style: {
-                                  color: '#f1c40f'
-                                }
-                              }
-                            ) : '',
-                          m.user && m.user.role === 'admin' ? ' ' : '',
-                          m.user.uname + ':'
-                        )
-                      ),
-                    m.system ?
-                      '' :
-                      el.span(
-                        {
-                          className: 'message-text',
-                          dangerouslySetInnerHTML: {
-                            __html: ' ' + m.html
-                          }
-                        }
-                      )
+                    this._renderMessage(m)
                   );
                 }, this)
               )
