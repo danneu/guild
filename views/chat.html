@@ -18,7 +18,7 @@
   </div>
 
   <p class="lead text-center">
-    Welcome to the Guild's chat. All Guild rules apply here. Be cool. <img src="http://i.imgur.com/MJSGzeo.gif">
+    Welcome to the Guild's chat. Be cool, don't spam. <img src="http://i.imgur.com/MJSGzeo.gif">
   </p>
 
   {% if session_id %}
@@ -61,6 +61,18 @@
     }
   </style>
 
+  <div class="clearfix">
+    <ul class="text-muted pull-right" style="margin-top: 20px;">
+      <li>
+        Bugs? Ideas? Suggestions? Leave feedback in
+        <a href="http://www.roleplayerguild.com/topics/75056-mahzs-dev-journal/ooc/first-unread" target="_blank">Mahz's Dev Thread</a>
+      </li>
+      <li>
+        Prefer IRC? Check out our <a href="http://widget02.mibbit.com/?settings=c2129339a43d8c49d86c34fa8dff7610&server=irc.foonetic.net&channel=%23Roleplayerguild" target="_blank">IRC channel</a> <code>#roleplayerguild on irc.foonetic.net</code>
+      </li>
+    </ul>
+  </div>
+
   <button type="button" class="chat-help-btn btn btn-default btn-xs">Show Chat Help</button>
   <div class="chat-help" style="border: 2px dotted #999; padding: 5px; display: none;">
     <li>
@@ -102,21 +114,6 @@
 
   <audio id="notify-sound" src="/sounds/chat_notify.mp3" preload="auto"></audio>
 
-  <ul class="text-muted" style="margin-top: 20px;">
-    <li>
-      The goal of this chat system is to eventually lead to a group-chat system and user-to-user IMing
-    </li>
-    <li>
-      Bugs? Ideas? Suggestions? Leave feedback in
-      <a href="http://www.roleplayerguild.com/topics/75056-mahzs-dev-journal/ooc/first-unread" target="_blank">Mahz's Dev Thread</a>
-    </li>
-    <li>
-      Prefer IRC? Check out our <a href="http://widget02.mibbit.com/?settings=c2129339a43d8c49d86c34fa8dff7610&server=irc.foonetic.net&channel=%23Roleplayerguild" target="_blank">IRC channel</a> (#roleplayerguild on irc.foonetic.net)
-    </li>
-    <li>
-      Chat logs are stored in the database. I will eventually let you browse the chat history.
-    </li>
-  </ul>
 {% endblock %}
 
 {% block scripts %}
