@@ -2,6 +2,12 @@
 
 ////////////////////////////////////////////////////////////
 
+var config = {
+  HISTORY_SIZE: 100
+};
+
+////////////////////////////////////////////////////////////
+
 var el = React.DOM;
 
 var hex = {
@@ -94,8 +100,24 @@ helpers.extractMentions = function(text) {
 // - muteList
 // - receivedServerPayload
 var MuteList = React.createClass({
+  shouldComponentUpdate: function(nextProps, nextState) {
+    var currLength = _.keys(this.props.muteList).length;
+    var nextLength = _.keys(nextProps.muteList).length;
+
+    if (currLength !== nextLength) {
+      return true;
+    }
+
+    if (this.props.receivedServerPayload !== nextProps.receivedServerPayload) {
+      return true;
+    }
+
+    return false;
+  },
   componentDidUpdate: function() {
     $("abbr.timeago").timeago();
+
+    console.log('[MuteList] updated');
   },
   render: function() {
     return el.div(
@@ -140,6 +162,23 @@ var MuteList = React.createClass({
 //   onUnameClick: fn
 // }
 var UserList = React.createClass({
+  shouldComponentUpdate: function(nextProps, nextState) {
+    var currLength = _.keys(this.props.userList).length;
+    var nextLength = _.keys(nextProps.userList).length;
+
+    if (currLength !== nextLength) {
+      return true;
+    }
+
+    if (this.props.receivedServerPayload !== nextProps.receivedServerPayload) {
+      return true;
+    }
+
+    return false;
+  },
+  componentDidUpdate: function() {
+    console.log('[UserList] Updating');
+  },
   render: function() {
     return el.div(
       null,
@@ -153,7 +192,7 @@ var UserList = React.createClass({
           {className: 'list-unstyled'},
           _.values(this.props.userList).map(function(u) {
             return el.li(
-              null,
+              { key: u.uname },
               u.role === 'admin' ?
                 el.span(
                   {
@@ -213,6 +252,9 @@ helpers.makeMessagePresenter = function(currUname) {
 // props:
 // - _makeSmilieClickHandler: fn
 var SmilieList = React.createClass({
+  shouldComponentUpdate: function() {
+    return false;
+  },
   render: function() {
     return el.div(
       null,
@@ -250,7 +292,7 @@ var App = React.createClass({
     return {
       text: '',
       user: undefined,
-      messages: new CBuffer(250),
+      messages: [],
       // String or undefined
       session_id: $('#session-id').attr('data-session-id'),
       socket: undefined,
@@ -327,16 +369,11 @@ var App = React.createClass({
           userList[u.uname] = u;
         });
 
-        // HACK: Mutating state outside of setState
-        var messages = new CBuffer(250);
-        data.messages = data.messages.map(helpers.makeMessagePresenter(data.user && data.user.uname));
-
-        messages.push.apply(messages, data.messages);
-        //self.state.messages.push.apply(self.state.messages, data.messages);
+        data.messages = _.takeRight(data.messages, config.HISTORY_SIZE).map(helpers.makeMessagePresenter(data.user && data.user.uname));
 
         self.setState({
           user: data.user,
-          messages: messages,
+          messages: data.messages,
           userList: userList,
           muteList: data.muteList,
           receivedServerPayload: true
@@ -360,10 +397,12 @@ var App = React.createClass({
           $('#notify-sound').get(0).play();
         }
 
-        // Hack
-        self.state.messages.push(message);
+        var messages = self.state.messages.length === config.HISTORY_SIZE ?
+            _.drop(self.state.messages).concat([message]) :
+            self.state.messages.concat([message]);
+
         self.setState({
-          //messages: self.state.messages.concat([message])
+          messages: messages
         }, function() {
           self._onNewMessage();
         });
@@ -467,7 +506,7 @@ var App = React.createClass({
     }, function() {
       self.refs.input.getDOMNode().focus();
     });
-    return false;
+    e.preventDefault();
   },
   _makeSmilieClickHandler: function(smilieName) {
     var self = this;
@@ -610,7 +649,7 @@ var App = React.createClass({
                     wordWrap: 'break-word'
                   }
                 },
-                this.state.messages.toArray().map(function(m) {
+                this.state.messages.map(function(m) {
                   var class1 = m.mentions_user ? ' mentions-user ' : '';
                   return el.li(
                     {
