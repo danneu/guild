@@ -320,8 +320,13 @@
         {{ guestCount }} Guest{% if guestCount > 1 %}s{% endif %}
       {% endif %}
       viewing this page
+
+      {% if userCount > 0 %}
+        <button type="button" class="viewers-list-btn btn btn-default btn-xs">Show</button>
+      {% endif %}
+
       <br>
-      <ul class="list-inline">
+      <ul class="list-inline viewers-list" style="display: none;">
         {% for viewer in viewers.users %}<li><a href="/users/{{ viewer.uname|slugifyUname }}">{{- viewer.uname -}}</a>{% if !loop.last %},{% endif %}</li>{% endfor %}
       </ul>
     </div>
