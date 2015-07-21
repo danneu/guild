@@ -112,6 +112,10 @@ var MuteList = React.createClass({
       return true;
     }
 
+    if (_.values(this.props.muteList) !== _.values(nextProps.muteList)) {
+      return true;
+    };
+
     return false;
   },
   componentDidUpdate: function() {
