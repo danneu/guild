@@ -3224,7 +3224,9 @@ exports.getMiniArenaLeaderboard = function*() {
       arena_draws,
       arena_points
     FROM users
-    WHERE (arena_wins > 0 OR arena_losses > 0 OR arena_draws > 0)
+    WHERE
+      (arena_wins > 0 OR arena_losses > 0 OR arena_draws > 0)
+      AND show_arena_stats = true
     ORDER BY
       arena_points DESC,
       arena_wins DESC,
