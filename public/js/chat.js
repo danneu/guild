@@ -354,9 +354,10 @@ var App = React.createClass({
           }, function() {
             document.title = '[' + self.state.unreadMentions + '] Chat — Roleplayer Guild';
           });
-          if (self.state.soundEnabled) {
-            $('#notify-sound').get(0).play();
-          }
+        }
+
+        if (message.mentions_user && self.state.soundEnabled) {
+          $('#notify-sound').get(0).play();
         }
 
         // Hack
