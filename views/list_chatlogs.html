@@ -1,0 +1,32 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li>
+      <a href="/">Home</a>
+    </li>
+  </ol>
+
+  <div class="page-header" style="border-color: #000">
+    <h3>Chat Logs</h3>
+  </div>
+
+  {% if logs.length === 0 %}
+    No chat logs, yet
+  {% endif %}
+
+  {% if logs.length > 0 %}
+    <ul>
+      {% for log in logs %}
+        <li>
+          <a href="/chatlogs/{{ log.when }}">
+            {{ log.when }}
+          </a> - {{ log.count }} messages
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li>
+      <a href="/">Home</a>
+    </li>
+    <li>
+      <a href="/chatlogs">Chat Logs</a>
+    </li>
+    <li>
+      {{ when }}
+    </li>
+  </ol>
+
+  <div class="page-header" style="border-color: #000">
+    <h3>Chat Log for {{ when }}</h3>
+  </div>
+
+  <style>
+    .messages {
+      font-family: monospace;
+    }
+  </style>
+
+  <ul class="messages list-unstyled">
+    {% for msg in log %}
+      <li>
+        <a name="message-{{ msg.id }}"></a>
+        <a href="/chatlogs/{{ when }}#message-{{ msg.id }}" title="Permalink to this line"><span class="glyphicon glyphicon-link"></span></a>
+
+        {{ msg.created_at|formatChatDate }}
+
+        {% if msg.uname %}
+          &lt;{{ msg.uname }}&gt;
+        {% else %}
+          ::
+        {% endif %}
+
+        {{ msg.text }}
+      </li>
+    {% endfor %}
+  </ul>
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}

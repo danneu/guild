@@ -2586,6 +2586,8 @@ var formatChatDate = function(date) {
     _.padLeft(date.getMinutes().toString(), 2, '0');
 };
 
+swig.setFilter('formatChatDate', formatChatDate);
+
 app.get('/chatlog.txt', function*() {
   // Temporarily disable
   this.body = 'Chatlog disabled until I implement pagination for it';
@@ -2606,6 +2608,33 @@ app.get('/chatlog.txt', function*() {
   }).join('\n');
 
   this.body = text;
+});
+
+////////////////////////////////////////////////////////////
+
+app.get('/chatlogs', function*() {
+  var logs = yield db.getChatLogDays();
+
+  yield this.render('list_chatlogs', {
+    ctx: this,
+    logs: logs
+  });
+});
+
+// :when is 'YYYY-MM-DD'
+app.get('/chatlogs/:when', function*() {
+  // TODO: Validate
+  this.validateParam('when')
+    .match(/\d{4}-\d{2}-\d{2}/, 'Invalid date format');
+
+  var log = yield db.findLogByDateTrunc(this.vals.when);
+  this.assert(log, 404);
+
+  yield this.render('show_chatlog', {
+    ctx: this,
+    log: log,
+    when: log[0].when
+  });
 });
 
 ////////////////////////////////////////////////////////////
