@@ -24,7 +24,6 @@ CREATE TABLE users (
   slug           text      NOT NULL,
   custom_title   text      NOT NULL  DEFAULT '',
   trophy_count   int       NOT NULL  DEFAULT 0,
-  current_status_id int    NULL REFERENCES statuses(id) ON DELETE SET NULL,
   -- Cache
   posts_count    int       NOT NULL  DEFAULT 0,
   pms_count      int       NOT NULL  DEFAULT 0,
@@ -93,7 +92,6 @@ CREATE TABLE forums (
   description     text NULL,
   pos             int NOT NULL,
   is_roleplay     boolean NOT NULL  DEFAULT false,
-  tag_id          int NULL REFERENCES tags(id) ON DELETE SET NULL,
   has_tags_enabled boolean NOT NULL DEFAULT false,
   tab_title       text NULL,
   is_check        boolean NOT NULL DEFAULT false,
@@ -310,6 +308,10 @@ CREATE TABLE tags (
   UNIQUE(title)
 );
 
+ALTER TABLE forums
+ADD COLUMN tag_id int NULL REFERENCES tags(id)
+ON DELETE SET NULL;
+
 CREATE INDEX ON tags (tag_group_id);
 
 CREATE TABLE tags_topics (
@@ -451,6 +453,10 @@ CREATE INDEX statuses__user_id ON statuses (user_id);
 -- To quickly find the latest X statuses sorted by created_at
 CREATE INDEX statuses__created_at ON statuses (created_at);
 
+ALTER TABLE users
+ADD COLUMN current_status_id int NULL REFERENCES statuses(id)
+ON DELETE SET NULL;
+
 ------------------------------------------------------------
 
 CREATE TABLE status_likes (
@@ -523,3 +529,111 @@ CREATE TABLE chat_messages (
 );
 
 CREATE INDEX ON chat_messages (user_id);
+
+------------------------------------------------------------
+-- ARENA ---------------------------------------------------
+------------------------------------------------------------
+
+ALTER TABLE topics ADD COLUMN is_ranked   boolean NOT NULL DEFAULT false;
+ALTER TABLE forums ADD COLUMN is_arena_rp boolean NOT NULL DEFAULT false;
+ALTER TABLE users ADD COLUMN arena_points integer NOT NULL DEFAULT 1000;
+ALTER TABLE users ADD COLUMN arena_wins   integer NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN arena_losses integer NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN arena_draws  integer NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN show_arena_stats  boolean NOT NULL DEFAULT false;
+
+CREATE TYPE arena_outcome_type AS ENUM ('WIN', 'LOSS', 'DRAW');
+
+CREATE TABLE arena_outcomes (
+  id         serial PRIMARY KEY,
+  topic_id   integer NOT NULL REFERENCES topics(id),
+  user_id    integer NOT NULL REFERENCES users(id),
+  outcome    arena_outcome_type NOT NULL,
+  profit     integer NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT NOW(),
+  inserted_by integer NOT NULL REFERENCES users(id),
+  -- Constraints
+  -- Ensure a user can only have one outcome per topic
+  UNIQUE (topic_id, user_id)
+);
+
+CREATE INDEX ON arena_outcomes (topic_id);
+CREATE INDEX ON arena_outcomes (user_id);
+
+-- Seeds
+
+UPDATE forums SET is_arena_rp = true WHERE id = 6;
+
+-- Role stuff
+
+CREATE TYPE user_role AS ENUM ('ARENA_MOD', 'CONTEST_MOD');
+
+ALTER TABLE users ADD COLUMN roles user_role[] NOT NULL DEFAULT Array[]::user_role[];
+
+-- Arena triggers/functions
+
+CREATE OR REPLACE FUNCTION update_user_arena_stats() RETURNS trigger AS
+$$
+  var outcome_row = NEW || OLD;
+
+  var point_delta = outcome_row.profit;
+  if (TG_OP === 'DELETE') {
+    point_delta = -point_delta;
+  }
+
+  var win_delta;
+  var loss_delta;
+  var draw_delta;
+
+  if (TG_OP === 'INSERT') {
+    win_delta = outcome_row.outcome  === 'WIN'  ? 1 : 0;
+    loss_delta = outcome_row.outcome === 'LOSS' ? 1 : 0;
+    draw_delta = outcome_row.outcome === 'DRAW' ? 1 : 0;
+  }
+
+  if (TG_OP === 'DELETE') {
+    win_delta = outcome_row.outcome  === 'WIN'  ? -1 : 0;
+    loss_delta = outcome_row.outcome === 'LOSS' ? -1 : 0;
+    draw_delta = outcome_row.outcome === 'DRAW' ? -1 : 0;
+  }
+
+  var q = 'UPDATE users                           ' +
+          'SET                                    ' +
+          '  arena_points = arena_points + $2,    ' +
+          '  arena_wins = arena_wins + $3,        ' +
+          '  arena_losses = arena_losses + $4,    ' +
+          '  arena_draws = arena_draws + $5       ' +
+          'WHERE id = $1                          ';
+  plv8.execute(q, [
+    outcome_row.user_id, point_delta, win_delta, loss_delta, draw_delta
+  ]);
+
+$$ LANGUAGE 'plv8';
+DROP TRIGGER IF EXISTS arena_outcomes_trigger ON arena_outcomes;
+CREATE TRIGGER arena_outcomes_trigger
+    AFTER INSERT OR DELETE ON arena_outcomes
+    FOR EACH ROW
+    EXECUTE PROCEDURE update_user_arena_stats();
+
+------------------------------------------------------------
+-- Feedback topics -----------------------------------------
+------------------------------------------------------------
+
+CREATE TABLE feedback_topics (
+  id         serial PRIMARY KEY,
+  markup     text NOT NULL,
+  html       text NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE feedback_replies (
+  id                serial PRIMARY KEY,
+  user_id           integer NOT NULL REFERENCES users(id),
+  ignored           boolean NOT NULL DEFAULT false,
+  text              text NULL,
+  feedback_topic_id integer NOT NULL REFERENCES feedback_topics(id),
+  created_at        timestamp with time zone NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX ON feedback_replies (user_id);
+CREATE INDEX ON feedback_replies (feedback_topic_id);
