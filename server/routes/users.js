@@ -425,25 +425,6 @@ router.get('/users/:userIdOrSlug', function*() {
   }.bind(this));
   recentPosts = recentPosts.map(pre.presentPost);
 
-  // TODO: Merge this query into the findUser query
-  // Until then, only execute query if user's column cache indicates that
-  // they actually have trophies
-  var trophies = [];
-  if (user.trophy_count > 0)
-    trophies = yield db.findTrophiesForUserId(user.id);
-  // Hide anon trophies from their list
-  // TODO: Display anon trophies as a mysterious trophy
-  trophies = trophies.filter(function(t) {
-    return !t.is_anon;
-  }).map(pre.presentTrophy);
-
-  trophies = _.sortByAll(trophies, [
-    // Put the activeTrophy on top if there is one
-    function(t) { return t.id === user.active_trophy_id ? 0 : 1; },
-    // Sort the rest by newest first
-    function(t) { return -t.awarded_at; }
-  ]);
-
   // FIXME: Way too many queries in this route.
 
   var results = yield [
@@ -468,12 +449,49 @@ router.get('/users/:userIdOrSlug', function*() {
     user: user,
     recentPosts: recentPosts,
     title: user.uname,
-    trophies: trophies,
     statuses: statuses,
     friendship: friendship,
     // Pagination
     nextBeforeId: nextBeforeId,
     recentPostsPerPage: config.RECENT_POSTS_PER_PAGE
+  });
+});
+
+//
+// Show user trophies
+//
+// TODO: Sync up with regular show-user route
+router.get('/users/:slug/trophies', function*() {
+  var user = yield db.findUserWithRatingsBySlug(this.params.slug);
+  this.assert(user, 404);
+  user = pre.presentUser(user);
+
+  var statuses = yield db.findLatestStatusesForUserId(user.id);
+
+  // TODO: Merge this query into the findUser query
+  // Until then, only execute query if user's column cache indicates that
+  // they actually have trophies
+  var trophies = [];
+  if (user.trophy_count > 0)
+    trophies = yield db.findTrophiesForUserId(user.id);
+  // Hide anon trophies from their list
+  // TODO: Display anon trophies as a mysterious trophy
+  trophies = trophies.filter(function(t) {
+    return !t.is_anon;
+  }).map(pre.presentTrophy);
+
+  trophies = _.sortByAll(trophies, [
+    // Put the activeTrophy on top if there is one
+    function(t) { return t.id === user.active_trophy_id ? 0 : 1; },
+    // Sort the rest by newest first
+    function(t) { return -t.awarded_at; }
+  ]);
+
+  yield this.render('show_user_trophies', {
+    ctx: this,
+    user: user,
+    trophies: trophies,
+    statuses: statuses
   });
 });
 

@@ -1,0 +1,120 @@
+{% extends 'show_user.html' %}
+
+{% block child %}
+  <!-- Trophy Box -->
+
+  {% if trophies.length > 0 %}
+    <a name="trophies"></a>
+    <div class="row">
+      <div class="col-sm-12">
+        <h3>
+          Trophies
+          <small>{{ user.trophy_count}} total</small>
+
+          {% if ctx.currUser && ctx.currUser.id === user.id && ctx.currUser.active_trophy_id %}
+            <form method="POST" action="/users/{{ user.id }}/active-trophy"
+                  style="display: inline-block;"
+            >
+              <input type="hidden" name="_method" value="DELETE">
+              <button type="submit" class="btn btn-danger btn-xs">
+                Deactivate Current Trophy
+              </button>
+            </form>
+          {% endif %}
+
+        </h3>
+
+        {% if ctx.currUser && ctx.currUser.id === user.id %}
+          <p>
+            You can activate any single trophy at a time to boast it around the guild. Some trophies have special effects while active.
+          </p>
+        {% endif %}
+
+        <div class="well trophy-box clearfix">
+          {% for trophy in trophies %}
+          <div class="row" {% if !loop.last %}style="margin-bottom: 20px;"{% endif %}>
+              <div class="col-sm-1">
+                {% if trophy.image_url %}
+                  <a href="{{ trophy.url }}">
+                    <img src="{{ trophy.image_url }}"
+                         style="width: 100%;"
+                         {#
+                          {% if trophy.image_dims %}
+                            width="{{ trophy.image_dims[0] }}"
+                            height="{{ trophy.image_dims[1] }}"
+                          {% endif %}
+                         #}
+                         >
+                  </a>
+                  <br>
+                {% endif %}
+              </div>
+              <div class="col-sm-5">
+
+                  {% if user.active_trophy_id === trophy.id %}
+                    <span class="label label-success">Active</span>
+                  {% else %}
+                    {% if ctx.currUser && ctx.currUser.id === user.id %}
+                      <form method="POST" action="/users/{{ user.id }}/active-trophy"
+                            style="display: inline-block;">
+                        <input type="hidden" name="_method" value="PUT">
+                        <input type="hidden" name="trophy_id" value="{{ trophy.id }}">
+                        <button class="btn btn-default btn-xs"
+                                type="submit"
+                        >Activate</button>
+                      </form>
+                    {% endif %}
+                  {% endif %}
+
+                <a href="{{ trophy.url }}" style="text-decoration: underline;">
+                  {{ trophy.title -}}
+                </a>
+                <span class="badge badge-default">{{ trophy.n|ordinalize }}</span>
+                <span class="text-muted">
+                  of {{ trophy.awarded_count }} awarded
+                </span>
+
+                <br>
+                {% if trophy.group %}
+                  This trophy is part of the
+                  <a href="/trophy-groups/{{ trophy.group.id }}">
+                    {{ trophy.group.title }}
+                  </a>
+                  trophy set
+                  <br>
+                {% endif %}
+
+                Awarded
+                <abbr class="timeago" title="{{ trophy.awarded_at.toISOString() }}">
+                  {{ trophy.awarded_at|formatDate }}
+                </abbr>
+                {% if trophy.awarded_by %}
+                  by
+                  <a href="{{ trophy.awarded_by.url }}">
+                    {{ trophy.awarded_by.uname }}
+                  </a>
+                {% endif %}
+
+                <div>
+                  {% if trophy.special_effect %}
+                    <span style="color:#3498db;">Special Effect:</span>
+                    {{ trophy.special_effect }}
+                  {% endif %}
+                </div>
+
+
+              </div><!--/col-->
+              <div class="col-sm-6">
+                {% if trophy.message_html %}
+                  {{ trophy.message_html|safe }}
+                {% endif %}
+              </div><!--/col-->
+
+            </div><!-- /.row -->
+
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}
