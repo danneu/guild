@@ -1139,6 +1139,8 @@ exports.createTopic = function*(props) {
   else
     assert(_.isUndefined(props.joinStatus));
 
+  props.is_ranked = !!props.is_ranked;
+
   var topicSql = m(function() {/*
 INSERT INTO topics (forum_id, user_id, title, is_roleplay, join_status, is_ranked)
 VALUES ($1, $2, $3, $4, $5, $6)
