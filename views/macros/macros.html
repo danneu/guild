@@ -305,7 +305,7 @@
   {% endif %}
 {% endmacro %}
 
-{% macro renderViewers(viewers) %}
+{% macro renderViewers(viewers, startHidden) %}
   {% set userCount = viewers.users.length %}
   {% set guestCount = viewers.guests.length %}
   {% if userCount > 0 || guestCount > 0 %}
@@ -322,11 +322,21 @@
       viewing this page
 
       {% if userCount > 0 %}
-        <button type="button" class="viewers-list-btn btn btn-default btn-xs">Show</button>
+      <button type="button" class="viewers-list-btn btn btn-default btn-xs">
+        {% if startHidden %}
+          Show
+        {% else %}
+          Hide
+        {% endif %}
+      </button>
       {% endif %}
 
       <br>
-      <ul class="list-inline viewers-list" style="display: none;">
+      <ul class="list-inline viewers-list"
+          {% if startHidden %}
+            style="display: none;"
+          {% endif %}
+          >
         {% for viewer in viewers.users %}<li><a href="/users/{{ viewer.uname|slugifyUname }}">{{- viewer.uname -}}</a>{% if !loop.last %},{% endif %}</li>{% endfor %}
       </ul>
     </div>

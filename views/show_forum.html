@@ -11,7 +11,7 @@
   </ol>
 
   <!-- Viewers -->
-  {{ macros.renderViewers(viewers) }}
+  {{ macros.renderViewers(viewers, true) }}
 
   {{ ads.topResponsive() }}
 
@@ -212,7 +212,7 @@
   {% endif %}
 
   <!-- Viewers -->
-  {{ macros.renderViewers(viewers) }}
+  {{ macros.renderViewers(viewers, true) }}
 
   {{ paginate.render(currPage, totalPages, forum.url) }}
 
