@@ -6,12 +6,19 @@ var _ = require('lodash');
 var debug = require('debug')('app:presenters');
 // 1st party
 var belt = require('./belt');
+var config = require('./config');
 
 // Util ////////////////////////////////////////////////////
 
 // Ex: formatDate(d) -> '8 Dec 2014 16:24'
 exports.formatDate = formatDate;
 function formatDate(d) {
+
+  // HACK: Help me realize when I call formatDate when there is no date in dev
+  if (config.NODE_ENV === 'development' && !d) {
+    return '[DATE WAS UNDEFINED]';
+  }
+
   var months = ["Jan", "Feb", "Mar", "Apr",
                 "May", "Jun", "Jul", "Aug",
                 "Sep", "Oct", "Nov", "Dec"];
