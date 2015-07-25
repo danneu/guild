@@ -481,6 +481,13 @@ function can(user, action, target) {
       // Users can only read convos they're participants of
       if (_.findWhere(target.participants, { id: user.id })) return true;
       return false;
+    case 'CREATE_VM':  // no target
+      // Guests can't
+      if (!user) return false;
+      // Banned can't
+      if (user.role === 'banned') return false;
+      // Everyone else can
+      return true;
     default:
       debug('Unsupported cancan action: ' + action);
       return false;

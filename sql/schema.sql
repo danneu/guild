@@ -29,6 +29,7 @@ CREATE TABLE users (
   pms_count      int       NOT NULL  DEFAULT 0,
   sig            text      NOT NULL  DEFAULT '',
   legacy_sig     text      NULL,
+  legacy_avatar_url text   NULL,
   sig_html       text      NOT NULL  DEFAULT '',
   avatar_url     text      NOT NULL DEFAULT '',
   hide_sigs      boolean   NOT NULL  DEFAULT false,
@@ -637,3 +638,117 @@ CREATE TABLE feedback_replies (
 
 CREATE INDEX ON feedback_replies (user_id);
 CREATE INDEX ON feedback_replies (feedback_topic_id);
+
+------------------------------------------------------------
+-- Visitor messages ----------------------------------------
+------------------------------------------------------------
+
+CREATE TABLE vms (
+  id           serial PRIMARY KEY,
+  from_user_id int NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  to_user_id   int NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  markup       text NOT NULL,
+  html         text NOT NULL,
+  -- nested vms dont have idx
+  idx          int NULL,
+  -- Present when vm is in reply to another
+  -- Can only be one level deep.
+  parent_vm_id int NULL REFERENCES vms(id) ON DELETE CASCADE,
+  -- Cache of reply vm count
+  vms_count    int NOT NULL DEFAULT 0,
+  --
+  created_at   timestamp with time zone NOT NULL  DEFAULT NOW()
+);
+
+-- TODO: Create FK indexes for vms table
+
+-- notifications table updates
+ALTER TYPE notification_type ADD VALUE 'TOPLEVEL_VM';
+ALTER TYPE notification_type ADD VALUE 'REPLY_VM';
+ALTER TABLE notifications
+  ADD COLUMN vm_id int NULL REFERENCES vms(id) ON DELETE CASCADE;
+
+-- This index is necessary so that db.createVmNotification can upsert
+-- the `notification.count` if the notification receiver already has
+-- a notification for this VM (to collapse notification spam into
+-- a single notification)
+CREATE UNIQUE INDEX unique_to_user_id_vm_id ON notifications (vm_id, to_user_id);
+
+-- users table updates
+ALTER TABLE users ADD COLUMN total_vms_count int NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN toplevel_vms_count int NOT NULL DEFAULT 0;
+ALTER TABLE users
+  ADD COLUMN toplevel_vm_notifications_count int NOT NULL DEFAULT 0;
+ALTER TABLE users
+  ADD COLUMN reply_vm_notifications_count int NOT NULL DEFAULT 0;
+
+
+-- Triggers/functions
+
+-- Set vm idx before insertion
+-- Note: Only set vm on vms without a parent_vm_id (only top-level vms)
+CREATE OR REPLACE FUNCTION set_vm_idx() RETURNS trigger AS
+$$
+  if (NEW.parent_vm_id)
+    return NEW;
+
+  var q;
+  q = 'SELECT COALESCE(MAX(vms.idx) + 1, 0) "idx"  '+
+      'FROM vms                                    '+
+      'WHERE vms.to_user_id = $1                   ';
+  var rows = plv8.execute(q, [NEW.to_user_id]);
+  NEW.idx = rows[0].idx;
+  return NEW;
+$$ LANGUAGE 'plv8';
+
+DROP TRIGGER IF EXISTS trigger_set_vm_idx ON vms;
+CREATE TRIGGER trigger_set_vm_idx
+    BEFORE INSERT ON vms
+    FOR EACH ROW
+    EXECUTE PROCEDURE set_vm_idx();
+
+CREATE OR REPLACE FUNCTION update_parent_vm() RETURNS trigger AS
+$$
+
+  // Short-circuit if there is no parent VM
+  var thisVm = (OLD || NEW);
+  if (!thisVm.parent_vm_id)
+    return;
+
+  var delta = 0;
+  if (TG_OP === 'INSERT') delta++
+  if (TG_OP === 'DELETE') delta--;
+  q = 'UPDATE vms SET vms_count = vms_count + $2 WHERE id = $1';
+  plv8.execute(q, [thisVm.parent_vm_id, delta]);
+$$ LANGUAGE 'plv8';
+
+DROP TRIGGER IF EXISTS update_parent_vm_trigger ON vms;
+CREATE TRIGGER update_parent_vm_trigger
+    AFTER INSERT OR DELETE ON vms
+    FOR EACH ROW
+    EXECUTE PROCEDURE update_parent_vm();
+
+CREATE OR REPLACE FUNCTION update_user_vms_count() RETURNS trigger AS
+$$
+  var totalDelta = 0, toplevelDelta = 0;
+  var thisVm = (OLD || NEW);
+  var toUserId = thisVm.to_user_id;
+  if (TG_OP === 'INSERT') {
+    totalDelta++;
+    if (!thisVm.parent_vm_id) toplevelDelta++;
+  }
+  if (TG_OP === 'DELETE') {
+    totalDelta--;
+    if (!thisVm.parent_vm_id) toplevelDelta--;
+  }
+  q = 'UPDATE users                                               '+
+      'SET total_vms_count = total_vms_count + $2,                '+
+      '    toplevel_vms_count = toplevel_vms_count + $3           '+
+      'WHERE id = $1                                              ';
+  plv8.execute(q, [toUserId, totalDelta, toplevelDelta]);
+$$ LANGUAGE 'plv8';
+DROP TRIGGER IF EXISTS update_user_vms_count_trigger ON vms;
+CREATE TRIGGER update_user_vms_count_trigger
+    AFTER INSERT OR DELETE ON vms
+    FOR EACH ROW
+    EXECUTE PROCEDURE update_user_vms_count();

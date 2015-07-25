@@ -496,6 +496,103 @@ router.get('/users/:slug/trophies', function*() {
 });
 
 //
+// Show user's VM
+//
+// This route is for use on the /me/notifications page since it
+// will clear the notification for this VM
+router.get('/me/vms/:id', function*() {
+  this.assert(this.currUser && this.currUser.role !== 'banned');
+
+  this.validateParam('id').toInt();
+  yield db.clearVmNotification(this.currUser.id, this.vals.id);
+
+  // TODO: Eventually this will link to VMs that aren't on currUser's profile
+  this.redirect('/users/' + this.currUser.slug + '/vms#vm-' + this.vals.id);
+});
+
+//
+// Show user visitor messages
+//
+// TODO: Sync up with regular show-user route
+router.get('/users/:slug/vms', function*() {
+  var user = yield db.findUserWithRatingsBySlug(this.params.slug);
+  this.assert(user, 404);
+  user = pre.presentUser(user);
+
+  // TODO: Run these queries in parallel
+  var statuses = yield db.findLatestStatusesForUserId(user.id);
+  var vms = yield db.findLatestVMsForUserId(user.id);
+  vms = vms.map(pre.presentVm);
+
+  yield this.render('show_user_visitor_messages', {
+    ctx: this,
+    user: user,
+    vms: vms,
+    statuses: statuses
+  });
+});
+
+////////////////////////////////////////////////////////////
+
+// Create VM
+//
+//
+router.post('/users/:slug/vms', function*() {
+  this.assertAuthorized(this.currUser, 'CREATE_VM');
+
+  // Load user
+  var user = yield db.findUserBySlug(this.params.slug);
+  this.assert(user, 404);
+  user = pre.presentUser(user);
+
+  // Validation
+  this.validateBody('markup')
+    .isString()
+    .notEmpty('Message is required')
+    .isLength(1, config.MAX_VM_LENGTH,
+              'Message must be 1-'+ config.MAX_VM_LENGTH + ' chars');
+
+  if (this.request.body.parent_vm_id) {
+    this.validateBody('parent_vm_id').toInt();
+  }
+
+  var html = bbcode(this.vals.markup);
+
+  // Create VM
+  var vm = yield db.createVm({
+    from_user_id: this.currUser.id,
+    to_user_id: user.id,
+    markup: this.vals.markup,
+    html: html,
+    parent_vm_id: this.vals.parent_vm_id
+  });
+
+  // Notifications
+  // - Only send notification if user isn't sending themself a VM
+  if (vm.from_user_id !== vm.to_user_id) {
+    let opts = {
+      from_user_id: vm.from_user_id,
+      to_user_id: vm.to_user_id,
+      vm_id: vm.parent_vm_id || vm.id
+    };
+    if (vm.parent_vm_id) {
+      // REPLY_VM notification since VM has a parent
+      opts.type = 'REPLY_VM';
+      yield db.createVmNotification(opts);
+    } else {
+      // TOPLEVEL_VM notification
+      opts.type = 'TOPLEVEL_VM';
+      yield db.createVmNotification(opts);
+    }
+  }
+
+  this.flash = {
+    message: ['success', 'Visitor message successfully posted']
+  };
+  this.redirect(user.url + '/vms#vm-' + vm.id);
+});
+
+//
 // Show user recent topics
 //
 router.get('/users/:slug/recent-topics', function*() {

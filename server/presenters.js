@@ -219,3 +219,19 @@ exports.presentFriendship = function(f) {
 
   return f;
 };
+
+exports.presentVm = function(vm) {
+  // Fix embedded
+  if (_.isString(vm.created_at)) {
+    vm.created_at = new Date(vm.created_at);
+  }
+
+  if (vm.from_user) {
+    vm.from_user = exports.presentUser(vm.from_user);
+  }
+  if (vm.child_vms) {
+    vm.child_vms = vm.child_vms.map(exports.presentVm);
+  }
+
+  return vm;
+};

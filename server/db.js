@@ -1675,6 +1675,40 @@ function* createPmNotification(opts) {
   });
 }
 
+// type is 'REPLY_VM' or 'TOPLEVEL_VM'
+exports.createVmNotification = function*(data) {
+  assert(_.contains(['REPLY_VM', 'TOPLEVEL_VM'], data.type));
+  assert(Number.isInteger(data.from_user_id));
+  assert(Number.isInteger(data.to_user_id));
+  assert(Number.isInteger(data.vm_id));
+
+  var createSql = m(function() {/*
+INSERT INTO notifications (type, from_user_id, to_user_id, vm_id, count)
+VALUES ($1, $2, $3, $4, 1)
+  */});
+
+  var updateSql = m(function() {/*
+UPDATE notifications
+SET count = count + 1
+WHERE vm_id = $1 AND to_user_id = $2
+  */});
+
+  return yield withTransaction(function*(client) {
+    try {
+      yield client.queryPromise(createSql, [data.type, data.from_user_id, data.to_user_id, data.vm_id]);
+    } catch(ex) {
+      // Unique constraint violation
+      if (ex.code === '23505') {
+        yield client.queryPromise('ROLLBACK');
+        yield client.queryPromise(updateSql, [data.vm_id, data.to_user_id]);
+        return;
+      }
+      throw ex;
+    }
+  });
+
+};
+
 exports.findParticipantIds = function*(convoId) {
   var sql = m(function() {/*
     SELECT user_id
@@ -1970,12 +2004,21 @@ SELECT
         'id', n.post_id,
         'html', p.html
       )
-  END "post"
+  END "post",
+  CASE
+    WHEN n.vm_id IS NOT NULL
+    THEN
+      json_build_object (
+        'id', n.vm_id,
+        'html', vms.html
+      )
+  END "vm"
 FROM notifications n
 JOIN users u ON n.from_user_id = u.id
 LEFT OUTER JOIN convos c ON n.convo_id = c.id
 LEFT OUTER JOIN topics t ON n.topic_id = t.id
 LEFT OUTER JOIN posts p ON n.post_id = p.id
+LEFT OUTER JOIN vms ON n.vm_id = vms.id
 WHERE n.to_user_id = $1
 ORDER BY n.id DESC
   */});
@@ -3274,4 +3317,81 @@ ORDER BY sub.id
   */});
 
   return yield queryMany(sql, [when]);
+};
+
+// data:
+// - to_user_id: Int
+// - from_user_id: Int
+// - markup
+// - html
+// Optional
+// - parent_vm_id: Int - Only present if this VM is a reply to a toplevel VM
+exports.createVm = function*(data) {
+  assert(Number.isInteger(data.from_user_id));
+  assert(Number.isInteger(data.to_user_id));
+  assert(_.isString(data.markup));
+  assert(_.isString(data.html));
+
+  var sql = m(function() {/*
+INSERT INTO vms (from_user_id, to_user_id, markup, html, parent_vm_id)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING *
+  */});
+
+  return yield queryOne(sql, [
+    data.from_user_id,
+    data.to_user_id,
+    data.markup,
+    data.html,
+    data.parent_vm_id
+  ]);
+};
+
+exports.findLatestVMsForUserId = function*(user_id) {
+  assert(Number.isInteger(user_id));
+
+  var sql = m(function() {/*
+SELECT
+  vms.*,
+  json_build_object(
+    'uname', u.uname,
+    'slug', u.slug,
+    'avatar_url', u.avatar_url
+  ) "from_user",
+  (
+    SELECT COALESCE(json_agg(sub.*), '[]'::json)
+    FROM (
+      SELECT
+        vms2.*,
+        json_build_object(
+          'uname', u2.uname,
+          'slug', u2.slug,
+          'avatar_url', u2.avatar_url,
+          'url', '/users/' || u2.slug
+        ) "from_user"
+      FROM vms vms2
+      JOIN users u2 ON vms2.from_user_id = u2.id
+      WHERE vms2.parent_vm_id = vms.id
+    ) sub
+  ) child_vms
+FROM vms
+JOIN users u ON vms.from_user_id = u.id
+WHERE vms.to_user_id = $1 AND parent_vm_id IS NULL
+ORDER BY vms.id DESC
+LIMIT 30
+  */});
+
+  return yield queryMany(sql, [user_id]);
+};
+
+exports.clearVmNotification = function*(to_user_id, vm_id) {
+  assert(Number.isInteger(to_user_id));
+  assert(Number.isInteger(vm_id));
+
+  var sql = m(function() {/*
+DELETE FROM notifications
+WHERE to_user_id = $1 AND vm_id = $2
+  */});
+
+  yield query(sql, [to_user_id, vm_id]);
 };

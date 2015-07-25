@@ -23,6 +23,7 @@ exports.MAX_POST_LENGTH = parseInt(process.env.MAX_POST_LENGTH, 10) || 150000;
 exports.MIN_UNAME_LENGTH = parseInt(process.env.MIN_UNAME_LENGTH, 10) || 2;
 exports.MAX_UNAME_LENGTH = parseInt(process.env.MAX_UNAME_LENGTH, 10) || 15;
 exports.MAX_BIO_LENGTH = parseInt(process.env.MAX_BIO_LENGTH) || 3000;
+exports.MAX_VM_LENGTH = parseInt(process.env.MAX_VM_LENGTH) || 300;
 
 exports.LATEST_RPGN_TOPIC_ID = parseInt(process.env.LATEST_RPGN_TOPIC_ID) || undefined;
 

@@ -1035,3 +1035,54 @@
     </a>
   </div>
 {% endmacro %}
+
+
+{% macro renderVm(vm, profileUser) %}
+    <a name="vm-{{ vm.id }}"></a>
+    <div class="media" style="position:relative;overflow:hidden;" id="vm-{{ vm.id }}">
+      <!-- ribbon if VM writer is also the profile owner -->
+      {% if vm.from_user_id === user.id %}
+        <div class="corner-ribbon top-right">&nbsp;</div>
+      {% endif %}
+      <div class="media-left">
+        <a href="{{ vm.from_user.url }}">
+          {% if vm.from_user.avatar_url %}
+            <img src="{{ vm.from_user.avatar_url }}" width="50">
+          {% else %}
+            <img src="https://placeholdit.imgix.net/~text?w=50&h=50" width="50">
+          {% endif %}
+        </a>
+      </div>
+      <div class="media-body">
+        <!-- meta row -->
+        <div>
+          <a href="{{ vm.from_user.url }}">{{ vm.from_user.uname }}</a>
+          <abbr class="timeago" title="{{ vm.created_at.toISOString() }}">
+            {{ vm.created_at|formatDate }}
+          </abbr>
+        </div>
+
+        <!-- content row -->
+        {{ vm.html|raw }}
+
+        <!-- controls row -->
+        {% if !vm.parent_vm_id && ctx.can(ctx.currUser, 'CREATE_VM') %}
+          <div>
+            <button type="button" class="btn-link vm-reply-btn"
+                    data-vm-id={{ vm.id }}>
+              Reply
+            </button>
+          </div>
+        {% endif %}
+
+      </div><!-- /media-body -->
+
+      {% if !vm.parent_vm_id %}
+        <ul class="child-vms list-unstyled" style="margin-left: 60px;">
+          {% for childVm in vm.child_vms%}
+            <li>{{ renderVm(childVm, profileUser) }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+{% endmacro %}

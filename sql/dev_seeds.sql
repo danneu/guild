@@ -12,6 +12,14 @@ VALUES
 ;
 SELECT setval('users_id_seq'::regclass, (SELECT MAX(id) FROM users));
 
+INSERT INTO vms (from_user_id, to_user_id, markup, html, parent_vm_id)
+VALUES
+(1, 1, 'Test1 - Has children', 'Test - has children', null),
+(1, 1, 'Child', 'Child', 1),
+(1, 1, 'Test2 - No Children', 'Test2 - No children', null)
+;
+SELECT setval('vms_id_seq'::regclass, (SELECT MAX(id) FROM vms));
+
 ---- Convos
 INSERT INTO convos (id, user_id, title)
 VALUES

@@ -78,6 +78,30 @@
             has {{ n.count }} unread
             {% if n.count === 1 %} message {% else %} messages {% endif %}
           </p>
+        {% elif n.type === 'REPLY_VM' %}
+          <p>
+            <a href="/me/vms/{{ n.vm_id }}">Your Visitor Message</a>
+            {% if n.count === 1 %}
+              has a new reply
+            {% else %}
+              has {{ n.count }} new replies
+            {% endif %}
+          </p>
+        {% elif n.type === 'TOPLEVEL_VM' %}
+          <p>
+            You have a new <a href="/me/vms/{{ n.vm_id }}">Visitor Message</a> from
+            <a href="/users/{{ n.from_user.slug }}">{{ n.from_user.uname }}</a>
+          </p>
+          <div class="panel panel-default">
+            <div class="panel-body" style="max-height: 100px; overflow: auto;">
+              {{ n.vm.html|safe }}
+            </div>
+            {% if n.count > 1 %}
+              <div class="panel-footer">
+                Replies: {{ n.count-1 }}
+              </div>
+            {% endif %}
+          </div>
         {% elif n.type === 'CONVO' %}
           <p>
             <!-- <a href="/users/{{ n.from_user.slug }}">{{ n.from_user.uname }}</a> -->

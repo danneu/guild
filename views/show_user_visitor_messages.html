@@ -1,0 +1,189 @@
+{% extends 'show_user.html' %}
+{% import './macros/macros.html' as macros %}
+{% import './macros/paginate.html' as paginate %}
+
+{% block child %}
+
+  <style>
+    .child-vms li {
+      background-color: #666;
+      margin-bottom: 10px;
+    }
+    #new-toplevel-vm-form {
+      border: 5px dotted #333;
+      padding: 0px 25px 15px 25px;
+    }
+  </style>
+
+  <p class="text-muted" style="margin-top: 10px;">
+    <span class="label label-info">Note</span> This feature is new and under construction
+  </p>
+
+  <a name="vms"></a>
+
+  {% if ctx.can(ctx.currUser, 'CREATE_VM') %}
+    <div id="new-toplevel-vm-form" style="display:none;">
+      <h3>New Visitor Messsage</h3>
+      <form action="{{ user.url }}/vms" method="post">
+        <textarea id="new-vm-input"
+                  placeholder="Click here and begin writing"
+                  name="markup"
+                  rows="6"
+                  class="form-control"></textarea>
+        <button type="submit" class="btn btn-primary">Create Visitor Message</button>
+      </form>
+    </div>
+  {% endif %}
+
+  <h3>
+    Visitor Messages
+
+    {% if ctx.can(ctx.currUser, 'CREATE_VM') %}
+      <button type="button" class="btn btn-primary new-vm-btn">
+        New Visitor Message
+      </button>
+    {% endif %}
+  </h3>
+
+  {% if user.toplevel_vms_count === 0 %}
+    <div class="well">
+      User has no visitor messages, yet
+    </div>
+  {% endif %}
+
+  {% for vm in vms %}
+    {{ macros.renderVm(vm, user) }}
+  {% endfor %}
+
+  <!-- New VM form -->
+
+    <li id="vm-reply-box-template" style="display: none;" class="vm-reply-box">
+      <div class="media">
+        <div class="media-left">
+          <a href="{{ ctx.currUser.url }}">
+            {% if ctx.currUser.avatar_url %}
+              <img src="{{ ctx.currUser.avatar_url }}" width="50">
+            {% else %}
+              <img src="https://placeholdit.imgix.net/~text?w=50&h=50" width="50">
+            {% endif %}
+          </a>
+        </div>
+        <div class="media-body" style="width:100%;">
+          <form action="{{ user.url }}/vms" method="post" style="margin-bottom: 10px;">
+            <input type="hidden" name="parent_vm_id" value="">
+            <textarea placeholder="Click here and begin writing"
+                      name="markup"
+                      rows="5"
+                      class="form-control"
+                      ></textarea>
+            <input type="submit" class="btn btn-primary" value="Submit Reply"
+                  style="margin-top: 10px;">
+            <button type="button" class="cancel-btn btn btn-default" style="margin-top: 10px;">Cancel</button>
+          </form>
+        </div>
+      </div>
+
+    </li>
+
+{% endblock %}
+
+{% block scripts %}
+    {% parent %}
+<script>
+  // Turn the new post editor into a bbcode editor
+  $('#new-vm-input').bbcode({
+    charLimit: {{ config.MAX_VM_LENGTH }},
+    height: '100px'
+  });
+</script>
+
+<script>
+  $('.vm-reply-btn').on('click', function(e) {
+    var $this = $(this);
+    var vmId = $this.attr('data-vm-id');
+
+    // Bail if this vm already has .vm-reply-box
+    if ($('#vm-' + vmId + ' .vm-reply-box').length > 0) {
+      return;
+    }
+
+    var $replyBox = $('#vm-reply-box-template').clone();
+    $replyBox.css('display', 'block');
+    // Remove id
+    $replyBox.attr('id', '');
+    // Hook up replybox cancel button
+    $replyBox.find('.cancel-btn').on('click', function() {
+      $replyBox.remove();
+    });
+    // Set the parent vm id
+    $replyBox.find('[name="parent_vm_id"]').val(vmId);
+
+    $('#vm-' + vmId + ' .child-vms').append($replyBox);
+
+    $replyBox.find('textarea').bbcode({
+      charLimit: 3000,
+      height: '100px'
+    });
+
+    $replyBox.find('textarea').focus();
+
+  });
+</script>
+
+<script>
+  $('.new-vm-btn').on('click', function() {
+    $(this).hide();
+    var onComplete = function() {
+      $('#new-toplevel-vm-form').find('textarea').focus();
+    };
+    $('#new-toplevel-vm-form').show(500, onComplete);
+  });
+</script>
+
+
+{#
+<script>
+  // Hook up reply button
+  $('.vm-reply-btn').on('click', function(e) {
+    var vmId = parseInt($(this).attr('data-vm-id') , 10);
+    var vmUname = parseInt($(this).attr('data-vm-uname'));
+    // Undefined unless this vm is a reply to another vm
+    var vmParentVmId = $(this).attr('data-parent-vm-id');
+    var $vm = $('#vm-' + vmId);
+    var $vmReplyBox = $('#vm-reply-box-template').clone();
+
+    // Remove other reply boxes
+    $('.vm-reply-box').remove();
+
+    // Remove the id since only the template has the id
+    $vmReplyBox.attr('id', '');
+
+    // Set the class to the generic class that all reply boxes have
+    // except for the template
+    $vmReplyBox.addClass('vm-reply-box')
+
+    // If this is a reply to a nested VM, then indent the reply box so it
+    // lines up with the nested VM
+    if (vmParentVmId)
+      $vmReplyBox.css('margin-left', '100px');
+
+    // Add click handler to cancel button that removes this box
+    $vmReplyBox.find('.cancel-btn').on('click', function(e) {
+      $vmReplyBox.remove();
+    });
+
+    // Set the value of input[name="parent-vm-id"]
+    $vmReplyBox.find('input[name="parent-vm-id"]').val(vmParentVmId || vmId);
+
+    // Load it into the DOM after the parent VM
+    $($vmReplyBox).insertAfter($vm);
+
+    // Now make it visible
+    $vmReplyBox.show();
+
+    // And focus it so user can immediately begin typing
+    $vmReplyBox.find('textarea').focus();
+  });
+</script>
+#}
+{% endblock %}

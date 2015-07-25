@@ -164,6 +164,7 @@
               {% if ctx.can(ctx.currUser, 'READ_USER_PM_SENT_COUNT', user) %}
                 <li>PMs: {{ user.pms_count }}</li>
               {% endif %}
+              <li>VMs: {{ user.toplevel_vms_count }}</li>
             </ul>
           </div>
         </div>
@@ -412,6 +413,11 @@
     <li class="{% if ctx.path === user.url %}active{% endif %}">
       <a href="{{ user.url }}#tabs">
         Recent Posts
+      </a>
+    </li>
+    <li class="{% if ctx.path === user.url + '/vms' %}active{% endif %}">
+      <a href="{{ user.url }}/vms#tabs">
+        Visitor Messages
       </a>
     </li>
     <li class="{% if ctx.path === user.url + '/trophies' %}active{% endif %}">
