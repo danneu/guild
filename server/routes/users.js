@@ -466,8 +466,6 @@ router.get('/users/:slug/trophies', function*() {
   this.assert(user, 404);
   user = pre.presentUser(user);
 
-  var statuses = yield db.findLatestStatusesForUserId(user.id);
-
   // TODO: Merge this query into the findUser query
   // Until then, only execute query if user's column cache indicates that
   // they actually have trophies
@@ -487,11 +485,23 @@ router.get('/users/:slug/trophies', function*() {
     function(t) { return -t.awarded_at; }
   ]);
 
+  var results = yield [
+    db.findLatestStatusesForUserId(user.id),
+    user.current_status_id ?
+      db.findStatusById(user.current_status_id) : function*(){},
+    this.currUser ?
+      db.findFriendshipBetween(this.currUser.id, user.id) : function*(){}
+  ];
+  var statuses = results[0];
+  user.current_status = results[1];
+  var friendship = results[2];
+
   yield this.render('show_user_trophies', {
     ctx: this,
     user: user,
     trophies: trophies,
-    statuses: statuses
+    statuses: statuses,
+    friendship: friendship
   });
 });
 
@@ -519,16 +529,23 @@ router.get('/users/:slug/vms', function*() {
   this.assert(user, 404);
   user = pre.presentUser(user);
 
-  // TODO: Run these queries in parallel
-  var statuses = yield db.findLatestStatusesForUserId(user.id);
-  var vms = yield db.findLatestVMsForUserId(user.id);
-  vms = vms.map(pre.presentVm);
+  var results = yield {
+    statuses: db.findLatestStatusesForUserId(user.id),
+    currStatus: user.current_status_id ?
+      db.findStatusById(user.current_status_id) : function*(){},
+    friendship: this.currUser ?
+      db.findFriendshipBetween(this.currUser.id, user.id) : function*(){},
+    vms: db.findLatestVMsForUserId(user.id)
+  };
+  user.current_status = results.currStatus;
+  results.vms = results.vms.map(pre.presentVm);
 
   yield this.render('show_user_visitor_messages', {
     ctx: this,
     user: user,
-    vms: vms,
-    statuses: statuses
+    vms: results.vms,
+    statuses: results.statuses,
+    friendship: results.friendship
   });
 });
 
