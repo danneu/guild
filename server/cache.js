@@ -63,9 +63,13 @@ module.exports = function() {
 
   cache = new Cache();
 
-  cache.once(function*() {
+  // cache.once(function*() {
+  //
+  // Every 60 seconds
+  // Need to fetch at interval now that homepage shows the latest reply
+  cache.every(1000 * 60, function*() {
     if (config.LATEST_RPGN_TOPIC_ID) {
-      var topic = yield db.findTopicById(config.LATEST_RPGN_TOPIC_ID);
+      var topic = yield db.findRGNTopicForHomepage(config.LATEST_RPGN_TOPIC_ID);
       this.set('latest-rpgn-topic', topic);
     }
   });

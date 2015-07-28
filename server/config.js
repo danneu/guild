@@ -26,6 +26,7 @@ exports.MAX_BIO_LENGTH = parseInt(process.env.MAX_BIO_LENGTH) || 3000;
 exports.MAX_VM_LENGTH = parseInt(process.env.MAX_VM_LENGTH) || 300;
 
 exports.LATEST_RPGN_TOPIC_ID = parseInt(process.env.LATEST_RPGN_TOPIC_ID) || undefined;
+exports.LATEST_RPGN_IMAGE_URL = process.env.LATEST_RPGN_IMAGE_URL || undefined;
 
 exports.CURRENT_FEEDBACK_TOPIC_ID = parseInt(process.env.CURRENT_FEEDBACK_TOPIC_ID, 10) || undefined;
 

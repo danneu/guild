@@ -400,18 +400,43 @@
   <div class="panel panel-default" style="background: transparent;">
     <div class="panel-body">
       <h4 style="margin-bottom: 20px;" class="text-center">
-        Latest RPGN
+        Latest Newsletter
       </h4>
       <div class="">
-        <a href="{{ latest_rpgn_topic.url }}">
-          {{ latest_rpgn_topic.title }}
-        </a><br>
-        <abbr class="timeago" title="{{ latest_rpgn_topic.created_at.toISOString() }}">
-          {{ latest_rpgn_topic.created_at|formatDate }}
-        </abbr>
-        {% if latest_rpgn_topic.created_at|isNewerThan({ days: 4 }) %}
-          <span style="color: #00a9a9; font-size: 75%;"><span style="border: 1px solid #51e0db; padding: 0px 3px;">FRESH</span></span>
+        {% if config.LATEST_RPGN_IMAGE_URL %}
+          <a href="{{ latest_rpgn_topic.url }}">
+            <img src="{{ config.LATEST_RPGN_IMAGE_URL }}" style="max-width: 100%;">
+          </a>
+        {% else %}
+          <a href="{{ latest_rpgn_topic.url }}">
+            {{ latest_rpgn_topic.title }}
+          </a>
         {% endif %}
+
+        <div class="text-center text-muted">
+          Posted
+          <abbr class="timeago" title="{{ latest_rpgn_topic.created_at.toISOString() }}">
+            {{ latest_rpgn_topic.created_at|formatDate }}
+          </abbr>
+          {% if latest_rpgn_topic.created_at|isNewerThan({ days: 4 }) %}
+            <span style="color: #00a9a9; font-size: 75%;"><span style="border: 1px solid #51e0db; padding: 0px 3px;">FRESH</span></span>
+          {% endif %}
+        </div>
+
+        <hr>
+
+            Latest post:
+            <a href="/users/{{ latest_rpgn_topic.latest_user.slug }}" style="color:white;text-decoration:underline;display:inline-block;">
+              {{ latest_rpgn_topic.latest_user.uname -}}
+            </a>
+                      <a href="/topics/{{ latest_rpgn_topic.latest_post.topic_id }}/ooc/first-unread" class="btn btn-default btn-xs">Go &rarr;</a>
+
+            <br>
+            <abbr class="timeago" title="{{ latest_rpgn_topic.latest_post.created_at.toISOString() }}">
+              {{ latest_rpgn_topic.latest_post.created_at|formatDate }}
+            </abbr>
+          </div>
+
       </div>
     </div>
   </div>

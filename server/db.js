@@ -1803,6 +1803,29 @@ exports.findAllUnames = function*() {
   return _.pluck(result.rows, 'uname');
 };
 
+////////////////////////////////////////////////////////////
+
+exports.findRGNTopicForHomepage = function*(topic_id) {
+  assert(topic_id);
+
+  var sql = m(function() {/*
+SELECT
+  t.id,
+  t.title,
+  t.created_at,
+  to_json(u.*) latest_user,
+  to_json(p.*) latest_post
+FROM topics t
+JOIN posts p ON t.latest_post_id = p.id
+JOIN users u ON p.user_id = u.id
+WHERE t.id = $1
+  */});
+
+  return yield queryOne(sql, [topic_id]);
+};
+
+////////////////////////////////////////////////////////////
+
 // Keep in sync with findTopicWithHasSubscribed
 exports.findTopicById = function*(topicId) {
   assert(topicId);
