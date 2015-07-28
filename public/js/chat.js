@@ -588,11 +588,12 @@ var App = React.createClass({
   },
   _renderChatMessage: function(m) {
     return el.span(
-      null,
+      {style: {display: 'table'}},
       el.a(
         {
           href: 'javascript:void(0)',
-          onClick: this._onUnameClick
+          onClick: this._onUnameClick,
+          className: 'message-uname-link'
         },
         el.code(
           {
@@ -711,9 +712,12 @@ var App = React.createClass({
                       tabIndex: 1,
                       className: 'message-item ' + class1
                     },
-                    el.code(
-                      null,
-                      helpers.formatMessageDate(m.created_at)
+                    el.span(
+                      {className: 'message-time'},
+                      el.code(
+                        null,
+                        helpers.formatMessageDate(m.created_at)
+                      )
                     ),
                     ' ',
                     this._renderMessage(m)
