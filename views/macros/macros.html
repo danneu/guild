@@ -183,6 +183,12 @@
     </div>
   {% endif %}
 
+  {% if user.active_trophy_id === 22 %}
+    <div style="color: #2ecc71; font-weight: bold; font-family: Georgia,Times,'Times New Roman',serif;">
+      Ceryneian Huntsman
+    </div>
+  {% endif %}
+
   {% if !ctx.currUser || (user.avatar_url && !ctx.currUser.hide_avatars) %}
     <div class="post-avatar"
          style="margin-top: 10px;">
