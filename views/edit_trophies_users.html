@@ -1,0 +1,35 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/trophies">Trophies</a></li>
+    <li><a href="/trophies/{{ record.trophy.id }}">{{ record.trophy.title }}</a></li>
+    <li>Edit awarding to {{ record.user.uname }}</li>
+  </ol>
+
+  <div class="page-header" style="border-color: #000">
+    <h1>Edit awarding to {{ record.user.uname }}</h1>
+  </div>
+
+  <form method="POST" action="/trophies-users/{{ record.id }}">
+    <input type="hidden" name="_method" value="PUT">
+    Message (BBCode):
+    <textarea id="markup-input"
+              placeholder="Click here and begin writing"
+              name="message-markup"
+              rows=10
+              class="form-control"
+    >{{ record.message_markup }}</textarea>
+    <button type="submit" class="btn btn-primary">Save</button>
+  </form>
+
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    $('#markup-input').bbcode({
+      charLimit: 3000
+    });
+  </script>
+{% endblock %}

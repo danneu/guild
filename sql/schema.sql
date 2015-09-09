@@ -752,3 +752,6 @@ CREATE TRIGGER update_user_vms_count_trigger
     AFTER INSERT OR DELETE ON vms
     FOR EACH ROW
     EXECUTE PROCEDURE update_user_vms_count();
+
+ALTER TABLE trophies_users
+ADD COLUMN id serial PRIMARY KEY;

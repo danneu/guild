@@ -2322,6 +2322,53 @@ app.get('/trophy-groups/:id/edit', function*() {
   });
 });
 
+// Show trophies-users bridge record edit form
+app.get('/trophies-users/:id/edit', function*() {
+  // Load
+  var record = yield db.findTrophyUserBridgeById(this.params.id);
+  this.assert(record, 404);
+
+  // Authorize
+  this.assertAuthorized(this.currUser, 'MANAGE_TROPHY_SYSTEM');
+
+  yield this.render('edit_trophies_users', {
+    ctx: this,
+    record: record
+  });
+});
+
+// Update trophies-users bridge record
+app.put('/trophies-users/:id', function*() {
+  // Load
+  var record = yield db.findTrophyUserBridgeById(this.params.id);
+  this.assert(record, 404);
+
+  // Authorize
+  this.assertAuthorized(this.currUser, 'MANAGE_TROPHY_SYSTEM');
+
+  this.validateParam('id').toInt();
+
+  this.validateBody('message-markup');
+  if (this.request.body['message-markup']) {
+    this.validateBody('message-markup')
+      .trim()
+      .isLength(3, 500, 'Message must be 3-500 chars');
+  }
+
+  var message_html;
+  if (this.vals['message-markup']) {
+    message_html = bbcode(this.vals['message-markup']);
+  }
+
+  yield db.updateTrophyUserBridge(
+    this.vals.id,
+    this.vals['message-markup'],
+    message_html
+  );
+
+  this.redirect('/trophies/' + record.trophy.id);
+});
+
 // Show trophy edit form
 app.get('/trophies/:id/edit', function*() {
   // Load

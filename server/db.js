@@ -2749,6 +2749,25 @@ RETURNING *
   return yield queryOne(sql, [id, title, desc_markup, desc_html]);
 };
 
+// Update trophy<->user bridge record
+//
+// message_markup Optional
+// message_html Optional
+exports.updateTrophyUserBridge = function*(id, message_markup, message_html) {
+  assert(Number.isInteger(id));
+
+  var sql = m(function() {/*
+UPDATE trophies_users
+SET
+  message_markup = $2,
+  message_html = $3
+WHERE id = $1
+RETURNING *
+  */});
+
+  return yield queryOne(sql, [id, message_markup, message_html]);
+};
+
 exports.deactivateCurrentTrophyForUserId = function*(user_id) {
   assert(_.isNumber(user_id));
 
@@ -2774,6 +2793,31 @@ WHERE id = $1
   return yield queryOne(sql, [user_id, trophy_id]);
 };
 
+////////////////////////////////////////////////////////////
+
+exports.findTrophyUserBridgeById = function*(id) {
+  debug('[findTrophyUserBridgeById] id=%j', id);
+  assert(id);
+
+  var sql = m(function() {/*
+SELECT 
+  tu.*,
+  to_json(t.*) AS trophy,
+  to_json(u.*) AS user
+FROM trophies_users tu
+JOIN trophies t ON tu.trophy_id = t.id
+JOIN users u ON tu.user_id = u.id
+WHERE tu.id = $1
+  */});
+
+  return yield queryOne(sql, [id]);
+};
+
+////////////////////////////////////////////////////////////
+
+// Deprecated now that I've added a primary key serial to trophies_users.
+//
+// Instead, use db.findTrophyUserBridgeById(id)
 exports.findTrophyByIdAndUserId = function*(trophy_id, user_id) {
   assert(_.isNumber(user_id));
   assert(_.isNumber(trophy_id));
@@ -2797,6 +2841,9 @@ SELECT
   winners.uname,
   winners.slug,
   tu.awarded_at,
+  tu.message_markup,
+  tu.message_html,
+  tu.id AS trophies_users_id,
   to_json(awarders.*) "awarded_by"
 FROM trophies_users tu
 JOIN users winners ON tu.user_id = winners.id

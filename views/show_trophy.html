@@ -65,6 +65,18 @@
               {{ winner.awarded_by.uname }}
             </a>
           {% endif %}
+
+          {% if ctx.can(ctx.currUser, 'MANAGE_TROPHY_SYSTEM') %}
+            <a href="/trophies-users/{{ winner.trophies_users_id}}/edit" class="btn btn-default btn-xs">
+              Edit
+            </a>
+          {% endif %}
+
+          {% if winner.message_markup %}
+            <ul>
+              <li>Message: {{ winner.message_html | safe }}</li>
+            </ul>
+          {% endif %}
         </li>
       {% endfor %}
     </ul>
