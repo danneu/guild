@@ -74,6 +74,12 @@
                   of {{ trophy.awarded_count }} awarded
                 </span>
 
+                {% if ctx.can(ctx.currUser, 'MANAGE_TROPHY_SYSTEM') %}
+                  <a href="/trophies-users/{{ trophy.trophies_users_id }}/edit" class="btn btn-default btn-xs">
+                    Edit
+                  </a>
+                {% endif %}
+
                 <br>
                 {% if trophy.group %}
                   This trophy is part of the

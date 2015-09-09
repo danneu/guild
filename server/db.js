@@ -2655,6 +2655,7 @@ SELECT
   tu.message_markup,
   tu.message_html,
   tu.n,
+  tu.id trophies_users_id,
   to_json(u1.*) awarded_by,
   to_json(tg.*) "group"
 FROM trophies t
