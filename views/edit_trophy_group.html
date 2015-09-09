@@ -11,6 +11,16 @@
     <h1>{{ group.title }}</h1>
   </div>
 
+  <div class="well">
+    <p>
+      The trophy-group aka contest description is a good place to describe
+      the contest in more detail and link to the contest's official topic.
+      Consider also linking to relevant places of interest like the
+      post that announces the winners, the voting/discussion topic,
+      and any other events related to the contest.
+    </p>
+  </div>
+
   <form method="POST" action="/trophy-groups/{{ group.id }}">
     <input type="hidden" name="_method" value="PUT">
     Title: <input type="text" name="title" class="form-control" value="{{ group.title }}">

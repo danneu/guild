@@ -17,6 +17,15 @@
     <h1>Edit Trophy: {{ trophy.title }}</h1>
   </div>
 
+  <div class="well">
+    <p>
+      The trophy description is a good place to explain what the trophy
+      represents and what its winners had to accomplish.
+      Consider including any relevant links like the post that announced
+      the winners of this trophy.
+    </p>
+  </div>
+
   <form method="POST" action="/trophies/{{ trophy.id }}">
     <input type="hidden" name="_method" value="PUT">
     Title: <input type="text" name="title" class="form-control" value="{{ trophy.title }}">
