@@ -2688,6 +2688,7 @@ exports.findTrophiesByGroupId = function*(group_id) {
 SELECT *
 FROM trophies t
 WHERE t.group_id = $1
+ORDER BY t.id ASC
   */});
   return yield queryMany(sql, [group_id]);
 };
