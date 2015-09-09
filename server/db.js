@@ -2728,6 +2728,27 @@ RETURNING *
   return yield queryOne(sql, [id, title, desc_markup, desc_html]);
 };
 
+// Update individual trophy
+//
+// title Required
+// description_markup Optional
+// description_html Optional
+exports.updateTrophy = function*(id, title, desc_markup, desc_html) {
+  assert(Number.isInteger(id));
+
+  var sql = m(function() {/*
+UPDATE trophies
+SET
+  title = $2,
+  description_markup = $3,
+  description_html = $4
+WHERE id = $1
+RETURNING *
+  */});
+
+  return yield queryOne(sql, [id, title, desc_markup, desc_html]);
+};
+
 exports.deactivateCurrentTrophyForUserId = function*(user_id) {
   assert(_.isNumber(user_id));
 

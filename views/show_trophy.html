@@ -13,6 +13,13 @@
   </ol>
 
   <div class="page-header" style="border-color: #000">
+    {% if ctx.can(ctx.currUser, 'UPDATE_TROPHY', trophy) %}
+      <a href="/trophies/{{ trophy.id }}/edit"
+         class="btn btn-default btn-xs pull-right"
+      >
+        Edit
+      </a>
+    {% endif %}
     <h1>Trophy: {{ trophy.title }}</h1>
     {% if trophy.group %}
       Part of the

@@ -57,6 +57,7 @@ function can(user, action, target) {
       if (user.role === 'conmod' && _.contains(CONTEST_FORUMS, target.forum_id))
         return true;
       return false;
+    case 'UPDATE_TROPHY': // target is trophy
     case 'CREATE_TROPHY_GROUP': // no target
     case 'UPDATE_TROPHY_GROUP': // target is trophy-group
       // Guests can't

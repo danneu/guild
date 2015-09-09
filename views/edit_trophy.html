@@ -1,0 +1,41 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/trophy-groups">Trophy Groups</a></li>
+    {% if trophy.group %}
+      <li><a href="/trophy-groups/{{ trophy.group.id }}">
+        {{ trophy.group.title }}
+      </a></li>
+    {% endif %}
+    <li>{{ trophy.title }}</li>
+    <li>Edit</li>
+  </ol>
+
+  <div class="page-header" style="border-color: #000">
+    <h1>Edit Trophy: {{ trophy.title }}</h1>
+  </div>
+
+  <form method="POST" action="/trophies/{{ trophy.id }}">
+    <input type="hidden" name="_method" value="PUT">
+    Title: <input type="text" name="title" class="form-control" value="{{ trophy.title }}">
+    Description (BBCode):
+    <textarea id="markup-input"
+              placeholder="Click here and begin writing"
+              name="description-markup"
+              rows=10
+              class="form-control"
+    >{{ trophy.description_markup }}</textarea>
+    <button type="submit" class="btn btn-primary">Save</button>
+  </form>
+
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    $('#markup-input').bbcode({
+      charLimit: 3000
+    });
+  </script>
+{% endblock %}

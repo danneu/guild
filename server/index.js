@@ -2322,6 +2322,59 @@ app.get('/trophy-groups/:id/edit', function*() {
   });
 });
 
+// Show trophy edit form
+app.get('/trophies/:id/edit', function*() {
+  // Load
+  var trophy = yield db.findTrophyById(this.params.id);
+  this.assert(trophy, 404);
+
+  // Authorize
+  this.assertAuthorized(this.currUser, 'UPDATE_TROPHY', trophy);
+
+  yield this.render('edit_trophy', {
+    ctx: this,
+    trophy: trophy
+  });
+});
+
+// Update trophy
+app.put('/trophies/:id', function*() {
+  // Load
+  var trophy = yield db.findTrophyById(this.params.id);
+  this.assert(trophy, 404);
+
+  // Authorize
+  this.assertAuthorized(this.currUser, 'UPDATE_TROPHY', trophy);
+
+  this.validateParam('id').toInt();
+
+  this.validateBody('title')
+    .notEmpty('Title required')
+    .trim()
+    .isLength(3, 50, 'Title must be 3-50 chars');
+
+  this.validateBody('description-markup');
+  if (this.request.body['description-markup']) {
+    this.validateBody('description-markup')
+      .trim()
+      .isLength(3, 3000, 'Description must be 3-3000 chars');
+  }
+
+  var description_html;
+  if (this.vals['description-markup']) {
+    description_html = bbcode(this.vals['description-markup']);
+  }
+
+  yield db.updateTrophy(
+    this.vals.id,
+    this.vals.title,
+    this.vals['description-markup'],
+    description_html
+  );
+
+  this.redirect('/trophies/' + trophy.id);
+});
+
 app.get('/trophy-groups/:id', function*() {
   var group = yield db.findTrophyGroupById(this.params.id);
 
