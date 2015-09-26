@@ -1,0 +1,117 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/current-sidebar-contest">Current Contest Command Center</a></li>
+    <li class="active">Edit</li>
+  </ol>
+
+  <div class="page-header" style="border-color: #000">
+    <h3>Edit Current Sidebar Contest</h3>
+  </div>
+
+  <div class="row">
+    <div class="col-md-8 col-md-offset-2">
+      <form action="/current-sidebar-contest" method="POST" class="form-horizontal">
+        <input type="hidden" name="_method" value="PUT">
+
+        <div class="panel panel-default no-select"
+             style="border-color: #000">
+          <!--
+              PANEL BODY
+              -->
+          <div class="panel-body">
+
+            <!-- title -->
+            <div class="form-group">
+              <label for="title-input" class="col-sm-3 control-label">
+                Title:
+              </label>
+              <div class="col-sm-9">
+                <input id="title-input" type="text" name="title" class="form-control" value="{{ currentContest.title }}" required>
+
+                <div class="help-block">
+                  Examples: <code>RPGC #5: Fear</code> OR <code>TTL: The Fourth Labour</code>
+                </div>
+              </div>
+            </div>
+
+            <!-- topic_url -->
+            <div class="form-group">
+              <label for="topic-url-input" class="col-sm-3 control-label">
+                Topic URL:
+              </label>
+              <div class="col-sm-9">
+                <input id="topic-url-input" type="text" name="topic_url" class="form-control" value="{{ currentContest.topic_url }}" placeholder="URL of the official contest info thread" required>
+              </div>
+            </div>
+
+            <!-- deadline -->
+            <div class="form-group">
+              <label for="deadline-input" class="col-sm-3 control-label">
+                Deadline:
+              </label>
+              <div class="col-sm-9">
+                <input id="deadline-input" type="text" name="deadline" class="form-control" value="{{ currentContest.deadline }}" required>
+
+                <div class="help-block">
+                  Examples: <code>October 4th</code> OR <code>CLOSED</code>
+                </div>
+              </div>
+            </div>
+
+            <!-- image_url -->
+            <div class="form-group">
+              <label for="image-url-input" class="col-sm-3 control-label">
+                Image URL: (Optional)
+              </label>
+              <div class="col-sm-9">
+                <input id="image-url-input" type="text" name="image_url" class="form-control" value="{{ currentContest.image_url }}" placeholder="http://example.com/path/to/image.png">
+
+                <div class="help-block">
+                  Ideally upload it to <a href="http://imgur.com/" target="_blank">imgur.com</a> and ensure it is no wider than 231px. Consider cropping the height so it's around 110px tall to avoid taking up too much vertical sidebar room. (You can resize and crop on Imgur by clicking its "Edit" button)
+                </div>
+              </div>
+            </div>
+
+            <!-- description -->
+            <!-- <div class="form-group"> -->
+            <!--   <label for="description-input" class="col-sm-3 control-label"> -->
+            <!--     Description: (Optional) -->
+            <!--   </label> -->
+            <!--   <div class="col-sm-9"> -->
+            <!--     <textarea id="description-input" name="description" class="form-control" value="{{ ctx.flash.params.description }}" rows="6"></textarea> -->
+
+            <!--     <div class="help-block"> -->
+
+            <!--     </div> -->
+            <!--   </div> -->
+            <!-- </div> -->
+
+          </div> <!-- /.panel-body -->
+          <!--
+              PANEL FOOTER
+              -->
+          <div class="panel-footer" style="border-color: #000">
+            <div class="text-right">
+              <a href="/current-sidebar-contest" style="display: inline-block; margin-right: 10px; color: white;">
+                Cancel
+              </a>
+              <button type="submit" class="btn btn-primary">
+                Update Contest
+              </button>
+            </div>
+          </div> <!-- /.panel-footer -->
+        </div> <!-- /.panel -->
+      </form>
+    </div> <!-- /col -->
+  </div> <!-- /.row -->
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  $('#title-input').focus();
+</script>
+{% endblock %}

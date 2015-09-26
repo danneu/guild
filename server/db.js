@@ -2801,7 +2801,7 @@ exports.findTrophyUserBridgeById = function*(id) {
   assert(id);
 
   var sql = m(function() {/*
-SELECT 
+SELECT
   tu.*,
   to_json(t.*) AS trophy,
   to_json(u.*) AS user
@@ -3487,4 +3487,79 @@ WHERE to_user_id = $1 AND vm_id = $2
   */});
 
   yield query(sql, [to_user_id, vm_id]);
+};
+
+////////////////////////////////////////////////////////////
+// current_sidebar_contests
+
+exports.clearCurrentSidebarContest = function*() {
+  var sql = m(function() {/*
+    UPDATE current_sidebar_contests
+    SET is_current = false
+  */});
+
+  return yield query(sql);
+};
+
+exports.updateCurrentSidebarContest = function*(id, data) {
+  assert(Number.isInteger(id));
+  assert(_.isString(data.title) || _.isUndefined(data.title));
+  assert(_.isString(data.topic_url) || _.isUndefined(data.topic_url));
+  assert(_.isString(data.deadline) || _.isUndefined(data.deadline));
+  assert(_.isString(data.image_url) || _.isUndefined(data.image_url));
+  assert(_.isString(data.description) || _.isUndefined(data.description));
+  assert(_.isBoolean(data.is_current) || _.isUndefined(data.is_current));
+
+  // Reminder: Only COALESCE things that are not nullable
+  var sql = m(function() {/*
+    UPDATE current_sidebar_contests
+    SET
+      title       = COALESCE($2, title),
+      topic_url   = COALESCE($3, topic_url),
+      deadline    = COALESCE($4, deadline),
+      image_url   = $5,
+      description = $6,
+      is_current  = COALESCE($7, is_current)
+    WHERE id = $1
+    RETURNING *
+  */});
+
+  return yield queryOne(sql, [
+    id, data.title, data.topic_url, data.deadline,
+    data.image_url, data.description, data.is_current
+  ]);
+};
+
+exports.insertCurrentSidebarContest = function*(data) {
+  assert(_.isString(data.title));
+  assert(_.isString(data.topic_url));
+  assert(_.isString(data.deadline));
+  assert(_.isString(data.image_url) || _.isUndefined(data.image_url));
+  assert(_.isString(data.description) || _.isUndefined(data.description));
+
+  var sql = m(function() {/*
+    INSERT INTO current_sidebar_contests
+    (title, topic_url, deadline, image_url, description, is_current)
+    VALUES
+    ($1, $2, $3, $4, $5, true)
+    RETURNING *
+  */});
+
+  return yield queryOne(sql, [
+    data.title, data.topic_url, data.deadline, data.image_url,
+    data.description
+  ]);
+};
+
+// Returns object or undefined
+exports.getCurrentSidebarContest = function*() {
+  var sql = m(function() {/*
+    SELECT *
+    FROM current_sidebar_contests
+    WHERE is_current = true
+    ORDER BY id DESC
+    LIMIT 1
+  */});
+
+  return yield queryOne(sql);
 };

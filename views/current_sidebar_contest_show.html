@@ -1,0 +1,79 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li>
+      <a href="/">Home</a>
+    </li>
+  </ol>
+
+  <div class="page-header" style="border-color: #000">
+    <h3>Current Sidebar Contest</h3>
+    <p>
+      This form allows you to configure what the homepage sidebar displays on
+      the "Current Contest" panel. Any changes you make will take up to 45 seconds
+      to be reflected on the homeapge due to caching.
+    </p>
+  </div>
+
+  <div class="well">
+    <a href="/current-sidebar-contest/new" class="btn btn-success">
+      New Current Contest
+    </a>
+    Create a new contest to be displayed in the sidebar.
+  </div>
+
+  {% if !currentContest %}
+    <div class="well">
+      <h3>Current Contest</h3>
+      There is no current contest, so there will be no contest panel on the sidebar.
+    </div>
+  {% endif %}
+
+  {% if currentContest %}
+    <div class="well">
+      <h3>
+        Current Contest
+
+        <a href="/current-sidebar-contest/edit" class="btn btn-default">
+          Edit this contest
+        </a>
+      </h3>
+
+
+      <pre>{{ JSON.stringify(currentContest, null, '  ') }}</pre>
+
+      <div>
+        <p class="lead">Image Preview:</p>
+        {% if currentContest.image_url %}
+          <img src="{{ currentContest.image_url }}" class="thumbnail">
+        {% else %}
+          -- No image_url provided for this contest --
+        {% endif %}
+      </div>
+
+    </div>
+
+    <div class="well">
+      <form action="/current-sidebar-contest" method="POST">
+        <input type="hidden" name="_method" value="DELETE">
+        <button type="submit" class="btn btn-danger" id="clear-btn">
+          Clear Current Contest
+        </button>
+        Press this to hide the Current Contest panel on the homepage sidebar
+      </form>
+    </div>
+  {% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+    <script type="text/javascript">
+      $('#clear-btn').on('click', function(e) {
+        var result = confirm('Are you sure?');
+        if (!result) {
+          return false;
+        }
+      });
+    </script>
+{% endblock %}

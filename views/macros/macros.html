@@ -451,37 +451,45 @@
 
   <!-- Current contest -->
 
-  <div class="panel panel-default" style="background: transparent;">
-    <div class="panel-body">
-      <h4 style="margin-bottom: 20px;" class="text-center">
-        <img src="/img/trophy.png" height="32" width="32"
-             alt="Contests Icon"
-             title="Contests Icon"> Current Contest
-      </h4>
-      <div class="text-center">
-        <!-- Link to contest -->
-        <a href="http://www.roleplayerguild.com/topics/86252-rpgc-5-fear/ooc">RPGC #5: FEAR</a>
-        <!-- Prompt -->
+  {% if ctx.currUser.role|isIn(['admin', 'conmod']) %}
+    <a href="/current-sidebar-contest" class="text-muted text-center" style="display: block;">
+      Manage Current Contest
+    </a>
+  {% endif %}
 
-        <a href="http://www.roleplayerguild.com/topics/86252-rpgc-5-fear/ooc">
-          <img style="max-width: 100%; border: 3px solid #333;"
-               src="http://i.imgur.com/xtBaWGl.jpg"
-          >
-        </a>
+  {% if currentContest %}
+    <div class="panel panel-default" style="background: transparent;">
+      <div class="panel-body">
+        <h4 style="margin-bottom: 20px;" class="text-center">
+          <img src="/img/trophy.png" height="32" width="32"
+              alt="Contests Icon"
+              title="Contests Icon"> Current Contest
+        </h4>
+        <div class="text-center">
+          <!-- Link to contest -->
+          <a href="{{ currentContest.topic_url }}">{{ currentContest.title }}</a>
+          <!-- Prompt -->
 
-        <!-- Deadline -->
-        <!-- <div style="margin-top: 15px;" class="text-muted text-left"><small>Submit entry by: <u>March 18th</u></small></div> -->
-        <div style="margin-top: 15px;" class="text-muted text-left"><small>Submit entry by: <u>October 4th</u></small></div>
-        <!-- <hr> -->
-        <!-- <p><small>The contest is now closed to submissions.<br>We need your help to determine the winner.</small></p> -->
+          <a href="{{ currentContest.topic_id }}">
+            {% if currentContest.image_url %}
+              <img style="max-width: 100%; border: 3px solid #333;" src="{{ currentContest.image_url }}">
+            {% endif %}
+          </a>
 
-        <!-- <a class="btn btn-primary btn-xs" href="http://www.roleplayerguild.com/topics/83022-rpgc-3-voting-and-discussion/ooc">Vote & Discuss</a> -->
-        <!-- <a class="btn btn-primary btn-xs" href="http://www.roleplayerguild.com/topics/83022-rpgc-3-voting-and-discussion/ooc">Vote</a> -->
-        <!-- <a class="btn btn-default btn-xs" href="http://www.roleplayerguild.com/topics/83022-rpgc-3-voting-and-discussion/ooc">Discuss</a> -->
+          <!-- Deadline -->
+          <!-- <div style="margin-top: 15px;" class="text-muted text-left"><small>Submit entry by: <u>March 18th</u></small></div> -->
+          <div style="margin-top: 15px;" class="text-muted text-left"><small>Submit entry by: <u>{{ currentContest.deadline }}</u></small></div>
+          <!-- <hr> -->
+          <!-- <p><small>The contest is now closed to submissions.<br>We need your help to determine the winner.</small></p> -->
 
+          <!-- <a class="btn btn-primary btn-xs" href="http://www.roleplayerguild.com/topics/83022-rpgc-3-voting-and-discussion/ooc">Vote & Discuss</a> -->
+          <!-- <a class="btn btn-primary btn-xs" href="http://www.roleplayerguild.com/topics/83022-rpgc-3-voting-and-discussion/ooc">Vote</a> -->
+          <!-- <a class="btn btn-default btn-xs" href="http://www.roleplayerguild.com/topics/83022-rpgc-3-voting-and-discussion/ooc">Discuss</a> -->
+
+        </div>
       </div>
     </div>
-  </div>
+  {% endif %}
 
   <!-- Friends -->
 

@@ -175,5 +175,10 @@ module.exports = function() {
     console.log('[cache.js] Skipping chat-server stats ping since CHAT_SERVER_URL is not set');
   }
 
+  // Update current-sidebar-contest every 45 seconds
+  cache.every(1000 * 45, function*() {
+    this.set('current-sidebar-contest', yield db.getCurrentSidebarContest());
+  });
+
   return cache;
 };
