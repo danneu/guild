@@ -755,3 +755,18 @@ CREATE TRIGGER update_user_vms_count_trigger
 
 ALTER TABLE trophies_users
 ADD COLUMN id serial PRIMARY KEY;
+
+------------------------------------------------------------
+
+CREATE TABLE current_sidebar_contests (
+  id         SERIAL  PRIMARY KEY,
+  --
+  title      text    NOT NULL,
+  topic_url  text    NOT NULL,
+  deadline   text    NOT NULL, -- e.g. 'October 4th' | 'CLOSED'
+  is_current boolean NOT NULL DEFAULT true,
+  image_url  text    NULL,
+  description text   NULL,
+  --
+  created_at timestamptz NOT NULL DEFAULT NOW()
+);

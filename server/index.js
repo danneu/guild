@@ -689,7 +689,8 @@ app.use(route.get('/', function*() {
     // For sidebar
     latestChecks: cache.get('latest-checks').map(pre.presentTopic),
     latestRoleplays: cache.get('latest-roleplays').map(pre.presentTopic),
-    latestStatuses: cache.get('latest-statuses').map(pre.presentStatus)
+    latestStatuses: cache.get('latest-statuses').map(pre.presentStatus),
+    currentContest: cache.get('current-sidebar-contest')
   });
 }));
 
@@ -2738,6 +2739,125 @@ app.get('/chatlogs/:when', function*() {
 });
 
 ////////////////////////////////////////////////////////////
+// current_sidebar_contests
 
-app.listen(config.PORT);
-console.log('Listening on ' + config.PORT);
+// Show the current-sidebar-contest form which is what's displayed
+// on the Current Contest sidebar panel
+app.get('/current-sidebar-contest', function*() {
+  // Ensure user is an admin or conmod
+  this.assert(this.currUser && _.contains(['admin', 'conmod'], this.currUser.role), 404);
+
+  var currentContest = yield db.getCurrentSidebarContest();
+
+  yield this.render('current_sidebar_contest_show', {
+    ctx: this,
+    currentContest: currentContest
+  });
+});
+
+// Show create form
+app.get('/current-sidebar-contest/new', function*() {
+  // Ensure user is an admin or conmod
+  this.assert(this.currUser && _.contains(['admin', 'conmod'], this.currUser.role), 404);
+
+  yield this.render('current_sidebar_contest_new', {
+    ctx: this
+  });
+});
+
+// Show edit form
+app.get('/current-sidebar-contest/edit', function*() {
+  // Ensure user is an admin or conmod
+  this.assert(this.currUser && _.contains(['admin', 'conmod'], this.currUser.role), 404);
+
+  var currentContest = yield db.getCurrentSidebarContest();
+
+  // Can only go to /edit if there's actually a contest to edit
+  if (!currentContest) {
+    this.flash = { message: ['danger', 'There is no current contest to edit. Did you want to create a new one?'] };
+    this.redirect('/current-sidebar-contest');
+    return;
+  }
+
+  yield this.render('current_sidebar_contest_edit', {
+    ctx: this,
+    currentContest: currentContest
+  });
+});
+
+// Update current contest
+//
+// Keep in sync with the POST (creation) route
+app.put('/current-sidebar-contest', function*() {
+  // Ensure user is an admin or conmod
+  this.assert(this.currUser && _.contains(['admin', 'conmod'], this.currUser.role), 404);
+
+  // Validation
+
+  this.validateBody('title').notEmpty().isString().tap(s => s.trim());
+  this.validateBody('topic_url').notEmpty().isString().tap(s => s.trim());
+  this.validateBody('deadline').notEmpty().isString().tap(s => s.trim());
+  this.validateBody('image_url').tap(url => url || undefined);
+
+  // Ensure there is a current contest to update
+
+  var currentContest = yield db.getCurrentSidebarContest();
+
+  // Can only update if there's actually a contest to edit
+  if (!currentContest) {
+    this.flash = { message: ['danger', 'There is no current contest to update. If you encounter this message, can you tell Mahz what you did to get here? Because you should not see this message under normal circumstances.'] };
+    this.redirect('/current-sidebar-contest');
+    return;
+  }
+
+  // Save the changes to the current contest
+
+  yield db.updateCurrentSidebarContest(currentContest.id, {
+    title:     this.vals.title,
+    topic_url: this.vals.topic_url,
+    deadline:  this.vals.deadline,
+    image_url: this.vals.image_url
+  });
+
+  this.flash = { message: ['success', 'Contest updated'] };
+  this.redirect('/current-sidebar-contest');
+});
+
+// Create new sidebar contest
+app.post('/current-sidebar-contest', function*() {
+  // Ensure user is an admin or conmod
+  this.assert(this.currUser && _.contains(['admin', 'conmod'], this.currUser.role), 404);
+
+  // Validation
+
+  this.validateBody('title').notEmpty().isString().tap(s => s.trim());
+  this.validateBody('topic_url').notEmpty().isString().tap(s => s.trim());
+  this.validateBody('deadline').notEmpty().isString().tap(s => s.trim());
+  this.validateBody('image_url').tap(url => url || undefined);
+
+  var currentContest = yield db.insertCurrentSidebarContest({
+    title:     this.vals.title,
+    topic_url: this.vals.topic_url,
+    deadline:  this.vals.deadline,
+    image_url: this.vals.image_url
+  });
+
+  this.flash = { message: ['success', 'Current contest created'] };
+  this.redirect('/current-sidebar-contest');
+});
+
+app.del('/current-sidebar-contest', function*() {
+  // Ensure user is an admin or conmod
+  this.assert(this.currUser && _.contains(['admin', 'conmod'], this.currUser.role), 404);
+
+  yield db.clearCurrentSidebarContest();
+
+  this.flash = { message: ['success', 'Current contest cleared'] };
+  this.redirect('/current-sidebar-contest');
+});
+
+////////////////////////////////////////////////////////////
+
+app.listen(config.PORT, function() {
+  console.log('Listening on', config.PORT);
+});
