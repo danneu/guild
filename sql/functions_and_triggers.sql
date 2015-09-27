@@ -14,15 +14,6 @@ CREATE UNIQUE INDEX cp_uniq_convoId_userId ON convos_participants (convo_id, use
 CREATE INDEX convos_id_latestPmId_DESC ON convos (id, latest_pm_id DESC);
 CREATE INDEX ON notifications (to_user_id);
 
--- Remove this index, it was replaced by topics_sort_1
-CREATE INDEX topics_moved_at_latest_post_at ON topics (
-  COALESCE(moved_at, latest_post_at) DESC
-);
-
-CREATE INDEX topics_sort_1 ON topics (
-  is_sticky DESC, COALESCE(moved_at, latest_post_at) DESC
-);
-
 -- To fetch a user's most recent rating
 CREATE INDEX ON ratings (created_at DESC);
 CREATE INDEX ON ratings (from_user_id);
