@@ -473,6 +473,9 @@ exports.escapeHtml = function(unsafe) {
 //       expires: belt.cookieDate(belt.futureDate({ years: 1 }))
 //     });
 //
+// Update: Don't think I actually need this. Reverted login back from
+// using cookieDate. Will get feedback from user having problems.
+//
 exports.cookieDate = function(date) {
   var padNum = function(n) {
     return n < 10 ? '0' + n : n;
