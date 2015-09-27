@@ -14,7 +14,7 @@ We are an ever-growing community of enthusiastic and dedicated play-by-post role
 [*]Feeling a little overwhelmed? It is [b]highly[/b] recommended that you read the [url=http://www.roleplayerguild.com/topics/4958/posts/ooc]New User's Guide[/url], which explains the various purposes of our different subforums and is full of useful links & information.
 [*]Please familiarize yourself with the [url=http://www.roleplayerguild.com/topics/531/posts/ooc]Fundamental Rules of the Guild[/url]. Don't worry, there aren't many.
 [*]The Guild is currently undergoing development. Features that are missing will be implemented in the future and existing functionality will keep improving. Keep an eye on [url=http://www.roleplayerguild.com/topics/75056/posts/ooc]Mahz's Dev Journal[/url] to stay up to date with the changes.
-[*]Last but not least, the [url=http://www.roleplayerguild.com/forums/2]Introduce Yourself[/url] subforum is a great way to introduce yourself to our community and make a good first impression. Also be sure to check out the [url=http://widget00.mibbit.com/?settings=c2129339a43d8c49d86c34fa8dff7610&server=irc.foonetic.net&channel=%23Roleplayerguild]IRC Chatroom[/url] where our members frequently hang out.[/list]
+[*]Last but not least, the [url=http://www.roleplayerguild.com/forums/2]Introduce Yourself[/url] subforum is a great way to introduce yourself to our community and make a good first impression. Also be sure to check out the [url=http://www.roleplayerguild.com/chat]Guild's Chat[/url] where our members frequently hang out.[/list]
 
 We hope you enjoy your stay at the Roleplayer Guild. :sun
 
