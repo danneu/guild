@@ -4,7 +4,7 @@
   },
   "scripts": {
     "start": "node --harmony --max_old_space_size=200 ./server",
-    "start-dev": "env $(cat .env | xargs) nodemon --harmony --expose-gc ./server | bunyan",
+    "start-dev": "env $(cat .env | xargs) nodemon --harmony --expose-gc ./server",
     "start-sandbox": "env $(cat .env | xargs) node --harmony --expose-gc ./server/sandbox",
     "start-sandbox-nodemon": "env $(cat .env | xargs) nodemon --harmony --expose-gc ./server/sandbox",
     "reset-db": "env $(cat .env | xargs) node --harmony ./server/reset_db",
