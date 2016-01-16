@@ -43,9 +43,9 @@ The BBCode editor, the preview button, and the BBCode error output are implement
 
 ## Setup and Install
 
-The Guild is a Node.js app (v0.11.x) that talks to a Postgres database.
+The Guild is a Node.js app that talks to a Postgres database.
 
-- You'll specifically need the latest version of Node v0.11.x (unstable) for your system: http://blog.nodejs.org/2014/09/24/node-v0-11-14-unstable/. The Guild won't run on Node v0.10.x (stable).
+- Install the latest stable version of Node (v5.4.x).
 
 - The Guild depends on the `plv8` Postgres extension.
 
@@ -64,7 +64,7 @@ The Guild is a Node.js app (v0.11.x) that talks to a Postgres database.
 
 - The Guild comes with a command that rebuilds the database with tables and fills them with some data to play with:
 
-        npm run-script reset-db
+        npm run reset-db
 
 - Now you can launch the server:
 
