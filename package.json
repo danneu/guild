@@ -1,6 +1,6 @@
 {
   "engines": {
-    "node": "0.12.x"
+    "node": "5.4.x"
   },
   "scripts": {
     "start": "node --harmony --max_old_space_size=200 ./server",
