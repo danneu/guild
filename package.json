@@ -14,6 +14,7 @@
     "type": "git",
     "url": "https://github.com/danneu/guild"
   },
+  "license": "MIT",
   "dependencies": {
     "autolinker": "0.22.0",
     "aws-sdk": "2.1.21",
