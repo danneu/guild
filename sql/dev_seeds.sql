@@ -149,3 +149,28 @@ VALUES
  (1, 1, 4, 1, 'A note', 'A note')
 ,(4, 1, 4, 2, 'Note 2', 'Note 2')
 ;
+
+
+------------------------------------------------------------
+-- ARENA
+------------------------------------------------------------
+
+INSERT INTO arena_outcomes (topic_id, user_id, outcome, profit, inserted_by)
+VALUES
+-- foo=1 wins 2
+ (1, 1, 'WIN', 100, 1)
+,(2, 1, 'WIN', 100, 1)
+-- bar=2
+,(1, 2, 'DRAW', 50, 1)
+,(2, 2, 'LOSS', 0, 1)
+;
+
+-- foo=1
+UPDATE users
+SET arena_wins = 2, arena_losses = 0, arena_draws = 0, show_arena_stats = true
+WHERE id = 1;
+
+-- bar=2
+UPDATE users
+SET arena_wins = 0, arena_losses = 1, arena_draws = 1, show_arena_stats = true
+WHERE id = 2;

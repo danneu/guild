@@ -3569,30 +3569,6 @@ ORDER BY id ASC
   return yield queryMany(sql);
 };
 
-exports.getMiniArenaLeaderboard = function*() {
-  const sql = `
-    SELECT
-      uname,
-      slug,
-      arena_wins,
-      arena_losses,
-      arena_draws,
-      arena_points
-    FROM users
-    WHERE
-      (arena_wins > 0 OR arena_losses > 0 OR arena_draws > 0)
-      AND show_arena_stats = true
-    ORDER BY
-      arena_points DESC,
-      arena_wins DESC,
-      arena_losses ASC,
-      arena_draws DESC
-    LIMIT 5
-  `;
-
-  return yield queryMany(sql);
-};
-
 ////////////////////////////////////////////////////////////
 
 // Returns [{when: '2015-7-25', count: 64}, ...]
@@ -3783,4 +3759,34 @@ exports.getCurrentSidebarContest = function*() {
   `;
 
   return yield queryOne(sql);
+};
+
+// Grabs info necessary to show the table on /arena-fighters
+//
+// TODO: Replace getminileaderboard with this, just
+// pass in a limit
+exports.getArenaLeaderboard = function*(limit) {
+  limit = limit || 1000;
+  assert(Number.isInteger(limit));
+
+  const sql = `
+SELECT
+  uname,
+  slug,
+  arena_wins,
+  arena_losses,
+  arena_draws,
+  arena_points
+FROM users
+WHERE (arena_wins > 0 OR arena_losses > 0 OR arena_draws > 0)
+  AND show_arena_stats = true
+ORDER BY
+  arena_points DESC,
+  arena_wins DESC,
+  arena_losses ASC,
+  arena_draws DESC
+LIMIT $1
+  `;
+
+  return yield queryMany(sql, [limit]);
 };

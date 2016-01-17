@@ -2814,6 +2814,15 @@ app.del('/current-sidebar-contest', function*() {
   this.redirect('/current-sidebar-contest');
 });
 
+app.get('/arena-fighters', function*() {
+  const fighters = yield db.getArenaLeaderboard();
+
+  yield this.render('arena_fighters', {
+    ctx: this,
+    fighters
+  });
+});
+
 ////////////////////////////////////////////////////////////
 
 app.listen(config.PORT, function() {

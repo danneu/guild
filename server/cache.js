@@ -151,7 +151,7 @@ module.exports = function() {
 
   // Every hour
   cache.every(1000 * 60 * 60 * 1, function*() {
-    this.set('arena-leaderboard', yield db.getMiniArenaLeaderboard());
+    this.set('arena-leaderboard', yield db.getArenaLeaderboard(5));
   });
 
   // Every 12 seconds
