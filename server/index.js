@@ -18,7 +18,6 @@ app.use(require('koa-body')({
   formLimit: '25mb'
 }));
 app.use(require('koa-methodoverride')('_method'));
-var route = require('koa-route');
 const nunjucksRender = require('koa-nunjucks-render');
 // Node
 var util = require('util');
@@ -277,9 +276,6 @@ app.use(function*(next) {
   }
 });
 
-// TODO: Migrate from route to koa-router.
-// For one, it lets koa-validate's checkParams work since it puts the params
-// in the koa context
 // - Create middleware before this
 app.use(require('koa-router')(app));
 
@@ -534,22 +530,22 @@ app.post('/posts/:postId/rate', function*() {
 //
 // Logout
 //
-app.use(route.post('/me/logout', function *() {
+app.post('/me/logout', function *() {
   if (this.currUser)
     yield db.logoutSession(this.currUser.id, this.cookies.get('sessionId'));
   this.flash = { message: ['success', 'Session terminated'] };
   this.redirect('/');
-}));
+});
 
 //
 // Login form
 //
-app.use(route.get('/login', function*() {
+app.get('/login', function*() {
   yield this.render('login', {
     ctx: this,
     title: 'Login'
   });
-}));
+});
 
 //
 // Create session
@@ -602,7 +598,7 @@ app.get('/register', function*() {
 //
 // Homepage
 //
-app.use(route.get('/', function*() {
+app.get('/', function*() {
   var categories = cache.get('categories');
 
   // We don't show the mod forum on the homepage.
@@ -672,7 +668,7 @@ app.use(route.get('/', function*() {
     latestStatuses: cache.get('latest-statuses').map(pre.presentStatus),
     currentContest: cache.get('current-sidebar-contest')
   });
-}));
+});
 
 //
 // Remove subcription
@@ -699,7 +695,7 @@ app.delete('/me/subscriptions/:topicSlug', function*() {
 //
 // Forgot password page
 //
-app.use(route.get('/forgot', function*() {
+app.get('/forgot', function*() {
   if (!config.IS_EMAIL_CONFIGURED) {
     this.body = 'This feature is currently disabled';
     return;
@@ -708,12 +704,12 @@ app.use(route.get('/forgot', function*() {
     ctx: this,
     title: 'Forgot Password'
   });
-}));
+});
 
 //
 //
 // - Required param: email
-app.use(route.post('/forgot', function*() {
+app.post('/forgot', function*() {
   if (!config.IS_EMAIL_CONFIGURED) {
     this.body = 'This feature is currently disabled';
     return;
@@ -756,12 +752,12 @@ app.use(route.post('/forgot', function*() {
 
   this.flash = { message: ['success', successMessage] };
   this.response.redirect('/');
-}));
+});
 
 // Password reset form
 // - This form allows a user to enter a reset token and new password
 // - The email from /forgot will link the user here
-app.use(route.get('/reset-password', function*() {
+app.get('/reset-password', function*() {
   if (!config.IS_EMAIL_CONFIGURED) {
     this.body = 'This feature is currently disabled';
     return;
@@ -772,13 +768,13 @@ app.use(route.get('/reset-password', function*() {
     resetToken: resetToken,
     title: 'Reset Password with Token'
   });
-}));
+});
 
 // Params
 // - token
 // - password1
 // - password2
-app.use(route.post('/reset-password', function*() {
+app.post('/reset-password', function*() {
   if (!config.IS_EMAIL_CONFIGURED) {
     this.body = 'This feature is currently disabled';
     return;
@@ -827,7 +823,7 @@ app.use(route.post('/reset-password', function*() {
 
   this.flash = { message: ['success', 'Your password was updated'] };
   return this.response.redirect('/');
-}));
+});
 
 //
 // Create subscription
