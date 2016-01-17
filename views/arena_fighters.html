@@ -1,0 +1,82 @@
+
+{% extends 'layouts/master.html' %}
+
+{% macro table(fighters) %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Fighter</th>
+        <th>Wins</th>
+        <th>Losses</th>
+        <th>Draws</th>
+        <th>Points</th>
+      </tr>
+    </thead>
+    <tbody style="font-size: 16px;">
+      {% for f in fighters %}
+        <tr>
+          <td>
+            <a href="/users/{{ f.uname | slugifyUname }}">
+              {{ f.uname }}
+            </a>
+          </td>
+          <td class="{% if f.arena_wins > 0 %}green-glow{% else %}text-muted{% endif %}">
+            {{ f.arena_wins }}
+          </td>
+          <td class="{% if f.arena_losses > 0 %}red-glow{% else %}text-muted{% endif %}">
+            {{ f.arena_losses }}
+          </td>
+          <td class="text-muted">
+            {{ f.arena_draws }}
+          </td>
+          <td style="font-weight: bold;">
+            {{ f.arena_points | commafy }}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endmacro %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li>
+      <a href="/">Home</a>
+    </li>
+    <li>
+      <a href="/forums/6-arena-roleplay">Arena Roleplay</a>
+    </li>
+  </ol>
+
+  <div class="page-header text-center" style="border-color: #000">
+
+    <h3>
+      <span style="color:#e67e22;">
+        <span class="glyphicon glyphicon-fire"></span>
+      </span>
+      Arena Standings
+    </h3>
+  </div>
+
+  <div class="row">
+    <div class="col-md-8 col-md-offset-2">
+      <div class="panel panel-default no-select" style="border-color: #000">
+        <!--
+            PANEL BODY
+            -->
+        <div class="panel-body">
+          {{ table(fighters) }}
+        </div>
+        <!--
+            PANEL FOOTER
+            -->
+        <div class="panel-footer" style="border-color: #000">
+        </div>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}
