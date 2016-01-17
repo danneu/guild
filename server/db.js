@@ -6,7 +6,6 @@ var fs = require('co-fs');
 var util = require('util');
 // 3rd party
 var pg = require('co-pg')(require('pg'));
-var m = require('multiline');
 var _ = require('lodash');
 var assert = require('better-assert');
 var debug = require('debug')('app:db');
@@ -121,12 +120,12 @@ function* withTransaction(runner) {
 exports.updatePostStatus = function*(postId, status) {
   var STATUS_WHITELIST = ['hide', 'unhide'];
   assert(_.contains(STATUS_WHITELIST, status));
-  var sql = m(function() {/*
+  var sql = `
 UPDATE posts
 SET is_hidden = $2
 WHERE id = $1
 RETURNING *
-  */});
+  `;
   var params;
   switch(status) {
     case 'hide':
@@ -144,14 +143,14 @@ RETURNING *
 exports.updateTopicStatus = function*(topicId, status) {
   var STATUS_WHITELIST = ['stick', 'unstick', 'hide', 'unhide', 'close', 'open'];
   assert(_.contains(STATUS_WHITELIST, status));
-  var sql = m(function() {/*
+  var sql = `
 UPDATE topics
 SET is_sticky = COALESCE($2, is_sticky),
     is_hidden = COALESCE($3, is_hidden),
     is_closed = COALESCE($4, is_closed)
 WHERE id = $1
 RETURNING *
-  */});
+  `;
   var params;
   switch(status) {
     case 'stick':   params = [true,  null,  null]; break;
@@ -167,10 +166,10 @@ RETURNING *
 };
 
 exports.subscribeToTopic = function*(userId, topicId) {
-  var sql = m(function() {/*
+  var sql = `
 INSERT INTO topic_subscriptions (user_id, topic_id)
 VALUES ($1, $2)
-  */});
+  `;
   try {
   var result = yield query(sql, [userId, topicId]);
   } catch(ex) {
@@ -181,10 +180,10 @@ VALUES ($1, $2)
 };
 
 exports.unsubscribeFromTopic = function*(userId, topicId) {
-  var sql = m(function() {/*
+  var sql = `
 DELETE FROM topic_subscriptions
 WHERE user_id = $1 AND topic_id = $2
-  */});
+  `;
   var result = yield query(sql, [userId, topicId]);
   return;
 };
@@ -192,10 +191,10 @@ WHERE user_id = $1 AND topic_id = $2
 // Same as findTopic but takes a userid so that it can return a topic
 // with an is_subscribed boolean for the user
 // Keep in sync with db.findTopicById
-exports.findTopicWithIsSubscribed = wrapTimer(findTopicWithIsSubscribed);
-function* findTopicWithIsSubscribed(userId, topicId) {
+exports.findTopicWithIsSubscribed = function*(userId, topicId) {
   debug('[findTopicWithIsSubscribed] userId %s, topicId %s:', userId, topicId);
-  var sql = m(function() {/*
+
+  const sql = `
 SELECT
   (
     CASE
@@ -271,93 +270,116 @@ JOIN forums f ON t.forum_id = f.id
 LEFT OUTER JOIN topic_subscriptions ts ON t.id = ts.topic_id AND ts.user_id = $1
 WHERE t.id = $2
 GROUP BY t.id, f.id, ts.user_id
-  */});
-  var result = yield query(sql, [userId, topicId]);
-  return result.rows[0];
-}
+  `;
+
+  return yield queryOne(sql, [userId, topicId]);
+};
+
+////////////////////////////////////////////////////////////
 
 exports.updateUserBio = function*(userId, bioMarkup, bioHtml) {
   assert(_.isString(bioMarkup));
-  var sql = m(function() {/*
+
+  const sql = `
     UPDATE users
     SET bio_markup = $2, bio_html = $3
     WHERE id = $1
     RETURNING *
-  */});
-  var result = yield query(sql, [userId, bioMarkup, bioHtml]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [userId, bioMarkup, bioHtml]);
 };
+
+////////////////////////////////////////////////////////////
 
 exports.findTopic = wrapTimer(findTopic);
 function* findTopic(topicId) {
-  var sql = m(function() {/*
+  const sql = `
 SELECT
   t.*,
   to_json(f.*) "forum"
 FROM topics t
 JOIN forums f ON t.forum_id = f.id
 WHERE t.id = $1
-  */});
-  var result = yield query(sql, [topicId]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [topicId]);
 }
+
+////////////////////////////////////////////////////////////
 
 exports.deleteResetTokens = function*(userId) {
   assert(_.isNumber(userId));
-  var sql = m(function() {/*
+
+  const sql = `
 DELETE FROM reset_tokens
 WHERE user_id = $1
-  */});
+  `;
+
   yield query(sql, [userId]);
 };
 
+////////////////////////////////////////////////////////////
+
 exports.findLatestActiveResetToken = function*(userId) {
   assert(_.isNumber(userId));
-  var sql = m(function() {/*
+
+  const sql = `
 SELECT *
 FROM active_reset_tokens
 WHERE user_id = $1
 ORDER BY created_at DESC
 LIMIT 1
-  */});
-  var result = yield query(sql, [userId]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [userId]);
 };
+
+////////////////////////////////////////////////////////////
 
 exports.createResetToken = function*(userId) {
   debug('[createResetToken] userId: ' + userId);
-  var uuid = belt.generateUuid();
-  var sql = m(function() {/*
+
+  const uuid = belt.generateUuid();
+  const sql = `
 INSERT INTO reset_tokens (user_id, token)
 VALUES ($1, $2)
 RETURNING *
-  */});
-  var result = yield query(sql, [userId, uuid]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [userId, uuid]);
 };
 
+////////////////////////////////////////////////////////////
+
 exports.findUserById = exports.findUser = function*(id) {
-  var sql = 'SELECT * FROM users WHERE id = $1';
-  var result = yield query(sql, [id]);
-  return result.rows[0];
+  const sql = 'SELECT * FROM users WHERE id = $1';
+
+  return yield queryOne(sql, [id]);
 };
+
+////////////////////////////////////////////////////////////
 
 exports.findUserBySlug = function*(slug) {
   assert(_.isString(slug));
-  var sql = m(function() {/*
+
+  const sql = `
 SELECT u.*
 FROM users u
 WHERE u.slug = lower($1)
 GROUP BY u.id
-  */});
-  var result = yield query(sql, [slug]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [slug]);
 };
+
+////////////////////////////////////////////////////////////
 
 // Only use this if you need ratings table, else use just findUserBySlug
 exports.findUserWithRatingsBySlug = function*(slug) {
   assert(_.isString(slug));
-  var sql = m(function() {/*
+
+  const sql = `
 WITH q1 AS (
   SELECT
     COUNT(r) FILTER (WHERE r.type = 'like') like_count,
@@ -394,55 +416,61 @@ SELECT
 FROM users u
 WHERE u.slug = lower($1)
 GROUP BY u.id
-  */});
-  var result = yield query(sql, [slug]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [slug]);
 };
 
-exports.findUserByUnameOrEmail = wrapTimer(findUserByUnameOrEmail);
-function *findUserByUnameOrEmail(unameOrEmail) {
+////////////////////////////////////////////////////////////
+
+exports.findUserByUnameOrEmail = function*(unameOrEmail) {
   assert(_.isString(unameOrEmail));
-  var sql = m(function() {/*
+
+  const sql =`
 SELECT *
 FROM users u
 WHERE lower(u.uname) = lower($1) OR lower(u.email) = lower($1);
-  */});
-  var result = yield query(sql, [unameOrEmail]);
-  return result.rows[0];
-}
+  `;
+  return yield queryOne(sql, [unameOrEmail]);
+};
+
+////////////////////////////////////////////////////////////
 
 // Note: Case-insensitive
-exports.findUserByEmail = wrapTimer(findUserByEmail);
-function *findUserByEmail(email) {
+exports.findUserByEmail = function*(email) {
   debug('[findUserByEmail] email: ' + email);
-  var sql = m(function() {/*
+
+  const sql = `
 SELECT *
 FROM users u
 WHERE lower(u.email) = lower($1);
-  */});
-  var result = yield query(sql, [email]);
-  return result.rows[0];
-}
+  `;
+
+  return yield queryOne(sql, [email]);
+};
+
+////////////////////////////////////////////////////////////
 
 // Note: Case-insensitive
-exports.findUserByUname = wrapTimer(findUserByUname);
-function *findUserByUname(uname) {
+exports.findUserByUname = function*(uname) {
   debug('[findUserByUname] uname: ' + uname);
-  var sql = m(function() {/*
+
+  const sql = `
 SELECT *
 FROM users u
 WHERE lower(u.uname) = lower($1);
-  */});
-  var result = yield query(sql, [uname]);
-  return result.rows[0];
-}
+  `;
 
+  return yield queryOne(sql, [uname]);
+};
+
+////////////////////////////////////////////////////////////
 
 // `beforeId` is undefined or a number
-exports.findRecentPostsForUserId = wrapTimer(findRecentPostsForUserId);
-function* findRecentPostsForUserId(userId, beforeId) {
+exports.findRecentPostsForUserId = function*(userId, beforeId) {
   assert(_.isNumber(beforeId) || _.isUndefined(beforeId));
-  var sql = m(function() {/*
+
+  const sql = `
 SELECT
   p.*,
   to_json(t.*) "topic",
@@ -453,21 +481,22 @@ JOIN forums f ON t.forum_id = f.id
 WHERE p.user_id = $1 AND p.id < $3
 ORDER BY p.id DESC
 LIMIT $2
-  */});
-  var result = yield query(sql, [
+  `;
+
+  return yield queryMany(sql, [
     userId,
     config.RECENT_POSTS_PER_PAGE,
     beforeId || 1e9
   ]);
-  return result.rows;
-}
+};
+
+////////////////////////////////////////////////////////////
 
 // `beforeId` is undefined or a number
-exports.findRecentTopicsForUserId = wrapTimer(findRecentTopicsForUserId);
-function* findRecentTopicsForUserId(userId, beforeId) {
+exports.findRecentTopicsForUserId = function*(userId, beforeId) {
   assert(_.isNumber(beforeId) || _.isUndefined(beforeId));
-  debug(userId, beforeId);
-  var sql = m(function() {/*
+
+  const sql = `
 SELECT
   t.*,
   to_json(f.*) "forum",
@@ -483,42 +512,49 @@ WHERE t.user_id = $1 AND t.id < $3
 GROUP BY t.id, f.id, p.id
 ORDER BY t.id DESC
 LIMIT $2
-  */});
-  var result = yield query(sql, [
+  `;
+
+  return yield queryMany(sql, [
     userId,
     config.RECENT_POSTS_PER_PAGE,
     beforeId || 1e9
   ]);
-  return result.rows;
-}
+};
 
-exports.findUser = wrapTimer(findUser);
-function *findUser(userId) {
+////////////////////////////////////////////////////////////
+
+exports.findUser = function*(userId) {
   debug('[findUser] userId: ' + userId);
-  var sql = m(function() {/*
+
+  const sql = `
 SELECT *
 FROM users
 WHERE id = $1
-  */});
-  var result = yield query(sql, [userId]);
-  return result.rows[0] || null;
-}
+  `;
+
+  return yield queryOne(sql, [userId]);
+};
+
+////////////////////////////////////////////////////////////
 
 // Returns an array of Users
 // (Case insensitive uname lookup)
-exports.findUsersByUnames = wrapTimer(findUsersByUnames);
-function* findUsersByUnames(unames) {
+exports.findUsersByUnames = function*(unames) {
   assert(_.isArray(unames));
   assert(_.every(unames, _.isString));
-  unames = unames.map(function(s) { return s.toLowerCase(); });
-  var sql = m(function() {/*
+
+  unames = unames.map(s => s.toLowerCase());
+
+  const sql = `
 SELECT u.*
 FROM users u
 WHERE lower(u.uname) = ANY ($1::text[])
-  */});
-  var result = yield query(sql, [unames]);
-  return result.rows;
-}
+  `;
+
+  return yield queryMany(sql, [unames]);
+};
+
+////////////////////////////////////////////////////////////
 
 // If toUsrIds is not given, then it's a self-convo
 // TODO: Wrap in transaction, Document the args of this fn
@@ -529,19 +565,19 @@ exports.createConvo = function*(args) {
   assert(_.isString(args.title));
   assert(_.isString(args.markup));
   assert(_.isString(args.html));
-  var convoSql = m(function() {/*
+  var convoSql = `
 INSERT INTO convos (user_id, title) VALUES ($1, $2) RETURNING *
-  */});
-  var pmSql = m(function() {/*
+  `;
+  var pmSql = `
 INSERT INTO pms
   (convo_id, user_id, ip_address, markup, html, idx)
 VALUES ($1, $2, $3, $4, $5, 0)
 RETURNING *
-*/});
-  var participantSql = m(function() {/*
+  `;
+  var participantSql = `
 INSERT INTO convos_participants (convo_id, user_id)
 VALUES ($1, $2)
-*/});
+  `;
 
   return yield withTransaction(function*(client) {
     var result;
@@ -565,16 +601,17 @@ VALUES ($1, $2)
   });
 };
 
+////////////////////////////////////////////////////////////
+
 // Only returns user if reset token has not expired
 // so this can be used to verify tokens
-exports.findUserByResetToken = wrapTimer(findUserByResetToken);
-function* findUserByResetToken(resetToken) {
+exports.findUserByResetToken = function*(resetToken) {
 
   // Short circuit if it's not even a UUID
   if (!belt.isValidUuid(resetToken))
     return;
 
-  var sql = m(function() {/*
+  const sql = `
 SELECT *
 FROM users u
 WHERE u.id = (
@@ -582,15 +619,17 @@ WHERE u.id = (
   FROM active_reset_tokens rt
   WHERE rt.token = $1
 )
-  */});
-  var result = yield query(sql, [resetToken]);
-  return result.rows[0];
-}
+  `;
 
-exports.findUserBySessionId = wrapTimer(findUserBySessionId);
-function *findUserBySessionId(sessionId) {
+  return yield queryOne(sql, [resetToken]);
+};
+
+////////////////////////////////////////////////////////////
+
+exports.findUserBySessionId = function*(sessionId) {
   assert(belt.isValidUuid(sessionId));
-  var sql = m(function() {/*
+
+  const sql = `
 UPDATE users
 SET last_online_at = NOW()
 WHERE id = (
@@ -603,12 +642,16 @@ WHERE id = (
   )
 )
 RETURNING *
-  */});
-  var user = yield queryOne(sql, [sessionId]);
+  `;
+
+  const user = yield queryOne(sql, [sessionId]);
   if (user)
     user.roles = pgArray.parse(user.roles, _.identity);
+
   return user;
-}
+};
+
+////////////////////////////////////////////////////////////
 
 exports.createSession = wrapOptionalClient(createSession);
 function *createSession(client, props) {
@@ -617,24 +660,30 @@ function *createSession(client, props) {
   assert(_.isNumber(props.userId));
   assert(_.isString(props.ipAddress));
   assert(_.isString(props.interval));
-  var uuid = belt.generateUuid();
-  var sql = m(function () {/*
+
+  const uuid = belt.generateUuid();
+
+  const sql = `
 INSERT INTO sessions (user_id, id, ip_address, expired_at)
 VALUES ($1, $2, $3::inet, NOW() + $4::interval)
 RETURNING *
-  */});
-  var result = yield client.queryPromise(sql, [
+  `;
+
+  const result = yield client.queryPromise(sql, [
     props.userId, uuid, props.ipAddress, props.interval
   ]);
+
   return result.rows[0];
 }
 
+////////////////////////////////////////////////////////////
+
 // Sync with db.findTopicsWithHasPostedByForumId
-exports.findTopicsByForumId = wrapTimer(findTopicsByForumId);
-function* findTopicsByForumId(forumId, limit, offset) {
+exports.findTopicsByForumId = function*(forumId, limit, offset) {
   debug('[%s] forumId: %s, limit: %s, offset: %s',
         'findTopicsByForumId', forumId, limit, offset);
-  var sql = m(function() {/*
+
+  const sql = `
 SELECT
   t.*,
   to_json(u.*) "user",
@@ -665,10 +714,12 @@ WHERE t.forum_id = $1
 ORDER BY t.is_sticky DESC, t.latest_post_at DESC
 LIMIT $2
 OFFSET $3
-  */});
-  var result = yield query(sql, [forumId, limit, offset]);
-  return result.rows;
-}
+  `;
+
+  return yield queryMany(sql, [forumId, limit, offset]);
+};
+
+////////////////////////////////////////////////////////////
 
 // Sync with db.findTopicsByForumId
 // Same as db.findTopicsByForumId except each forum has a has_posted boolean
@@ -677,7 +728,8 @@ exports.findTopicsWithHasPostedByForumId = function*(forumId, limit, offset, use
   assert(userId);
   debug('[findTopicsWithHasPostedByForumId] forumId: %s, userId: %s',
         forumId, userId);
-  var sql = m(function() {/*
+
+  const sql = `
 SELECT
   EXISTS(
     SELECT 1 FROM posts WHERE topic_id = t.id AND user_id = $4
@@ -719,58 +771,68 @@ WHERE t.forum_id = $1
 ORDER BY t.is_sticky DESC, t.latest_post_at DESC
 LIMIT $2
 OFFSET $3
-  */});
-  var result = yield query(sql, [forumId, limit, offset, userId]);
-  return result.rows;
+  `;
+
+  return yield queryMany(sql, [forumId, limit, offset, userId]);
 };
+
+////////////////////////////////////////////////////////////
 
 exports.updateUserPassword = function*(userId, password) {
   assert(_.isNumber(userId));
   assert(_.isString(password));
-  var digest = yield belt.hashPassword(password);
-  var sql = m(function() {/*
+
+  const digest = yield belt.hashPassword(password);
+  const sql = `
 UPDATE users
 SET digest = $2
 WHERE id = $1
 RETURNING *
-  */});
-  var result = yield query(sql, [userId, digest]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [userId, digest]);
 };
+
+////////////////////////////////////////////////////////////
 
 // Keep updatePost and updatePm in sync
 exports.updatePost = function*(postId, markup, html) {
   assert(_.isString(markup));
   assert(_.isString(html));
-  var sql = m(function() {/*
+
+  const sql = `
 UPDATE posts
 SET markup = $2, html = $3, updated_at = NOW()
 WHERE id = $1
 RETURNING *
-  */});
-  var result = yield query(sql, [postId, markup, html]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [postId, markup, html]);
 };
+
+////////////////////////////////////////////////////////////
 
 // Keep updatePost and updatePm in sync
 exports.updatePm = function*(id, markup, html) {
   assert(_.isString(markup));
   assert(_.isString(html));
-  var sql = m(function() {/*
+
+  const sql = `
 UPDATE pms
 SET markup = $2, html = $3, updated_at = NOW()
 WHERE id = $1
 RETURNING *
-  */});
-  var result = yield query(sql, [id, markup, html]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [id, markup, html]);
 };
+
+////////////////////////////////////////////////////////////
 
 // Attaches topic and forum to post for authorization checks
 // See cancan.js 'READ_POST'
-exports.findPostWithTopicAndForum = wrapTimer(findPostWithTopicAndForum);
-function* findPostWithTopicAndForum(postId) {
-  var sql = m(function() {/*
+exports.findPostWithTopicAndForum = function*(postId) {
+  const sql = `
 SELECT
   p.*,
   to_json(t.*) "topic",
@@ -779,16 +841,18 @@ FROM posts p
 JOIN topics t ON p.topic_id = t.id
 JOIN forums f ON t.forum_id = f.id
 WHERE p.id = $1
-  */});
-  var result = yield query(sql, [postId]);
-  return result.rows[0];
-}
+  `;
+
+  return yield queryOne(sql, [postId]);
+};
+
+////////////////////////////////////////////////////////////
 
 // Keep findPost and findPm in sync
 exports.findPostById = wrapTimer(findPost);
 exports.findPost = wrapTimer(findPost);
 function* findPost(postId) {
-  var sql = m(function() {/*
+  const sql = `
 SELECT
   p.*,
   to_json(t.*) "topic",
@@ -797,58 +861,67 @@ FROM posts p
 JOIN topics t ON p.topic_id = t.id
 JOIN forums f ON t.forum_id = f.id
 WHERE p.id = $1
-  */});
-  var result = yield query(sql, [postId]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [postId]);
 }
+
+////////////////////////////////////////////////////////////
+
 exports.findPmById = wrapTimer(findPm);
 exports.findPm = wrapTimer(findPm);
 function* findPm(id) {
-  var sql = m(function() {/*
+  const sql = `
 SELECT
   pms.*,
   to_json(c.*) "convo"
 FROM pms
 JOIN convos c ON pms.convo_id = c.id
 WHERE pms.id = $1
-  */});
-  var result = yield query(sql, [id]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [id]);
 }
+
+////////////////////////////////////////////////////////////
 
 exports.findUsersContainingString = wrapTimer(findUsersContainingString);
 function* findUsersContainingString(searchTerm) {
   // searchTerm is the term that the user searched for
   assert(_.isString(searchTerm) || _.isUndefined(searchTerm));
-    var sql = m(function() {/*
-  SELECT *
-  FROM users
-  WHERE lower(uname) LIKE '%' || lower($1::text) || '%'
-  ORDER BY id DESC
-  LIMIT $2::bigint
-    */});
-  var result = yield query(sql, [searchTerm, config.USERS_PER_PAGE]);
-  return result.rows;
+
+  const sql = `
+SELECT *
+FROM users
+WHERE lower(uname) LIKE '%' || lower($1::text) || '%'
+ORDER BY id DESC
+LIMIT $2::bigint
+  `;
+
+  return yield queryMany(sql, [searchTerm, config.USERS_PER_PAGE]);
 }
 
-exports.findAllUsers = wrapTimer(findAllUsers);
-function* findAllUsers(beforeId) {
-    var sql = m(function() {/*
-  SELECT *
-  FROM users
-  WHERE id < $2
-  ORDER BY id DESC
-  LIMIT $1::bigint
-    */});
-  var result = yield query(sql, [config.USERS_PER_PAGE, beforeId || 1e9]);
-  return result.rows;
-}
+////////////////////////////////////////////////////////////
+
+exports.findAllUsers = function*(beforeId) {
+  const sql = `
+SELECT *
+FROM users
+WHERE id < $2
+ORDER BY id DESC
+LIMIT $1::bigint
+  `;
+  return yield queryMany(sql, [config.USERS_PER_PAGE, beforeId || 1e9]);
+};
+
+////////////////////////////////////////////////////////////
 
 exports.findUsersContainingStringWithId = wrapTimer(findUsersContainingStringWithId);
 function* findUsersContainingStringWithId(searchTerm, beforeId) {
   // searchTerm is the term that the user searched for
   assert(_.isString(searchTerm) || _.isUndefined(searchTerm));
-  var sql = m(function() {/*
+
+  const sql = `
 SELECT *
 FROM users
 WHERE
@@ -856,17 +929,20 @@ lower(uname) LIKE '%' || lower($1::text) || '%'
 AND id < $2
 ORDER BY id DESC
 LIMIT $3::bigint
-  */});
-  var result = yield query(sql, [searchTerm, beforeId, config.USERS_PER_PAGE]);
-  return result.rows;
+  `;
+
+  return yield queryMany(sql, [searchTerm, beforeId, config.USERS_PER_PAGE]);
 }
+
+////////////////////////////////////////////////////////////
 
 exports.findConvosInvolvingUserId = wrapTimer(findConvosInvolvingUserId);
 function* findConvosInvolvingUserId(userId, beforeId) {
   // beforeId is the id of convo.latest_pm_id since that's how
   // convos are sorted
   assert(_.isNumber(beforeId) || _.isUndefined(beforeId));
-  var sql = m(function() {/*
+
+  const sql = `
 SELECT
   c.id,
   c.title,
@@ -895,7 +971,8 @@ WHERE c.latest_pm_id < $2 AND c.id IN (
 GROUP BY c.id, u1.id, pms.id, u3.id
 ORDER BY c.latest_pm_id DESC
 LIMIT $3
-  */});
+  `;
+
   var result = yield query(sql, [userId, beforeId || 1e9, config.CONVOS_PER_PAGE]);
   return result.rows.map(function(row) {
     row.user = {
@@ -932,10 +1009,12 @@ LIMIT $3
   });
 }
 
-exports.findConvo = wrapTimer(findConvo);
-function* findConvo(convoId) {
+////////////////////////////////////////////////////////////
+
+exports.findConvo = function*(convoId) {
   assert(!_.isUndefined(convoId));
-  var sql = m(function() {/*
+
+  const sql = `
 SELECT
   c.*,
   to_json(u1.*) "user",
@@ -946,13 +1025,15 @@ JOIN users u1 ON c.user_id = u1.id
 JOIN users u2 ON cp.user_id = u2.id
 WHERE c.id = $1
 GROUP BY c.id, u1.id
-  */});
-  var result = yield query(sql, [convoId]);
-  return result.rows[0];
-}
+  `;
+
+  return yield queryOne(sql, [convoId]);
+};
+
+////////////////////////////////////////////////////////////
 
 exports.findPmsByConvoId = function*(convoId, page) {
-  var sql = m(function() {/*
+  const sql = `
 SELECT
   pms.*,
   to_json(u.*) "user"
@@ -961,19 +1042,23 @@ JOIN users u ON pms.user_id = u.id
 WHERE pms.convo_id = $1 AND pms.idx >= $2 AND pms.idx < $3
 GROUP BY pms.id, u.id
 ORDER BY pms.id
-  */});
-  var fromIdx = (page - 1) * config.POSTS_PER_PAGE;
-  var toIdx = fromIdx + config.POSTS_PER_PAGE;
-  var result = yield query(sql, [convoId, fromIdx, toIdx]);
-  return result.rows;
+  `;
+
+  const fromIdx = (page - 1) * config.POSTS_PER_PAGE;
+  const toIdx = fromIdx + config.POSTS_PER_PAGE;
+
+  return yield queryMany(sql, [convoId, fromIdx, toIdx]);
 };
+
+////////////////////////////////////////////////////////////
 
 exports.findPostsByTopicId = wrapTimer(findPostsByTopicId);
 function* findPostsByTopicId(topicId, postType, page) {
   debug('[findPostsByTopicId] topicId: %s, postType: %s, page',
         topicId, postType, page);
   assert(_.isNumber(page));
-  var sql = m(function() {/*
+
+  const sql = `
 SELECT
   p.*,
   to_json(u.*) "user",
@@ -990,7 +1075,8 @@ LEFT OUTER JOIN statuses s ON u.current_status_id = s.id
 WHERE p.topic_id = $1 AND p.type = $2 AND p.idx >= $3 AND p.idx < $4
 GROUP BY p.id, u.id, t.id, f.id, s.id
 ORDER BY p.id
-  */});
+  `;
+
   var fromIdx = (page - 1) * config.POSTS_PER_PAGE;
   var toIdx = fromIdx + config.POSTS_PER_PAGE;
   debug('%s <= post.idx < %s', fromIdx, toIdx);
@@ -1007,11 +1093,13 @@ ORDER BY p.id
   });
 }
 
+////////////////////////////////////////////////////////////
+
 // TODO: Order by
 // TODO: Pagination
 exports.findForumWithTopics = wrapTimer(findForumWithTopics);
 function* findForumWithTopics(forumId) {
-  var sql = m(function() {/*
+  const sql = `
 SELECT
   f.*,
   to_json(array_agg(t.*)) "topics",
@@ -1020,9 +1108,9 @@ FROM forums f
 LEFT OUTER JOIN topics t ON f.id = t.forum_id
 WHERE f.id = $1
 GROUP BY f.id
-  */});
-  var result = yield query(sql, [forumId]);
-  var forum = result.rows[0];
+  `;
+
+  let forum = yield queryOne(sql, [forumId]);
   if (!forum) return null;
   // The query will set forum.topics to `[null]` if it has
   // none, so compact it to just `[]`.
@@ -1030,10 +1118,12 @@ GROUP BY f.id
   return forum;
 }
 
+////////////////////////////////////////////////////////////
+
 // Keep findPostWithTopic and findPmWithConvo in sync
 exports.findPostWithTopic = wrapTimer(findPostWithTopic);
 function* findPostWithTopic(postId) {
-  var sql = m(function() {/*
+  const sql = `
 SELECT
   p.*,
   to_json(t.*) "topic"
@@ -1041,15 +1131,17 @@ FROM posts p
 JOIN topics t ON p.topic_id = t.id
 WHERE p.id = $1
 GROUP BY p.id, t.id
-  */});
-  var result = yield query(sql, [postId]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [postId]);
 }
+
+////////////////////////////////////////////////////////////
 
 // Keep findPostWithTopic and findPmWithConvo in sync
 exports.findPmWithConvo = wrapTimer(findPmWithConvo);
 function* findPmWithConvo(pmId) {
-  var sql = m(function() {/*
+  const sql = `
 SELECT
   pms.*,
   to_json(c.*) "convo",
@@ -1060,10 +1152,12 @@ JOIN convos_participants cp ON cp.convo_id = pms.convo_id
 JOIN users u ON cp.user_id = u.id
 WHERE pms.id = $1
 GROUP BY pms.id, c.id
-  */});
-  var result = yield query(sql, [pmId]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [pmId]);
 }
+
+////////////////////////////////////////////////////////////
 
 // Returns created PM
 exports.createPm = function*(props) {
@@ -1071,20 +1165,23 @@ exports.createPm = function*(props) {
   assert(props.convoId);
   assert(_.isString(props.markup));
   assert(_.isString(props.html));
-  var sql = m(function() {/*
+
+  const sql = `
 INSERT INTO pms (user_id, ip_address, convo_id, markup, html)
 VALUES ($1, $2::inet, $3, $4, $5)
 RETURNING *
-  */});
-  var result = yield query(sql, [
+  `;
+
+  return yield queryOne(sql, [
     props.userId,
     props.ipAddress,
     props.convoId,
     props.markup,
     props.html
   ]);
-  return result.rows[0];
 };
+
+////////////////////////////////////////////////////////////
 
 // Args:
 // - userId      Required Number/String
@@ -1101,14 +1198,17 @@ exports.createPost = function*(args) {
   assert(args.topicId);
   assert(_.isBoolean(args.isRoleplay));
   assert(_.contains(['ic', 'ooc', 'char'], args.type));
-  var sql = m(function() {/*
+
+  const sql = `
 INSERT INTO posts (user_id, ip_address, topic_id, markup, html, type, is_roleplay)
 VALUES ($1, $2::inet, $3, $4, $5, $6, $7)
 RETURNING *
-  */});
-  var result = yield query(sql, [args.userId, args.ipAddress, args.topicId, args.markup, args.html, args.type, args.isRoleplay]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [args.userId, args.ipAddress, args.topicId, args.markup, args.html, args.type, args.isRoleplay]);
 };
+
+////////////////////////////////////////////////////////////
 
 // Args:
 // - userId     Required Number/String
@@ -1141,16 +1241,16 @@ exports.createTopic = function*(props) {
 
   props.is_ranked = !!props.is_ranked;
 
-  var topicSql = m(function() {/*
+  const topicSql = `
 INSERT INTO topics (forum_id, user_id, title, is_roleplay, join_status, is_ranked)
 VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *
-  */});
-  var postSql = m(function() {/*
+  `;
+  const postSql = `
 INSERT INTO posts (topic_id, user_id, ip_address, markup, html, type, is_roleplay, idx)
 VALUES ($1, $2, $3::inet, $4, $5, $6, $7, 0)
 RETURNING *
-  */});
+  `;
 
   return yield withTransaction(function*(client) {
     // Create topic
@@ -1167,11 +1267,11 @@ RETURNING *
 
     // Create tags if given
     if (props.tagIds) {
-      var promises = props.tagIds.map(function(tagId) {
-        var sql = m(function() {/*
+      const promises = props.tagIds.map(function(tagId) {
+        const sql = `
 INSERT INTO tags_topics (topic_id, tag_id)
 VALUES ($1, $2)
-        */});
+        `;
         return client.queryPromise(sql, [topic.id, tagId]);
       });
       yield promises;
@@ -1181,11 +1281,14 @@ VALUES ($1, $2)
   });
 };
 
+////////////////////////////////////////////////////////////
+
 // Generic user-update route. Intended to be paired with
 // the generic PUT /users/:userId route.
 exports.updateUser = function*(userId, attrs) {
   debug('[updateUser] attrs', attrs);
-  var sql = m(function() {/*
+
+  const sql = `
 UPDATE users
 SET
   email = COALESCE($2, email),
@@ -1201,8 +1304,9 @@ SET
   show_arena_stats = COALESCE($12, show_arena_stats)
 WHERE id = $1
 RETURNING *
-  */});
-  var result = yield query(sql, [
+  `;
+
+  return yield queryOne(sql, [
     userId,
     attrs.email,
     attrs.sig,
@@ -1216,24 +1320,27 @@ RETURNING *
     attrs.hide_avatars,  // $11
     attrs.show_arena_stats // $12
   ]);
-  return result.rows[0];
 };
 
+////////////////////////////////////////////////////////////
+
 exports.updateUserRole = function*(userId, role) {
-  var sql = m(function() {/*
+  const sql = `
 UPDATE users
 SET role = $2
 WHERE id = $1
 RETURNING *
-  */});
-  var result = yield query(sql, [userId, role]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [userId, role]);
 };
+
+////////////////////////////////////////////////////////////
 
 exports.findForumById = wrapTimer(findForum);
 exports.findForum = wrapTimer(findForum);
 function* findForum(forumId) {
-  var sql = m(function() {/*
+  const sql = `
 SELECT
   f.*,
   to_json(f2.*) "child_forum",
@@ -1243,50 +1350,57 @@ LEFT OUTER JOIN forums f2 ON f.id = f2.parent_forum_id
 LEFT OUTER JOIN forums f3 ON f.parent_forum_id = f3.id
 WHERE f.id = $1
 GROUP BY f.id, f2.id, f3.id
-  */});
-  var result = yield query(sql, [forumId]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [forumId]);
 }
+
+////////////////////////////////////////////////////////////
 
 exports.findLatestUsers = wrapTimer(findLatestUsers);
 function* findLatestUsers(limit) {
-  var sql = m(function() {/*
+  const sql = `
 SELECT u.*
 FROM users u
 ORDER BY id DESC
 LIMIT $1
-  */});
-  var result = yield query(sql, [limit || 25]);
-  return result.rows;
+  `;
+
+  return yield queryMany(sql, [limit || 25]);
 }
+
+////////////////////////////////////////////////////////////
 
 // Also has cat.forums array
 exports.findModCategory = function*() {
-  var MOD_CATEGORY_ID = 4;
-  var sql = m(function() {/*
+  const MOD_CATEGORY_ID = 4;
+  const sql = `
 SELECT c.*
 FROM categories c
 WHERE c.id = $1
-  */});
-  var result = yield query(sql, [MOD_CATEGORY_ID]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [MOD_CATEGORY_ID]);
 };
 
+////////////////////////////////////////////////////////////
+
 // Only returns non-mod-forum categories
-exports.findCategories = wrapTimer(findCategories);
-function* findCategories() {
-  var sql = m(function() {/*
+exports.findCategories = function*() {
+  const sql = `
 SELECT c.*
 FROM categories c
 ORDER BY c.pos
-  */});
-  var result = yield query(sql);
-  return result.rows;
-}
+  `;
+
+  return yield queryMany(sql);
+};
+
+////////////////////////////////////////////////////////////
 
 exports.findCategoriesWithForums = findCategoriesWithForums;
 function* findCategoriesWithForums() {
-  var sql = m(function() {/*
+  const sql = `
 SELECT
   c.*,
   array_agg(
@@ -1339,9 +1453,9 @@ JOIN forums f ON c.id = f.category_id
 LEFT OUTER JOIN posts p ON f.latest_post_id = p.id
 GROUP BY c.id
 ORDER BY c.pos
-  */});
-  var result = yield query(sql);
-  var categories = result.rows;
+  `;
+
+  let categories = yield queryMany(sql);
   categories = categories.map(function(c) {
     c.forums = _.sortBy(c.forums, 'pos');
     return c;
@@ -1349,26 +1463,28 @@ ORDER BY c.pos
   return categories;
 }
 
+////////////////////////////////////////////////////////////
+
 // Creates a user and a session (logs them in).
 // - Returns {:user <User>, :session <Session>}
 // - Use `createUser` if you only want to create a user.
 //
 // Throws: 'UNAME_TAKEN', 'EMAIL_TAKEN'
-exports.createUserWithSession = createUserWithSession;
-function *createUserWithSession(props) {
+exports.createUserWithSession = function*(props) {
   debug('[createUserWithSession] props: ', props);
   assert(_.isString(props.uname));
   assert(_.isString(props.ipAddress));
   assert(_.isString(props.password));
   assert(_.isString(props.email));
 
-  var digest = yield belt.hashPassword(props.password);
-  var slug = belt.slugifyUname(props.uname);
-  var sql = m(function () {/*
+  const digest = yield belt.hashPassword(props.password);
+  const slug = belt.slugifyUname(props.uname);
+
+  const sql = `
 INSERT INTO users (uname, digest, email, slug)
 VALUES ($1, $2, $3, $4)
 RETURNING *;
-   */});
+   `;
 
   return yield withTransaction(function*(client) {
     var user, session;
@@ -1393,23 +1509,27 @@ RETURNING *;
 
     return { user: user, session: session };
   });
-}
+};
 
-exports.logoutSession = logoutSession;
-function *logoutSession(userId, sessionId) {
+////////////////////////////////////////////////////////////
+
+exports.logoutSession = function*(userId, sessionId) {
   assert(_.isNumber(userId));
   assert(_.isString(sessionId) && belt.isValidUuid(sessionId));
-  var sql = m(function() {/*
+
+  const sql = `
 DELETE FROM sessions
 WHERE user_id = $1 AND id = $2
-  */});
+  `;
+
   return yield query(sql, [userId, sessionId]);
-}
+};
+
+////////////////////////////////////////////////////////////
 
 // Sort them by latest_posts first
-exports.findSubscribedTopicsForUserId = wrapTimer(findSubscribedTopicsForUserId);
-function* findSubscribedTopicsForUserId(userId) {
-  var sql = m(function() {/*
+exports.findSubscribedTopicsForUserId = function*(userId) {
+  const sql = `
 SELECT
   t.*,
 
@@ -1506,15 +1626,17 @@ JOIN users u2 ON latest_post.user_id = u2.id
 JOIN forums f ON t.forum_id = f.id
 WHERE ts.user_id = $1
 ORDER BY t.latest_post_id DESC
-  */});
-  var result = yield query(sql, [userId]);
-  return result.rows;
-}
+  `;
 
-exports.findForums = wrapTimer(findForums);
-function* findForums(categoryIds) {
+  return yield queryMany(sql, [userId]);
+};
+
+////////////////////////////////////////////////////////////
+
+exports.findForums = function*(categoryIds) {
   assert(_.isArray(categoryIds));
-  var sql = m(function() {/*
+
+  const sql = `
 SELECT
   f.*,
   to_json(p.*) "latest_post",
@@ -1527,73 +1649,73 @@ LEFT OUTER JOIN users u ON u.id = p.user_id
 --WHERE f.category_id IN ($1)
 WHERE f.category_id = ANY ($1::int[])
 ORDER BY pos;
-  */});
-  var result = yield query(sql, [categoryIds]);
-  return result.rows;
-}
+  `;
+
+  return yield queryMany(sql, [categoryIds]);
+};
+
+////////////////////////////////////////////////////////////
 
 // Stats
 
 // https://wiki.postgresql.org/wiki/Count_estimate
-exports.getApproxCount = wrapTimer(getApproxCount);
-function* getApproxCount(tableName) {
+exports.getApproxCount = function*(tableName) {
   assert(_.isString(tableName));
-  var sql = 'SELECT reltuples "count" FROM pg_class WHERE relname = $1';
-  var result = yield query(sql, [tableName]);
-  return result.rows[0].count;
-}
+  const sql = 'SELECT reltuples "count" FROM pg_class WHERE relname = $1';
+  const row = yield queryOne(sql, [tableName]);
+  return row.count;
+};
 
-exports.getLatestUser = wrapTimer(getLatestUser);
-function* getLatestUser() {
-  var sql = 'SELECT * FROM users ORDER BY created_at DESC LIMIT 1';
-  var result = yield query(sql);
-  return result.rows[0];
-}
+////////////////////////////////////////////////////////////
+
+exports.getLatestUser = function*() {
+  const sql = 'SELECT * FROM users ORDER BY created_at DESC LIMIT 1';
+  return yield queryOne(sql);
+};
+
+////////////////////////////////////////////////////////////
 
 // Users online within 15 min
-exports.getOnlineUsers = wrapTimer(getOnlineUsers);
-function* getOnlineUsers() {
-  var sql = m(function() {/*
+exports.getOnlineUsers = function*() {
+  const sql = `
 SELECT *
 FROM users
 WHERE last_online_at > NOW() - interval '15 minutes'
 ORDER BY uname
-  */});
-  var result = yield query(sql);
-  return result.rows;
-}
-
-var getMaxTopicId = function*() {
-  var result = yield query('SELECT MAX(id) "max_id" FROM topics');
-  return result.rows[0].max_id;
+  `;
+  return yield queryMany(sql);
 };
 
-var getMaxPostId = function*() {
-  var result = yield query('SELECT MAX(id) "max_id" FROM posts');
-  return result.rows[0].max_id;
+exports.getMaxTopicId = function*() {
+  const result = yield queryOne('SELECT MAX(id) "max_id" FROM topics');
+  return result.max_id;
 };
 
-var getMaxUserId = function*() {
-  var result = yield query('SELECT MAX(id) "max_id" FROM users');
-  return result.rows[0].max_id;
+exports.getMaxPostId = function*() {
+  const result = yield queryOne('SELECT MAX(id) "max_id" FROM posts');
+  return result.max_id;
+};
+
+exports.getMaxUserId = function*() {
+  const result = yield queryOne('SELECT MAX(id) "max_id" FROM users');
+  return result.max_id;
 };
 
 // https://web.archive.org/web/20131218103719/http://roleplayerguild.com/
-var legacyCounts = {
+const legacyCounts = {
   topics: 210879,
   posts: 9243457,
   users: 44799
 };
 
-exports.getStats = wrapTimer(getStats);
-function* getStats() {
-  var results = yield {
+exports.getStats = function*() {
+  let results = yield {
     // I switched the getApproxCount fns out for MaxId fns because
     // the vacuuming threshold was too high and the stats were never getting
     // updated
-    topicsCount: getMaxTopicId(), //getApproxCount('topics'),
-    usersCount: getMaxUserId(), //getApproxCount('users'),
-    postsCount: getMaxPostId(), //getApproxCount('posts'),
+    topicsCount: exports.getMaxTopicId(), //getApproxCount('topics'),
+    usersCount: exports.getMaxUserId(), //getApproxCount('users'),
+    postsCount: exports.getMaxPostId(), //getApproxCount('posts'),
     latestUser: exports.getLatestUser(),
     onlineUsers: exports.getOnlineUsers()
   };
@@ -1601,28 +1723,27 @@ function* getStats() {
   results.usersCount += legacyCounts.users;
   results.postsCount += legacyCounts.posts;
   return results;
-}
+};
 
 exports.deleteUser = function*(id) {
-  var sql = 'DELETE FROM users WHERE id = $1';
-  yield query(sql, [id]);
+  const sql = 'DELETE FROM users WHERE id = $1';
+  return yield query(sql, [id]);
 };
 
 exports.deleteLegacySig = function*(userId) {
-  var sql = 'UPDATE users SET legacy_sig = NULL WHERE id = $1';
-  yield query(sql, [userId]);
+  const sql = 'UPDATE users SET legacy_sig = NULL WHERE id = $1';
+  return yield query(sql, [userId]);
 };
 
 exports.findStaffUsers = function*() {
-  var sql = m(function(){/*
+  const sql = `;
 SELECT u.*
 FROM users u
 WHERE
   u.role IN ('mod', 'smod', 'admin', 'conmod')
   OR 'ARENA_MOD' = ANY (u.roles)
-  */});
-  var result = yield query(sql);
-  return result.rows;
+  `;
+  return yield queryMany(sql);
 };
 
 // Users receive this when someone starts a convo with them
@@ -1631,16 +1752,20 @@ function* createConvoNotification(client, opts) {
   assert(_.isNumber(opts.from_user_id));
   assert(_.isNumber(opts.to_user_id));
   assert(opts.convo_id);
-  var sql = m(function(){/*
+
+  const sql = `
 INSERT INTO notifications (type, from_user_id, to_user_id, convo_id, count)
 VALUES ('CONVO', $1, $2, $3, 1)
 RETURNING *
-  */});
+  `;
+
   var result = yield client.queryPromise(sql, [
     opts.from_user_id, opts.to_user_id, opts.convo_id
   ]);
   return result.rows;
 }
+
+////////////////////////////////////////////////////////////
 
 // Tries to create a convo notification.
 // If to_user_id already has a convo notification for this convo, then
@@ -1661,11 +1786,11 @@ function* createPmNotification(opts) {
     } catch(ex) {
       // Unique constraint violation
       if (ex.code === '23505') {
-        var sql = m(function() {/*
+        const sql = `
           UPDATE notifications
           SET count = COALESCE(count, 0) + 1
           WHERE convo_id = $1 AND to_user_id = $2
-        */});
+        `;
         yield client.queryPromise(sql, [opts.convo_id, opts.to_user_id]);
         return;
       }
@@ -1682,16 +1807,16 @@ exports.createVmNotification = function*(data) {
   assert(Number.isInteger(data.to_user_id));
   assert(Number.isInteger(data.vm_id));
 
-  var createSql = m(function() {/*
+  const createSql = `
 INSERT INTO notifications (type, from_user_id, to_user_id, vm_id, count)
 VALUES ($1, $2, $3, $4, 1)
-  */});
+  `;
 
-  var updateSql = m(function() {/*
+  const updateSql = `
 UPDATE notifications
 SET count = count + 1
 WHERE vm_id = $1 AND to_user_id = $2
-  */});
+  `;
 
   return yield withTransaction(function*(client) {
     try {
@@ -1706,36 +1831,34 @@ WHERE vm_id = $1 AND to_user_id = $2
       throw ex;
     }
   });
-
 };
 
 exports.findParticipantIds = function*(convoId) {
-  var sql = m(function() {/*
+  const sql = `;
     SELECT user_id
     FROM convos_participants
     WHERE convo_id = $1
-  */});
-  var result = yield query(sql, [convoId]);
-  return _.pluck(result.rows, 'user_id');
+  `;
+  const rows = yield queryMany(sql, [convoId]);
+  return _.pluck(rows, 'user_id');
 };
 
 exports.findNotificationsForUserId = function*(toUserId) {
-  var sql = m(function() {/*
+  const sql = `
     SELECT *
     FROM notifications
     WHERE to_user_id = $1
-  */});
-  var result = yield query(sql, [toUserId]);
-  return result.rows;
+  `;
+  return yield queryMany(sql, [toUserId]);
 };
 
 // Returns how many rows deleted
 exports.deleteConvoNotification = function*(toUserId, convoId) {
-  var sql = m(function() {/*
+  const sql = `
     DELETE FROM notifications
     WHERE type = 'CONVO' AND to_user_id = $1 AND convo_id = $2
-  */});
-  var result = yield query(sql, [toUserId, convoId]);
+  `;
+  const result = yield query(sql, [toUserId, convoId]);
   return result.rowCount;
 };
 
@@ -1745,18 +1868,18 @@ exports.clearNotifications = function*(toUserId, notificationIds) {
   assert(Number.isInteger(toUserId));
   assert(Array.isArray(notificationIds));
 
-  var sql1 = m(function() {/*
+  const sql1 = `
 DELETE FROM notifications
 WHERE
   to_user_id = $1
   AND id = ANY ($2::int[])
-  */});
+  `;
 
   // TODO: Remove
   // Resetting notification count manually until I can ensure
   // notification system doesn't create negative notification counts
 
-  var sql2 = m(function() {/*
+  const sql2 = `
 UPDATE users
 SET
 	notifications_count = sub.notifications_count,
@@ -1772,35 +1895,37 @@ FROM (
 ) sub
 WHERE users.id = $1
   AND sub.to_user_id = $1
-  */});
+  `;
+
   yield query(sql1, [toUserId, notificationIds]);
   yield query(sql2, [toUserId]);
 };
 
 exports.clearConvoNotifications = function*(toUserId) {
-  var sql1 = m(function() {/*
+  const sql1 = `
     DELETE FROM notifications
     WHERE to_user_id = $1 AND type = 'CONVO'
-  */});
+  `;
 
   // TODO: Remove
   // Resetting notification count manually until I can ensure
   // notification system doesn't create negative notification counts
 
-  var sql2 = m(function() {/*
+  const sql2 = `
     UPDATE users
     SET convo_notifications_count = 0
     WHERE id = $1
-  */});
+  `;
+
   yield query(sql1, [toUserId]);
   yield query(sql2, [toUserId]);
 };
 
 // Returns [String]
 exports.findAllUnames = function*() {
-  var sql = 'SELECT uname FROM users ORDER BY uname';
-  var result = yield query(sql);
-  return _.pluck(result.rows, 'uname');
+  const sql = 'SELECT uname FROM users ORDER BY uname';
+  const rows = yield queryMany(sql);
+  return _.pluck(rows, 'uname');
 };
 
 ////////////////////////////////////////////////////////////
@@ -1808,7 +1933,7 @@ exports.findAllUnames = function*() {
 exports.findRGNTopicForHomepage = function*(topic_id) {
   assert(topic_id);
 
-  var sql = m(function() {/*
+  const sql = `
 SELECT
   t.id,
   t.title,
@@ -1819,7 +1944,7 @@ FROM topics t
 JOIN posts p ON t.latest_post_id = p.id
 JOIN users u ON p.user_id = u.id
 WHERE t.id = $1
-  */});
+  `;
 
   return yield queryOne(sql, [topic_id]);
 };
@@ -1829,7 +1954,8 @@ WHERE t.id = $1
 // Keep in sync with findTopicWithHasSubscribed
 exports.findTopicById = function*(topicId) {
   assert(topicId);
-  var sql = m(function() {/*
+
+  const sql = `
 SELECT
   t.*,
   to_json(f.*) "forum",
@@ -1855,22 +1981,22 @@ FROM topics t
 JOIN forums f ON t.forum_id = f.id
 WHERE t.id = $1
 GROUP BY t.id, f.id
-  */});
-  var result = yield query(sql, [topicId]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [topicId]);
 };
 
 exports.findArenaOutcomesForTopicId = function*(topic_id) {
   assert(_.isNumber(topic_id));
 
-  var sql = m(function() {/*
+  const sql = `
     SELECT
       arena_outcomes.*,
       to_json(users.*) "user"
     FROM arena_outcomes
     JOIN users ON arena_outcomes.user_id = users.id
     WHERE topic_id = $1
-  */});
+  `;
 
   return yield queryMany(sql, [topic_id]);
 };
@@ -1882,20 +2008,15 @@ exports.findArenaOutcomesForTopicId = function*(topic_id) {
 exports.updateTopic = function*(topicId, props) {
   assert(topicId);
   assert(props);
-  var sql = m(function() {/*
+  const sql = `
     UPDATE topics
     SET
       title = COALESCE($2, title),
       join_status = COALESCE($3, join_status)::join_status
     WHERE id = $1
     RETURNING *
-  */});
-  var result = yield query(sql, [
-    topicId,
-    props.title,
-    props.join_status
-  ]);
-  return result.rows[0];
+  `;
+  return yield queryOne(sql, [topicId, props.title, props.join_status]);
 };
 
 ////////////////////////////////////////////////////////////
@@ -1905,20 +2026,23 @@ exports.createMentionNotification = function*(opts) {
   assert(opts.to_user_id);
   assert(opts.post_id);
   assert(opts.topic_id);
-  var sql = m(function() {/*
+
+  const sql = `
     INSERT INTO notifications
     (type, from_user_id, to_user_id, topic_id, post_id)
     VALUES ('MENTION', $1, $2, $3, $4)
     RETURNING *
-  */});
-  var result = yield query(sql, [
-    opts.from_user_id,  // $1
-    opts.to_user_id,  // $2
-    opts.topic_id, // $3
-    opts.post_id // $4
+  `;
+
+  return yield queryOne(sql, [
+    opts.from_user_id,
+    opts.to_user_id,
+    opts.topic_id,
+    opts.post_id
   ]);
-  return result.rows[0];
 };
+
+////////////////////////////////////////////////////////////
 
 exports.parseAndCreateMentionNotifications = function*(props) {
   debug('[parseAndCreateMentionNotifications] Started...');
@@ -1954,19 +2078,20 @@ exports.createQuoteNotification = function*(opts) {
   assert(opts.to_user_id);
   assert(opts.post_id);
   assert(opts.topic_id);
-  var sql = m(function() {/*
+
+  const sql = `
     INSERT INTO notifications
     (type, from_user_id, to_user_id, topic_id, post_id)
     VALUES ('QUOTE', $1, $2, $3, $4)
     RETURNING *
-  */});
-  var result = yield query(sql, [
+  `;
+
+  return yield queryOne(sql, [
     opts.from_user_id,  // $1
     opts.to_user_id,  // $2
     opts.topic_id, // $3
     opts.post_id // $4
   ]);
-  return result.rows[0];
 };
 
 // Keep in sync with db.parseAndCreateMentionNotifications
@@ -2000,7 +2125,7 @@ exports.parseAndCreateQuoteNotifications = function*(props) {
 };
 
 exports.findReceivedNotificationsForUserId = function*(toUserId) {
-  var sql = m(function() {/*
+  const sql = `
 SELECT
   n.*,
   to_json(u.*) "from_user",
@@ -2044,20 +2169,22 @@ LEFT OUTER JOIN posts p ON n.post_id = p.id
 LEFT OUTER JOIN vms ON n.vm_id = vms.id
 WHERE n.to_user_id = $1
 ORDER BY n.id DESC
-  */});
-  var result = yield query(sql, [toUserId]);
-  return result.rows;
+  `;
+
+  return yield queryMany(sql, [toUserId]);
 };
 
 // Returns how many rows deleted
 exports.deleteNotificationsForPostId = function*(toUserId, postId) {
   assert(toUserId);
   assert(postId);
-  var sql = m(function() {/*
+
+  const sql = `
     DELETE FROM notifications
     WHERE to_user_id = $1 AND post_id = $2
-  */});
-  var result = yield query(sql, [toUserId, postId]);
+  `;
+
+  const result = yield query(sql, [toUserId, postId]);
   return result.rowCount;
 };
 
@@ -2074,16 +2201,16 @@ exports.upsertViewer = function*(ctx, forumId, topicId) {
 
   var sql, params;
   if (ctx.currUser && !ctx.currUser.is_ghost) {
-    sql = m(function() {/*
+    sql = `
 INSERT INTO viewers (uname, forum_id, topic_id, viewed_at)
 VALUES ($1, $2, $3, NOW())
-    */});
+    `;
     params = [ctx.currUser.uname, forumId, topicId];
   } else {
-    sql = m(function() {/*
+    sql = `
 INSERT INTO viewers (ip, forum_id, topic_id, viewed_at)
 VALUES ($1, $2, $3, NOW())
-    */});
+    `;
     params = [ctx.ip, forumId, topicId];
   }
 
@@ -2096,17 +2223,17 @@ VALUES ($1, $2, $3, NOW())
       // update the row
       if (ex.code === '23505') {
         if (ctx.currUser && !ctx.currUser.is_ghost) {
-          sql = m(function() {/*
+          sql = `
             UPDATE viewers
             SET forum_id = $2, topic_id = $3, viewed_at = NOW()
             WHERE uname = $1
-          */});
+          `;
         } else {
-          sql = m(function() {/*
+          sql = `
             UPDATE viewers
             SET forum_id = $2, topic_id = $3, viewed_at = NOW()
             WHERE ip = $1
-          */});
+          `;
         }
         var result = yield query(sql, params);
 
@@ -2126,17 +2253,18 @@ VALUES ($1, $2, $3, NOW())
 // Returns map of ForumId->Int
 exports.getForumViewerCounts = function*() {
   // Query returns { forum_id: Int, viewers_count: Int } for every forum
-  var sql = m(function() {/*
+  const sql = `
 SELECT
   f.id "forum_id",
   COUNT(v.*) "viewers_count"
 FROM forums f
 LEFT OUTER JOIN active_viewers v ON f.id = v.forum_id
 GROUP BY f.id
-  */});
-  var result = yield query(sql);
+  `;
 
-  var output = {};
+  const result = yield query(sql);
+
+  let output = {};
   result.rows.forEach(function(row) {
     output[row.forum_id] = row.viewers_count;
   });
@@ -2149,12 +2277,14 @@ GROUP BY f.id
 // Returns Int of viewers deleted
 exports.clearExpiredViewers = function*() {
   debug('[clearExpiredViewers] Running');
-  var sql = m(function() {/*
+
+  const sql = `
 DELETE FROM viewers
 WHERE viewed_at < NOW() - interval '15 minutes'
-  */});
-  var result = yield query(sql);
-  var count = result.rowCount;
+  `;
+
+  const result = yield query(sql);
+  const count = result.rowCount;
   debug('[clearExpiredViewers] Deleted views: ' + count);
   return count;
 };
@@ -2162,16 +2292,16 @@ WHERE viewed_at < NOW() - interval '15 minutes'
 // Returns viewers as a map of { users: [Viewer], guests: [Viewer] }
 exports.findViewersForTopicId = function*(topicId) {
   assert(topicId);
-  var sql = m(function() {/*
+  var sql = `
 SELECT *
 FROM active_viewers
 WHERE topic_id = $1
 ORDER BY uname
-  */});
-  var result = yield query(sql, [topicId]);
-  var viewers = result.rows;
+  `;
 
-  var output = {
+  const viewers = yield queryMany(sql, [topicId]);
+
+  const output = {
     users: _.filter(viewers, 'uname'),
     guests: _.filter(viewers, 'ip')
   };
@@ -2182,14 +2312,14 @@ ORDER BY uname
 // Returns viewers as a map of { users: [Viewer], guests: [Viewer] }
 exports.findViewersForForumId = function*(forumId) {
   assert(forumId);
-  var sql = m(function() {/*
+
+  var sql = `
 SELECT *
 FROM active_viewers
 WHERE forum_id = $1
 ORDER BY uname
-  */});
-  var result = yield query(sql, [forumId]);
-  var viewers = result.rows;
+  `;
+  var viewers = yield queryMany(sql, [forumId]);
 
   var output = {
     users: _.filter(viewers, 'uname'),
@@ -2204,20 +2334,20 @@ exports.moveTopic = function*(topicId, fromForumId, toForumId, leaveRedirect) {
   assert(_.isNumber(toForumId));
   var sql, params, result;
   if (leaveRedirect) {
-    sql = m(function() {/*
+    sql = `
       UPDATE topics
       SET forum_id = $2, moved_from_forum_id = $3, moved_at = NOW()
       WHERE id = $1
       RETURNING *
-    */});
+    `;
     params = [topicId, toForumId, fromForumId];
   } else {
-    sql = m(function() {/*
+    sql = `
       UPDATE topics
       SET forum_id = $2, moved_at = NOW()
       WHERE id = $1
       RETURNING *
-    */});
+    `;
     params = [topicId, toForumId];
   }
   result = yield query(sql, params);
@@ -2236,11 +2366,11 @@ exports.moveTopic = function*(topicId, fromForumId, toForumId, leaveRedirect) {
   // then update destination forum's latest post.
   if (topic.latest_post_id > toForum.latest_post_id) {
     debug('[moveTopic] Updating toForum latest_post_id');
-    sql = m(function() {/*
+    sql = `
 UPDATE forums
 SET latest_post_id = $2
 WHERE id = $1
-    */});
+    `;
     debug('topic.id: %s, topic.latest_post_id: %s', topic.id, topic.latest_post_id);
     yield query(sql, [topic.forum_id, topic.latest_post_id]);
   }
@@ -2249,7 +2379,7 @@ WHERE id = $1
   // we moved the topic out of this forum.
   if (topic.latest_post_id === fromForum.latest_post_id) {
     debug('[moveTopic] Updating fromForum.latest_post_id');
-    sql = m(function() {/*
+    sql = `
 UPDATE forums
 SET latest_post_id = (
   SELECT MAX(t.latest_post_id) "latest_post_id"
@@ -2257,12 +2387,14 @@ SET latest_post_id = (
   WHERE t.forum_id = $1
 )
 WHERE id = $1
-    */});
+    `;
     yield query(sql, [fromForumId]);
   }
 
   return topic;
 };
+
+////////////////////////////////////////////////////////////
 
 // Required props:
 // - post_id: Int
@@ -2276,42 +2408,49 @@ exports.ratePost = function*(props) {
   assert(props.from_user_uname);
   assert(props.to_user_id);
   assert(props.type);
-  var sql = m(function() {/*
+
+  const sql = `
 INSERT INTO ratings (from_user_id, from_user_uname, post_id, type, to_user_id)
 VALUES ($1, $2, $3, $4, $5)
 RETURNING *
-  */});
-  var result = yield query(sql, [
+  `;
+
+  return yield queryOne(sql, [
     props.from_user_id,
     props.from_user_uname,
     props.post_id,
     props.type,
     props.to_user_id
   ]);
-  return result.rows[0];
 };
+
+////////////////////////////////////////////////////////////
 
 exports.findLatestRatingForUserId = function*(userId) {
   assert(userId);
-  var sql = m(function() {/*
+
+  const sql = `
 SELECT *
 FROM ratings
 WHERE from_user_id = $1
 ORDER BY created_at DESC
 LIMIT 1
-  */});
-  var result = yield query(sql, [userId]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [userId]);
 };
+
+////////////////////////////////////////////////////////////
 
 exports.findRatingByFromUserIdAndPostId = function*(from_user_id, post_id) {
   assert(from_user_id);
   assert(post_id);
-  var sql = m(function() {/*
+
+  const sql = `
 SELECT *
 FROM ratings
 WHERE from_user_id = $1 AND post_id = $2
-  */});
+  `;
   var result = yield query(sql, [from_user_id, post_id]);
   return result.rows[0];
 };
@@ -2319,35 +2458,36 @@ WHERE from_user_id = $1 AND post_id = $2
 exports.deleteRatingByFromUserIdAndPostId = function*(from_user_id, post_id) {
   assert(from_user_id);
   assert(post_id);
-  var sql = m(function() {/*
+
+  const sql = `
 DELETE FROM ratings
 WHERE from_user_id = $1 AND post_id = $2
 RETURNING *
-  */});
-  var result = yield query(sql, [from_user_id, post_id]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [from_user_id, post_id]);
 };
 
 exports.deleteLegacyAvatar = function*(userId) {
-  var sql = m(function() {/*
+  const sql = `
 UPDATE users
 SET legacy_avatar_url = null
 WHERE id = $1
 RETURNING *
-  */});
-  var result = yield query(sql, [userId]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [userId]);
 };
 
 exports.deleteAvatar = function*(userId) {
-  var sql = m(function() {/*
+  const sql = `
 UPDATE users
 SET legacy_avatar_url = null, avatar_url = ''
 WHERE id = $1
 RETURNING *
-  */});
-  var result = yield query(sql, [userId]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [userId]);
 };
 
 // User receives this when someone rates their post
@@ -2364,20 +2504,21 @@ exports.createRatingNotification = function*(props) {
   assert(props.post_id);
   assert(props.topic_id);
   assert(props.rating_type);
-  var sql = m(function(){/*
+
+  const sql = `
 INSERT INTO notifications
 (type, from_user_id, to_user_id, meta, post_id, topic_id)
 VALUES ('RATING', $1, $2, $3, $4, $5)
 RETURNING *
-  */});
-  var result = yield query(sql, [
+  `;
+
+  return yield queryOne(sql, [
     props.from_user_id, // $1
     props.to_user_id, // $2
     { type: props.rating_type }, // $3
     props.post_id, // $4
     props.topic_id // $5
   ]);
-  return result.rows[0];
 };
 
 // Recalculates forum caches including the counter caches and
@@ -2388,7 +2529,8 @@ RETURNING *
 // topic will hang around as the forum's latest post.
 exports.refreshForum = function*(forumId) {
   assert(forumId);
-  var sql = m(function(){/*
+
+  var sql = `
 UPDATE forums
 SET
   posts_count = sub.posts_count,
@@ -2402,54 +2544,54 @@ FROM (
 ) sub
 WHERE id = $1
 RETURNING forums.*
-  */});
-  var result = yield query(sql, [forumId]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [forumId]);
 };
 
 // -> JSONString
 exports.findAllUnamesJson = function*() {
-  var sql = m(function() {/*
+  const sql = `
 SELECT json_agg(uname) unames
 FROM users
 --WHERE last_online_at IS NOT NULL
-  */});
-  var result = yield query(sql);
-  return result.rows[0].unames;
+  `;
+  const row = yield queryOne(sql);
+  return row.unames;
 };
 
 exports.updateTopicCoGms = function*(topicId, userIds) {
   assert(topicId);
   assert(_.isArray(userIds));
-  var sql = m(function() {/*
+
+  const sql = `
 UPDATE topics
 SET co_gm_ids = $2
 WHERE id = $1
 RETURNING *
-  */});
-  var result = yield query(sql, [topicId, userIds]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [topicId, userIds]);
 };
 
 exports.findAllTags = function*() {
-  var sql = m(function() {/*
+  const sql = `
 SELECT *
 FROM tags
-  */});
-  var result = yield query(sql);
-  return result.rows;
+  `;
+  return yield queryMany(sql);
 };
 
 // Returns [TagGroup] where each group has [Tag] array bound to `tags` property
 exports.findAllTagGroups = function*() {
-  var sql = m(function() {/*
+  const sql = `
 SELECT
   *,
   (SELECT json_agg(t.*) FROM tags t WHERE t.tag_group_id = tg.id) tags
 FROM tag_groups tg
-  */});
-  var result = yield query(sql);
-  return result.rows;
+  `;
+
+  return yield queryMany(sql);
 };
 
 // topicId :: String | Int
@@ -2461,18 +2603,18 @@ exports.updateTopicTags = function*(topicId, tagIds) {
   var sql;
   return yield withTransaction(function*(client) {
     // Delete all tags for this topic from the bridge table
-    yield client.queryPromise(m(function() {/*
+    yield client.queryPromise(`
 DELETE FROM tags_topics
 WHERE topic_id = $1
-    */}), [topicId]);
+    `, [topicId]);
 
     // Now create the new bridge links
     var thunks = [];
     tagIds.forEach(function(tagId) {
-      var thunk = client.queryPromise(m(function() {/*
+      var thunk = client.queryPromise(`
 INSERT INTO tags_topics (topic_id, tag_id)
 VALUES ($1, $2)
-      */}), [topicId, tagId]);
+      `, [topicId, tagId]);
 
       thunks.push(thunk);
     });
@@ -2491,7 +2633,8 @@ VALUES ($1, $2)
 // user that has this ip address.
 exports.findUsersWithPostsWithIpAddress = function*(ip_address) {
   assert(ip_address);
-  var sql = m(function() {/*
+
+  const sql = `
 SELECT
   u.uname           uname,
   COUNT(p.id)       count,
@@ -2500,14 +2643,15 @@ FROM posts p
 JOIN users u ON p.user_id = u.id
 WHERE p.ip_address = $1
 GROUP BY u.uname
-  */});
-  var result = yield query(sql, [ip_address]);
-  return result.rows;
+  `;
+
+  return yield queryMany(sql, [ip_address]);
 };
 
 exports.findUsersWithPmsWithIpAddress = function*(ip_address) {
   assert(ip_address);
-  var sql = m(function() {/*
+
+  const sql = `
 SELECT
   u.uname           uname,
   COUNT(p.id)       count,
@@ -2516,15 +2660,16 @@ FROM pms p
 JOIN users u ON p.user_id = u.id
 WHERE p.ip_address = $1
 GROUP BY u.uname
-  */});
-  var result = yield query(sql, [ip_address]);
-  return result.rows;
+  `;
+
+  return yield queryMany(sql, [ip_address]);
 };
 
 // Returns [String]
 exports.findAllIpAddressesForUserId = function*(user_id) {
   assert(user_id);
-  var sql = m(function() {/*
+
+  const sql = `
 SELECT DISTINCT ip_address
 FROM posts
 WHERE user_id = $1 AND ip_address IS NOT NULL
@@ -2534,15 +2679,16 @@ UNION
 SELECT DISTINCT ip_address
 FROM pms
 WHERE user_id = $1 AND ip_address IS NOT NULL
-  */});
-  var result = yield query(sql, [user_id]);
-  return _.pluck(result.rows, 'ip_address');
+  `;
+
+  const rows = yield queryMany(sql, [user_id]);
+  return _.pluck(rows, 'ip_address');
 };
 
 // Returns latest 5 unhidden checks
 exports.findLatestChecks = function*() {
   var forumIds = [12, 38, 13, 14, 15, 16, 40, 43];
-  var sql = m(function() {/*
+  var sql = `
 SELECT
   t.*,
   (SELECT to_json(u.*) FROM users u WHERE id = t.user_id) "user",
@@ -2558,15 +2704,15 @@ WHERE
   AND NOT t.is_hidden
 ORDER BY t.id DESC
 LIMIT 5
-  */});
-  var result = yield query(sql, [forumIds]);
-  return result.rows;
+  `;
+
+  return yield queryMany(sql, [forumIds]);
 };
 
 // Returns latest 5 unhidden roleplays
 exports.findLatestRoleplays = function*() {
   var forumIds = [3, 4, 5, 6, 7, 39, 42];
-  var sql = m(function() {/*
+  var sql = `
 SELECT
   t.*,
   (SELECT to_json(u.*) FROM users u WHERE id = t.user_id) "user",
@@ -2582,13 +2728,13 @@ WHERE
   AND NOT t.is_hidden
 ORDER BY t.id DESC
 LIMIT 5
-  */});
-  var result = yield query(sql, [forumIds]);
-  return result.rows;
+  `;
+
+  return yield queryMany(sql, [forumIds]);
 };
 
 exports.findAllPublicTopicUrls = function*() {
-  var sql = m(function() {/*
+  var sql = `
 SELECT id, title
 FROM topics
 WHERE
@@ -2598,7 +2744,8 @@ WHERE
     FROM forums
     WHERE category_id NOT IN (4)
   )
-  */});
+  `;
+
   var result = yield query(sql);
   return result.rows.map(function(row) {
     return pre.presentTopic(row).url;
@@ -2609,7 +2756,7 @@ exports.findPostsByIds = function*(ids) {
   assert(_.isArray(ids));
   ids = ids.map(Number);  // Ensure ids are numbers, not strings
 
-  var sql = m(function() {/*
+  var sql = `
 SELECT
   p.*,
   to_json(t.*) topic,
@@ -2620,9 +2767,9 @@ JOIN topics t ON p.topic_id = t.id
 JOIN forums f ON t.forum_id = f.id
 JOIN users u ON p.user_id = u.id
 WHERE p.id = ANY ($1::int[])
-  */});
-  var result = yield query(sql, [ids]);
-  var rows = result.rows;
+  `;
+
+  var rows = yield queryMany(sql, [ids]);
 
   // Reorder posts by the order of ids passed in
   var out = [];
@@ -2636,18 +2783,23 @@ WHERE p.id = ANY ($1::int[])
   return out;
 };
 
+////////////////////////////////////////////////////////////
+
 exports.getUnamesMappedToIds = function*() {
-  var sql = 'SELECT uname, id FROM users';
-  var rows = (yield query(sql)).rows;
+  const sql = 'SELECT uname, id FROM users';
+  const rows = yield queryMany(sql);
 
   var out = {};
   rows.forEach(function(row) { out[row.uname.toLowerCase()] = row.id; });
+
   return out;
 };
 
+////////////////////////////////////////////////////////////
+
 // Trophies are returned newly-awarded first
 exports.findTrophiesForUserId = function*(user_id) {
-  var sql = m(function() {/*
+  const sql = `
 SELECT
   tu.is_anon,
   t.*,
@@ -2664,7 +2816,8 @@ LEFT OUTER JOIN users u1 ON tu.awarded_by = u1.id
 LEFT OUTER JOIN trophy_groups tg ON t.group_id = tg.id
 WHERE tu.user_id = $1
 ORDER BY tu.awarded_at DESC
-  */});
+  `;
+
   return yield queryMany(sql, [user_id]);
 };
 
@@ -2672,7 +2825,7 @@ ORDER BY tu.awarded_at DESC
 
 // Finds one trophy
 exports.findTrophyById = function*(trophy_id) {
-  var sql = m(function() {/*
+  const sql = `
 SELECT
   t.*,
   to_json(tg.*) "group"
@@ -2680,43 +2833,55 @@ FROM trophies t
 LEFT OUTER JOIN trophy_groups tg ON t.group_id = tg.id
 WHERE t.id = $1
 GROUP BY t.id, tg.id
-  */});
+  `;
+
   return yield queryOne(sql, [trophy_id]);
 };
 
+////////////////////////////////////////////////////////////
+
 exports.findTrophiesByGroupId = function*(group_id) {
-  var sql = m(function() {/*
+  const sql = `
 SELECT *
 FROM trophies t
 WHERE t.group_id = $1
 ORDER BY t.id ASC
-  */});
+  `;
+
   return yield queryMany(sql, [group_id]);
 };
 
+////////////////////////////////////////////////////////////
+
 exports.findTrophyGroups = function*() {
-  var sql = m(function() {/*
+  const sql = `
 SELECT *
 FROM trophy_groups
 ORDER BY id DESC
-  */});
+  `;
+
   return yield queryMany(sql);
 };
 
+////////////////////////////////////////////////////////////
+
 exports.findTrophyGroupById = function*(group_id) {
-  var sql = m(function() {/*
+  const sql = `
 SELECT *
 FROM trophy_groups tg
 WHERE tg.id = $1
-  */});
+  `;
+
   return yield queryOne(sql, [group_id]);
 };
+
+////////////////////////////////////////////////////////////
 
 // title Required
 // description_markup Optional
 // description_html Optional
 exports.updateTrophyGroup = function*(id, title, desc_markup, desc_html) {
-  var sql = m(function() {/*
+  const sql = `
 UPDATE trophy_groups
 SET
   title = $2,
@@ -2724,10 +2889,12 @@ SET
   description_html = $4
 WHERE id = $1
 RETURNING *
-  */});
+  `;
 
   return yield queryOne(sql, [id, title, desc_markup, desc_html]);
 };
+
+////////////////////////////////////////////////////////////
 
 // Update individual trophy
 //
@@ -2737,7 +2904,7 @@ RETURNING *
 exports.updateTrophy = function*(id, title, desc_markup, desc_html) {
   assert(Number.isInteger(id));
 
-  var sql = m(function() {/*
+  const sql = `
 UPDATE trophies
 SET
   title = $2,
@@ -2745,10 +2912,12 @@ SET
   description_html = $4
 WHERE id = $1
 RETURNING *
-  */});
+  `;
 
   return yield queryOne(sql, [id, title, desc_markup, desc_html]);
 };
+
+////////////////////////////////////////////////////////////
 
 // Update trophy<->user bridge record
 //
@@ -2757,39 +2926,43 @@ RETURNING *
 exports.updateTrophyUserBridge = function*(id, message_markup, message_html) {
   assert(Number.isInteger(id));
 
-  var sql = m(function() {/*
+  const sql = `
 UPDATE trophies_users
 SET
   message_markup = $2,
   message_html = $3
 WHERE id = $1
 RETURNING *
-  */});
+  `;
 
   return yield queryOne(sql, [id, message_markup, message_html]);
 };
 
+////////////////////////////////////////////////////////////
+
 exports.deactivateCurrentTrophyForUserId = function*(user_id) {
   assert(_.isNumber(user_id));
 
-  var sql = m(function() {/*
+  const sql = `
 UPDATE users
 SET active_trophy_id = NULL
 WHERE id = $1
-  */});
+  `;
 
   yield queryOne(sql, [user_id]);
 };
+
+////////////////////////////////////////////////////////////
 
 exports.updateUserActiveTrophyId = function*(user_id, trophy_id) {
   assert(_.isNumber(user_id));
   assert(_.isNumber(trophy_id));
 
-  var sql = m(function() {/*
+  const sql = `
 UPDATE users
 SET active_trophy_id = $2
 WHERE id = $1
-  */});
+  `;
 
   return yield queryOne(sql, [user_id, trophy_id]);
 };
@@ -2800,7 +2973,7 @@ exports.findTrophyUserBridgeById = function*(id) {
   debug('[findTrophyUserBridgeById] id=%j', id);
   assert(id);
 
-  var sql = m(function() {/*
+  const sql = `
 SELECT
   tu.*,
   to_json(t.*) AS trophy,
@@ -2809,7 +2982,7 @@ FROM trophies_users tu
 JOIN trophies t ON tu.trophy_id = t.id
 JOIN users u ON tu.user_id = u.id
 WHERE tu.id = $1
-  */});
+  `;
 
   return yield queryOne(sql, [id]);
 };
@@ -2823,19 +2996,21 @@ exports.findTrophyByIdAndUserId = function*(trophy_id, user_id) {
   assert(_.isNumber(user_id));
   assert(_.isNumber(trophy_id));
 
-  var sql = m(function() {/*
+  const sql = `
 SELECT trophies.*
 FROM trophies_users
 JOIN trophies ON trophies_users.trophy_id = trophies.id
 WHERE trophies_users.trophy_id = $1 AND trophies_users.user_id = $2
 LIMIT 1
-  */});
+  `;
 
   return yield queryOne(sql, [trophy_id, user_id]);
 };
 
+////////////////////////////////////////////////////////////
+
 exports.findWinnersForTrophyId = function*(trophy_id) {
-  var sql = m(function() {/*
+  const sql = `
 SELECT
   tu.is_anon,
   winners.id,
@@ -2850,9 +3025,12 @@ FROM trophies_users tu
 JOIN users winners ON tu.user_id = winners.id
 LEFT OUTER JOIN users awarders ON tu.awarded_by = awarders.id
 WHERE tu.trophy_id = $1
-  */});
+  `;
+
   return yield queryMany(sql, [trophy_id]);
 };
+
+////////////////////////////////////////////////////////////
 
 // description_markup and _html are optional
 //
@@ -2862,11 +3040,11 @@ exports.createTrophyGroup = function*(title, description_markup, description_htm
   assert(_.isUndefined(description_markup) || _.isString(description_markup));
   assert(_.isUndefined(description_html) || _.isString(description_html));
 
-  var sql = m(function() {/*
+  const sql = `
 INSERT INTO trophy_groups (title, description_markup, description_html)
 VALUES ($1, $2, $3)
 RETURNING *
-  */});
+  `;
 
   return yield queryOne(sql, [
     title,
@@ -2883,51 +3061,59 @@ exports.createStatus = function*(props) {
   assert(typeof props.text === 'string');
   assert(typeof props.html === 'string');
 
-  var sql = m(function() {/*
+  const sql = `
 INSERT INTO statuses (user_id, text, html)
 VALUES ($1, $2, $3)
 RETURNING *
-  */});
+  `;
 
-  var result = yield query(sql, [props.user_id, props.text, props.html]);
-  return result.rows[0];
+  return yield queryOne(sql, [props.user_id, props.text, props.html]);
 };
 
+////////////////////////////////////////////////////////////
+
 exports.findLatestStatusesForUserId = function*(user_id) {
-  var sql = m(function() {/*
+  const sql = `
 SELECT *
 FROM statuses
 WHERE user_id = $1
 ORDER BY created_at DESC
 LIMIT 5
-  */});
-  var result = yield query(sql, [user_id]);
-  return result.rows;
+  `;
+
+  return yield queryMany(sql, [user_id]);
 };
 
+////////////////////////////////////////////////////////////
+
 exports.findStatusById = function*(id) {
-  var sql = m(function() {/*
+  const sql = `
 SELECT
   us.*,
   to_json(u.*) "user"
 FROM statuses us
 JOIN users u ON us.user_id = u.id
 WHERE us.id = $1
-  */});
-  var result = yield query(sql, [id]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [id]);
 };
 
+////////////////////////////////////////////////////////////
+
 exports.deleteStatusById = function*(id) {
-  var sql = m(function() {/*
+  const sql = `
 DELETE FROM statuses
 WHERE id = $1
-  */});
+  `;
+
   yield query(sql, [id]);
 };
 
+////////////////////////////////////////////////////////////
+
 exports.findLatestStatuses = function*() {
-  var sql = m(function() {/*
+  const sql = `
 SELECT
   us.*,
   to_json(u.*) "user"
@@ -2935,23 +3121,29 @@ FROM statuses us
 JOIN users u ON us.user_id = u.id
 ORDER BY created_at DESC
 LIMIT 5
-  */});
-  var result = yield query(sql);
-  return result.rows;
+  `;
+
+  return yield queryMany(sql);
 };
+
+////////////////////////////////////////////////////////////
 
 exports.clearCurrentStatusForUserId = function*(user_id) {
   assert(user_id);
-  var sql = m(function() {/*
+
+  const sql = `
 UPDATE users
 SET current_status_id = NULL
 WHERE id = $1
-*/});
+  `;
+
   yield query(sql, [user_id]);
 };
 
+////////////////////////////////////////////////////////////
+
 exports.findAllStatuses = function*() {
-  var sql = m(function() {/*
+  const sql = `
 SELECT
   s.*,
   to_json(u.*) "user",
@@ -2963,13 +3155,14 @@ LEFT OUTER JOIN users likers ON status_likes.user_id = likers.id
 GROUP BY s.id, u.id
 ORDER BY s.created_at DESC
 LIMIT 100
+  `;
 
-*/});
-  var result = yield query(sql, []);
-  var statuses = result.rows.map(function(r) {
+  const result = yield query(sql, []);
+  const statuses = result.rows.map(function(r) {
     r.likers = r.likers.filter(Boolean);
     return r;
   });
+
   return statuses;
 };
 
@@ -2981,39 +3174,45 @@ exports.likeStatus = function*(props) {
 
     // 1. Create status_likes row
 
-    yield client.queryPromise(m(function*() {/*
+    yield client.queryPromise(`
 INSERT INTO status_likes (status_id, user_id)
 VALUES ($1, $2)
-    */}), [
+    `, [
       props.status_id,
       props.user_id
     ]);
 
     // 2. Update status
 
-    yield client.queryPromise(m(function*() {/*
+    yield client.queryPromise(`
 UPDATE statuses
 SET liked_user_ids = array_append(liked_user_ids, $2)
 WHERE id = $1
-    */}), [
+    `, [
       props.status_id,
       props.user_id
     ]);
   });
 };
 
+////////////////////////////////////////////////////////////
+
 // Returns created_at Date OR null for user_id
 exports.latestStatusLikeAt = function*(user_id) {
   assert(user_id);
-  var sql = m(function() {/*
+
+  const sql = `
 SELECT MAX(created_at) created_at
 FROM status_likes
 WHERE user_id = $1
-  */});
-  var result = yield query(sql, [user_id]);
-  var row = result.rows[0];
+  `;
+
+  const row = yield queryOne(sql, [user_id]);
+
   return row && row.created_at;
 };
+
+////////////////////////////////////////////////////////////
 
 exports.updateTopicWatermark = function*(props) {
   debug('[updateTopicWatermark] props:', props);
@@ -3023,10 +3222,10 @@ exports.updateTopicWatermark = function*(props) {
   assert(props.post_id);
 
   try {
-    yield query(m(function() {/*
+    yield query(`
 INSERT INTO topics_users_watermark (topic_id, user_id, post_type, watermark_post_id)
 VALUES ($1, $2, $3, $4)
-    */}), [
+    `, [
       props.topic_id,
       props.user_id,
       props.post_type,
@@ -3035,11 +3234,11 @@ VALUES ($1, $2, $3, $4)
   } catch(ex) {
     // If unique violation...
     if (ex.code === '23505') {
-      yield query(m(function() {/*
+      yield query(`
 UPDATE topics_users_watermark
 SET watermark_post_id = GREATEST(watermark_post_id, $4)
 WHERE topic_id = $1 AND user_id = $2 AND post_type = $3
-      */}), [
+      `, [
         props.topic_id,
         props.user_id,
         props.post_type,
@@ -3051,11 +3250,13 @@ WHERE topic_id = $1 AND user_id = $2 AND post_type = $3
   }
 };
 
+////////////////////////////////////////////////////////////
+
 exports.findFirstUnreadPostId = function*(props) {
   assert(props.topic_id);
   assert(props.post_type);
 
-  var sql = m(function() {/*
+  const sql = `
 SELECT COALESCE(
   MIN(p.id),
   (
@@ -3078,21 +3279,24 @@ WHERE
   AND p.topic_id = $1
   AND p.type = $3
   AND p.is_hidden = false
-  */});
-  var result = yield query(sql, [
+  `;
+
+  const row = yield queryOne(sql, [
     props.topic_id,
     props.user_id,
     props.post_type
   ]);
-  var row = result.rows[0];
+
   return row && row.post_id;
 };
+
+////////////////////////////////////////////////////////////
 
 exports.findFirstUnreadPostId = function*(props) {
   assert(props.topic_id);
   assert(props.post_type);
 
-  var sql = m(function() {/*
+  const sql = `
 SELECT COALESCE(MIN(p.id),
   CASE $3::post_type
     WHEN 'ic' THEN
@@ -3117,35 +3321,38 @@ WHERE
   )
   AND p.topic_id = $1
   AND p.type = $3
-  */});
-  var result = yield query(sql, [
+  `;
+
+  const row = yield queryOne(sql, [
     props.topic_id,
     props.user_id,
     props.post_type
   ]);
-  var row = result.rows[0];
+
   return row && row.post_id;
 };
 
 exports.deleteNotificationForUserIdAndId = function*(userId, id) {
-  var sql = m(function() {/*
+  const sql = `
 DELETE FROM notifications
-WHERE
-  to_user_id = $1
+WHERE to_user_id = $1
   AND id = $2
-  */});
+  `;
+
   yield query(sql, [userId, id]);
 };
 
 exports.findNotificationById = function*(id) {
-  var sql = m(function() {/*
+  const sql = `
 SELECT *
 FROM notifications
 WHERE id = $1
-  */});
-  var result = yield query(sql, [id]);
-  return result.rows[0];
+  `;
+
+  return yield queryOne(sql, [id]);
 };
+
+////////////////////////////////////////////////////////////
 
 // - inserted_by is user_id of ARENA_MOD that is adding this outcome
 exports.createArenaOutcome = function*(topic_id, user_id, outcome, inserted_by) {
@@ -3154,11 +3361,11 @@ exports.createArenaOutcome = function*(topic_id, user_id, outcome, inserted_by) 
   assert(_.contains(['WIN', 'LOSS', 'DRAW'], outcome));
   assert(_.isNumber(inserted_by));
 
-  var sql = m(function() {/*
+  const sql = `
 INSERT INTO arena_outcomes (topic_id, user_id, outcome, profit, inserted_by)
 VALUES ($1, $2, $3, $4, $5)
 RETURNING *
-  */});
+  `;
 
   var profit;
   switch(outcome) {
@@ -3178,23 +3385,27 @@ RETURNING *
   return yield queryOne(sql, [topic_id, user_id, outcome, profit, inserted_by]);
 };
 
+////////////////////////////////////////////////////////////
+
 exports.deleteArenaOutcome = function*(topic_id, outcome_id) {
   assert(_.isNumber(topic_id));
   assert(_.isNumber(outcome_id));
 
-  var sql = m(function() {/*
+  const sql = `
 DELETE FROM arena_outcomes
 WHERE topic_id = $1 and id = $2
-  */});
+  `;
 
   return yield query(sql, [topic_id, outcome_id]);
 };
+
+////////////////////////////////////////////////////////////
 
 // Query is more complex than necessary to make it idempotent
 exports.promoteArenaRoleplayToRanked = function*(topic_id) {
   assert(_.isNumber(topic_id));
 
-  var sql = m(function() {/*
+  const sql = `
 UPDATE topics
 SET is_ranked = true
 WHERE
@@ -3208,10 +3419,9 @@ WHERE
       AND id = (SELECT forum_id FROM topics WHERE id = $1)
   )
 RETURNING *
-  */});
+  `;
 
-  var result = yield query(sql, [topic_id]);
-  return result.rows;
+  return yield queryMany(sql, [topic_id]);
 };
 
 // Returns the current feedback topic only if:
@@ -3220,7 +3430,7 @@ exports.findUnackedFeedbackTopic = function*(feedback_topic_id, user_id) {
   assert(_.isNumber(feedback_topic_id));
   assert(_.isNumber(user_id));
 
-  var sql = m(function() {/*
+  const sql = `
 SELECT *
 FROM feedback_topics
 WHERE
@@ -3230,7 +3440,7 @@ WHERE
     FROM feedback_replies fr
     WHERE fr.feedback_topic_id = $1 AND fr.user_id = $2
   )
-  */});
+  `;
 
   return yield queryOne(sql, [feedback_topic_id, user_id]);
 };
@@ -3240,11 +3450,11 @@ WHERE
 exports.findFeedbackTopicById = function*(ftopic_id) {
   assert(_.isNumber(ftopic_id));
 
-  var sql = m(function() {/*
+  const sql = `
 SELECT feedback_topics.*
 FROM feedback_topics
 WHERE id = $1
-  */});
+  `;
 
   return yield queryOne(sql, [ftopic_id]);
 };
@@ -3254,7 +3464,7 @@ WHERE id = $1
 exports.findFeedbackRepliesByTopicId = function*(ftopic_id) {
   assert(_.isNumber(ftopic_id));
 
-  var sql = m(function() {/*
+  const sql = `
 SELECT
   fr.*,
   u.uname
@@ -3262,7 +3472,7 @@ FROM feedback_replies fr
 JOIN users u ON fr.user_id = u.id
 WHERE fr.feedback_topic_id = $1
 ORDER BY id DESC
-  */});
+  `;
 
   return yield queryMany(sql, [ftopic_id]);
 };
@@ -3274,11 +3484,11 @@ exports.insertReplyToUnackedFeedbackTopic = function*(feedback_topic_id, user_id
   assert(_.isNumber(user_id));
   assert(_.isBoolean(ignored));
 
-  var sql = m(function() {/*
+  const sql = `
 INSERT INTO feedback_replies (user_id, ignored, text, feedback_topic_id)
 VALUES ($1, $2, $3, $4)
 RETURNING *
-  */});
+  `;
 
   return yield queryOne(sql, [user_id, ignored, text, feedback_topic_id]);
 };
@@ -3289,7 +3499,7 @@ RETURNING *
 exports.findFriendshipsForUserId = function*(user_id, limit) {
   assert(_.isNumber(user_id));
 
-  var sql = m(function() {/*
+  const sql = `
 SELECT
   friendships.*,
   json_build_object(
@@ -3303,57 +3513,64 @@ JOIN users u1 ON friendships.to_user_id = u1.id
 WHERE from_user_id = $1
 ORDER BY u1.last_online_at DESC NULLS LAST
 LIMIT $2
-  */});
+  `;
 
   return yield queryMany(sql, [user_id, limit || 10]);
 };
 
 exports.findFriendshipBetween = function*(from_id, to_id) {
-  var sql = m(function() {/*
+  const sql = `
 SELECT friendships
 FROM friendships
 WHERE from_user_id = $1 AND to_user_id = $2
-  */});
+  `;
 
   return yield queryOne(sql, [from_id, to_id]);
 };
 
+////////////////////////////////////////////////////////////
+
 exports.createFriendship = function*(from_id, to_id) {
   assert(_.isNumber(from_id));
   assert(_.isNumber(to_id));
-  var sql = m(function() {/*
+
+  const sql = `
 INSERT INTO friendships (from_user_id, to_user_id)
 VALUES ($1, $2)
-  */});
+  `;
+
   return yield query(sql, [from_id, to_id]);
 };
+
 exports.deleteFriendship = function*(from_id, to_id) {
   assert(_.isNumber(from_id));
   assert(_.isNumber(to_id));
-  var sql = m(function() {/*
+
+  const sql = `
 DELETE FROM friendships
 WHERE from_user_id = $1 AND to_user_id = $2
-  */});
+  `;
 
   return yield query(sql, [from_id, to_id]);
 };
 
+////////////////////////////////////////////////////////////
 
 exports.getAllChatMessages = function*() {
-  var sql = m(function() {/*
+  const sql = `
 SELECT
   chat_messages.*,
   to_json(u.*) "user"
 FROM chat_messages
 LEFT OUTER JOIN users u ON chat_messages.user_id = u.id
 ORDER BY id ASC
-  */});
+  `;
 
   return yield queryMany(sql);
 };
 
 exports.getMiniArenaLeaderboard = function*() {
-  var sql = m(function() {/*
+  const sql = `
     SELECT
       uname,
       slug,
@@ -3371,14 +3588,16 @@ exports.getMiniArenaLeaderboard = function*() {
       arena_losses ASC,
       arena_draws DESC
     LIMIT 5
-  */});
+  `;
 
   return yield queryMany(sql);
 };
 
+////////////////////////////////////////////////////////////
+
 // Returns [{when: '2015-7-25', count: 64}, ...]
 exports.getChatLogDays = function*() {
-  var sql = m(function() {/*
+  const sql = `
 SELECT to_char(sub.day, 'YYYY-MM-DD') "when", sub.count "count"
 FROM (
 	SELECT date_trunc('day', cm.created_at) "day", COUNT(cm.*) "count"
@@ -3386,16 +3605,18 @@ FROM (
 	GROUP BY "day"
 	ORDER BY "day"
 ) sub
-  */});
+  `;
 
   return yield queryMany(sql);
 };
+
+////////////////////////////////////////////////////////////
 
 // `when` is string 'YYYY-MM-DD'
 exports.findLogByDateTrunc = function*(when) {
   assert(_.isString(when));
 
-  var sql = m(function() {/*
+  const sql = `
 SELECT sub.*
 FROM (
 	SELECT
@@ -3407,7 +3628,7 @@ FROM (
 ) sub
 WHERE sub.when = $1
 ORDER BY sub.id
-  */});
+  `;
 
   return yield queryMany(sql, [when]);
 };
@@ -3425,11 +3646,11 @@ exports.createVm = function*(data) {
   assert(_.isString(data.markup));
   assert(_.isString(data.html));
 
-  var sql = m(function() {/*
+  const sql = `
 INSERT INTO vms (from_user_id, to_user_id, markup, html, parent_vm_id)
 VALUES ($1, $2, $3, $4, $5)
 RETURNING *
-  */});
+  `;
 
   return yield queryOne(sql, [
     data.from_user_id,
@@ -3443,7 +3664,7 @@ RETURNING *
 exports.findLatestVMsForUserId = function*(user_id) {
   assert(Number.isInteger(user_id));
 
-  var sql = m(function() {/*
+  const sql = `
 SELECT
   vms.*,
   json_build_object(
@@ -3472,7 +3693,7 @@ JOIN users u ON vms.from_user_id = u.id
 WHERE vms.to_user_id = $1 AND parent_vm_id IS NULL
 ORDER BY vms.id DESC
 LIMIT 30
-  */});
+  `;
 
   return yield queryMany(sql, [user_id]);
 };
@@ -3481,10 +3702,10 @@ exports.clearVmNotification = function*(to_user_id, vm_id) {
   assert(Number.isInteger(to_user_id));
   assert(Number.isInteger(vm_id));
 
-  var sql = m(function() {/*
+  const sql = `
 DELETE FROM notifications
 WHERE to_user_id = $1 AND vm_id = $2
-  */});
+  `;
 
   yield query(sql, [to_user_id, vm_id]);
 };
@@ -3493,10 +3714,10 @@ WHERE to_user_id = $1 AND vm_id = $2
 // current_sidebar_contests
 
 exports.clearCurrentSidebarContest = function*() {
-  var sql = m(function() {/*
+  const sql = `
     UPDATE current_sidebar_contests
     SET is_current = false
-  */});
+  `;
 
   return yield query(sql);
 };
@@ -3511,7 +3732,7 @@ exports.updateCurrentSidebarContest = function*(id, data) {
   assert(_.isBoolean(data.is_current) || _.isUndefined(data.is_current));
 
   // Reminder: Only COALESCE things that are not nullable
-  var sql = m(function() {/*
+  const sql = `
     UPDATE current_sidebar_contests
     SET
       title       = COALESCE($2, title),
@@ -3522,7 +3743,7 @@ exports.updateCurrentSidebarContest = function*(id, data) {
       is_current  = COALESCE($7, is_current)
     WHERE id = $1
     RETURNING *
-  */});
+  `;
 
   return yield queryOne(sql, [
     id, data.title, data.topic_url, data.deadline,
@@ -3537,13 +3758,13 @@ exports.insertCurrentSidebarContest = function*(data) {
   assert(_.isString(data.image_url) || _.isUndefined(data.image_url));
   assert(_.isString(data.description) || _.isUndefined(data.description));
 
-  var sql = m(function() {/*
+  const sql = `
     INSERT INTO current_sidebar_contests
     (title, topic_url, deadline, image_url, description, is_current)
     VALUES
     ($1, $2, $3, $4, $5, true)
     RETURNING *
-  */});
+  `;
 
   return yield queryOne(sql, [
     data.title, data.topic_url, data.deadline, data.image_url,
@@ -3553,13 +3774,13 @@ exports.insertCurrentSidebarContest = function*(data) {
 
 // Returns object or undefined
 exports.getCurrentSidebarContest = function*() {
-  var sql = m(function() {/*
+  const sql = `
     SELECT *
     FROM current_sidebar_contests
     WHERE is_current = true
     ORDER BY id DESC
     LIMIT 1
-  */});
+  `;
 
   return yield queryOne(sql);
 };
