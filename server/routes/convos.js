@@ -223,6 +223,10 @@ router.get('/convos/:convoId', function*() {
   this.assert(convo, 404);
   this.assertAuthorized(this.currUser, 'READ_CONVO', convo);
 
+  const folder = (() => {
+    return convo.cp.filter(cp => cp.user_id === this.currUser.id)[0].folder;
+  })();
+
   this.validateQuery('page')
     .default(1)
     .toInt()
@@ -266,36 +270,65 @@ router.get('/convos/:convoId', function*() {
     title: convo.title,
     // Pagination
     currPage: page,
-    totalPages: totalPages
+    totalPages: totalPages,
+    folder
   });
 });
 
-//
-// Show convos
-//
-router.get('/me/convos', function*() {
-  if (!config.IS_PM_SYSTEM_ONLINE) {
-    this.body = 'PM system currently disabled';
-    return;
+////////////////////////////////////////////////////////////
+
+function showConvosHandler(folder) {
+  return function* _showConvosHandler() {
+    if (!config.IS_PM_SYSTEM_ONLINE) {
+      this.body = 'PM system currently disabled';
+      return;
+    }
+
+    if (this.query['before-id'])
+      this.validateQuery('before-id').toInt();  // undefined || Number
+
+    this.assert(this.currUser, 404);
+
+    var convos = yield db.findConvosInvolvingUserId(this.currUser.id,
+                                                    this.vals['before-id'],
+                                                    folder);
+    convos = convos.map(pre.presentConvo);
+
+    var counts = yield db.getConvoFolderCounts(this.currUser.id);
+
+    var nextBeforeId = convos.length > 0 ? _.last(convos).latest_pm_id : null;
+    yield this.render('me_convos', {
+      ctx: this,
+      title: 'My Private Conversations',
+      counts,
+      folder,
+      convos,
+      // Pagination
+      beforeId: this.vals['before-id'],
+      nextBeforeId: nextBeforeId,
+      perPage: config.CONVOS_PER_PAGE
+    });
   }
+}
 
-  if (this.query['before-id'])
-    this.validateQuery('before-id').toInt();  // undefined || Number
+router.get('/me/convos', showConvosHandler('INBOX'));
+router.get('/me/convos/star', showConvosHandler('STAR'));
+router.get('/me/convos/archive', showConvosHandler('ARCHIVE'));
+router.get('/me/convos/trash', showConvosHandler('TRASH'));
 
-  this.assert(this.currUser, 404);
-  var convos = yield db.findConvosInvolvingUserId(this.currUser.id,
-                                                  this.vals['before-id']);
-  convos = convos.map(pre.presentConvo);
-  var nextBeforeId = convos.length > 0 ? _.last(convos).latest_pm_id : null;
-  yield this.render('me_convos', {
-    ctx: this,
-    convos: convos,
-    title: 'My Private Conversations',
-    // Pagination
-    beforeId: this.vals['before-id'],
-    nextBeforeId: nextBeforeId,
-    perPage: config.CONVOS_PER_PAGE
-  });
+router.put('/convos/:convoId/folder', function*() {
+  debug(this.request.body);
+  var folder = this.request.body.folder;
+  this.assert(_.contains(['INBOX', 'STAR', 'ARCHIVE', 'TRASH'], folder), 400)
+
+  let convo = yield db.findConvo(this.params.convoId);
+  this.assert(convo, 404);
+  this.assertAuthorized(this.currUser, 'READ_CONVO', convo);
+
+  yield db.updateConvoFolder(this.currUser.id, convo.id, folder);
+
+  this.flash = { message: ['success', 'Convo updated'] };
+  this.redirect(`/convos/${convo.id}`);
 });
 
 ////////////////////////////////////////////////////////////
