@@ -88,7 +88,7 @@
       {% endif %}
     </h1>
     {% if user.custom_title %}
-      <h3 style="margin-top: 0;">{{ user.custom_title|replaceTitleNewlines|raw }}</h3>
+      <h3 style="margin-top: 0;">{{ user.custom_title|replaceTitleNewlines|safe }}</h3>
     {% endif %}
 
     {% if user.current_status_id %}
