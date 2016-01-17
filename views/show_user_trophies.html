@@ -11,7 +11,7 @@
           Trophies
           <small>{{ user.trophy_count}} total</small>
 
-          {% if ctx.currUser && ctx.currUser.id === user.id && ctx.currUser.active_trophy_id %}
+          {% if ctx.currUser and ctx.currUser.id == user.id and ctx.currUser.active_trophy_id %}
             <form method="POST" action="/users/{{ user.id }}/active-trophy"
                   style="display: inline-block;"
             >
@@ -24,7 +24,7 @@
 
         </h3>
 
-        {% if ctx.currUser && ctx.currUser.id === user.id %}
+        {% if ctx.currUser and ctx.currUser.id == user.id %}
           <p>
             You can activate any single trophy at a time to boast it around the guild. Some trophies have special effects while active.
           </p>
@@ -32,7 +32,7 @@
 
         <div class="well trophy-box clearfix">
           {% for trophy in trophies %}
-          <div class="row" {% if !loop.last %}style="margin-bottom: 20px;"{% endif %}>
+          <div class="row" {% if not loop.last %}style="margin-bottom: 20px;"{% endif %}>
               <div class="col-sm-1">
                 {% if trophy.image_url %}
                   <a href="{{ trophy.url }}">
@@ -51,10 +51,10 @@
               </div>
               <div class="col-sm-5">
 
-                  {% if user.active_trophy_id === trophy.id %}
+                  {% if user.active_trophy_id == trophy.id %}
                     <span class="label label-success">Active</span>
                   {% else %}
-                    {% if ctx.currUser && ctx.currUser.id === user.id %}
+                    {% if ctx.currUser and ctx.currUser.id == user.id %}
                       <form method="POST" action="/users/{{ user.id }}/active-trophy"
                             style="display: inline-block;">
                         <input type="hidden" name="_method" value="PUT">
@@ -66,9 +66,7 @@
                     {% endif %}
                   {% endif %}
 
-                <a href="{{ trophy.url }}" style="text-decoration: underline;">
-                  {{ trophy.title -}}
-                </a>
+                <a href="{{ trophy.url }}" style="text-decoration: underline;">{{ trophy.title }}</a>
                 <span class="badge badge-default">{{ trophy.n|ordinalize }}</span>
                 <span class="text-muted">
                   of {{ trophy.awarded_count }} awarded

@@ -7,12 +7,12 @@
   {% set suffix = '' %} {# reset state of suffix #}
   {% if totalPages > 1 %}
     <ul class="pager">
-      <li {% if currPage === 1 %} class="disabled" {% endif %}>
+      <li {% if currPage == 1 %} class="disabled" {% endif %}>
         <a href="{{ baseUrl }}{{ urlFragment }}" rel="first">First</a>
       </li>
 
-      <li {% if currPage === 1 %} class="disabled" {% endif %}>
-        {% if currPage-1 > 1 %}
+      <li {% if currPage == 1 %} class="disabled" {% endif %}>
+        {% if (currPage-1) > 1 %}
           {% set suffix = '?page=' + Math.max(currPage-1, 1) %}
         {% endif %}
         <a href="{{ baseUrl + suffix }}{{ urlFragment}}" rel="prev">
@@ -23,17 +23,15 @@
       {% if currPage > 1 %}
         {% set suffix = '?page=' + currPage  %}
       {% endif %}
-      <a style="color: white;" href="{{ baseUrl + suffix }}{{ urlFragment }}">
-        Page {{ currPage|commafy }} of {{ totalPages|commafy -}}
-      </a>
+      <a style="color: white;" href="{{ baseUrl + suffix }}{{ urlFragment }}">Page {{ currPage|commafy }} of {{ totalPages|commafy }}</a>
 
-      <li {% if currPage === totalPages %} class="disabled" {% endif %}>
+      <li {% if currPage == totalPages %} class="disabled" {% endif %}>
         <a href="{{ baseUrl + '?page=' + Math.min(currPage+1, totalPages) }}{{ urlFragment }}" rel="next">
           Next &rarr;
         </a>
       </li>
 
-      <li {% if currPage === totalPages %} class="disabled" {% endif %}>
+      <li {% if currPage == totalPages %} class="disabled" {% endif %}>
         <a href="{{ baseUrl }}?page={{ totalPages }}{{ urlFragment }}" rel="last">Last</a>
       </li>
 

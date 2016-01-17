@@ -8,7 +8,7 @@
         Latest 100 Statuses
       </h4>
 
-      {% if statuses.length === 0 %}
+      {% if statuses.length == 0 %}
         <div class="text-center">-- None --</div>
       {% endif %}
 
@@ -59,12 +59,12 @@
           <span style="font-size: 90%;" class="text-muted">
             {{ status.likers.length }} like{% if status.likers.length > 1%}s{% endif %}:
             {% for uname in status.likers %}
-              <a href="/users/{{ uname|slugifyUname }}" class="text-muted" style="text-decoration: underline;">{{ uname }}</a>{% if !loop.last %},{% endif %}
+              <a href="/users/{{ uname|slugifyUname }}" class="text-muted" style="text-decoration: underline;">{{ uname }}</a>{% if not loop.last %},{% endif %}
             {% endfor %}
           </span>
         {% endif %}
 
-        {% if !loop.last %}<hr>{% endif %}
+        {% if not loop.last %}<hr>{% endif %}
       {% endfor %}
     </div><!-- /panel-body -->
   </div><!-- /panel-default -->

@@ -15,9 +15,7 @@
 
     <div class="form-group">
       <label for="pm-markup"></label>
-      <textarea name="markup" id="pm-markup" class="form-control" rows="10">
-       {{- pm.markup || pm.text -}}
-      </textarea>
+      <textarea name="markup" id="pm-markup" class="form-control" rows="10">{{ pm.markup or pm.text }}</textarea>
     </div>
 
     <!-- Submit button: Saves and redirects to pm -->

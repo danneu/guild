@@ -4,7 +4,7 @@
 {% macro topLeaderboard() %}
   {% if config.ENABLE_ADS %}
     <div class="abc">
-      {% if config.NODE_ENV === 'production' %}
+      {% if config.NODE_ENV == 'production' %}
         <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
         <!-- [koa-guild] top-leadboard -->
         <ins class="adsbygoogle"
@@ -28,7 +28,7 @@
 {% macro profileBlock() %}
   {% if config.ENABLE_ADS %}
     <div class="abc">
-      {% if config.NODE_ENV === 'production' %}
+      {% if config.NODE_ENV == 'production' %}
         <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
         <!-- [koa-guild] profile-block -->
         <ins class="adsbygoogle"

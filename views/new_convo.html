@@ -35,8 +35,8 @@
                      name="to"
                      class="form-control"
                      placeholder="User Name 1, User Name 2, User Name 3 (The other people that will be part of this convo)"
-                     {% if (ctx.flash.params || to) %}
-                     value="{{ ctx.flash.params.to || to }}"
+                     {% if (ctx.flash.params or to) %}
+                     value="{{ ctx.flash.params.to or to }}"
                      {% endif %}
                      >
             </div>

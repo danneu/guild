@@ -16,9 +16,7 @@
 
     <div class="form-group">
       <label for="post-markup"></label>
-      <textarea name="markup" id="post-markup" class="form-control" rows="10">
-       {{- post.markup || post.text -}}
-      </textarea>
+      <textarea name="markup" id="post-markup" class="form-control" rows="10">{{ post.markup or post.text }}</textarea>
     </div>
 
     <!-- Submit button: Saves post and redirects to post -->

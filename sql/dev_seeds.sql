@@ -126,3 +126,26 @@ VALUES
 (1, 1)  -- foo + nonrp
 ,(4, 1)  -- foo + rp (the flob's journey)
 ;
+
+
+------------------------------------------------------------
+-- TROPHIES
+------------------------------------------------------------
+
+INSERT INTO trophy_groups (id, title, description_markup, description_html)
+VALUES
+ (1, 'Test Trophy Group', 'Test', 'Test')
+;
+
+INSERT INTO trophies (id, group_id, title, awarded_count, description_markup, description_html, image_url)
+VALUES
+ (1, 1, 'Test Trophy', 2, 'Test', 'Test', '/img/fonzy.gif')
+;
+
+-- @foo = 1
+-- @admin = 4
+INSERT INTO trophies_users (user_id, trophy_id, awarded_by, n, message_markup, message_html)
+VALUES
+ (1, 1, 4, 1, 'A note', 'A note')
+,(4, 1, 4, 2, 'Note 2', 'Note 2')
+;

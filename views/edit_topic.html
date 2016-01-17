@@ -39,16 +39,16 @@
             <div class="col-sm-6 col-sm-offset-3">
           <div class="form-group">
             <div class="btn-group btn-group-justified" data-toggle="buttons">
-              <label class="btn btn-default {% if topic.join_status === 'jump-in' %}active{% endif%} join-status join-status-jump-in">
-                <input type="radio" name="join-status" id="option1" autocomplete="off" value="jump-in" {% if topic.join_status === 'jump-in' %}checked{% endif%}>
+              <label class="btn btn-default {% if topic.join_status == 'jump-in' %}active{% endif%} join-status join-status-jump-in">
+                <input type="radio" name="join-status" id="option1" autocomplete="off" value="jump-in" {% if topic.join_status == 'jump-in' %}checked{% endif%}>
                 Jump-in
               </label>
-              <label class="btn btn-default {% if topic.join_status === 'apply' %}active{% endif%} join-status join-status-apply">
-                <input type="radio" name="join-status" id="option2" autocomplete="off" value="apply" {% if topic.join_status === 'apply' %}checked{% endif%}>
+              <label class="btn btn-default {% if topic.join_status == 'apply' %}active{% endif%} join-status join-status-apply">
+                <input type="radio" name="join-status" id="option2" autocomplete="off" value="apply" {% if topic.join_status == 'apply' %}checked{% endif%}>
                 Apply
               </label>
-              <label class="btn btn-default {% if topic.join_status === 'full' %}active{% endif%} join-status join-status-full">
-                <input type="radio" name="join-status" id="option3" autocomplete="off" value="full" {% if topic.join_status === 'full' %}checked{% endif%}> Full
+              <label class="btn btn-default {% if topic.join_status == 'full' %}active{% endif%} join-status join-status-full">
+                <input type="radio" name="join-status" id="option3" autocomplete="off" value="full" {% if topic.join_status == 'full' %}checked{% endif%}> Full
               </label>
             </div>
           </div> <!--/form-group-->
@@ -179,7 +179,7 @@
           <strong>Current GM:</strong>
           <div>
             <a href="{{ topic.user.url }}">{{ topic.user.uname }}</a>
-            {% if ctx.currUser.id === topic.user.id %}
+            {% if ctx.currUser.id == topic.user.id %}
               (You)
             {% endif %}
           </div>
@@ -187,7 +187,7 @@
 
         <p><strong>Current Co-GMs:</strong>
           ({{ topic.co_gm_ids.length }}/{{ ctx.config.MAX_CO_GM_COUNT }})</p>
-        {% if !topic.co_gm_unames %}
+        {% if not topic.co_gm_unames %}
           <p class="text-muted">None</p>
         {% endif %}
         {% if topic.co_gm_unames %}
@@ -201,7 +201,7 @@
                   <input type="submit" value="Remove" class="btn btn-xs btn-danger">
                 </form>
               </li>
-              {% if !loop.last %}&mdash;{% endif %}
+              {% if not loop.last %}&mdash;{% endif %}
             {% endfor %}
           </ul>
         {% endif %}
@@ -245,7 +245,7 @@
 
 
     <!-- PANEL BODY -->
-    {% if !topic.is_ranked %}
+    {% if not topic.is_ranked %}
       <div class="panel-body">
         Only ranked fights can have outcomes. This fight is unranked.
 
@@ -260,14 +260,14 @@
     {% else %}
       <div class="panel-body">
         Outcomes:
-        {% if arenaOutcomes.length === 0 %}
+        {% if arenaOutcomes.length == 0 %}
           Not outcomes, yet
         {% else %}
           <ul>
             {% for outcome in arenaOutcomes %}
               <li>
                 <a href="{{ outcome.user.url }}">{{ outcome.user.uname }}</a>
-                {{ outcome.outcome|outcomeToElement|raw }}
+                {{ outcome.outcome|outcomeToElement|safe }}
 
                 <form method="POST" action="{{ topic.url }}/arena-outcomes"
                       style="display: inline-block;"
@@ -325,7 +325,7 @@
     $('[data-toggle="tooltip"]').tooltip();
   </script>
 
-  {% if ctx.can(ctx.currUser, 'UPDATE_TOPIC_CO_GMS', topic) || ctx.can(ctx.currUser, 'UPDATE_TOPIC_ARENA_OUTCOMES', topic) %}
+  {% if can(ctx.currUser, 'UPDATE_TOPIC_CO_GMS', topic) or can(ctx.currUser, 'UPDATE_TOPIC_ARENA_OUTCOMES', topic) %}
     <script type="text/javascript" src="/vendor/typeahead/typeahead.bundle.js"></script>
     <script type="text/javascript">
       var unames = new Bloodhound({

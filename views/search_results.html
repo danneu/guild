@@ -102,12 +102,12 @@
         <div class="btn-group" data-toggle="buttons">
           {% for sort_type in ['newest-first', 'oldest-first', 'relevance'] %}
             <label class="btn btn-default
-                          {% if sort_type === searchParams.sort %}
+                          {% if sort_type == searchParams.sort %}
                             active
                           {% endif %}">
               <input type="radio" autocomplete="off" name="sort"
                      value="{{ sort_type }}"
-                     {% if sort_type === searchParams.sort %}
+                     {% if sort_type == searchParams.sort %}
                        checked
                      {% endif %}
                      >
@@ -125,7 +125,7 @@
 
   <!-- Page title -->
 
-  {% if !_.isEmpty(searchParams) %}
+  {% if not _.isEmpty(searchParams) %}
 
     <h6>Debug:</h6>
     <pre>{{ JSON.stringify(cloudParams, null, '  ') }}</pre>
@@ -138,14 +138,14 @@
     </div>
   {% endif %}
 
-  {% if !_.isEmpty(searchParams) && posts.length === 0 %}
+  {% if not _.isEmpty(searchParams) and posts.length == 0 %}
     No results
   {% endif %}
 
   {% if posts.length > 0 %}
   <ul>
     {% for post in posts %}
-      {% if !ctx.can(ctx.currUser, 'READ_POST', post) %}
+      {% if not ctx.can(ctx.currUser, 'READ_POST', post) %}
         <p>
           {{ loop.index }}.
           <span class="text-danger">You are not authorized to view this post</span>

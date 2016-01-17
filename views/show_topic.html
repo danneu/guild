@@ -44,12 +44,12 @@
 
     <!-- -->
 
-    {% if ctx.can(ctx.currUser, 'UPDATE_TOPIC', topic) %}
+    {% if can(ctx.currUser, 'UPDATE_TOPIC', topic) %}
       <a href="{{ topic.url }}/edit" style="margin-bottom: 10px;"
          class="btn btn-xs btn-default">Edit Topic</a>
     {% endif %}
 
-    {% if ctx.can(ctx.currUser, 'ACCESS_TOPIC_MODKIT', topic) %}
+    {% if can(ctx.currUser, 'ACCESS_TOPIC_MODKIT', topic) %}
       <button type="button"
               id="toggle-topic-modkit"
               class="btn btn-default btn-xs"
@@ -60,11 +60,11 @@
 
     <!-- Topic state buttons -->
 
-    {% if ctx.can(ctx.currUser, 'ACCESS_TOPIC_MODKIT', topic) %}
+    {% if can(ctx.currUser, 'ACCESS_TOPIC_MODKIT', topic) %}
     <div class="topic-modkit" style="display: none;">
 
       <!-- STICK -->
-      {% if ctx.can(ctx.currUser, 'STICK_TOPIC', topic) %}
+      {% if can(ctx.currUser, 'STICK_TOPIC', topic) %}
         <form action="{{ topic.url }}/status" method="post">
           <input type="hidden" name="_method" value="put">
           {% if topic.is_sticky %}
@@ -78,7 +78,7 @@
       {% endif %}
 
       <!-- HIDE -->
-      {% if ctx.can(ctx.currUser, 'HIDE_TOPIC', topic) %}
+      {% if can(ctx.currUser, 'HIDE_TOPIC', topic) %}
         <form action="{{ topic.url }}/status" method="post">
           <input type="hidden" name="_method" value="put">
           {% if topic.is_hidden %}
@@ -92,7 +92,7 @@
       {% endif %}
 
       <!-- CLOSE -->
-      {% if ctx.can(ctx.currUser, 'CLOSE_TOPIC', topic) %}
+      {% if can(ctx.currUser, 'CLOSE_TOPIC', topic) %}
         <form action="{{ topic.url }}/status" method="post">
           <input type="hidden" name="_method" value="put">
           {% if topic.is_closed %}
@@ -106,7 +106,7 @@
       {% endif %}
 
      <!-- MOVE -->
-     {% if ctx.can(ctx.currUser, 'MOVE_TOPIC', topic) %}
+     {% if can(ctx.currUser, 'MOVE_TOPIC', topic) %}
         <div style="display: inline-block;" class="well well-sm">
         Move topic:
         <form action="{{ topic.url }}/move" method="post">
@@ -190,7 +190,7 @@
               {% for o in topic.arena_outcomes %}
                 <li>
                   <a href="/users/{{ o.uname|slugifyUname }}">{{ o.uname }}</a>
-                  {{ o.outcome|outcomeToElement|raw }}
+                  {{ o.outcome|outcomeToElement|safe }}
                   <span class="text-muted">
                     &mdash; Awarded by
                     <a href="/users/{{ o.inserted_by_uname|slugifyUname }}">{{ o.inserted_by_uname }}</a>
@@ -224,16 +224,16 @@
         </button>
         <ul class="dropdown-menu" role="menu">
           <!-- <li class="divider"></li> -->
-          <li><a href="/search?topic_id={{ topic.id }}&unames={{ encodeURIComponent(ctx.currUser.uname) }}">Find My Posts</a></li>
+          <li><a href="/search?topic_id={{ topic.id }}&unames={{ ctx.currUser.uname | encodeURIComponent }}">Find My Posts</a></li>
         </ul>
       </div>
     {% endif %}
 
     <!-- Subscribe button -->
 
-    {% if ctx.can(ctx.currUser, 'SUBSCRIBE_TOPIC', topic) %}
+    {% if can(ctx.currUser, 'SUBSCRIBE_TOPIC', topic) %}
       {% if topic.is_subscribed %}
-        <form action="{{ topic.subscriptionUrl }}?redirectTo={{ encodeURIComponent(ctx.url) }}" method="post">
+        <form action="{{ topic.subscriptionUrl }}?redirectTo={{ ctx.url | encodeURIComponent }}" method="post">
           <input type="hidden" name="_method" value="delete">
           <button type="submit" class="btn btn-danger" style="margin-right: 0px">
             <span class="glyphicon glyphicon-remove"></span>
@@ -241,7 +241,7 @@
           </button>
         </form>
       {% else %}
-        <form action="/me/subscriptions?redirectTo={{ encodeURIComponent(ctx.url) }}" method="post">
+        <form action="/me/subscriptions?redirectTo={{ ctx.url | encodeURIComponent }}" method="post">
           <input type="hidden" name="topic-id" value="{{ topic.id }}">
           <button type="submit" class="btn btn-success" style="margin-right: 0px">
             <span class="glyphicon glyphicon-plus"></span>
@@ -253,7 +253,7 @@
 
     <!-- New Reply button -->
 
-    {% if ctx.can(ctx.currUser, 'CREATE_POST', topic) %}
+    {% if can(ctx.currUser, 'CREATE_POST', topic) %}
       <a class="btn btn-primary" href="#new-reply-form">
         <span class="glyphicon glyphicon-pencil"></span>
         New Reply
@@ -324,14 +324,14 @@
 
   <!-- Posts list -->
 
-  {% if topic[postType + '_posts_count'] === 0 %}
+  {% if topic[postType + '_posts_count'] == 0 %}
     <div class="well">
       There are no {{ postType.toUpperCase() }} posts, yet.
     </div>
   {% endif %}
 
   {% for post in topic.posts %}
-    {% if ctx.can(ctx.currUser, 'READ_POST', post) %}
+    {% if can(ctx.currUser, 'READ_POST', post) %}
       <a name="post-{{ post.id }}"></a>
       <div class="panel panel-default post
                   {% if post.is_hidden %} hidden-post {% endif %}"
@@ -343,7 +343,7 @@
             <abbr class="timeago" title="{{ post.created_at.toISOString() }}">
               {{ post.created_at|formatDate }}
             </abbr>
-            {% if post.updated_at && post.updated_at.getTime() - post.created_at.getTime() > 1000 * 60 %}
+            {% if post.updated_at and post.updated_at.getTime() - post.created_at.getTime() > 1000 * 60 %}
               &rarr;
               <span class="glyphicon glyphicon-pencil"></span>
               <abbr class="timeago" title="{{ post.updated_at.toISOString() }}">
@@ -366,7 +366,7 @@
              style="background-color: #2E2C2C; position: relative; overflow: hidden;">
 
           <!-- Ribbon -->
-          {% if post.user_id === topic.user_id %}
+          {% if post.user_id == topic.user_id %}
             {% if topic.is_roleplay %}
               <div class="corner-ribbon top-right">GM</div>
             {% else %}
@@ -381,20 +381,20 @@
 
             <!-- For small devices -->
             <div class="visible-xs-block">
-              {{ macros.renderUserbitSmall(post.user) }}
+              {{ macros.renderUserbitSmall(ctx, post.user) }}
               <hr class="small-userbit-divider">
             </div>
 
             <!-- For larger-than-smartphone devices -->
             <div class="hidden-xs">
-              {{ macros.renderUserbitLarge(post.user) }}
+              {{ macros.renderUserbitLarge(ctx, post.user) }}
             </div> <!-- /.hidden-xs -->
 
           </div> <!-- /.col-sm-2 post-meta -->
 
           <div class="col-sm-10 post-content-wrapper">
             <!-- Post text -->
-            {{- macros.renderPost(post) -}}
+            {{ macros.renderPost(ctx, post) }}
             <!-- Ratings -->
             {% if post.ratings.length > 0 %}
               <div class="post-rating-list well well-sm">
@@ -420,7 +420,7 @@
                       <ul class="list-inline" style="display: inline-block;">
                       {% for rating in _.sortBy(_.filter(post.ratings, { type: type }), 'from_user_uname') %}
                         <li>
-                          <a href="/users/{{ rating.from_user_uname|slugifyUname }}">{{ rating.from_user_uname }}</a>{% if !loop.last %},{% endif %}
+                          <a href="/users/{{ rating.from_user_uname|slugifyUname }}">{{ rating.from_user_uname }}</a>{% if not loop.last %},{% endif %}
                         </li>
                       {% endfor %}
                       </ul>
@@ -431,9 +431,9 @@
               </div>
             {% endif %}
             <!-- Signature -->
-            {% if !post.is_hidden %}
-              {{- macros.renderSig(post.user) -}}
-            {% endif %}
+            {% if not post.is_hidden -%}
+              {{ macros.renderSig(ctx, post.user) }}
+            {%- endif %}
           </div>
 
         </div> <!-- /.panel-body -->
@@ -443,14 +443,14 @@
              style="background-color: #2E2C2C; border-radius: 0; border: 0">
           <!-- Hide button -->
           {% if post.is_hidden %}
-            {% if ctx.can(ctx.currUser, 'UNHIDE_POST', post) %}
+            {% if can(ctx.currUser, 'UNHIDE_POST', post) %}
               <form action="{{ post.url}}/unhide" method="post">
                 <input type="submit" value="Unhide"
                        class="btn btn-default btn-xs hide-btn pull-left">
               </form>
             {% endif %}
           {% else %}
-            {% if ctx.can(ctx.currUser, 'HIDE_POST', post) %}
+            {% if can(ctx.currUser, 'HIDE_POST', post) %}
               <form action="{{ post.url}}/hide" method="post">
                 <input type="submit" value="Hide"
                        class="btn btn-default btn-xs unhide-btn pull-left">
@@ -458,7 +458,7 @@
             {% endif %}
           {% endif %}
           <!-- IP address -->
-          {% if ctx.can(ctx.currUser, 'READ_USER_IP', post.user) %}
+          {% if can(ctx.currUser, 'READ_USER_IP', post.user) %}
             <div class="pull-left" style="margin-left: 5px; color: #6E6B6B">
               <a href="/ips/{{ post.ip_address }}" class="text-muted">
                 {{ post.ip_address }}
@@ -466,7 +466,7 @@
             </div>
           {% endif %}
           <!-- @Mention -->
-          {% if ctx.can(ctx.currUser, 'CREATE_POST', topic) %}
+          {% if can(ctx.currUser, 'CREATE_POST', topic) %}
             <a href=""
                class="btn btn-default btn-xs pull-right post-mention-btn"
                data-post-id="{{ post.id }}"
@@ -475,7 +475,7 @@
                >@Mention</a>
           {% endif %}
           <!-- Quote button -->
-          {% if ctx.can(ctx.currUser, 'CREATE_POST', topic) %}
+          {% if can(ctx.currUser, 'CREATE_POST', topic) %}
             <a href=""
                class="btn btn-default btn-xs pull-right post-reply-btn"
                post-id="{{ post.id }}"
@@ -484,7 +484,7 @@
                >Quote</a>
           {% endif %}
           <!-- Edit button -->
-          {% if ctx.can(ctx.currUser, 'UPDATE_POST', post) %}
+          {% if can(ctx.currUser, 'UPDATE_POST', post) %}
             <a href="{{ post.url }}/edit"
                class="btn btn-default btn-xs pull-right post-edit-btn"
                style="margin-left: 5px;"
@@ -492,7 +492,7 @@
               >Edit</a>
           {% endif %}
 
-          {% if ctx.can(ctx.currUser, 'RATE_POST', post) %}
+          {% if can(ctx.currUser, 'RATE_POST', post) %}
             {% if post.has_rated %}
               <span class="pull-right text-muted" style="margin-right: 10px;">
                 You <img src="{{ post.has_rated.type|ratingTypeToImageSrc }}"
@@ -534,7 +534,7 @@
 
   <!-- New post form -->
 
-  {% if ctx.can(ctx.currUser, 'CREATE_POST', topic) %}
+  {% if can(ctx.currUser, 'CREATE_POST', topic) %}
     <a name="new-reply-form"></a>
     <h2 style="display: inline-block;">New Reply</h2>
     <button type="button" class="btn btn-default btn-xs"
@@ -600,7 +600,7 @@ $('#new-reply').submit(function() {
 });
 </script>
 
-  {% if ctx.can(ctx.currUser, 'CREATE_POST', topic) %}
+  {% if can(ctx.currUser, 'CREATE_POST', topic) %}
     <script type="text/javascript">
       // Turn the new post editor into a bbcode editor
 

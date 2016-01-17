@@ -4,10 +4,10 @@
 <head>
   {# Temporarily off
    Guests always get the mobile version
-  {% if !ctx.currUser %}
+  {% if not ctx.currUser %}
     <meta name="viewport" content="width=device-width, initial-scale=1">
   {% endif %}
-  {% if ctx.currUser && ctx.currUser.force_device_width %}
+  {% if ctx.currUser and ctx.currUser.force_device_width %}
     <meta name="viewport" content="width=device-width, initial-scale=1">
   {% endif %}
   #}
@@ -15,7 +15,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <link rel="shortcut icon" href="/favicon.ico?v=3">
 
-  {% if ctx.path === '/' %}
+  {% if ctx.path == '/' %}
     <meta name="description" content="Laid-back and free-form roleplaying. From fandoms to original plots, you'll find other players that share your interests. Roleplays are organized by skill-level and tags.">
   {% endif %}
 
@@ -29,7 +29,7 @@
     {% endif %}
   </title>
 
-  {% if ctx.dist && ctx.dist.css %}
+  {% if ctx.dist.css %}
     <link rel="stylesheet" href="/{{ ctx.dist.css }}">
   {% else %}
     <!-- Bootstrap CSS -->
@@ -51,7 +51,7 @@
 
   {% block head %}{% endblock %}
 </head>
-<body class="{{ className || '' }}">
+<body class="{{ className or '' }}">
 <div class="container">
 
   <div id="top-bottom-box">
@@ -63,7 +63,7 @@
     </a>
   </div>
 
-    {% if ctx.path === '/' && ctx.config.NODE_ENV === 'production' %}
+    {% if ctx.path == '/' and ctx.config.NODE_ENV == 'production' %}
       <h1 id="tagline">Play-by-Post Role Playing Forum</h1>
     {% endif %}
 
@@ -79,7 +79,7 @@
             <span class="icon-bar"></span>
           </button>
           <a class="navbar-brand" href="/" style="padding:10px 15px; height:auto;">
-            {% if ctx.config.NODE_ENV === 'production' %}
+            {% if ctx.config.NODE_ENV == 'production' %}
               <h2 style="margin:0;font-size:14px;">
                 <img src="/img/redPANDA-logo.png" alt="Roleplayer Guild"
                      width="196"
@@ -140,11 +140,11 @@
             </form>
 
             <div class="hidden-xs">
-              {{ macros.renderUserBar(true, 'pull-right') }}
+              {{ macros.renderUserBar(ctx, true, 'pull-right') }}
             </div>
           {% endif %}
           <!-- If user is not logged in, show login/register controls -->
-          {% if !ctx.currUser %}
+          {% if not ctx.currUser %}
             <div class="navbar-right">
               <a class="btn btn-default navbar-btn" href="/login" id="login-btn">
                 Login
@@ -162,13 +162,13 @@
     <!-- userbar for mobile users -->
     {% if ctx.currUser %}
       <div class="text-center visible-xs-block">
-        {{ macros.renderUserBar(false) }}
+        {{ macros.renderUserBar(ctx, false) }}
       </div>
     {% endif %}
 
     <!-- Display flash message -->
-    {% if ctx.flash && ctx.flash.message %}
-      <div class="alert alert-{{= ctx.flash.message[0] }}"
+    {% if ctx.flash.message %}
+      <div class="alert alert-{{ ctx.flash.message[0] }}"
            role="alert">
         {{ ctx.flash.message[1] }}
       </div>
@@ -188,7 +188,7 @@
   </div> <!-- /container -->
 
   <!-- JS -->
-  {% if ctx.dist && ctx.dist.js %}
+  {% if ctx.dist.js %}
     <script src="/{{ ctx.dist.js }}"></script>
   {% else %}
     <script src="/vendor/jquery/jquery-2.1.3.min.js"></script>
@@ -270,7 +270,7 @@
          console.log('$content', $content);
          console.log('expr', $content.css('display'));
 
-         if ($content.css('display') === 'none') {
+         if ($content.css('display') == 'none') {
            $content.show();
            $button.parent().parent().css('border', '1px solid #111')
            $button.text(hiderName + ' [-]');
@@ -287,7 +287,7 @@
 
   <script type="text/javascript">
     $('.viewers-list-btn').on('click', function() {
-      if ($('.viewers-list').css('display') === 'none') {
+      if ($('.viewers-list').css('display') == 'none') {
         $('.viewers-list').show();
         $('.viewers-list-btn').text('Hide');
       } else {

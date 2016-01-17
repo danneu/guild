@@ -68,11 +68,11 @@
             </h4>
 
             <div class="post-type-btn-group btn-group" data-toggle="buttons" style="display: inline-block;">
-              <label class="btn btn-default {% if !is_ranked %} active {% endif %}">
+              <label class="btn btn-default {% if not is_ranked %} active {% endif %}">
                 <input type="radio" name="is_ranked"
                        value=""
                        id="option2" autocomplete="off"
-                         {% if !is_ranked  %}
+                         {% if not is_ranked  %}
                            checked
                          {% endif %}
                        > Unranked
@@ -103,17 +103,15 @@
                       <label style="padding: 5px 0 5px 20px; width: 100%;">
                         <input type="radio" name="join-status" value="{{ status }}"
                           {% if ctx.flash.params %}
-                            {% if ctx.flash.params['join-status'] === status %}
+                            {% if ctx.flash.params['join-status'] == status %}
                                checked
                             {% endif %}
-                          {% elif status === 'apply' %}
+                          {% elif status == 'apply' %}
                             checked
                           {% endif %}
                         >
                         <div style="display: inline-block; margin-left: 5px;">
-                          <span class="join-status join-status-{{ status }}">
-                            {{ status|capitalize -}}
-                          </span>
+                          <span class="join-status join-status-{{ status }}">{{ status|capitalize }}</span>
                           &mdash;
                           {{ status|expandJoinStatus }}
                         </div>
@@ -147,20 +145,20 @@
           <div style="margin-bottom: 30px;">
             <h4>First Post:</h4>
             <div class="post-type-btn-group btn-group" data-toggle="buttons" style="display: inline-block;">
-              <label class="btn btn-default {% if postType === 'ic' %}active{% endif %}">
+              <label class="btn btn-default {% if postType == 'ic' %}active{% endif %}">
                 <input type="radio" name="post-type"
                        value="ic"
                        id="option2" autocomplete="off"
-                         {% if postType === 'ic'  %}
+                         {% if postType == 'ic'  %}
                            checked
                          {% endif %}
                        > IC
               </label>
-              <label class="btn btn-default {% if postType === 'ooc' %}active{% endif %}">
+              <label class="btn btn-default {% if postType == 'ooc' %}active{% endif %}">
                 <input type="radio" name="post-type"
                        value="ooc"
                        id="option1" autocomplete="off"
-                         {% if postType === 'ooc'  %}
+                         {% if postType == 'ooc'  %}
                            checked
                          {% endif %}> OOC
               </label>
@@ -177,9 +175,9 @@
                       id="reply-input"
                       name="markup"
                       class="form-control"
-                      value="{{ ctx.flash.params && ctx.flash.params.markup }}"
+                      value="{{ ctx.flash.params.markup or '' }}"
                       placeholder="Click here and begin writing"
-                      required>{{ ctx.flash.params && ctx.flash.params.markup }}</textarea>
+                      required>{{ ctx.flash.params.markup or '' }}</textarea>
           </div><!--/form-group-->
       <div class="form-controls">
         <a href="{{ forum.url }}" class="btn btn-default">Cancel</a>
@@ -225,12 +223,12 @@
     $('#new-topic-form').on('submit', function(e) {
 
       // If the form has no tags, just continue
-      if ($('[name="tag-ids[]"]').length === 0) {
+      if ($('[name="tag-ids[]"]').length == 0) {
         return true;
       }
 
       var selectedTagCount = $('[name="tag-ids[]"]:checked').length;
-      if (selectedTagCount === 0) {
+      if (selectedTagCount == 0) {
         alert('Must select at least one tag');
         return false;
       }

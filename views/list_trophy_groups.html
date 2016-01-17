@@ -18,7 +18,7 @@
       <li>
         <a href="/trophy-groups/{{ group.id }}">{{ group.title }}</a>
         {% if group.description_html %}
-          <div>{{ group.description_html|raw }}</div>
+          <div>{{ group.description_html|safe }}</div>
         {% endif %}
       </li>
     {% endfor %}
