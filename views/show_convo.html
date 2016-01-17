@@ -22,6 +22,42 @@
 
   {{ ads.topResponsive() }}
 
+  <!-- Folder update -->
+
+  <div class="well">
+    <form action="{{ convo.url }}/folder" method="POST">
+      <input type="hidden" name="_method" value="PUT">
+      <label for="folder-input" class="control-label">
+        Folder:
+        <span style="font-weight: normal;" class="text-muted">(Currently <u>{{ folder | capitalize }}</u>)</span>
+      </label>
+
+      <div class="row">
+        <div class="col-lg-10">
+          <select id="folder-input" class="form-control" name="folder">
+            <option value="INBOX" {% if folder == 'INBOX' %}selected{% endif %}>
+              Inbox
+            </option>
+            <option value="STAR" {% if folder == 'STAR' %}selected{% endif %}>
+              Starred
+            </option>
+            <option value="ARCHIVE" {% if folder == 'ARCHIVE' %}selected{% endif %}>
+              Archive
+            </option>
+            <option value="TRASH" {% if folder == 'TRASH' %}selected{% endif %}>
+              Trash
+            </option>
+          </select>
+        </div>
+        <div class="col-lg-2">
+          <button type="submit" class="btn btn-primary btn-block">
+            Save
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+
   <!-- Pagination -->
   {{ paginate.render(currPage, totalPages, ctx.request.path) }}
 

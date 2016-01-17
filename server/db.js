@@ -936,8 +936,9 @@ LIMIT $3::bigint
 
 ////////////////////////////////////////////////////////////
 
-exports.findConvosInvolvingUserId = wrapTimer(findConvosInvolvingUserId);
-function* findConvosInvolvingUserId(userId, beforeId) {
+exports.findConvosInvolvingUserId = function*(userId, beforeId, folder) {
+  assert(_.isString(folder));
+  assert(_.contains(['INBOX', 'STAR', 'ARCHIVE', 'TRASH'], folder));
   // beforeId is the id of convo.latest_pm_id since that's how
   // convos are sorted
   assert(_.isNumber(beforeId) || _.isUndefined(beforeId));
@@ -949,6 +950,7 @@ SELECT
   c.created_at,
   c.latest_pm_id,
   c.pms_count,
+  cp.folder,
   u1.uname "user.uname",
   u1.slug "user.slug",
   json_agg(u2.uname) "participant_unames",
@@ -958,7 +960,7 @@ SELECT
   u3.uname "latest_user.uname",
   u3.slug "latest_user.slug"
 FROM convos c
-JOIN convos_participants cp ON c.id = cp.convo_id
+LEFT OUTER JOIN convos_participants cp ON c.id = cp.convo_id
 JOIN users u1 ON c.user_id = u1.id
 JOIN users u2 ON cp.user_id = u2.id
 JOIN pms ON c.latest_pm_id = pms.id
@@ -968,12 +970,19 @@ WHERE c.latest_pm_id < $2 AND c.id IN (
   FROM convos_participants cp
   WHERE cp.user_id = $1
 )
-GROUP BY c.id, u1.id, pms.id, u3.id
+  AND (cp.folder = $4 AND cp.user_id = $1)
+GROUP BY c.id, u1.id, pms.id, u3.id, cp.folder
 ORDER BY c.latest_pm_id DESC
 LIMIT $3
   `;
 
-  var result = yield query(sql, [userId, beforeId || 1e9, config.CONVOS_PER_PAGE]);
+  var result = yield query(sql, [
+    userId,
+    beforeId || 1e9,
+    config.CONVOS_PER_PAGE,
+    folder
+  ]);
+
   return result.rows.map(function(row) {
     row.user = {
       uname: row['user.uname'],
@@ -1018,7 +1027,8 @@ exports.findConvo = function*(convoId) {
 SELECT
   c.*,
   to_json(u1.*) "user",
-  to_json(array_agg(u2.*)) "participants"
+  to_json(array_agg(u2.*)) "participants",
+  json_agg(cp.*) "cp"
 FROM convos c
 JOIN convos_participants cp ON c.id = cp.convo_id
 JOIN users u1 ON c.user_id = u1.id
@@ -3789,4 +3799,40 @@ LIMIT $1
   `;
 
   return yield queryMany(sql, [limit]);
+};
+
+
+////////////////////////////////////////////////////////////
+
+exports.updateConvoFolder = function*(userId, convoId, folder) {
+  assert(Number.isInteger(userId));
+  assert(convoId);
+  assert(_.isString(folder));
+
+  const sql = `
+UPDATE convos_participants
+SET folder = $3
+WHERE user_id = $1
+  AND convo_id = $2
+  `;
+
+  return yield query(sql, [userId, convoId, folder]);
+};
+
+////////////////////////////////////////////////////////////
+
+exports.getConvoFolderCounts = function*(userId) {
+  assert(Number.isInteger(userId));
+
+  const sql = `
+SELECT
+  COUNT(*) FILTER (WHERE folder = 'INBOX') "inbox_count",
+  COUNT(*) FILTER (WHERE folder = 'STAR') "star_count",
+  COUNT(*) FILTER (WHERE folder = 'ARCHIVE') "archive_count",
+  COUNT(*) FILTER (WHERE folder = 'TRASH') "trash_count"
+FROM convos_participants
+WHERE user_id = $1
+  `;
+
+  return yield queryOne(sql, [userId]);
 };
