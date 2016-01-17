@@ -1,6 +1,5 @@
 // Node
 // 3rd party
-var request = require('co-request');
 var _ = require('lodash');
 var co = require('co');
 var debug = require('debug')('task:batch_upload_posts');

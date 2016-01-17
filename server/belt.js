@@ -8,11 +8,11 @@ var debug = require('debug')('app:belt');
 var promissory = require('promissory');
 var assert = require('better-assert');
 var _bcrypt = require('bcryptjs');
-var request = require('co-request');
 var _ = require('lodash');
 var uuid = require('node-uuid');
 var Autolinker = require('autolinker');
 var recaptchaValidator = require('recaptcha-validator');
+var request = require('request');
 // 1st party
 var config = require('./config');
 
@@ -519,4 +519,18 @@ exports.formatChatDate = function(date) {
     _.padLeft(date.getHours().toString(), 2, '0') +
     ':' +
     _.padLeft(date.getMinutes().toString(), 2, '0');
+};
+
+////////////////////////////////////////////////////////////
+
+// opts is url string or object
+//
+// https://www.npmjs.com/package/request#requestoptions-callback
+exports.request = function(opts) {
+  return new Promise(function(resolve, reject) {
+    request(opts, function(err, res, body) {
+      if (err) return reject(err);
+      return resolve(res);
+    });
+  });
 };

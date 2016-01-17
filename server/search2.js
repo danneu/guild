@@ -2,7 +2,6 @@
 // Node
 var util = require('util');
 // 3rd
-var request = require('co-request');
 var assert = require('better-assert');
 var _ = require('lodash');
 var co = require('co');
@@ -147,18 +146,3 @@ exports.searchPosts = function(props) {
     });
   });
 };
-
-
-// co(function*() {
-//   var response = yield searchPosts({
-//     term: 'elephant',
-//     user_ids: [1]
-//   });
-//   debug(response.status);
-//   response.hits.hit.forEach(function(hit) {
-//     debug(hit);
-//   });
-// }).then(
-//   function() { console.log('OK'); },
-//   function(ex) { console.log(ex, ex.stack); }
-// );

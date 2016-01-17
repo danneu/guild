@@ -7,11 +7,11 @@ var co = require('co');
 var RegexTrie = require('regex-trie');
 var debug = require('debug')('app:cache');
 var assert = require('better-assert');
-var request = require('co-request');
 // 1st party
 var db = require('./db');
 var pre = require('./presenters');
 var config = require('./config');
+var belt = require('./belt');
 
 // TODO: Handle failure
 function Cache() {
@@ -164,7 +164,7 @@ module.exports = function() {
         });
       }
 
-      var response = yield request(config.CHAT_SERVER_URL + '/stats');
+      var response = yield belt.request(config.CHAT_SERVER_URL + '/stats');
 
       // Only update on response success
       if (response.statusCode === 200) {
