@@ -1,7 +1,7 @@
 var gulp = require('gulp');
 var concat = require('gulp-concat');
 var rev = require('gulp-rev');
-var minifyCSS = require('gulp-minify-css');
+var minifyCSS = require('gulp-cssnano');
 var uglifyJS = require('gulp-uglify');
 
 gulp.task('copy-fonts', function() {
