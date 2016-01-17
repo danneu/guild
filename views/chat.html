@@ -132,6 +132,14 @@
 
   <audio id="notify-sound" src="/sounds/chat_notify.mp3" preload="auto"></audio>
 
+  {% if ctx.currUser.role == 'admin' or ctx.currUser.role == 'mod' %}
+      <pre style="border: 0; margin-top: 20px;">
+Mute for 1-60 minutes:   /mute badUser42 15
+Mute forever:            /mute badUser42 forever
+Umute                    /unmute badUser42
+      </pre>
+  {% endif %}
+
 {% endblock %}
 
 {% block scripts %}
