@@ -21,7 +21,6 @@ var route = require('koa-route');
 var views = require('koa-views');
 // Node
 var util = require('util');
-var path = require('path');
 var fs = require('co-fs');
 // 3rd party
 var _ = require('lodash');
@@ -29,8 +28,6 @@ var debug = require('debug')('app:index');
 var assert = require('better-assert');
 var swig = require('swig');
 var co = require('co');
-var uuid = require('node-uuid');
-var coParallel = require('co-parallel');
 var koaCompressor = require('koa-compressor');
 // 1st party
 var db = require('./db');
@@ -41,8 +38,6 @@ var emailer = require('./emailer');
 var cache = require('./cache')();
 var belt = require('./belt');
 var bbcode = require('./bbcode');
-var welcomePm = require('./welcome_pm');
-var avatar = require('./avatar');
 var bouncer = require('koa-bouncer');
 
 // Catch and log all errors that bubble up to koa
