@@ -213,6 +213,13 @@ var UserList = React.createClass({
                   }
                 ) : '',
               u.role === 'admin' ? ' ' : '',
+              u.role === 'mod' ?
+                el.img(
+                  {
+                    src: "http://i.imgur.com/AV5z7to.png"
+                  }
+                ) : '',
+              u.role === 'mod' ? ' ' : '',
               el.a(
                 {
                   href: 'javascript:void(0)',
