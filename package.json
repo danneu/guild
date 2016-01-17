@@ -28,7 +28,7 @@
     "co-request": "0.2.1",
     "debug": "2.2.0",
     "gm": "1.21.1",
-    "koa": "0.21.0",
+    "koa": "1.1.2",
     "koa-body": "1.2.1",
     "koa-bouncer": "0.0.20",
     "koa-compressor": "1.0.3",
