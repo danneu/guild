@@ -129,7 +129,7 @@
                 <span class="glyphicon glyphicon-comment"></span>
                 Chat
                 {% if ctx.cache.get('chat-server-stats').member_count > 0 %}
-                  <span class="label label-primary" style="color: #fff;">{{- ctx.cache.get('chat-server-stats').member_count }} Online</span>
+                  <span class="label label-primary" style="color: #fff;">{{ ctx.cache.get('chat-server-stats').member_count }} Online</span>
                 {% endif %}
               </a>
             </li>
