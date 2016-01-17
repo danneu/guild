@@ -63,17 +63,9 @@
     </a>
   </div>
 
-    {% if ctx.path == '/' and ctx.config.NODE_ENV == 'production' %}
+    {% if ctx.path == '/' and config.NODE_ENV == 'production' %}
       <h1 id="tagline">Play-by-Post Role Playing Forum</h1>
     {% endif %}
-
-    <div class="alert alert-info">
-      I'm currently making big changes to the Guild's server. (No features, just making it better)
-      <br>
-      Expect some breakage! Makes sure to save your posts before submitting.
-      <br>
-      &mdash; Mahz
-    </div>
 
     <!-- Static navbar -->
     <nav class="navbar navbar-inverse" role="navigation"
