@@ -1,11 +1,11 @@
-"use strict";
+'use strict';
 // 3rd party
-var m = require('multiline');
+// ...
 // 1st party
 var bbcode = require('./bbcode');
 
 // Markup and HTML for the welcome/introductory PM
-var welcomeMarkup = m(function() {/*
+var welcomeMarkup = `
 [center][h1]Welcome to the Roleplayer Guild![/h1][/center]
 
 We are an ever-growing community of enthusiastic and dedicated play-by-post roleplayers that cater to all genres and playstyles - fantasy, sci-fi, romance and even tabletop & nation roleplays. First founded in 2007, the Guild has been the go-to forum for thousands of members since its inception. We sport an easy-to-navigate forum layout and a plethora of nifty features implemented specifically to improve the roleplaying experience.
@@ -20,7 +20,7 @@ We hope you enjoy your stay at the Roleplayer Guild. :sun
 
 Yours sincerely,
 The Roleplayer Guild Staff
-*/});
+`;
 
 var welcomeHtml = bbcode(welcomeMarkup);
 

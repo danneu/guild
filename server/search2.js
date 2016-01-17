@@ -6,7 +6,6 @@ var request = require('co-request');
 var assert = require('better-assert');
 var _ = require('lodash');
 var co = require('co');
-var m = require('multiline');
 var debug = require('debug')('app:search');
 // 1st
 var db = require('./db');

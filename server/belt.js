@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 // Node
 var util = require('util');
 var url = require('url');
@@ -11,7 +11,6 @@ var _bcrypt = require('bcryptjs');
 var request = require('co-request');
 var _ = require('lodash');
 var uuid = require('node-uuid');
-var m = require('multiline');
 var Autolinker = require('autolinker');
 // 1st party
 var config = require('./config');

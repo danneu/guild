@@ -4,7 +4,6 @@ var nodemailer = require('nodemailer');
 var ses = require('nodemailer-ses-transport');
 var assert = require('better-assert');
 var _ = require('lodash');
-var m = require('multiline');
 var swig = require('swig');
 var debug = require('debug')('app:emailer');
 // 1st party
@@ -22,7 +21,7 @@ function getTransporter() {
 }
 
 var templates = {
-  resetToken: swig.compile(m(function() {/*
+  resetToken: swig.compile(`
 <p>Hello {{ uname }},</p>
 
 <p>This link will take you to a form that will let you type in a new password:</p>
@@ -32,7 +31,7 @@ var templates = {
 </a>
 
 <p>If you did not expect this email, you can ignore it and nothing will happen.</p>
-  */}))
+  `)
 };
 
 exports.sendResetTokenEmail = function(toUname, toEmail, token) {

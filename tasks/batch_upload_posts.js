@@ -5,7 +5,6 @@ var _ = require('lodash');
 var co = require('co');
 var debug = require('debug')('task:batch_upload_posts');
 var assert = require('better-assert');
-var m = require('multiline');
 var AWS = require('aws-sdk');
 // 1st party
 var db = require('../server/db');
@@ -87,7 +86,7 @@ function* batchUploadPosts(posts) {
 
 var queries = {
   findPostsToUpload: function*() {
-    var sql = m(function() {/*
+    var sql = `
 SELECT
   *
 FROM (
@@ -117,17 +116,17 @@ FROM (
 	ORDER BY p.id
 ) pp
 WHERE char_total <= 4500000  -- 4.5 MB
-    */});
+    `;
     var result = yield db.query(sql);
     return result.rows;
   },
   massUpdatePostUploadedAt: function*(post_ids) {
     assert(_.isArray(post_ids));
-    var sql = m(function() {/*
+    var sql = `
 UPDATE posts
 SET uploaded_at = now()
 WHERE id = ANY ($1::int[])
-    */});
+    `;
     yield db.query(sql, [post_ids]);
   }
 };
