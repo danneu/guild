@@ -77,11 +77,9 @@ router.post('/users', function*() {
   // Validation success
 
   // Check recaptcha against google
-  var passedRecaptcha = yield belt.makeRecaptchaRequest({
-    userResponse: this.vals['g-recaptcha-response'],
-    userIp: this.request.ip
-  });
-  if (! passedRecaptcha) {
+  var passedRecaptcha = yield belt.makeRecaptchaRequest(this.vals['g-recaptcha-response'], this.request.ip);
+
+  if (!passedRecaptcha) {
     debug('Google rejected recaptcha');
     this.flash = {
       message: ['danger', 'You failed the recaptcha challenge'],

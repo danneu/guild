@@ -12,6 +12,7 @@ var request = require('co-request');
 var _ = require('lodash');
 var uuid = require('node-uuid');
 var Autolinker = require('autolinker');
+var recaptchaValidator = require('recaptcha-validator');
 // 1st party
 var config = require('./config');
 
@@ -157,31 +158,20 @@ exports.generateUuid = function() {
 // reCaptcha ///////////////////////////////////////////////
 
 // Returns Bool
-exports.makeRecaptchaRequest = function *(args) {
-  debug('[makeRecaptchaRequest] args: ', args);
+exports.makeRecaptchaRequest = function *(userResponse, remoteIp) {
   assert(config.RECAPTCHA_SITESECRET);
-  assert(_.isString(args.userResponse));
-  assert(_.isString(args.userIp));
-  var googleUrl = url.format({
-    pathname: 'https://www.google.com/recaptcha/api/siteverify',
-    query: {
-      secret: config.RECAPTCHA_SITESECRET,
-      response: args.userResponse,
-      remoteip: args.userIp
-    }
-  });
-  // Docs: https://developers.google.com/recaptcha/docs/verify
-  // Body will look like:
-  // {
-  //    "success": true | false,
-  //    "error-codes":  [...]      // Optional
-  // }
-  var result = yield request({ url: googleUrl, json: true });
-  debug('Response body from google: ', result.body);
-  if (! result.body.success)
-    return false;
-  else
+  assert(_.isString(userResponse));
+  assert(_.isString(remoteIp));
+
+  try {
+    yield recaptchaValidator.promise(config.RECAPTCHA_SITESECRET, userResponse, remoteIp);
     return true;
+  } catch(err) {
+    if (typeof err === 'string') {
+      return false;
+    }
+    throw err;
+  }
 };
 
 ////////////////////////////////////////////////////////////
