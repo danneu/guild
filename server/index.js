@@ -27,7 +27,6 @@ var fs = require('co-fs');
 var _ = require('lodash');
 var debug = require('debug')('app:index');
 var assert = require('better-assert');
-var swig = require('swig');
 var co = require('co');
 var koaCompressor = require('koa-compressor');
 // 1st party

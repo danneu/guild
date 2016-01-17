@@ -4,7 +4,7 @@ var nodemailer = require('nodemailer');
 var ses = require('nodemailer-ses-transport');
 var assert = require('better-assert');
 var _ = require('lodash');
-var swig = require('swig');
+var nunjucks = require('nunjucks');
 var debug = require('debug')('app:emailer');
 // 1st party
 var belt = require('./belt');
@@ -21,7 +21,7 @@ function getTransporter() {
 }
 
 var templates = {
-  resetToken: swig.compile(`
+  resetToken: nunjucks.compile(`
 <p>Hello {{ uname }},</p>
 
 <p>This link will take you to a form that will let you type in a new password:</p>
@@ -47,7 +47,7 @@ exports.sendResetTokenEmail = function(toUname, toEmail, token) {
     from: config.FROM_EMAIL,
     to: toEmail,
     subject: 'Password Reset Token - RoleplayerGuild.com',
-    html: templates.resetToken({
+    html: templates.resetToken.render({
       uname: toUname,
       host: config.HOST,
       token: token
