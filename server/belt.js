@@ -514,3 +514,19 @@ exports.presentUserRole = function(role) {
       return _.capitalize(role);
   }
 };
+
+// Helper function for formatting chat messages for the log.txt
+exports.formatChatDate = function(date) {
+  var monthNames = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
+
+  return date.getDate() +
+    '/' + monthNames[date.getMonth()] +
+    '/' + date.getFullYear().toString().slice(2, 4) +
+    ' ' +
+    _.padLeft(date.getHours().toString(), 2, '0') +
+    ':' +
+    _.padLeft(date.getMinutes().toString(), 2, '0');
+};

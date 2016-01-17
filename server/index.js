@@ -247,7 +247,8 @@ const nunjucksOptions = {
       case 'DRAW':
         return '<span style="color: #999">Draw</span>';
       }
-    }
+    },
+    formatChatDate: belt.formatChatDate,
   }
 };
 
@@ -2650,24 +2651,6 @@ app.post('/me/friendships', function*() {
 });
 
 ////////////////////////////////////////////////////////////
-
-// Helper function for formatting chat messages for the log.txt
-var formatChatDate = function(date) {
-  var monthNames = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-  ];
-
-  return date.getDate() +
-    '/' + monthNames[date.getMonth()] +
-    '/' + date.getFullYear().toString().slice(2, 4) +
-    ' ' +
-    _.padLeft(date.getHours().toString(), 2, '0') +
-    ':' +
-    _.padLeft(date.getMinutes().toString(), 2, '0');
-};
-
-swig.setFilter('formatChatDate', formatChatDate);
 
 app.get('/chatlog.txt', function*() {
   // Temporarily disable
