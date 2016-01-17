@@ -189,6 +189,12 @@
     </div>
   {% endif %}
 
+  {% if user.active_trophy_id === 38 %} {# FIXME: just copied this color from prev trophy #}
+    <div style="color: #2ecc71; font-weight: bold; font-family: Georgia,Times,'Times New Roman',serif;">
+      Pride of Augeas
+    </div>
+  {% endif %}
+
   {% if !ctx.currUser || (user.avatar_url && !ctx.currUser.hide_avatars) %}
     <div class="post-avatar"
          style="margin-top: 10px;">
