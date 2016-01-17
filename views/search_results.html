@@ -128,7 +128,7 @@
   {% if not _.isEmpty(searchParams) %}
 
     <h6>Debug:</h6>
-    <pre>{{ JSON.stringify(cloudParams, null, '  ') }}</pre>
+    <pre>{{ cloudParams | json }}</pre>
 
     <div class="page-header">
       <h1>
