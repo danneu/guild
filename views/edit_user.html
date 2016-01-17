@@ -58,32 +58,32 @@
                   <select id="role-input" name="role" class="form-control"
                           autocomplete="off">
                     <option value="admin"
-                            {% if user.role === 'admin' %}selected{% endif %}
+                            {% if user.role == 'admin' %}selected{% endif %}
                             >
                       Admin
                     </option>
                     <option value="smod"
-                            {% if user.role === 'smod' %}selected{% endif %}
+                            {% if user.role == 'smod' %}selected{% endif %}
                             >
                       Super Mod
                     </option>
                     <option value="mod"
-                            {% if user.role === 'mod' %}selected{% endif %}
+                            {% if user.role == 'mod' %}selected{% endif %}
                             >
                       Mod
                     </option>
                     <option value="conmod"
-                            {% if user.role === 'conmod' %}selected{% endif %}
+                            {% if user.role == 'conmod' %}selected{% endif %}
                             >
                       Contest Mod
                     </option>
                     <option value="member"
-                            {% if user.role === 'member' %}selected{% endif %}
+                            {% if user.role == 'member' %}selected{% endif %}
                             >
                       Member
                     </option>
                     <option value="banned"
-                            {% if user.role === 'banned' %}selected{% endif %}
+                            {% if user.role == 'banned' %}selected{% endif %}
                             >
                       Banned
                     </option>

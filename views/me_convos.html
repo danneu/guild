@@ -24,7 +24,7 @@
 
   {% if ctx.currUser.pms_count > 1 %}
     <ul class="pager">
-      <li class="{% if !beforeId %} disabled {% endif %}">
+      <li class="{% if not beforeId %} disabled {% endif %}">
         <a href="{{ ctx.request.path }}">
           First Page
         </a>
@@ -64,9 +64,7 @@
             <a href="{{ convo.url }}">{{ convo.title }}</a>
             <div>
               by
-              <a href="{{ convo.user.url }}" style="color: white">
-                {{ convo.user.uname -}}
-              </a>,
+              <a href="{{ convo.user.url }}" style="color: white">{{ convo.user.uname }}</a>,
               <abbr class="timeago" title="{{ convo.created_at.toISOString() }}">
                 {{ convo.created_at|formatDate }}
               </abbr>
@@ -74,7 +72,7 @@
             <div>
               Participants:
               {% for user in convo.participants %}
-                <a href="{{ user.url }}">{{ user.uname }}</a>{% if !loop.last %}, {% endif %}
+                <a href="{{ user.url }}">{{ user.uname }}</a>{% if not loop.last %}, {% endif %}
               {% endfor %}
             </div>
           </div> <!-- /.col-sm-7 -->
@@ -107,7 +105,7 @@
 
   {% if ctx.currUser.pms_count > 1 %}
     <ul class="pager">
-      <li class="{% if !beforeId %} disabled {% endif %}">
+      <li class="{% if not beforeId %} disabled {% endif %}">
         <a href="{{ ctx.request.path }}">
           First Page
         </a>

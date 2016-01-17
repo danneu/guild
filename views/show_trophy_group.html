@@ -24,7 +24,7 @@
   {% if group.description_html %}
     <h4>Description:</h4>
     <div style="margin-left: 20px;">
-      {{ group.description_html|raw }}
+      {{ group.description_html|safe }}
     </div>
   {% endif %}
 
@@ -32,7 +32,7 @@
 
   <h2>Trophies in this group</h2>
 
-  {% if trophies.length === 0 %}
+  {% if trophies.length == 0 %}
     <div class="well">
       This trophy collection has no trophies, yet
     </div>

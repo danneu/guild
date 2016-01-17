@@ -7,7 +7,7 @@
     </li>
   </ol>
 
-  {% if ctx.currUser && ctx.currUser.role === 'banned' %}
+  {% if ctx.currUser and ctx.currUser.role == 'banned' %}
     <div class="alert alert-danger">
       You cannot participate in chat because you're banned from the guild.
     </div>
@@ -155,7 +155,7 @@
     });
   </script>
 
-  {% if ctx.dist && ctx.dist.chatjs %}
+  {% if ctx.dist and ctx.dist.chatjs %}
     <script src="/{{ ctx.dist.chatjs }}" type="text/javascript"></script>
   {% else %}
     <script src="/js/chat.js" type="text/javascript"></script>

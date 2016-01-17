@@ -6,7 +6,7 @@
 
   {{ ads.topResponsive() }}
 
-  {% if false && ftopic %}
+  {% if false and ftopic %}
     <div class="panel panel-default" style="border: 2px solid #8e44ad">
 
 
@@ -16,7 +16,7 @@
         </h4>
 
       <p class="lead">
-      {{ ftopic.html|raw }}
+      {{ ftopic.html | safe }}
       </p>
 
       <form method="POST" action="/current-feedback-topic/replies">
@@ -49,7 +49,7 @@
           <div class="col-sm-12">
 
             {% for category in categories %}
-              {% if ctx.can(ctx.currUser, 'READ_CATEGORY', category) %}
+              {% if can(ctx.currUser, 'READ_CATEGORY', category) %}
                 <div class="list-group category-group">
                   <div class="list-group-item category-group-heading">
                     <div class="row">
@@ -109,9 +109,7 @@
                               </a>
                               <div class="by-line">
                                 by
-                                <a href="{{ forum.latest_user.url }}" style="color: #fff;">
-                                  {{- forum.latest_user.uname -}}
-                                </a>,
+                                <a href="{{ forum.latest_user.url }}" style="color: #fff;">{{ forum.latest_user.uname }}</a>,
                                 <abbr class="timeago" style="display: inline-block;"
                                       title="{{ forum.latest_post.created_at.toISOString() }}">
                                   {{ forum.latest_post.created_at|formatDate }}
@@ -155,9 +153,7 @@
                                 <a href="{{ subforum.latest_post.url }}" class="latest-title">{{ subforum.latest_topic.title }}</a>
                                 <div class="by-line">
                                   by
-                                  <a href="{{ subforum.latest_user.url }}" style="color: #fff;">
-                                    {{- subforum.latest_user.uname -}}
-                                  </a>,
+                                  <a href="{{ subforum.latest_user.url }}" style="color: #fff;">{{ subforum.latest_user.uname }}</a>,
                                   <abbr class="timeago" style="display: inline-block;"
                                         title="{{ subforum.latest_post.created_at.toISOString() }}">
                                     {{ subforum.latest_post.created_at|formatDate }}
@@ -182,7 +178,7 @@
 
     </div><!--/col (forums) -->
     <div class="col-sm-3">
-      {{ macros.renderSidebar(latestChecks, latestRoleplays) }}
+      {{ macros.renderSidebar(ctx, latestChecks, latestRoleplays, latestStatuses, currentContest, friendships, latest_rpgn_topic) }}
     </div><!--/col (sidebar)-->
   </div><!--/row-->
 
@@ -198,13 +194,13 @@
           <h4>{{ stats.onlineUsers.length }} Members Online (within 15 min)</h4>
           <div id="whos-online-list" style="display: none;">
             {% for user in stats.onlineUsers %}
-              {% if ctx.can(ctx.currUser, 'READ_USER_ONLINE_STATUS', user) %}
+              {% if can(ctx.currUser, 'READ_USER_ONLINE_STATUS', user) %}
                 {% if user.is_ghost %}
                   <a href="{{ user.url }}" style="color: #000">{{ user.uname }}</a>
                 {% else %}
                   <a href="{{ user.url }}" style="color: #999">{{ user.uname }}</a>
-                {% endif %}
-                {% if !loop.last %}
+                {%- endif -%}
+                {%- if not loop.last -%}
                   ,
                 {% endif %}
               {% endif %}
@@ -302,7 +298,7 @@
             alert('Like failed. Refresh the page and try again.');
             throw ex;
           }
-          if (json.error === 'TOO_SOON')
+          if (json.error == 'TOO_SOON')
             alert('Must wait 30 seconds between status likes.');
         },
         success: function() {

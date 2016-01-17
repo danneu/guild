@@ -33,7 +33,7 @@
         </div>
       </div>
 
-        {% if roleplayTopics.length === 0 %}
+        {% if roleplayTopics.length == 0 %}
           <div class="well">You have not subscribed to any Roleplays, yet</div>
         {% endif %}
 
@@ -65,9 +65,7 @@
                 </div>
                 <p class="list-group-item-text topic-panel-desc">
                   by
-                  <a href="{{ topic.user.url }}" style="color: #fff">
-                    {{ topic.user.uname -}}
-                  </a>,
+                  <a href="{{ topic.user.url }}" style="color: #fff">{{ topic.user.uname }}</a>,
                   <abbr class="timeago" title="{{ topic.created_at.toISOString() }}"
                         style="display: inline-block;">
                     {{ topic.formattedCreatedAt }}
@@ -80,9 +78,7 @@
                   <span class="visible-xs-inline">Latest IC:</span>
                   <div class="latest-ic">
                     <a href="{{ topic.latest_ic_user.url }}"
-                       style="color: #fff">
-                      {{ topic.latest_ic_user.uname -}}
-                    </a>
+                       style="color: #fff">{{ topic.latest_ic_user.uname }}</a>
                     <a href="{{ topic.latest_ic_post.url }}"
                        class="btn btn-default btn-xs latest-post-btn">
                       &rarr;
@@ -103,9 +99,7 @@
                   <div class="latest-ooc">
                     <div style="display: inline-block;">
                       <a href="{{ topic.latest_ooc_user.url }}"
-                         style="color: #fff">
-                        {{ topic.latest_ooc_user.uname -}}
-                      </a>
+                         style="color: #fff">{{ topic.latest_ooc_user.uname }}</a>
                       <a href="{{ topic.latest_ooc_post.url}}"
                          class="btn btn-default btn-xs latest-post-btn">
                         &rarr;
@@ -126,9 +120,7 @@
                   <span class="visible-xs-inline">Latest Char:</span>
                   <div class="latest-char">
                     <a href="{{ topic.latest_char_user.url }}"
-                       style="color: #fff">
-                      {{ topic.latest_char_user.uname -}}
-                    </a>
+                       style="color: #fff">{{ topic.latest_char_user.uname }}</a>
                     <a href="{{ topic.latest_char_post.url}}"
                        class="btn btn-default btn-xs latest-post-btn">
                       &rarr;
@@ -161,7 +153,7 @@
         </div>
       </div><!--/.list-group-item-->
 
-      {% if nonroleplayTopics.length === 0 %}
+      {% if nonroleplayTopics.length == 0 %}
         <div class="well">You have not subscribed to any Topics, yet</div>
       {% endif %}
 
@@ -199,9 +191,7 @@
               </h5>
 
               <p class="list-group-item-text topic-panel-desc">
-                <a href="{{ topic.user.url }}" style="color: #fff">
-                  {{ topic.user.uname -}}
-                </a>,
+                <a href="{{ topic.user.url }}" style="color: #fff">{{ topic.user.uname }}</a>,
                 <abbr class="timeago" title="{{ topic.created_at.toISOString() }}">
                   {{ topic.created_at|formatDate }}
                 </abbr>
@@ -217,9 +207,7 @@
                   <div>
                     Latest:
                     <a href="{{ topic.latest_user.url }}"
-                       style="color: #fff">
-                      {{ topic.latest_user.uname -}}
-                    </a>
+                       style="color: #fff">{{ topic.latest_user.uname }}</a>
                     <a href="{{ topic.latest_post.url }}"
                        class="btn btn-default btn-xs latest-post-btn">
                       &rarr;

@@ -13,14 +13,14 @@
 
   {{ ads.topResponsive() }}
 
-  {% if user.uname === 'Mahz' %}
+  {% if user.uname == 'Mahz' %}
     <div class="alert alert-info">
       <img src="http://imgur.com/GuZN5tA.png">
       {{ user.uname }} is the admin. He's the man with the plan and the guild's head honcho.
     </div>
   {% endif %}
 
-  {% if user.role === 'mod' %}
+  {% if user.role == 'mod' %}
     <div class="alert alert-info">
       <img src="http://i.imgur.com/w3t5YqA.png">
       {{ user.uname }} is a Moderator. They assist users and keep the forum running smoothly. They have power across all forums.
@@ -37,11 +37,11 @@
   <div class="page-header">
 
       <!-- PM button -->
-      {% if ctx.can(ctx.currUser, 'CREATE_CONVO') %}
+      {% if can(ctx.currUser, 'CREATE_CONVO') %}
         <a class="btn btn-primary pull-right"
-           href="/convos/new?to={{ encodeURI(user.uname) }}">
+           href="/convos/new?to={{ user.uname | encodeURIComponent }}">
           <span class="glyphicon glyphicon-envelope"></span>
-          {% if ctx.currUser.id === user.id %}
+          {% if ctx.currUser.id == user.id %}
             Start Private Convo with yourself
           {% else %}
             Start Private Convo with {{ user.uname }}
@@ -50,7 +50,7 @@
       {% endif %}
 
       <!-- Friend/Unfriend Button -->
-      {% if ctx.currUser && ctx.currUser.role !== 'banned' && ctx.currUser.id !== user.id %}
+      {% if ctx.currUser and ctx.currUser.role != 'banned' and ctx.currUser.id != user.id %}
         <div class="pull-right" style="margin-right: 10px; display: inline-block;">
           <form method="POST" action="/me/friendships">
             <input type="hidden" name="to_user_id" value="{{ user.id }}">
@@ -70,20 +70,20 @@
     <h1 style="margin-bottom: 0;">
       <a href="{{ user.url }}">{{ user.uname }}</a>
 
-      {% if ctx.currUser && ctx.currUser.role === 'admin' %}
+      {% if ctx.currUser and ctx.currUser.role == 'admin' %}
         <span class="label label-default" style="font-size: 50%; display: inline-block;">
           ID: {{ user.id }}
         </span>
       {% endif %}
 
       <small>{{ user.role|presentUserRole }}</small>
-      {% if ctx.can(ctx.currUser, 'UPDATE_USER', user) %}
+      {% if can(ctx.currUser, 'UPDATE_USER', user) %}
         <a href="{{ user.url }}/edit" class="btn btn-default btn-xs">
           Edit
         </a>
       {% endif %}
 
-      {% if ctx.can(ctx.currUser, 'DELETE_USER', user) %}
+      {% if can(ctx.currUser, 'DELETE_USER', user) %}
         <!-- Delete button temporarily disabled -->
       {% endif %}
     </h1>
@@ -105,13 +105,13 @@
 
   </div>
 
-  {% if ctx.currUser && cancan.isStaffRole(ctx.currUser.role) %}
+  {% if ctx.currUser and cancan.isStaffRole(ctx.currUser.role) %}
     <div class="well well-sm">
       <h4>
         <span class="glyphicon glyphicon-eye-open"></span> User Modkit
       </h4>
       <ul>
-        {% if ctx.can(ctx.currUser, 'READ_USER_IP', user) %}
+        {% if can(ctx.currUser, 'READ_USER_IP', user) %}
           <li><a href="{{ user.url }}/ips">View All IP Addresses</a></li>
         {% endif %}
       </ul>
@@ -132,7 +132,7 @@
             <!-- Stats list -->
             <ul>
                 {% if user.is_ghost %}
-                  {% if ctx.can(ctx.currUser, 'READ_USER_ONLINE_STATUS', user) %}
+                  {% if can(ctx.currUser, 'READ_USER_ONLINE_STATUS', user) %}
                     <li>Last Seen: <span style="color: #000">Invisible</span></li>
                   {% endif %}
                 {% else %}
@@ -161,7 +161,7 @@
                 </abbr>
               </li>
               <li>Posts: {{ user.posts_count }}</li>
-              {% if ctx.can(ctx.currUser, 'READ_USER_PM_SENT_COUNT', user) %}
+              {% if can(ctx.currUser, 'READ_USER_PM_SENT_COUNT', user) %}
                 <li>PMs: {{ user.pms_count }}</li>
               {% endif %}
               <li>VMs: {{ user.toplevel_vms_count }}</li>
@@ -176,11 +176,11 @@
     <div class="col-sm-6">
       <!-- Ratings table -->
 
-      {% if !ctx.currUser %}
+      {% if not ctx.currUser %}
         {{ ads.profileBlock() }}
       {% endif %}
 
-      {% if ctx.can(ctx.currUser, 'READ_USER_RATINGS_TABLE', user) %}
+      {% if can(ctx.currUser, 'READ_USER_RATINGS_TABLE', user) %}
         <table class="table table-condensed rating-table">
           <thead>
             <tr style="border-bottom: 2px solid #333;">
@@ -268,8 +268,7 @@
         <span class="glyphicon glyphicon-comment"></span>
         Status
 
-        {% if user.current_status_id
-              && ctx.can(ctx.currUser, 'MANAGE_USER_STATUS', user) %}
+        {% if user.current_status_id and can(ctx.currUser, 'MANAGE_USER_STATUS', user) %}
           <form action="/me/current-status" method="post"
                 class="pull-right"
                 style="display: inline-block;">
@@ -285,7 +284,7 @@
       <div class="well">
 
         <!-- New status form -->
-        {% if ctx.can(ctx.currUser, 'MANAGE_USER_STATUS', user) %}
+        {% if can(ctx.currUser, 'MANAGE_USER_STATUS', user) %}
           <form action="/me/statuses" method="post">
             <p class="text-muted">No BBCode allowed. URLs (like "example.com") will be converted into clickable links. Please don't flood the homepage sidebar.</p>
             <input type="text" class="form-control status-text-input" name="text"
@@ -301,6 +300,11 @@
         {% endif %}
 
         <!-- Latest statuses -->
+
+        {% if statuses.length == 0 %}
+          User has no status, yet
+        {% endif %}
+
         {% if statuses.length > 0 %}
           <h3>
             Recent Statuses
@@ -325,7 +329,7 @@
                 </div>
                 <div class="col-lg-10 col-md-10 col-sm-9">
                   <div class="lead" style="margin-bottom: 0;">
-                    {% if user.current_status_id === status.id %}
+                    {% if user.current_status_id == status.id %}
                       <span class="label label-primary"
                             style="display: inline-block;">
                         Current
@@ -360,7 +364,7 @@
     <div class="col-sm-12">
       <h3>
         Bio
-        {% if ctx.can(ctx.currUser, 'UPDATE_USER', user) %}
+        {% if can(ctx.currUser, 'UPDATE_USER', user) %}
           <button type="button"
                   class="btn btn-xs btn-default"
                   id="edit-bio"
@@ -379,13 +383,13 @@
 
   <!-- Arena stats -->
 
-  {% if ctx.currUser.id === user.id || user.show_arena_stats %}
+  {% if ctx.currUser.id == user.id or user.show_arena_stats %}
     <a name="arena-stats"></a>
     <div class="row">
       <div class="col-sm-12">
         <h3>
           Arena Stats
-          {% if ctx.currUser.id === user.id %}
+          {% if ctx.currUser.id == user.id %}
             <small>
               {% if user.show_arena_stats %}
                 Public
@@ -410,17 +414,17 @@
   <!-- User profile tabs -->
   <a name="tabs" style="margin-top: 20px; display: block;"></a>
   <ul class="nav nav-tabs">
-    <li class="{% if ctx.path === user.url %}active{% endif %}">
+    <li class="{% if ctx.path == user.url %}active{% endif %}">
       <a href="{{ user.url }}#tabs">
         Recent Posts
       </a>
     </li>
-    <li class="{% if ctx.path === user.url + '/vms' %}active{% endif %}">
+    <li class="{% if ctx.path == user.url + '/vms' %}active{% endif %}">
       <a href="{{ user.url }}/vms#tabs">
         Visitor Messages
       </a>
     </li>
-    <li class="{% if ctx.path === user.url + '/trophies' %}active{% endif %}">
+    <li class="{% if ctx.path == user.url + '/trophies' %}active{% endif %}">
       <a href="{{ user.url }}/trophies#tabs">
         Trophies
       </a>
@@ -468,7 +472,7 @@
 
       <!-- Recent post list -->
 
-      {% if user.posts_count === 0 %}
+      {% if user.posts_count == 0 %}
         <div class="well">
           User has no posts, yet
         </div>
@@ -583,7 +587,7 @@
     });
   </script>
 
-  {% if ctx.can(ctx.currUser, 'MANAGE_USER_STATUS', user) %}
+  {% if can(ctx.currUser, 'MANAGE_USER_STATUS', user) %}
     <script type="text/javascript">
       $('.status-item').mouseenter(function() {
         $(this).find('.delete-status-form').css('visibility', 'visible');

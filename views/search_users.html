@@ -34,7 +34,7 @@
 
       <!-- Pagination -->
 
-      {% if usersList.length-1 > 1 || beforeId %}
+      {% if (usersList.length-1) > 1 or beforeId %}
         <ul class="pager">
           <li>
             <a href="{{ ctx.request.path }}" rel="first">
@@ -63,7 +63,7 @@
 
       <!-- Users list -->
 
-      {% if usersList.length === 0 %}
+      {% if usersList.length == 0 %}
         <div class="well">
           No users found
         </div>
@@ -92,8 +92,8 @@
               </td>
               <!-- Last Online -->
               <td>
-                {% if user.is_ghost && user.last_online_at %}
-                  {% if ctx.can(ctx.currUser, 'READ_USER_ONLINE_STATUS', user) %}
+                {% if user.is_ghost and user.last_online_at %}
+                  {% if can(ctx.currUser, 'READ_USER_ONLINE_STATUS', user) %}
                     <abbr class="timeago" title="{{ user.last_online_at.toISOString() }}">
                       {{ user.last_online_at|formatDate }}
                     </abbr>
@@ -122,7 +122,7 @@
 
       <!-- Pagination -->
 
-      {% if usersList.length-1 > 1 || beforeId %}
+      {% if (usersList.length-1) > 1 or beforeId %}
         <ul class="pager">
           <li>
             <a href="{{ ctx.request.path }}" rel="first">
@@ -151,7 +151,7 @@
 
     </div> <!-- /.col-6 -->
   </div> <!-- /.row -->
-
+{% endblock %}
 
 {% block scripts %}
 {% endblock %}

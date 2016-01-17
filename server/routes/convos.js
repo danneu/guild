@@ -287,7 +287,7 @@ router.get('/me/convos', function*() {
                                                   this.vals['before-id']);
   convos = convos.map(pre.presentConvo);
   var nextBeforeId = convos.length > 0 ? _.last(convos).latest_pm_id : null;
-  yield this.render('me_convos.html', {
+  yield this.render('me_convos', {
     ctx: this,
     convos: convos,
     title: 'My Private Conversations',

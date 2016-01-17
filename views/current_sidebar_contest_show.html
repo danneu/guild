@@ -23,7 +23,7 @@
     Create a new contest to be displayed in the sidebar.
   </div>
 
-  {% if !currentContest %}
+  {% if not currentContest %}
     <div class="well">
       <h3>Current Contest</h3>
       There is no current contest, so there will be no contest panel on the sidebar.
@@ -41,7 +41,7 @@
       </h3>
 
 
-      <pre>{{ JSON.stringify(currentContest, null, '  ') }}</pre>
+      <pre>{{ currentContest | json }}</pre>
 
       <div>
         <p class="lead">Image Preview:</p>

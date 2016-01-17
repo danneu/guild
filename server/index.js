@@ -14,11 +14,12 @@ app.use(require('koa-body')({
   multipart: true,
   // Max payload size allowed in request form body
   // Defaults to '56kb'
+  // CloudFlare limits to 100mb max
   formLimit: '25mb'
 }));
 app.use(require('koa-methodoverride')('_method'));
 var route = require('koa-route');
-var views = require('koa-views');
+const nunjucksRender = require('koa-nunjucks-render');
 // Node
 var util = require('util');
 var fs = require('co-fs');
@@ -142,131 +143,115 @@ app.use(function*(next) {  // Must become before koa-router
   yield next;
 });
 
-// Custom Swig filters
+// Configure Nunjucks
 ////////////////////////////////////////////////////////////
 
-swig.setDefaults({
-  locals: {
+const nunjucksOptions = {
+  // `yield this.render('show_user')` will assume that a show_user.html exists
+  ext: '.html',
+  noCache: config.NODE_ENV === 'development',
+  // if true, throw an error if we try to {{ x }} where x is null or undefined in
+  // templates. helps catch bugs and forces us to explicitly {{ x or '' }}
+  throwOnUndefined: false,
+  // globals are bindings we want to expose to all templates
+  globals: {
+    // let us use `can(USER, ACTION, TARGET)` authorization-checks in templates
     '_': _,
     belt: belt,
     cancan: cancan,
-    config: config
+    can: cancan.can,
+    config: config,
+    Math: Math,
+    Date: Date,
+  },
+  // filters are functions that we can pipe values to from nunjucks templates.
+  // e.g. {{ user.uname | md5 | toAvatarUrl }}
+  filters: {
+    json: s => JSON.stringify(s, null, '  '),
+    ordinalize: belt.ordinalize,
+    getOrdinalSuffix: belt.getOrdinalSuffix,
+    isNewerThan: belt.isNewerThan,
+    expandJoinStatus: belt.expandJoinStatus,
+    // {% if user.id|isIn([1, 2, 3]) %}
+    isIn: (v, coll) => _.contains(coll, v),
+    // {% if things|isEmpty %}
+    isEmpty: coll => _.isEmpty(coll),
+    // Specifically replaces \n with <br> in user.custom_title
+    replaceTitleNewlines: str => {
+      if (!str) return '';
+      return _.escape(str).replace(/\\n/, '<br>').replace(/^<br>|<br>$/g, '');
+    },
+    replaceTitleNewlinesMobile: str => {
+      if (!str) return '';
+      return _.escape(str).replace(/(?:\\n){2,}/, '\n').replace(/^\\n|\\n$/g, '').replace(/\\n/, ' / ');
+    },
+    // Sums `nums`, an array of numbers. Returns zero if `nums` is falsey.
+    sum: nums => {
+      return (nums || []).reduce(function(memo, n) {
+        return memo + n;
+      }, 0);
+    },
+    // Sums the values of an object
+    sumValues: obj => {
+      return (_.values(obj)).reduce(function(memo, n) {
+        return memo + n;
+      }, 0);
+    },
+    ratingTypeToImageSrc: type => {
+      switch(type) {
+      case 'like':
+        return '/ratings/like.png';
+      case 'laugh':
+        return '/ratings/laugh-static.png';
+      case 'thank':
+        return '/ratings/thank.png';
+      default:
+        throw new Error('Unsupported rating type: ' + type);
+      }
+    },
+    // {{ 'firetruck'|truncate(5) }}  -> 'firet...'
+    // {{ 'firetruck'|truncate(6) }}  -> 'firetruck'
+    truncate: belt.makeTruncate('…'),
+    // Returns distance from now to date in days. 0 or more.
+    daysAgo: date => {
+      return Math.floor((Date.now() - date.getTime()) / (1000*60*60*24));
+    },
+    // FIXME: Can't render bbcode on the fly until I speed up
+    // slow bbcode like tabs
+    bbcode: markup => {
+      var html, start = Date.now();
+      try {
+        html = bbcode(markup);
+        return html;
+      } catch(ex) {
+        //return 'There was a problem parsing a tag in this BBCode<br><br><pre style="overflow: auto">' + markup + '</pre>';
+        throw ex;
+      } finally {
+        debug('bbcode render time: ', Date.now() - start, 'ms - Rendered', markup.length, 'chars');
+      }
+    },
+    // commafy(10) -> 10
+    // commafy(1000000) -> 1,000,000
+    commafy: n => (n || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','),
+    formatDate: pre.formatDate,
+    slugifyUname: belt.slugifyUname,
+    presentUserRole: belt.presentUserRole,
+    encodeURIComponent: s => encodeURIComponent(s),
+    // String -> String
+    outcomeToElement: outcome => {
+      switch(outcome) {
+      case 'WIN':
+        return '<span class="green-glow">Win</span>';
+      case 'LOSS':
+        return '<span class="red-glow">Loss</span>';
+      case 'DRAW':
+        return '<span style="color: #999">Draw</span>';
+      }
+    }
   }
-});
+};
 
-swig.setFilter('ordinalize', belt.ordinalize);
-swig.setFilter('getOrdinalSuffix', belt.getOrdinalSuffix);
-
-swig.setFilter('isNewerThan', belt.isNewerThan);
-
-swig.setFilter('expandJoinStatus', belt.expandJoinStatus);
-
-// {% if user.id|isIn([1, 2, 3]) %}
-swig.setFilter('isIn', function(v, coll) {
-  return _.contains(coll, v);
-});
-
-// {% if things|isEmpty %}
-swig.setFilter('isEmpty', function(coll) {
-  return _.isEmpty(coll);
-});
-
-// Specifically replaces \n with <br> in user.custom_title
-swig.setFilter('replaceTitleNewlines', function(str) {
-  if (!str) return '';
-  return _.escape(str).replace(/\\n/, '<br>').replace(/^<br>|<br>$/g, '');
-});
-swig.setFilter('replaceTitleNewlinesMobile', function(str) {
-  if (!str) return '';
-  return _.escape(str).replace(/(?:\\n){2,}/, '\n').replace(/^\\n|\\n$/g, '').replace(/\\n/, ' / ');
-});
-
-// Sums `nums`, an array of numbers. Returns zero if `nums` is falsey.
-swig.setFilter('sum', function(nums) {
-  return (nums || []).reduce(function(memo, n) {
-    return memo + n;
-  }, 0);
-});
-
-// Sums the values of an object
-swig.setFilter('sumValues', function(obj) {
-  return (_.values(obj)).reduce(function(memo, n) {
-    return memo + n;
-  }, 0);
-});
-
-swig.setFilter('ratingTypeToImageSrc', function(type) {
-  switch(type) {
-    case 'like':
-      return '/ratings/like.png';
-    case 'laugh':
-      return '/ratings/laugh-static.png';
-    case 'thank':
-      return '/ratings/thank.png';
-    default:
-      throw new Error('Unsupported rating type: ' + type);
-  }
-});
-
-// TODO: Extract custom swig filters
-// {{ 'firetruck'|truncate(5) }}  -> 'firet...'
-// {{ 'firetruck'|truncate(6) }}  -> 'firetruck'
-swig.setFilter('truncate', belt.makeTruncate('…'));
-
-// Returns distance from now to date in days. 0 or more.
-function daysAgo(date) {
-  return Math.floor((Date.now() - date.getTime()) / (1000*60*60*24));
-}
-swig.setFilter('daysAgo', daysAgo);
-
-// FIXME: Can't render bbcode on the fly until I speed up
-// slow bbcode like tabs
-swig.setFilter('bbcode', function(markup) {
-  var html, start = Date.now();
-  try {
-    html = bbcode(markup);
-    return html;
-  } catch(ex) {
-    //return 'There was a problem parsing a tag in this BBCode<br><br><pre style="overflow: auto">' + markup + '</pre>';
-    throw ex;
-  } finally {
-    console.log('bbcode render time: ', Date.now() - start, 'ms - Rendered', markup.length, 'chars');
-  }
-});
-
-// commafy(10) -> 10
-// commafy(1000000) -> 1,000,000
-function commafy(n) {
-  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-}
-swig.setFilter('commafy', commafy);
-swig.setFilter('formatDate', pre.formatDate);
-swig.setFilter('slugifyUname', belt.slugifyUname);
-swig.setFilter('presentUserRole', belt.presentUserRole);
-
-// String -> String
-swig.setFilter('outcomeToElement', function(outcome) {
-  switch(outcome) {
-  case 'WIN':
-    return '<span class="green-glow">Win</span>';
-  case 'LOSS':
-    return '<span class="red-glow">Loss</span>';
-  case 'DRAW':
-    return '<span style="color: #999">Draw</span>';
-  }
-});
-
-////////////////////////////////////////////////////////////
-
-// Configure templating system to use `swig`
-// and to find view files in `view` directory
-app.use(views('../views', {
-  // Default extension is .html
-  default: 'html',
-  // consolidate bug hack
-  cache: (config.NODE_ENV === 'development' ? false : 'memory'),
-  map: { html: 'swig' }
-}));
+app.use(nunjucksRender('views', nunjucksOptions));
 
 ////////////////////////////////////////////////////////////
 // Routes //////////////////////////////////////////////////

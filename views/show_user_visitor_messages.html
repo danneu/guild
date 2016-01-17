@@ -45,14 +45,14 @@
     {% endif %}
   </h3>
 
-  {% if user.toplevel_vms_count === 0 %}
+  {% if user.toplevel_vms_count == 0 %}
     <div class="well">
       User has no visitor messages, yet
     </div>
   {% endif %}
 
   {% for vm in vms %}
-    {{ macros.renderVm(vm, user) }}
+    {{ macros.renderVm(ctx, vm, user) }}
   {% endfor %}
 
   <!-- New VM form -->
@@ -88,7 +88,7 @@
 {% endblock %}
 
 {% block scripts %}
-    {% parent %}
+  {{ super() }}
 <script>
   // Turn the new post editor into a bbcode editor
   $('#new-vm-input').bbcode({

@@ -63,11 +63,11 @@
               {% for row in arenaLeaderboard %}
                 <tr>
                   <td>
-                    {% if loop.index === 1 %}
+                    {% if loop.index == 1 %}
                       <span class="badge" style="background-color:#C98910; color:#111;">1st</span>
-                    {% elif loop.index === 2 %}
+                    {% elif loop.index == 2 %}
                       <span class="badge" style="background-color:#A8A8A8; color:#111;">2nd</span>
-                    {% elif loop.index === 3 %}
+                    {% elif loop.index == 3 %}
                       <span class="badge" style="background-color:#965A38; color:#111;">3rd</span>
                     {% else %}
                       <span class="badge" style="background: none;">
@@ -121,12 +121,12 @@
     <ul class="nav nav-tabs forum-tabs">
       <li>
         <a href="{{ forum.parent_forum.url }}">
-          {{ forum.parent_forum.tab_title || 'Roleplays' }}
+          {{ forum.parent_forum.tab_title or 'Roleplays' }}
         </a>
       </li>
       <li class="active">
         <a href="{{ forum.url }}">
-          {{ forum.tab_title || 'Interest Checks' }}
+          {{ forum.tab_title or 'Interest Checks' }}
         </a>
       </li>
     </ul>
@@ -136,18 +136,18 @@
     <ul class="nav nav-tabs forum-tabs">
       <li class="active">
         <a href="{{ forum.url }}">
-          {{ forum.tab_title || 'Roleplays' }}
+          {{ forum.tab_title or 'Roleplays' }}
         </a>
       </li>
       <li>
         <a href="{{ forum.child_forum.url }}">
-          {{ forum.child_forum.tab_title || 'Interest Checks' }}
+          {{ forum.child_forum.tab_title or 'Interest Checks' }}
         </a>
       </li>
     </ul>
   {% endif %}
 
-  {% if (!forum.child_forum && !forum.parent_forum && !forum.is_roleplay) %}
+  {% if (not forum.child_forum and not forum.parent_forum and not forum.is_roleplay) %}
     <ul class="nav nav-tabs forum-tabs">
       <li class="active"><a href="{{ forum.url }}">Topics</a></li>
     </ul>
@@ -155,7 +155,7 @@
 
   <!-- Topic list -->
 
-  {% if forum.topics.length === 0 %}
+  {% if forum.topics.length == 0 %}
     <div class="well">
       This forum has no topics yet.
     </div>

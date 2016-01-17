@@ -23,7 +23,7 @@
     <h3>My Notifications</h3>
   </div>
 
-  {% if notifications.length === 0 %}
+  {% if notifications.length == 0 %}
     <div class="well">
       You have no notifications.
     </div>
@@ -40,7 +40,7 @@
         <abbr class="timeago" title="{{ n.created_at.toISOString() }}">
           {{ n.created_at|formatDate }}
         </abbr>
-        {% if n.type === 'MENTION' %}
+        {% if n.type == 'MENTION' %}
           <p>
             <a href="/users/{{ n.from_user.slug }}">{{ n.from_user.uname }}</a>
             mentioned you in a topic: <a href="{{ n.post.url }}">{{ n.topic.title }}</a>
@@ -50,7 +50,7 @@
               {{ n.post.html|safe }}
             </div>
           </div>
-        {% elif n.type === 'RATING' %}
+        {% elif n.type == 'RATING' %}
           <p>
             <a href="/users/{{ n.from_user.slug }}">{{ n.from_user.uname }}</a>
             <img src="{{ n.meta.type|ratingTypeToImageSrc }}">'d your post in
@@ -61,7 +61,7 @@
               {{ n.post.html|safe }}
             </div>
           </div>
-        {% elif n.type === 'QUOTE' %}
+        {% elif n.type == 'QUOTE' %}
           <p>
             <a href="/users/{{ n.from_user.slug }}">{{ n.from_user.uname }}</a>
             quoted you in a topic: <a href="{{ n.post.url }}">{{ n.topic.title }}</a>
@@ -71,23 +71,23 @@
               {{ n.post.html|safe }}
             </div>
           </div>
-        {% elif n.type === 'PM' %}
+        {% elif n.type == 'PM' %}
           <p>
             Private conversation
             <a href="{{ n.convo.url }}">{{ n.convo.title }}</a>
             has {{ n.count }} unread
-            {% if n.count === 1 %} message {% else %} messages {% endif %}
+            {% if n.count == 1 %} message {% else %} messages {% endif %}
           </p>
-        {% elif n.type === 'REPLY_VM' %}
+        {% elif n.type == 'REPLY_VM' %}
           <p>
             <a href="/me/vms/{{ n.vm_id }}">Your Visitor Message</a>
-            {% if n.count === 1 %}
+            {% if n.count == 1 %}
               has a new reply
             {% else %}
               has {{ n.count }} new replies
             {% endif %}
           </p>
-        {% elif n.type === 'TOPLEVEL_VM' %}
+        {% elif n.type == 'TOPLEVEL_VM' %}
           <p>
             You have a new <a href="/me/vms/{{ n.vm_id }}">Visitor Message</a> from
             <a href="/users/{{ n.from_user.slug }}">{{ n.from_user.uname }}</a>
@@ -102,7 +102,7 @@
               </div>
             {% endif %}
           </div>
-        {% elif n.type === 'CONVO' %}
+        {% elif n.type == 'CONVO' %}
           <p>
             <!-- <a href="/users/{{ n.from_user.slug }}">{{ n.from_user.uname }}</a> -->
             <!-- started a new private convo with you: -->

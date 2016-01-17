@@ -2,8 +2,8 @@
 {% macro renderJoinStatus(status) %}
   {% if status %}
     <div class="join-status join-status-{{ status }}" style="display: inline-block;">
-      <abbr title="{{ status|expandJoinStatus }}" data-toggle="tooltip">
-        {{ status|capitalize }}
+      <abbr title="{{ status | expandJoinStatus }}" data-toggle="tooltip">
+        {{ status | capitalize }}
       </abbr>
     </div>
   {% endif %}
@@ -11,85 +11,81 @@
 
 {# minimal is optional boolean #}
 
-{% macro onlineStatus(user, minimal) %}
+{% macro onlineStatus(ctx, user, minimal) %}
   {% if user.is_ghost %}
-    {% if ctx.can(ctx.currUser, 'READ_USER_ONLINE_STATUS', user) %}
+    {% if can(ctx.currUser, 'READ_USER_ONLINE_STATUS', user) %}
       <span class="text-muted">Invisible</span>
     {% endif %}
-  {% else %}
+  {% elif user.last_online_at %}
     {% if Date.now() - user.last_online_at.getTime() < 1000 * 60 * 15 %}
       <span style="color: #3BB878">Online</span>
     {% else %}
-      {% if user.last_online_at %}
-        <span class="text-muted">
-          {% if !minimal %}Seen{% endif %}
-          <abbr class="timeago"
-                style="display: inline-block;"
-                title="{{ user.last_online_at.toISOString() }}">
-            {{ user.last_online_at|formatDate }}
-          </abbr>
-        </span>
-      {% else %}
-        <span style="color: #555">
-          {% if minimal %}
-            MIA
-          {% else %}
-            Offline since relaunch
-          {% endif %}
-        </span>
-      {% endif %}
+      <span class="text-muted">
+        {% if not minimal %}Seen{% endif %}
+        <abbr class="timeago"
+              style="display: inline-block;"
+              title="{{ user.last_online_at.toISOString() }}">
+          {{ user.last_online_at | formatDate }}
+        </abbr>
+      </span>
     {% endif %}
-  {% endif %}
-{% endmacro %}
-
-{% macro renderPost(post) %}
-  {% if post.html %}
-    <div class="post-body-html post-content">{{- post.html|safe -}}</div>
-  {% elif post.legacy_html %}
-    <div class="post-body-html post-content">{{- post.legacy_html|safe -}}</div>
   {% else %}
-    <div class="post-body post-content">{{- post.text -}}</div>
+    <span style="color: #555">
+      {% if minimal %}
+        MIA
+      {% else %}
+        Offline since relaunch
+      {% endif %}
+    </span>
   {% endif %}
 {% endmacro %}
 
-{% macro renderSig(user) %}
-  {% if ctx.currUser && !ctx.currUser.hide_sigs && user.sig_html %}
-    <div class="post-sig-legacy post-sig">
-      {{- post.user.sig_html|safe -}}
-    </div>
+{% macro renderPost(ctx, post) %}
+  {% if post.html %}
+    <div class="post-body-html post-content">{{ post.html | safe }}</div>
+  {% elif post.legacy_html %}
+    <div class="post-body-html post-content">{{ post.legacy_html | safe }}</div>
+  {% else %}
+    <div class="post-body post-content">{{ post.text }}</div>
   {% endif %}
 {% endmacro %}
 
-{% macro renderUserbitSmall(user) %}
+{% macro renderSig(ctx, user) %}
+  {% if ctx.currUser and user.sig_html and not ctx.currUser.hide_sigs %}
+    <div class="post-sig-legacy post-sig">{{ user.sig_html | safe }}</div>
+  {% endif %}
+{% endmacro %}
+
+{% macro renderUserbitSmall(ctx, user) %}
     <div class="media">
-      {% if !ctx.currUser || (user.avatar_url && !ctx.currUser.hide_avatars) %}
-        <a class="media-left" href="{{ post.user.url }}">
+      {% if user.avatar_url and not ctx.currUser.hide_avatars %}
+        <a class="media-left" href="{{ user.url }}">
           <img class="avatar-img {% if ctx.currUser.is_grayscale %}desaturate{% endif %}"
-               src="{{ post.user.avatar_url }}"
-               alt="Avatar of {{ post.user.uname }}"
-               title="Avatar of {{ post.user.uname }}"
+               src="{{ user.avatar_url }}"
+               alt="Avatar of {{ user.uname }}"
+               title="Avatar of {{ user.uname }}"
                style="max-width: 40px; max-height: 40px;"
                >
         </a>
       {% endif %}
       <div class="media-body" style="text-align: left;">
         <h4 class="media-heading" style="margin-bottom: 0;">
-          <a href="{{ post.user.url }}">
+          <a href="{{ user.url }}">
             {{ user.uname }}
           </a>
           {% if user.custom_title %}
-            <small><span class="text-muted">{{ user.custom_title|replaceTitleNewlinesMobile|raw }}</span></small>
+            <small><span class="text-muted">{{ user.custom_title | replaceTitleNewlinesMobile | safe }}</span></small>
           {% endif %}
         </h4>
         <div class="pull-left">
-          {{ user.role|presentUserRole }}
-          {{ macros.onlineStatus(user) }}
+          {{ user.role | presentUserRole }}
+          {{ onlineStatus(ctx, user) }}
         </div>
       </div>
     </div>
 {% endmacro %}
 
-{% macro renderCyberpunkUserbitLarge(user) %}
+{% macro renderCyberpunkUserbitLarge(ctx, user) %}
   <fieldset class="cyberpunk">
     <legend>
       <a href="{{ user.url }}">
@@ -97,13 +93,11 @@
       </a>
     </legend>
     {% if user.custom_title %}
-      <span class="user-custom-title negate-bg">
-        {{ user.custom_title|replaceTitleNewlines|raw -}}
-      </span><br>
+      <span class="user-custom-title negate-bg">{{ user.custom_title | replaceTitleNewlines | safe }}</span><br>
     {% endif %}
 
 
-    {% if !ctx.currUser || (user.avatar_url && !ctx.currUser.hide_avatars) %}
+    {% if user.avatar_url and not ctx.currUser.hide_avatars %}
       <div class="post-avatar"
            style="margin-top: 10px;">
         <img class="avatar-img {% if ctx.currUser.is_grayscale %}desaturate{% endif %}"
@@ -117,7 +111,7 @@
     <table style="width: 100%;">
       <tr>
         <td class="L">Role</td>
-        <td class="R">{{ user.role|presentUserRole }}</td>
+        <td class="R">{{ user.role | presentUserRole }}</td>
       </td>
       <tr>
         <td class="L">Posts</td>
@@ -125,12 +119,12 @@
       </td>
       <tr>
         <td class="L">Days</td>
-        <td class="R"> {{ user.created_at|daysAgo}}</td>
+        <td class="R"> {{ user.created_at | daysAgo}}</td>
       </td>
     </table>
 
     {% if user.is_ghost %}
-      {% if ctx.can(ctx.currUser, 'READ_USER_ONLINE_STATUS', user) %}
+      {% if can(ctx.currUser, 'READ_USER_ONLINE_STATUS', user) %}
         <span class="negate-bg" style="color: white;">INVISIBLE</span>
       {% endif %}
     {% else %}
@@ -143,7 +137,7 @@
             <abbr class="timeago"
                   style="display: inline-block; text-transform: uppercase; border: none; color: white;"
                   title="{{ user.last_online_at.toISOString() }}">
-              {{ user.last_online_at|formatDate }}
+              {{ user.last_online_at | formatDate }}
             </abbr>
           </span>
         {% else %}
@@ -158,7 +152,7 @@
   </fieldset>
 {% endmacro %}
 
-{% macro renderOriginalUserbitLarge(user) %}
+{% macro renderOriginalUserbitLarge(ctx, user) %}
   <div class="user-uname">
     <a href="{{ user.url }}">
       {{ user.uname }}
@@ -167,35 +161,35 @@
 
   {% if user.custom_title %}
     <div class="user-custom-title text-muted">
-      {{ user.custom_title|replaceTitleNewlines|raw }}
+      {{ user.custom_title | replaceTitleNewlines | safe }}
     </div>
   {% endif %}
 
-  {% if user.active_trophy_id === 2 %}
+  {% if user.active_trophy_id == 2 %}
     <div style="color: #e67e22; font-weight: bold; font-family: Georgia,Times,'Times New Roman',serif;">
       Nemean Assassin
     </div>
   {% endif %}
 
-  {% if user.active_trophy_id === 7 %}
+  {% if user.active_trophy_id == 7 %}
     <div style="color: #9b59b6; font-weight: bold; font-family: Georgia,Times,'Times New Roman',serif;">
       Lernaean Exile
     </div>
   {% endif %}
 
-  {% if user.active_trophy_id === 22 %}
+  {% if user.active_trophy_id == 22 %}
     <div style="color: #2ecc71; font-weight: bold; font-family: Georgia,Times,'Times New Roman',serif;">
       Ceryneian Huntsman
     </div>
   {% endif %}
 
-  {% if user.active_trophy_id === 38 %} {# FIXME: just copied this color from prev trophy #}
+  {% if user.active_trophy_id == 38 %} {# FIXME: just copied this color from prev trophy #}
     <div style="color: #2ecc71; font-weight: bold; font-family: Georgia,Times,'Times New Roman',serif;">
       Pride of Augeas
     </div>
   {% endif %}
 
-  {% if !ctx.currUser || (user.avatar_url && !ctx.currUser.hide_avatars) %}
+  {% if user.avatar_url and not ctx.currUser.hide_avatars %}
     <div class="post-avatar"
          style="margin-top: 10px;">
       <img class="avatar-img {% if ctx.currUser.is_grayscale %}desaturate{% endif %}"
@@ -206,38 +200,38 @@
   {% endif %}
 
   <div class="user-role" style="margin-top: 10px;">
-    {% if user.id === 10 %}
+    {% if user.id == 10 %}
       <img src="/bling/10-sora/legacy.gif">
       <img src="/bling/10-sora/member.gif">
       <br>
       <img src="/bling/10-sora/forever.gif">
-    {% elif user.role === 'member' %}
+    {% elif user.role == 'member' %}
     {% else %}
-      {{ user.role|presentUserRole }}
+      {{ user.role | presentUserRole }}
     {% endif %}
   </div>
 
   <div class="user-stats">
     {{ user.posts_count }} posts
-    <div style="display: inline-block;">in {{ user.created_at|daysAgo}} days</div>
+    <div style="display: inline-block;">in {{ user.created_at | daysAgo}} days</div>
   </div>
 
 <!-- Online status -->
 
-  {{ onlineStatus(user) }}
+  {{ onlineStatus(ctx, user) }}
 {% endmacro %}
 
-{% macro renderUserbitLarge(user)  %}
+{% macro renderUserbitLarge(ctx, user)  %}
 
-  {% if user.active_trophy_id === 1 %}
-    {{ renderCyberpunkUserbitLarge(user) }}
+  {% if user.active_trophy_id == 1 %}
+    {{ renderCyberpunkUserbitLarge(ctx, user) }}
   {% else %}
-    {{ renderOriginalUserbitLarge(user) }}
+    {{ renderOriginalUserbitLarge(ctx, user) }}
   {% endif %}
 
   <!-- User gylphs -->
 
-  {% if user.bio_markup || user.current_status || user.show_arena_stats %}
+  {% if user.bio_markup or user.current_status or user.show_arena_stats %}
     <div class="user-glyphs">
 
       <!-- Bio -->
@@ -320,12 +314,12 @@
 {% macro renderViewers(viewers, startHidden) %}
   {% set userCount = viewers.users.length %}
   {% set guestCount = viewers.guests.length %}
-  {% if userCount > 0 || guestCount > 0 %}
+  {% if userCount > 0 or guestCount > 0 %}
     <div class="viewers">
       {% if userCount > 0 %}
         {{ userCount }} User{% if userCount > 1 %}s{% endif %}
       {% endif %}
-      {% if userCount > 0 && guestCount > 0%}
+      {% if userCount > 0 and guestCount > 0%}
         and
       {% endif %}
       {% if guestCount > 0 %}
@@ -349,14 +343,14 @@
             style="display: none;"
           {% endif %}
           >
-        {% for viewer in viewers.users %}<li><a href="/users/{{ viewer.uname|slugifyUname }}">{{- viewer.uname -}}</a>{% if !loop.last %},{% endif %}</li>{% endfor %}
+        {% for viewer in viewers.users %}<li><a href="/users/{{ viewer.uname|slugifyUname }}">{{ viewer.uname }}</a>{% if not loop.last %},{% endif %}</li>{% endfor %}
       </ul>
     </div>
   {% endif %}
 {% endmacro %}
 
 {% macro renderTagInputs(tagGroups, selectedTagIds) %}
-  {% set selectedTagIds = selectedTagIds || [] %}
+  {% set selectedTagIds = selectedTagIds or [] %}
 
   <input type="hidden" name="tag-ids[]" value="-1">
   {% for group in tagGroups %}
@@ -380,7 +374,7 @@
   {% endfor %}
 {% endmacro %}
 
-{% macro renderSidebar(latestChecks, latestRoleplays) %}
+{% macro renderSidebar(ctx, latestChecks, latestRoleplays, latestStatuses, currentContest, friendships, latest_rpgn_topic) %}
 
   {# Only show this if within 3 days of this deploy #}
 
@@ -440,9 +434,7 @@
         <hr>
 
             Latest post:
-            <a href="/users/{{ latest_rpgn_topic.latest_user.slug }}" style="color:white;text-decoration:underline;display:inline-block;">
-              {{ latest_rpgn_topic.latest_user.uname -}}
-            </a>
+            <a href="/users/{{ latest_rpgn_topic.latest_user.slug }}" style="color:white;text-decoration:underline;display:inline-block;">{{ latest_rpgn_topic.latest_user.uname }}</a>
                       <a href="/topics/{{ latest_rpgn_topic.latest_post.topic_id }}/ooc/first-unread" class="btn btn-default btn-xs">Go &rarr;</a>
 
             <br>
@@ -520,7 +512,7 @@
               </a>
             </td>
             <td class="text-right">
-              <small>{{ macros.onlineStatus(friend, true) }}</small>
+              <small>{{ onlineStatus(ctx, friend, true) }}</small>
             </td>
           </tr>
         {% endfor %}
@@ -552,7 +544,7 @@
         Latest Status Updates
       </h4>
 
-      {% if latestStatuses.length === 0 %}
+      {% if latestStatuses.length == 0 %}
         <div class="text-center">-- None --</div>
       {% endif %}
 
@@ -585,8 +577,8 @@
             {% if ctx.currUser.id|isIn(status.liked_user_ids) %}
               You liked this -
             {% endif %}
-            {% if ctx.can(ctx.currUser, 'LIKE_STATUS', status) %}
-                {% if !(ctx.currUser.id|isIn(status.liked_user_ids)) %}
+            {% if can(ctx.currUser, 'LIKE_STATUS', status) %}
+                {% if not (ctx.currUser.id|isIn(status.liked_user_ids)) %}
                   <button type="button"
                           class="btn btn-default btn-xs like-status-btn"
                           data-status-id="{{ status.id }}">
@@ -599,9 +591,9 @@
           <!-- Like count -->
           <span class="text-muted">
             <span class="status-like-count">
-              {% if status.liked_user_ids.length > 0 %}
-                {{- status.liked_user_ids.length -}}
-              {% endif %}
+              {% if status.liked_user_ids.length > 0 -%}
+                {{ status.liked_user_ids.length }}
+              {%- endif %}
             </span>
             <span class="status-like-count-suffix">
               {% if status.liked_user_ids.length > 0 %}
@@ -610,7 +602,7 @@
             </span>
           </span>
 
-          {% if !loop.last %}<hr>{% endif %}
+          {% if not loop.last %}<hr>{% endif %}
           {% if loop.last %}
             <hr>
             <a style="display: block;" class="text-center" href="/statuses">View More</a>
@@ -653,7 +645,7 @@
             {% endfor %}
           </div>
         </div>
-        {% if !loop.last %}<hr>{% endif %}
+        {% if not loop.last %}<hr>{% endif %}
       {% endfor %}
 
     </div><!-- /panel-body -->
@@ -695,7 +687,7 @@
             {% endfor %}
           </div>
         </div>
-        {% if !loop.last %}<hr>{% endif %}
+        {% if not loop.last %}<hr>{% endif %}
       {% endfor %}
 
     </div><!-- /panel-body -->
@@ -733,7 +725,7 @@
               </div>
               <div class="col-sm-6">
                 <h5 class="list-group-item-heading topic-panel-title">
-                  {% if topic.moved_at && topic.moved_from_forum_id === forum.id %}
+                  {% if topic.moved_at and topic.moved_from_forum_id == forum.id %}
                     <span class="glyphicon glyphicon-share-alt" title="Moved" data-toggle="tooltip"></span>
                   {% endif %}
                   {% if topic.is_closed %}
@@ -749,9 +741,7 @@
                 </h5>
                 <div class="list-group-item-text">
                   <div style="margin-top: 6px;">
-                    by <a href="{{ topic.user.url }}" style="color: #fff">
-                      {{ topic.user.uname -}}
-                    </a>,
+                    by <a href="{{ topic.user.url }}" style="color: #fff">{{ topic.user.uname }}</a>,
                     <abbr class="timeago created-at"
                           title="{{ topic.created_at.toISOString() }}">
                       {{ topic.created_at|formatDate }}
@@ -762,7 +752,7 @@
                     <ul class="list-inline" style="margin: 0;">
                       {% for tag in topic.tags %}
                         <!-- Ignore tag if we're in the "tag's forum" -->
-                        {% if tag.id !== forum.tag_id %}
+                        {% if tag.id != forum.tag_id %}
                           <li data-toggle="tooltip" title="{{ tag.description }}"
                               style="padding: 0;">
                             <span class="label label-default">{{ tag.title }}</span>
@@ -773,12 +763,10 @@
                   {% endif %}
                 </div>
               </div> <!-- /col6 -->
-              {% if topic.moved_at && topic.moved_from_forum_id === forum.id %}
+              {% if topic.moved_at and topic.moved_from_forum_id == forum.id %}
                 <div class="col-sm-6">
                   Moved to
-                  <a href="/forums/{{ topic.forum_id }}">
-                    {{ topic.forum.title -}}
-                  </a>
+                  <a href="/forums/{{ topic.forum_id }}">{{ topic.forum.title }}</a>
                   <div>
                     <abbr class="timeago moved-at" title="{{ topic.moved_at.toISOString() }}">
                       {{ topic.moved_at|formatDate }}
@@ -835,7 +823,7 @@
             <div class="row">
               <div class="col-sm-6">
                 <h5 class="list-group-item-heading topic-panel-title">
-                  {% if topic.moved_at && topic.moved_from_forum_id === forum.id %}
+                  {% if topic.moved_at and topic.moved_from_forum_id == forum.id %}
                     <span class="glyphicon glyphicon-share-alt" title="Moved" data-toggle="tooltip"></span>
                   {% endif %}
                   {% if topic.is_closed %}
@@ -876,9 +864,7 @@
                 </h5>
                 <div class="list-group-item-text">
                   <div style="margin-top: 6px;">
-                    by <a href="{{ topic.user.url }}" style="color: #fff">
-                      {{ topic.user.uname -}}
-                    </a>,
+                    by <a href="{{ topic.user.url }}" style="color: #fff">{{ topic.user.uname }}</a>,
                     <abbr class="timeago created-at"
                           title="{{ topic.created_at.toISOString() }}">
                       {{ topic.created_at|formatDate }}
@@ -888,7 +874,7 @@
                     {% endif %}
                   </div>
                   <!-- List topic tags -->
-                  {% if topic.tags || topic.join_status %}
+                  {% if topic.tags or topic.join_status %}
                     <ul class="list-inline" style="margin: 2px 0 0 0;">
                       {% if topic.join_status %}
                         <li class="join-status join-status-{{ topic.join_status }}" style="padding-left: 0;">
@@ -899,7 +885,7 @@
                       {% endif %}
                       {% for tag in topic.tags %}
                         <!-- Ignore tag if we're in the "tag's forum" -->
-                        {% if tag.id !== forum.tag_id %}
+                        {% if tag.id != forum.tag_id %}
                           <li data-toggle="tooltip" title="{{ tag.description }}"
                               style="padding: 0;">
                             <span class="label label-default">{{ tag.title }}</span>
@@ -910,12 +896,10 @@
                   {% endif %}
                 </div>
               </div> <!-- /col6 -->
-              {% if topic.moved_at && topic.moved_from_forum_id === forum.id %}
+              {% if topic.moved_at and topic.moved_from_forum_id == forum.id %}
                 <div class="col-sm-6">
                   Moved to
-                  <a href="/forums/{{ topic.forum_id }}">
-                    {{ topic.forum.title -}}
-                  </a>
+                  <a href="/forums/{{ topic.forum_id }}">{{ topic.forum.title }}</a>
                   <div>
                     <abbr class="timeago moved-at" title="{{ topic.moved_at.toISOString() }}">
                       {{ topic.moved_at|formatDate }}
@@ -973,7 +957,7 @@
             <div class="row">
               <div class="col-sm-6">
                 <h5 class="list-group-item-heading topic-panel-title">
-                  {% if topic.moved_at && topic.moved_from_forum_id === forum.id %}
+                  {% if topic.moved_at and topic.moved_from_forum_id == forum.id %}
                     <span class="glyphicon glyphicon-share-alt" title="Moved" data-toggle="tooltip"></span>
                   {% endif %}
                   {% if topic.is_closed %}
@@ -989,9 +973,7 @@
                 </h5>
                 <div class="list-group-item-text">
                   <div style="margin-top: 6px;">
-                    by <a href="{{ topic.user.url }}" style="color: #fff">
-                      {{ topic.user.uname -}}
-                    </a>,
+                    by <a href="{{ topic.user.url }}" style="color: #fff">{{ topic.user.uname }}</a>,
                     <abbr class="timeago created-at"
                           title="{{ topic.created_at.toISOString() }}">
                       {{ topic.created_at|formatDate }}
@@ -999,12 +981,10 @@
                   </div>
                 </div>
               </div> <!-- /col6 -->
-              {% if topic.moved_at && topic.moved_from_forum_id === forum.id %}
+              {% if topic.moved_at and topic.moved_from_forum_id == forum.id %}
                 <div class="col-sm-6">
                   Moved to
-                  <a href="/forums/{{ topic.forum_id }}">
-                    {{ topic.forum.title -}}
-                  </a>
+                  <a href="/forums/{{ topic.forum_id }}">{{ topic.forum.title }}</a>
                   <div>
                     <abbr class="timeago moved-at" title="{{ topic.moved_at.toISOString() }}">
                       {{ topic.moved_at|formatDate }}
@@ -1044,7 +1024,7 @@
 <!-- USER BAR -->
 
 
-{% macro renderUserBar(showUname, clss) %}
+{% macro renderUserBar(ctx, showUname, clss) %}
   <div class="btn-group btn-group-sm {{ clss }}">
     <a href="/me/convos"
        class="btn btn-default navbar-btn">
@@ -1052,10 +1032,10 @@
       PMs
       {# Doing !==0 instead of >0 so user can see any bugs where
          notification count goes negative #}
-      {% if ctx.currUser.convo_notifications_count !== 0 %}
-      <div class="badge">
-        {{ ctx.currUser.convo_notifications_count|commafy }}
-      </div>
+      {% if ctx.currUser.convo_notifications_count > 0 %}
+        <div class="badge">
+          {{ ctx.currUser.convo_notifications_count | commafy }}
+        </div>
       {% endif %}
     </a>
     <a href="/me/subscriptions"
@@ -1063,7 +1043,7 @@
       <span class="glyphicon glyphicon-list"></span>
       Subs
     </a>
-    {% if ctx.can(ctx.currUser, 'LEXUS_LOUNGE') %}
+    {% if can(ctx.currUser, 'LEXUS_LOUNGE') %}
       <a href="/lexus-lounge"
          class="btn btn-default navbar-btn">
         <span class="glyphicon glyphicon-eye-open"></span>
@@ -1075,7 +1055,7 @@
       <span class="glyphicon glyphicon-bell"></span>
       {% if ctx.currUser.notifications_count > 0 %}
         <div class="badge">
-          {{ ctx.currUser.notifications_count|commafy }}
+          {{ ctx.currUser.notifications_count | commafy }}
         </div>
       {% endif %}
     </a>
@@ -1093,11 +1073,11 @@
 {% endmacro %}
 
 
-{% macro renderVm(vm, profileUser) %}
+{% macro renderVm(ctx, vm, profileUser) %}
     <a name="vm-{{ vm.id }}"></a>
     <div class="media" style="position:relative;overflow:hidden;" id="vm-{{ vm.id }}">
       <!-- ribbon if VM writer is also the profile owner -->
-      {% if vm.from_user_id === user.id %}
+      {% if vm.from_user_id == user.id %}
         <div class="corner-ribbon top-right">&nbsp;</div>
       {% endif %}
       <div class="media-left">
@@ -1119,10 +1099,10 @@
         </div>
 
         <!-- content row -->
-        {{ vm.html|raw }}
+        {{ vm.html|safe }}
 
         <!-- controls row -->
-        {% if !vm.parent_vm_id && ctx.can(ctx.currUser, 'CREATE_VM') %}
+        {% if not vm.parent_vm_id and can(ctx.currUser, 'CREATE_VM') %}
           <div>
             <button type="button" class="btn-link vm-reply-btn"
                     data-vm-id={{ vm.id }}>
@@ -1133,10 +1113,10 @@
 
       </div><!-- /media-body -->
 
-      {% if !vm.parent_vm_id %}
+      {% if not vm.parent_vm_id %}
         <ul class="child-vms list-unstyled" style="margin-left: 60px;">
           {% for childVm in vm.child_vms%}
-            <li>{{ renderVm(childVm, profileUser) }}</li>
+            <li>{{ renderVm(ctx, childVm, profileUser) }}</li>
           {% endfor %}
         </ul>
       {% endif %}
