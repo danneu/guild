@@ -3,9 +3,12 @@ var w;
 
   // commafy(10) -> 10
   // commafy(1000000) -> 1,000,000
-  function commafy(n) {
-    return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  }
+  var commafy = (function() {
+    var re = /\B(?=(\d{3})+(?!\d))/g;
+    return function _commafy(n) {
+      return n.toString().replace(re, ',');
+    };
+  })();
 
   var buttons = {
     'bb-b': {
@@ -250,12 +253,17 @@ var w;
       resize: 'vertical',
       height: 350,
       iconlibrary: 'fa',
-      onChange: function(e) {
-        var count = e.getContent().length;
-        e.$editor.find('.char-count .current').text(commafy(count));
-      },
+      onChange: (function() {
+        var $counter;
+        return function _onChange(e) {
+          if (!$counter) {
+            $counter = e.$editor.find('.char-count .current');
+          }
+          var count = e.getContent().length;
+          $counter.text(commafy(count));
+        };
+      })(),
       onShow: function(e) {
-        console.log('show');
         $M = e;
 
         e.$element.on('keydown', function(ev) {
