@@ -302,6 +302,7 @@ function showConvosHandler(folder) {
       ctx: this,
       title: 'My Private Conversations',
       counts: results.counts,
+      folderEmpty: results.counts[`${folder}_count`],
       convos,
       folder,
       // Pagination

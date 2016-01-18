@@ -162,11 +162,20 @@
       </div>
     </div>
   </div>
-  {% if convos.length == 0 %}
+  {% if folderEmpty %}
     <div class="panel panel-default">
       <div class="panel-body">
         <p class="text-center lead">
           You haven't moved any convos into this folder, yet
+        </p>
+      </div>
+    </div>
+  {% elif convos.length == 0 %}
+    <div class="panel panel-default">
+      <div class="panel-body">
+        <p class="text-center lead">
+          Page is empty.
+          <br>In the future I'll prevent you from landing on an empty page.
         </p>
       </div>
     </div>
