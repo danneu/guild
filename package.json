@@ -3,12 +3,12 @@
     "node": "5.4.x"
   },
   "scripts": {
-    "start": "node --harmony --max_old_space_size=200 ./server",
-    "start-dev": "env $(cat .env | xargs) nodemon --harmony --expose-gc ./server",
-    "start-sandbox": "env $(cat .env | xargs) node --harmony --expose-gc ./server/sandbox",
-    "start-sandbox-nodemon": "env $(cat .env | xargs) nodemon --harmony --expose-gc ./server/sandbox",
-    "reset-db": "env $(cat .env | xargs) node --harmony ./server/reset_db",
-    "tasks:batch-upload-posts": "DEBUG=* node --harmony ./tasks/batch_upload_posts"
+    "start": "node --max_old_space_size=200 ./server",
+    "start-dev": "env $(cat .env | xargs) nodemon ./server",
+    "start-sandbox": "env $(cat .env | xargs) node ./server/sandbox",
+    "start-sandbox-nodemon": "env $(cat .env | xargs) nodemon ./server/sandbox",
+    "reset-db": "env $(cat .env | xargs) node ./server/reset_db",
+    "tasks:batch-upload-posts": "DEBUG=* node ./tasks/batch_upload_posts"
   },
   "repository": {
     "type": "git",
