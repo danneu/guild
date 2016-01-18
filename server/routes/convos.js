@@ -289,20 +289,21 @@ function showConvosHandler(folder) {
 
     this.assert(this.currUser, 404);
 
-    var convos = yield db.findConvosInvolvingUserId(this.currUser.id,
-                                                    this.vals['before-id'],
-                                                    folder);
-    convos = convos.map(pre.presentConvo);
-
-    var counts = yield db.getConvoFolderCounts(this.currUser.id);
+    const results = yield {
+      convos: db.findConvosInvolvingUserId(
+        this.currUser.id, this.vals['before-id'], folder
+      ),
+      counts: db.getConvoFolderCounts(this.currUser.id)
+    }
+    const convos = results.convos.map(pre.presentConvo);
 
     var nextBeforeId = convos.length > 0 ? _.last(convos).latest_pm_id : null;
     yield this.render('me_convos', {
       ctx: this,
       title: 'My Private Conversations',
-      counts,
-      folder,
+      counts: results.counts,
       convos,
+      folder,
       // Pagination
       beforeId: this.vals['before-id'],
       nextBeforeId: nextBeforeId,
