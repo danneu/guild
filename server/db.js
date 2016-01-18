@@ -950,7 +950,7 @@ SELECT
   c.created_at,
   c.latest_pm_id,
   c.pms_count,
-  cp.folder,
+  cp2.folder,
   u1.uname "user.uname",
   u1.slug "user.slug",
   json_agg(u2.uname) "participant_unames",
@@ -960,18 +960,19 @@ SELECT
   u3.uname "latest_user.uname",
   u3.slug "latest_user.slug"
 FROM convos c
-LEFT OUTER JOIN convos_participants cp ON c.id = cp.convo_id
+JOIN convos_participants cp ON c.id = cp.convo_id
 JOIN users u1 ON c.user_id = u1.id
 JOIN users u2 ON cp.user_id = u2.id
 JOIN pms ON c.latest_pm_id = pms.id
 JOIN users u3 ON pms.user_id = u3.id
-WHERE c.latest_pm_id < $2 AND c.id IN (
-  SELECT cp.convo_id
-  FROM convos_participants cp
-  WHERE cp.user_id = $1
-)
-  AND (cp.folder = $4 AND cp.user_id = $1)
-GROUP BY c.id, u1.id, pms.id, u3.id, cp.folder
+JOIN convos_participants cp2 ON c.id = cp2.convo_id
+WHERE c.latest_pm_id < $2
+  AND c.id IN (
+    SELECT cp.convo_id
+    FROM convos_participants cp
+  )
+  AND (cp2.folder = $4 AND cp2.user_id = $1)
+GROUP BY c.id, u1.id, pms.id, u3.id, cp2.folder
 ORDER BY c.latest_pm_id DESC
 LIMIT $3
   `;
