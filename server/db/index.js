@@ -12,9 +12,9 @@ var debug = require('debug')('app:db');
 var coParallel = require('co-parallel');
 var pgArray = require('postgres-array');
 // 1st party
-var config = require('./config');
-var belt = require('./belt');
-var pre = require('./presenters');
+var config = require('../config');
+var belt = require('../belt');
+var pre = require('../presenters');
 
 // If a client is not provided to fn as first argument,
 // we'll pass one into it.
