@@ -11,7 +11,7 @@ const config = require('./config');
 // Returns falsey if no paginator needs to be displayed
 exports.makeFullPaginator = function(currPage, totalItems, perPage) {
   perPage = perPage || config.CONVOS_PER_PAGE;
-  const totalPages = Math.ceil(totalItems / perPage);
+  const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
   currPage = Math.min(currPage, totalPages);
   debug('totalPages', totalPages);
 
