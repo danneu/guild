@@ -936,12 +936,12 @@ LIMIT $3::bigint
 
 ////////////////////////////////////////////////////////////
 
-exports.findConvosInvolvingUserId = function*(userId, beforeId, folder) {
-  assert(_.isString(folder));
+exports.findConvosInvolvingUserId = function*(userId, folder, page) {
+  assert(_.isNumber(page));
   assert(_.contains(['INBOX', 'STAR', 'ARCHIVE', 'TRASH'], folder));
-  // beforeId is the id of convo.latest_pm_id since that's how
-  // convos are sorted
-  assert(_.isNumber(beforeId) || _.isUndefined(beforeId));
+
+  const offset = config.CONVOS_PER_PAGE * (page-1);
+  const limit = config.CONVOS_PER_PAGE;
 
   const sql = `
 SELECT
@@ -966,22 +966,22 @@ JOIN users u2 ON cp.user_id = u2.id
 JOIN pms ON c.latest_pm_id = pms.id
 JOIN users u3 ON pms.user_id = u3.id
 JOIN convos_participants cp2 ON c.id = cp2.convo_id
-WHERE c.latest_pm_id < $2
-  AND c.id IN (
+WHERE c.id IN (
     SELECT cp.convo_id
     FROM convos_participants cp
   )
-  AND (cp2.folder = $4 AND cp2.user_id = $1)
+  AND (cp2.folder = $2 AND cp2.user_id = $1)
 GROUP BY c.id, u1.id, pms.id, u3.id, cp2.folder
 ORDER BY c.latest_pm_id DESC
+OFFSET $4
 LIMIT $3
   `;
 
   var result = yield query(sql, [
     userId,
-    beforeId || 1e9,
-    config.CONVOS_PER_PAGE,
-    folder
+    folder,
+    limit,
+    offset
   ]);
 
   return result.rows.map(function(row) {

@@ -38,3 +38,50 @@
     </ul>
   {% endif %}
 {% endmacro %}
+
+
+
+
+
+{% macro renderFullPaginator(fullPaginator) %}
+  {% if fullPaginator %}
+    {# TODO: Extract to CSS file #}
+    <style>
+     .pagination > li > a {
+       color: #ffc300;
+       background-color: #222;
+       border-color: #777;
+     }
+     .pagination > li > span {
+       color: #777;
+       background-color: #222;
+       border-top: 0;
+       border-bottom: 0;
+       border-left: 1px solid #777;
+       border-right: 1px solid #777;
+       border-color: #777;
+     }
+     .pagination > li > span:hover {
+       color: #777;
+       background-color: #222;
+     }
+    </style>
+    <nav class="full-paginator" style="text-align:center;">
+      <ul class="pagination">
+        {% for pg in fullPaginator %}
+          {% if pg.kind == 'BUTTON' %}
+            <li class="{% if pg.isActive %}active{% endif %}">
+              <a href="{{ pg.href }}">
+                <span aria-hidden="true">{{ pg.text }}</span>
+              </a>
+            </li>
+          {% elif pg.kind == 'SEPARATOR' %}
+            <li class="separator">
+              <span>...</span>
+            </li>
+          {% endif %}
+        {% endfor %}
+      </ul>
+    </nav>
+  {% endif %}
+{% endmacro %}

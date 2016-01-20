@@ -14,6 +14,7 @@ var welcomePm = require('../welcome_pm');
 var cancan = require('../cancan');
 var avatar = require('../avatar');
 var bbcode = require('../bbcode');
+var paginate = require('../paginate');
 
 var router = new Router();
 
@@ -284,27 +285,34 @@ function showConvosHandler(folder) {
       return;
     }
 
-    if (this.query['before-id'])
-      this.validateQuery('before-id').toInt();  // undefined || Number
+    this.validateQuery('page')
+      .defaultTo(1)
+      .toInt()
+      .tap(n => Math.max(1, n));
 
     this.assert(this.currUser, 404);
 
     const results = yield {
       convos: db.findConvosInvolvingUserId(
-        this.currUser.id, this.vals['before-id'], folder
+        this.currUser.id, folder, this.vals.page
       ),
       counts: db.getConvoFolderCounts(this.currUser.id)
     }
     const convos = results.convos.map(pre.presentConvo);
+
+    const itemsInFolder = results.counts[`${folder.toLowerCase()}_count`];
+    const fullPaginator = paginate.makeFullPaginator(this.vals.page, itemsInFolder);
 
     var nextBeforeId = convos.length > 0 ? _.last(convos).latest_pm_id : null;
     yield this.render('me_convos', {
       ctx: this,
       title: 'My Private Conversations',
       counts: results.counts,
-      folderEmpty: results.counts[`${folder.toLowerCase()}_count`] === 0,
+      folderEmpty: itemsInFolder === 0,
       convos,
       folder,
+      // FullPagination
+      fullPaginator,
       // Pagination
       beforeId: this.vals['before-id'],
       nextBeforeId: nextBeforeId,

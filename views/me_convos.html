@@ -1,5 +1,6 @@
 {% extends 'layouts/master.html' %}
 {% import './macros/ads.html' as ads %}
+{% import './macros/paginate.html' as paginate %}
 
 
 
@@ -26,7 +27,6 @@
       <br>&mdash; Mahz
     </p>
   </div>
-
 
   <div class="row">
     <div class="col-lg-3">
@@ -132,47 +132,26 @@
 
 {% block main %}
 
-  <div class="convo-list-actions">
+  <div class="convo-list-actions" style="height: 50px;">
 
-  <a href="/convos/new" class="pull-right btn btn-success">
-    <span class="glyphicon glyphicon-plus"></span>
-    Create Convo
-  </a>
+    <a href="/convos/new" class="pull-right btn btn-success">
+      <span class="glyphicon glyphicon-plus"></span>
+      Create Convo
+    </a>
 
-  <form action="/me/notifications/convos" method="post" class="pull-right">
-    <input type="hidden" name="_method" value="delete">
-    <input type="submit"
-           value="Clear PM Notifications"
-           class="btn btn-default"
-           style="margin-right: 10px;">
-  </form>
+    <form action="/me/notifications/convos" method="post" class="pull-right">
+      <input type="hidden" name="_method" value="delete">
+      <input type="submit"
+            value="Clear PM Notifications"
+            class="btn btn-default"
+            style="margin-right: 10px;">
+    </form>
+
+  </div><!--/.convo-list-actions-->
 
   <!-- Pagination -->
 
-  {% if ctx.currUser.pms_count > 1 %}
-    <ul class="pager">
-      <li class="{% if not beforeId %} disabled {% endif %}">
-        <a href="{{ ctx.request.path }}">
-          First Page
-        </a>
-      </li>
-      {% if convos.length < perPage %}
-        <li class="disabled">
-          <a href="{{ ctx.request.url }}">
-            Next Page &rarr;
-          </a>
-        </li>
-      {% else %}
-        <li>
-          <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}">
-            Next Page &rarr;
-          </a>
-        </li>
-      {% endif %}
-    </ul>
-  {% endif %}
-
-  </div><!--/.convo-list-actions-->
+  {{ paginate.renderFullPaginator(fullPaginator) }}
 
   <div class="panel panel-default" style="border: 0; background-color: #111">
     <div class="panel-body" style="">
@@ -250,26 +229,6 @@
 
   <!-- Pagination -->
 
-  {% if ctx.currUser.pms_count > 1 %}
-    <ul class="pager">
-      <li class="{% if not beforeId %} disabled {% endif %}">
-        <a href="{{ ctx.request.path }}">
-          First Page
-        </a>
-      </li>
-      {% if convos.length < perPage %}
-        <li class="disabled">
-          <a href="{{ ctx.request.url }}">
-            Next Page &rarr;
-          </a>
-        </li>
-      {% else %}
-        <li>
-          <a href="{{ ctx.request.path }}?before-id={{ nextBeforeId }}">
-            Next Page &rarr;
-          </a>
-        </li>
-      {% endif %}
-    </ul>
-  {% endif %}
+  {{ paginate.renderFullPaginator(fullPaginator) }}
+
 {% endblock %}
