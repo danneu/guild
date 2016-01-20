@@ -7,8 +7,14 @@ app.poweredBy = false;
 app.proxy = true;
 app.use(require('koa-conditional-get')()); // Works with koa-etag
 app.use(require('koa-etag')());
-app.use(require('koa-static')('public', { maxage: 1000 * 60 * 60 * 24 * 365 }));
-app.use(require('koa-static')('dist', { maxage: 1000 * 60 * 60 * 24 * 365 }));
+app.use(require('koa-static')('public', {
+  maxage: 1000 * 60 * 60 * 24 * 365,
+  gzip: false
+}));
+app.use(require('koa-static')('dist', {
+  maxage: 1000 * 60 * 60 * 24 * 365,
+  gzip: false
+}));
 app.use(require('koa-logger')());
 app.use(require('koa-body')({
   multipart: true,
