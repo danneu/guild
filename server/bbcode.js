@@ -950,6 +950,11 @@ var XBBCODE = (function() {
           myUrl = params.trim().substr(1).trim();
         }
 
+        if (myUrl.indexOf('http') != 0 && myUrl.indexOf('ftp://') != 0){
+          // they don't have a valid protocol at the start, so add one [#63]
+          myUrl = `http://${myUrl}`;
+        }
+
         urlPattern.lastIndex = 0;
         if ( !urlPattern.test( myUrl ) ) {
           hasError.url = true;
