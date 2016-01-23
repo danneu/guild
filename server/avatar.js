@@ -60,15 +60,10 @@ exports.handleAvatar = function*(userId, fullInPath) {
   // - size: { width: 130, height: 133 }
   // - 'Mime type': 'image/gif'
   var data = yield identify(fullInPath);
-  data['format'] = data['format'].toLowerCase();
-
-  debug('format: ', data['format']);
   debug('size: ', data['size']);
-  debug('Mime type: ', data['Mime type']);
-
-  // TODO: Figure out why I'm getting an octet stream on Heroku
-  const mime = data['Mime type'] || `image/${data['format']}`;
-  debug('final mime: %j', mime);
+  const format = data['format'].toLowerCase();
+  // data['Mime type'] is never set on the Heroku dyno, only exists locally...
+  const mime = data['Mime type'] || `image/${format}`;
 
   // :: Stream of the original uploaded image
   var inStream = nodeFs.createReadStream(fullInPath);
@@ -83,7 +78,7 @@ exports.handleAvatar = function*(userId, fullInPath) {
   var handler = function(resolve, reject) {
     hashPromise.then(function(hash) {
       var folderName = config.NODE_ENV === 'production' ? 'production' : 'development';
-      var objectName = `${folderName}/${hash}.${data.format}`;
+      var objectName = `${folderName}/${hash}.${format}`;
 
       gm(inStream)
         // width, height, modifier
@@ -91,7 +86,7 @@ exports.handleAvatar = function*(userId, fullInPath) {
         // http://www.imagemagick.org/script/command-line-processing.php#geometry
         .resize(150, 200, '>')
         .strip() // Remove all metadata
-        .stream(data.format, function(err, processedImageReadStream) {
+        .stream(format, function(err, processedImageReadStream) {
           if (err) return reject(err);
           var uploader = new Uploader({
             stream: processedImageReadStream,
@@ -100,7 +95,7 @@ exports.handleAvatar = function*(userId, fullInPath) {
             bucket: config.S3_AVATAR_BUCKET,
             objectName: objectName,
             objectParams: {
-              'ContentType': data['Mime type'],
+              'ContentType': mime,
               'CacheControl': 'max-age=31536000' // 1 year
             }
           });
