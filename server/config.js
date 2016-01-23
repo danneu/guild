@@ -41,10 +41,12 @@ exports.HOST = process.env.HOST || ('http://localhost:' + exports.PORT);
 // Required for sending emails
 exports.AWS_KEY = process.env.AWS_KEY;
 exports.AWS_SECRET = process.env.AWS_SECRET;
-// Bucket will get an avatars/ folder in it with many avatars/<imageHash>.<ext>
-exports.S3_BUCKET = process.env.S3_BUCKET;
-if (!exports.S3_BUCKET) console.warn('S3_BUCKET not set. Cannot process avatars.');
+exports.S3_AVATAR_BUCKET = process.env.S3_AVATAR_BUCKET;
+if (!exports.S3_AVATAR_BUCKET) {
+  console.warn('S3_AVATAR_BUCKET not set. Cannot process avatars.');
+}
 exports.FROM_EMAIL = process.env.FROM_EMAIL;
+
 
 // The max amount of co-GMs per topic
 exports.MAX_CO_GM_COUNT = process.env.MAX_CO_GM_COUNT || 2;
@@ -55,7 +57,7 @@ exports.POSTS_PER_PAGE = parseInt(process.env.POSTS_PER_PAGE, 10) || 20;
 exports.USERS_PER_PAGE = parseInt(process.env.USERS_PER_PAGE, 10) || 20;
 // How many recent posts to display on user profile
 exports.RECENT_POSTS_PER_PAGE = parseInt(process.env.RECENT_POSTS_PER_PAGE, 10) || 5;
-exports.CONVOS_PER_PAGE = parseInt(process.env.CONVOS_PER_PAGE, 10) || 10;
+exports.CONVOS_PER_PAGE = parseInt(process.env.CONVOS_PER_PAGE, 10) || 3;
 
 // Used as the sender of the welcome PM
 // On the Guild, this is set to a user named "Guild Mods" that the mods

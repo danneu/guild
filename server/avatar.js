@@ -66,6 +66,10 @@ exports.handleAvatar = function*(userId, fullInPath) {
   debug('size: ', data['size']);
   debug('Mime type: ', data['Mime type']);
 
+  // TODO: Figure out why I'm getting an octet stream on Heroku
+  const mime = data['Mime type'] || `image/${data['format']}`;
+  debug('final mime: %j', mime);
+
   // :: Stream of the original uploaded image
   var inStream = nodeFs.createReadStream(fullInPath);
 
@@ -78,7 +82,8 @@ exports.handleAvatar = function*(userId, fullInPath) {
 
   var handler = function(resolve, reject) {
     hashPromise.then(function(hash) {
-      var objectName = 'avatars/' + hash + '.' + data.format;
+      var folderName = config.NODE_ENV === 'production' ? 'production' : 'development';
+      var objectName = `${folderName}/${hash}.${data.format}`;
 
       gm(inStream)
         // width, height, modifier
@@ -92,7 +97,7 @@ exports.handleAvatar = function*(userId, fullInPath) {
             stream: processedImageReadStream,
             accessKey: config.AWS_KEY,
             secretKey: config.AWS_SECRET,
-            bucket: config.S3_BUCKET,
+            bucket: config.S3_AVATAR_BUCKET,
             objectName: objectName,
             objectParams: {
               'ContentType': data['Mime type'],
