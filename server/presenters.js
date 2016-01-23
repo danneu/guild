@@ -1,6 +1,7 @@
 "use strict";
 // Node
 var util = require('util');
+var nodeUrl = require('url');
 // 3rd party
 var _ = require('lodash');
 var debug = require('debug')('app:presenters');
@@ -65,6 +66,17 @@ function presentForum(forum) {
 exports.presentUser = presentUser;
 function presentUser(user) {
   user.url = '/users/' + user.slug;
+
+  // Reminder: Only avatar uploads since the S3 bucket update will
+  // be served from the avatars.roleplayeguild.com bucket,
+  // so here we'll check for that and only write those to go through
+  // our avatars subdomain
+  if (user.avatar_url) {
+    const parsed = nodeUrl.parse(user.avatar_url);
+    if (parsed.pathname.startsWith('/avatars.roleplayerguild.com/')) {
+      user.avatar_url = 'https://' + parsed.pathname.slice(1);
+    }
+  }
 
   // Fix embedded
   if (_.isString(user.created_at))
