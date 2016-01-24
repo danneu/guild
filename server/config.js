@@ -57,7 +57,7 @@ exports.POSTS_PER_PAGE = parseInt(process.env.POSTS_PER_PAGE, 10) || 20;
 exports.USERS_PER_PAGE = parseInt(process.env.USERS_PER_PAGE, 10) || 20;
 // How many recent posts to display on user profile
 exports.RECENT_POSTS_PER_PAGE = parseInt(process.env.RECENT_POSTS_PER_PAGE, 10) || 5;
-exports.CONVOS_PER_PAGE = parseInt(process.env.CONVOS_PER_PAGE, 10) || 3;
+exports.CONVOS_PER_PAGE = parseInt(process.env.CONVOS_PER_PAGE, 10) || 10;
 
 // Used as the sender of the welcome PM
 // On the Guild, this is set to a user named "Guild Mods" that the mods
