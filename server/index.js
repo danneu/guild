@@ -2628,7 +2628,8 @@ app.get('/chat', function*() {
 // Friendships
 // - to_user_id Int
 // - commit: Required 'add' | 'remove'
-
+//
+// Optionally pass a redirect-to (URI encoded)
 app.post('/me/friendships', function*() {
   // ensure user logged in
   this.assert(this.currUser, 404);
@@ -2637,6 +2638,14 @@ app.post('/me/friendships', function*() {
   // validate body
   this.validateBody('commit').isIn(['add', 'remove']);
   this.validateBody('to_user_id').toInt();
+
+  const nodeUrl = require('url');
+
+  let redirectTo;
+  if (this.query['redirect-to']) {
+    const parsed = nodeUrl.parse(decodeURIComponent(this.query['redirect-to']));
+    redirectTo = parsed.pathname;
+  }
 
   // update db
   if (this.vals.commit === 'add') {
@@ -2648,7 +2657,24 @@ app.post('/me/friendships', function*() {
   }
 
   // redirect
-  this.redirect('/users/' + this.vals.to_user_id);
+  this.redirect(redirectTo || '/users/' + this.vals.to_user_id);
+});
+
+app.get('/me/friendships', function*() {
+  // ensure user logged in
+  this.assert(this.currUser, 404);
+  this.assert(this.currUser.role !== 'banned', 404);
+
+  // load friendships
+  let friendships = yield db.findFriendshipsForUserId(this.currUser.id);
+  friendships = friendships.map(pre.presentFriendship);
+
+  // render
+  yield this.render('me_friendships', {
+    ctx: this,
+    friendships,
+    title: 'My Friendships'
+  });
 });
 
 ////////////////////////////////////////////////////////////

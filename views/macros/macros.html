@@ -519,7 +519,11 @@
         </table>
         {% set friend = undefined %}
 
-        <div style="color: #1abc9c; font-size: 90%;" class="text-center">Under Construction</div>
+        {% if friendships.length > 0 %}
+          <a href="/me/friendships" style="display: block;" class="text-center text-muted">
+            View All
+          </a>
+        {% endif %}
       {% else %}
         <div class="text-center">
           You have no friends<br>

@@ -9,8 +9,33 @@ VALUES
 (5, 'mod', 'mod', 'mod@example.com',  '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'mod'),
 (6, 'smod', 'smod', 'smod@example.com',  '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'smod'),
 (7, 'banned', 'banned', 'banned@example.com',  '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'banned')
+,(8,  'user8', 'user8',   'user8@example.com',  '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'member')
+,(9,  'user9', 'user9',   'user9@example.com',  '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'member')
+,(10, 'user10', 'user10', 'user10@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'member')
+,(11, 'user11', 'user11', 'user11@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'member')
+,(12, 'user12', 'user12', 'user12@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'member')
+,(13, 'user13', 'user13', 'user13@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'member')
+,(14, 'user14', 'user14', 'user14@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'member')
+,(15, 'user15', 'user15', 'user15@example.com', '$2a$04$o8noGLPldirkZe4fzitY..hQ11s2jVcQswPROshPyI7GnYDJckdci', 'member')
 ;
 SELECT setval('users_id_seq'::regclass, (SELECT MAX(id) FROM users));
+
+-- foo=1 has more friends than fit on the homepage
+INSERT INTO friendships (from_user_id, to_user_id) VALUES
+(1, 2)
+,(1, 3)
+,(1, 4)
+-- all the user* users
+,(1, 8)
+,(1, 9)
+,(1, 10)
+,(1, 11)
+,(1, 12)
+,(1, 13)
+,(1, 14)
+,(1, 15)
+;
+
 
 INSERT INTO vms (from_user_id, to_user_id, markup, html, parent_vm_id)
 VALUES

@@ -1,0 +1,74 @@
+{% extends 'layouts/master.html' %}
+{% import 'macros/macros.html' as macros %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li>
+      <a href="/">Home</a>
+    </li>
+    <li>
+      <a href="/me/friendships">My Friendships</a>
+    </li>
+  </ol>
+
+  <div class="row">
+    <div class="col-md-8 col-md-offset-2">
+      <div class="panel panel-default no-select"
+            style="border-color: #000">
+
+        <div class="panel-heading">
+          <h4 class="text-center">
+            Your Friends
+          </h4>
+        </div>
+
+        <div class="panel-body">
+          {% if friendships.length > 0 %}
+            <table style="width: 100%;">
+            {% for friendship in friendships %}
+              {% set friend = friendship.to_user %}
+              <tr>
+                <td>
+                  <!-- Remove btn -->
+                  <form action="/me/friendships?redirect-to={{ ctx.path | encodeURIComponent }}" method="POST" style="display: inline-block;">
+                    <input type="hidden" name="to_user_id" value="{{ friendship.to_user_id }}">
+                    <input type="hidden" name="commit" value="remove">
+                    <button type="submit" class="btn btn-xs btn-danger remove-friend-btn" data-uname="{{ friend.uname }}" style="display: inline-block;">
+                      X
+                    </button>
+                  </form>
+
+                  <!-- Friend uname -->
+                  <a href="{{ friend.url }}" style="color: #999; display: inline-block; width: 100px;">
+                    {{ friend.uname }}
+                  </a>
+                </td>
+                <td class="text-right">
+                  <small>{{ macros.onlineStatus(ctx, friend, true) }}</small>
+                </td>
+              </tr>
+            {% endfor %}
+            </table>
+            {% set friend = undefined %}
+          {% else %}
+            You have no friends.
+            <br>To add a friend, visit their user profile and click the "Add Friend" button.
+          {% endif %}
+        </div>
+
+      </div> <!-- /.panel -->
+    </div> <!-- /col -->
+  </div> <!-- /.row -->
+
+{% endblock %}
+
+{% block scripts %}
+  <script type="text/javascript">
+   $('.remove-friend-btn').on('click', function(e) {
+     var uname = $(this).attr('data-uname');
+     var message = 'Are you sure you want to defriend "'+uname+'"?';
+     var result = confirm(message);
+     if (!result) return false;
+   });
+  </script>
+{% endblock %}
