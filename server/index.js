@@ -944,6 +944,9 @@ app.post('/forums/:forumSlug/refresh', function*() {
 // New topic form
 //
 app.get('/forums/:forumSlug/topics/new', function*() {
+  assert(config.RECAPTCHA_SITEKEY);
+  assert(config.RECAPTCHA_SITESECRET);
+
   // Load forum
   var forumId = belt.extractId(this.params.forumSlug);
   this.assert(forumId, 404);
@@ -969,6 +972,7 @@ app.get('/forums/:forumSlug/topics/new', function*() {
     is_ranked: (this.flash.params && this.flash.params.is_ranked) || false,
     postType: (this.flash.params && this.flash.params['post-type']) || 'ooc',
     initTitle: this.flash.params && this.flash.params.title,
+    recaptchaSitekey: config.RECAPTCHA_SITEKEY,
     selectedTagIds: (
       this.flash.params
         && toArray(this.flash.params['tag-ids']).map(function(idStr) {
@@ -1224,7 +1228,7 @@ app.put('/topics/:topicSlug/tags', function*() {
 // - tag-ids: Array of StringIntegers (IntChecks/RPs only for now)
 // - join-status
 //
-app.post('/forums/:slug/topics', function*() {
+app.post('/forums/:slug/topics', middleware.ensureRecaptcha, function*() {
   var forumId = belt.extractId(this.params.slug);
   this.assert(forumId, 404);
 
