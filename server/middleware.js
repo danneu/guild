@@ -5,8 +5,12 @@ var util = require('util');
 var db = require('./db');
 var pre = require('./presenters');
 var belt = require('./belt');
+var config = require('./config');
+var bouncer = require('koa-bouncer');
 // 3rd party
 var debug = require('debug')('app:middleware');
+var recaptcha = require('recaptcha-validator');
+var _ = require('lodash');
 
 // Assoc ctx.currUser if the sessionId cookie (UUIDv4 String)
 // is an active session.
@@ -53,4 +57,32 @@ exports.flash = function(cookieName) {
       this.cookies.set(cookieName, null);
     }
   };
+};
+
+exports.ensureRecaptcha = function * (next) {
+  if (_.includes(['development', 'test'], config.NODE_ENV) && !this.request.body['g-recaptcha-response']) {
+    console.log('Development mode, so skipping recaptcha check');
+    yield* next;
+    return;
+  }
+
+  if (!config.RECAPTCHA_SITEKEY) {
+    console.warn('Warn: Recaptcha environment variables not set, so skipping recaptcha check');
+    yield* next;
+    return;
+  }
+
+  this.validateBody('g-recaptcha-response')
+    .notEmpty('You must attempt the human test');
+
+  try {
+    yield recaptcha.promise(config.RECAPTCHA_SITESECRET, this.vals['g-recaptcha-response'], this.request.ip);
+  } catch (err) {
+    console.warn('Got invalid captcha: ', this.vals['g-recaptcha-response'], err);
+    this.validateBody('g-recaptcha-response')
+      .check(false, 'Could not verify recaptcha was correct');
+    return;
+  }
+
+  yield * next;
 };

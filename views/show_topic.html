@@ -554,6 +554,7 @@
       </li>
       <li>Post limit: {{ ctx.config.MAX_POST_LENGTH|commafy }} chars</li>
     </ul>
+    <div class="well">
     <form method="post" action="{{ topic.url }}/posts" id="new-post">
       <input type="hidden" name="post-type" value="{{ postType }}">
       <textarea id="markup-input"
@@ -563,8 +564,19 @@
                 class="form-control"
                 ></textarea>
 
-      <input type="submit" class="btn btn-primary" value="Post Reply"></input>
+      <!-- Recaptcha -->
+      <label>
+        Human Test: (Sorry, I'll remove this soon for existing members)
+      </label>
+      <div class="g-recaptcha"
+           style="margin-bottom: 20px;"
+           data-sitekey="{{ recaptchaSitekey }}"
+           data-callback="recaptchaSuccessCallback">
+      </div>
+
+      <input type="submit" id="recaptcha-protected-submit" class="btn btn-primary" value="Post Reply" disabled></input>
     </form>
+    </div>
 
     {% include 'partials/bbcode_cheatsheet.html' %}
 
@@ -573,6 +585,18 @@
 {% endblock %}
 
 {% block scripts %}
+
+<script src='https://www.google.com/recaptcha/api.js'></script>
+<script>
+  // Called when user submits successful recaptcha, so allow them
+  // to actually submit the form.
+  function recaptchaSuccessCallback() {
+    $('#recaptcha-protected-submit')
+      .removeClass('btn-danger')
+      .addClass('btn-primary')
+      .attr('disabled', false);
+  }
+</script>
 
 <script>
 

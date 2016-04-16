@@ -1047,7 +1047,7 @@ app.get('/forums/:forumSlug', function*() {
 // - post-type
 // - markup
 //
-app.post('/topics/:topicSlug/posts', function*() {
+app.post('/topics/:topicSlug/posts', middleware.ensureRecaptcha, function*() {
   var topicId = belt.extractId(this.params.topicSlug);
   this.assert(topicId, 404);
 
@@ -1845,6 +1845,8 @@ app.post('/topics/:slug/arena-outcomes', function*() {
 //
 
 app.get('/topics/:slug/:postType', function*() {
+  assert(config.RECAPTCHA_SITEKEY);
+  assert(config.RECAPTCHA_SITESECRET);
   this.assert(_.contains(['ic', 'ooc', 'char'], this.params.postType), 404);
   this.checkQuery('page').optional().toInt();
   this.assert(!this.errors, 400, belt.joinErrors(this.errors));
@@ -1952,7 +1954,8 @@ app.get('/topics/:slug/:postType', function*() {
     currPage: page,
     totalPages: totalPages,
     // Viewer tracker
-    viewers: viewers
+    viewers: viewers,
+    recaptchaSitekey: config.RECAPTCHA_SITEKEY
   });
 });
 
