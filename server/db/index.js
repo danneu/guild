@@ -3850,20 +3850,18 @@ exports.nukeUser = function * (opts) {
   assert(Number.isInteger(opts.spambot));
   assert(Number.isInteger(opts.nuker));
   const sql = {
-    banUser: `UPDATE users SET role = 'banned' WHERE id = $1`,
+    banUser: `UPDATE users SET role = 'banned', is_nuked = true WHERE id = $1`,
     hideTopics: `UPDATE topics SET is_hidden = true WHERE user_id = $1`,
     hidePosts: `UPDATE posts SET is_hidden = true WHERE user_id = $1`,
     insertNukelist: `
       INSERT INTO nuked_users (user_id, nuker_id)
       VALUES ($1, $2)
-    `,
-    updateUser: `UPDATE users SET is_nuked = true WHERE id = $1`
+    `
   };
   return yield withTransaction(function * (client) {
     yield client.queryPromise(sql.banUser, [opts.spambot]);
     yield client.queryPromise(sql.hideTopics, [opts.spambot]);
     yield client.queryPromise(sql.hidePosts, [opts.spambot]);
     yield client.queryPromise(sql.insertNukelist, [opts.spambot, opts.nuker]);
-    yield client.queryPromise(sql.updateUser, [opts.spambot]);
   });
 };
