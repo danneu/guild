@@ -25,7 +25,7 @@
       <tbody>
         {% for row in postsTable %}
           <tr>
-            <td>{{ row.uname }}</td>
+            <td><a href="/users/{{ row.slug }}">{{ row.uname }}</a></td>
             <td>{{ row.count }}</td>
             <td>
               <abbr class="timeago" title="{{ row.latest_at.toISOString() }}">

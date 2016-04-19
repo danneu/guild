@@ -2650,12 +2650,13 @@ exports.findUsersWithPostsWithIpAddress = function*(ip_address) {
   const sql = `
 SELECT
   u.uname           uname,
+  u.slug            slug,
   COUNT(p.id)       count,
   MAX(p.created_at) latest_at
 FROM posts p
 JOIN users u ON p.user_id = u.id
 WHERE p.ip_address = $1
-GROUP BY u.uname
+GROUP BY u.uname, u.slug
   `;
 
   return yield queryMany(sql, [ip_address]);
@@ -2667,12 +2668,13 @@ exports.findUsersWithPmsWithIpAddress = function*(ip_address) {
   const sql = `
 SELECT
   u.uname           uname,
+  u.slug            slug,
   COUNT(p.id)       count,
   MAX(p.created_at) latest_at
 FROM pms p
 JOIN users u ON p.user_id = u.id
 WHERE p.ip_address = $1
-GROUP BY u.uname
+GROUP BY u.uname, u.slug
   `;
 
   return yield queryMany(sql, [ip_address]);
