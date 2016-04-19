@@ -24,6 +24,7 @@ CREATE TABLE users (
   slug           text      NOT NULL,
   custom_title   text      NOT NULL  DEFAULT '',
   trophy_count   int       NOT NULL  DEFAULT 0,
+  is_nuked       boolean   NOT NULL  DEFAULT false,
   -- Cache
   posts_count    int       NOT NULL  DEFAULT 0,
   pms_count      int       NOT NULL  DEFAULT 0,
