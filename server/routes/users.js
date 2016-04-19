@@ -713,5 +713,20 @@ router.post('/users/:slug/avatar', function*() {
 });
 
 ////////////////////////////////////////////////////////////
+// NUKING
+////////////////////////////////////////////////////////////
+
+router.post('/users/:slug/nuke', function*() {
+  this.assert(this.currUser, 404);
+  var user = yield db.findUserBySlug(this.params.slug);
+  this.assert(user, 404);
+  pre.presentUser(user);
+  this.assertAuthorized(this.currUser, 'NUKE_USER', user);
+  yield db.nukeUser({ spambot: user.id, nuker: this.currUser.id });
+  this.flash = { message: ['success', 'Nuked the bastard'] };
+  this.redirect(user.url)
+});
+
+////////////////////////////////////////////////////////////
 
 module.exports = router;

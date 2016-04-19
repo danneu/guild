@@ -67,6 +67,24 @@
         </div>
       {% endif %}
 
+      <!-- Nuke Button -->
+      {% if can(ctx.currUser, 'NUKE_USER', user) %}
+        <div class="pull-right" style="margin-right: 10px; display: inline-block;">
+          {% if user.is_nuked %}
+            <button class="btn btn-danger" disabled>
+              Already Nuked
+            </button>
+          {% else %}
+              <form method="POST" action="{{ user.url }}/nuke">
+                <button type="submit" class="btn btn-danger">
+                  <span class="glyphicon glyphicon-flag"></span>
+                  Nuke Spambot
+                </button>
+              </form>
+          {% endif %}
+        </div>
+      {% endif %}
+
     <h1 style="margin-bottom: 0;">
       <a href="{{ user.url }}">{{ user.uname }}</a>
 
@@ -76,7 +94,12 @@
         </span>
       {% endif %}
 
-      <small>{{ user.role|presentUserRole }}</small>
+      <small>
+        {{ user.role|presentUserRole }}
+        {% if user.is_nuked %}
+          and Nuked <img src="/img/nuked.gif" height="33" width="33">
+        {% endif %}
+      </small>
       {% if can(ctx.currUser, 'UPDATE_USER', user) %}
         <a href="{{ user.url }}/edit" class="btn btn-default btn-xs">
           Edit

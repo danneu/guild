@@ -770,3 +770,17 @@ CREATE TABLE current_sidebar_contests (
   --
   created_at timestamptz NOT NULL DEFAULT NOW()
 );
+
+------------------------------------------------------------
+
+CREATE TABLE nuked_users (
+  id           serial           PRIMARY KEY,
+  user_id      int              NOT NULL REFERENCES users(id),
+  nuked_at     timestamptz      NOT NULL DEFAULT NOW(),
+  nuker_id     int              NOT NULL REFERENCES users(id)
+);
+
+
+-- Users can only be nuked once
+CREATE UNIQUE INDEX nuked_user_id ON nuked_users (user_id);
+CREATE INDEX nuked_user_nuker ON nuked_users (nuker_id);

@@ -34,3 +34,9 @@ ADD COLUMN folder convo_folder NOT NULL DEFAULT 'INBOX'
 ;
 
 CREATE INDEX convos_participants__folder ON convos_participants(folder);
+
+----------------------------------------------
+
+ALTER TABLE users
+ADD COLUMN is_nuked  BOOLEAN  NOT NULL DEFAULT false
+;
