@@ -46,6 +46,9 @@ router.get('/users/:slug/edit', function*() {
 // checked
 router.post('/users', function*() {
 
+  this.body = 'Registration temporarily disabled while we address the recent spambot issue.';
+  return;
+
   // Validation
 
   this.validateBody('uname')
