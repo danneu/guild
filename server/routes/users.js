@@ -46,6 +46,9 @@ router.get('/users/:slug/edit', function*() {
 // checked
 router.post('/users', function*() {
 
+  this.body = 'Registration temporarily disabled while we address the recent spambot issue.';
+  return;
+
   // Validation
 
   this.validateBody('uname')
@@ -710,6 +713,21 @@ router.post('/users/:slug/avatar', function*() {
 
   this.flash = { message: ['success', 'Avatar uploaded and saved'] };
   this.response.redirect(user.url + '/edit#avatar');
+});
+
+////////////////////////////////////////////////////////////
+// NUKING
+////////////////////////////////////////////////////////////
+
+router.post('/users/:slug/nuke', function*() {
+  this.assert(this.currUser, 404);
+  var user = yield db.findUserBySlug(this.params.slug);
+  this.assert(user, 404);
+  pre.presentUser(user);
+  this.assertAuthorized(this.currUser, 'NUKE_USER', user);
+  yield db.nukeUser({ spambot: user.id, nuker: this.currUser.id });
+  this.flash = { message: ['success', 'Nuked the bastard'] };
+  this.redirect(user.url)
 });
 
 ////////////////////////////////////////////////////////////

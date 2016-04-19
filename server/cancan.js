@@ -490,6 +490,12 @@ function can(user, action, target) {
       if (user.role === 'banned') return false;
       // Everyone else can
       return true;
+    case 'NUKE_USER': // target is spambot user
+      // guests cannot
+      if (!user) return false;
+      // staff can ban non-staff
+      if (isStaffRole(user.role) && !isStaffRole(target.role)) return true;
+      return false;
     default:
       debug('Unsupported cancan action: ' + action);
       return false;

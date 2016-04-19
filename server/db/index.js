@@ -3837,3 +3837,31 @@ WHERE user_id = $1
 
   return yield queryOne(sql, [userId]);
 };
+
+////////////////////////////////////////////////////////////
+// NUKING
+////////////////////////////////////////////////////////////
+
+// In one fell motion, bans a user, hides all their stuff.
+//
+// Takes an object to prevent mistakes.
+// { spambot: UserId, nuker: UserId  }
+exports.nukeUser = function * (opts) {
+  assert(Number.isInteger(opts.spambot));
+  assert(Number.isInteger(opts.nuker));
+  const sql = {
+    banUser: `UPDATE users SET role = 'banned', is_nuked = true WHERE id = $1`,
+    hideTopics: `UPDATE topics SET is_hidden = true WHERE user_id = $1`,
+    hidePosts: `UPDATE posts SET is_hidden = true WHERE user_id = $1`,
+    insertNukelist: `
+      INSERT INTO nuked_users (user_id, nuker_id)
+      VALUES ($1, $2)
+    `
+  };
+  return yield withTransaction(function * (client) {
+    yield client.queryPromise(sql.banUser, [opts.spambot]);
+    yield client.queryPromise(sql.hideTopics, [opts.spambot]);
+    yield client.queryPromise(sql.hidePosts, [opts.spambot]);
+    yield client.queryPromise(sql.insertNukelist, [opts.spambot, opts.nuker]);
+  });
+};
