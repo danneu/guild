@@ -711,6 +711,7 @@ LEFT JOIN posts p ON t.latest_post_id = p.id
 LEFT JOIN users u2 ON p.user_id = u2.id
 LEFT JOIN forums f ON t.forum_id = f.id
 WHERE t.forum_id = $1
+  AND t.is_hidden = false
 ORDER BY t.is_sticky DESC, t.latest_post_at DESC
 LIMIT $2
 OFFSET $3
@@ -768,6 +769,7 @@ LEFT JOIN posts p ON t.latest_post_id = p.id
 LEFT JOIN users u2 ON p.user_id = u2.id
 LEFT JOIN forums f ON t.forum_id = f.id
 WHERE t.forum_id = $1
+  AND t.is_hidden = false
 ORDER BY t.is_sticky DESC, t.latest_post_at DESC
 LIMIT $2
 OFFSET $3
