@@ -565,6 +565,7 @@
                 ></textarea>
 
       <!-- Recaptcha -->
+      {#
       <label>
         Human Test: (Sorry, I'll remove this soon for existing members)
       </label>
@@ -573,8 +574,9 @@
            data-sitekey="{{ recaptchaSitekey }}"
            data-callback="recaptchaSuccessCallback">
       </div>
+      #}
 
-      <input type="submit" id="recaptcha-protected-submit" class="btn btn-primary" value="Post Reply" disabled></input>
+      <input type="submit" id="recaptcha-protected-submit" class="btn btn-primary" value="Post Reply"></input>
     </form>
     </div>
 
@@ -586,6 +588,7 @@
 
 {% block scripts %}
 
+  {#
 <script src='https://www.google.com/recaptcha/api.js'></script>
 <script>
   // Called when user submits successful recaptcha, so allow them
@@ -597,6 +600,7 @@
       .attr('disabled', false);
   }
 </script>
+#}
 
 <script>
 
