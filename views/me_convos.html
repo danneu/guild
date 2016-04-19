@@ -11,205 +11,189 @@
 
   <div class="row">
     <div class="col-lg-3">
-      {% block side %}{% endblock %}
+      <style>
+      .folder-list .list-group-item {
+        background-color: #3d3a3a;
+        border-color: #7d7c7c;
+        position: relative;
+        padding: 0;
+      }
+      .folder-list .list-group-item .badge {
+        position: absolute;
+        right: 10px;
+        border-color: #000;
+      }
+      .folder-list .list-group-item:hover {
+        background-color: #7d7c7c;
+      }
+      .folder-list .list-group-item a {
+        display: block;
+        color: #ccc;
+        padding: 10px 15px;
+      }
+      .folder-list .list-group-item a:hover {
+        text-decoration: none;
+      }
+      </style>
+
+      <h3 class="text-center">
+        Folders
+      </h3>
+
+      <ul class="list-group folder-list">
+        <li class="
+              list-group-item
+              {% if ctx.path == '/me/convos' %}active{% endif %}
+            ">
+          <a href="/me/convos">
+            <span class="glyphicon glyphicon-inbox"></span>
+            &nbsp;
+            Inbox
+            <span class="badge">{{ counts.inbox_count }}</span>
+          </a>
+        </li>
+        <li class="
+              list-group-item
+              {% if ctx.path == '/me/convos/star' %}active{% endif %}
+            ">
+          <a href="/me/convos/star">
+            <span class="glyphicon glyphicon-star"></span>
+            &nbsp;
+            Starred
+            <span class="badge">{{ counts.star_count }}</span>
+          </a>
+        </li>
+        <li class="
+              list-group-item
+              {% if ctx.path == '/me/convos/archive' %}active{% endif %}
+            ">
+          <a href="/me/convos/archive">
+            <span class="glyphicon glyphicon-folder-open"></span>
+            &nbsp;
+            Archived
+            <span class="badge">{{ counts.archive_count }}</span>
+          </a>
+        </li>
+        <li class="
+              list-group-item
+              {% if ctx.path == '/me/convos/trash' %}active{% endif %}
+            ">
+          <a href="/me/convos/trash">
+            <span class="glyphicon glyphicon-trash"></span>
+            &nbsp;
+            Trash
+            <span class="badge">{{ counts.trash_count }}</span>
+          </a>
+        </li>
+      </ul>
+
+      <p class="text-center text-muted">
+        &uarr;
+        <br>The folder system is
+        <br>a work in progress.
+        <br>It doesn't do much, yet.
+      </p>
     </div>
     <div class="col-lg-9">
-      {% block main %}{% endblock %}
-    </div>
-  </div>
-{% endblock %}
 
+      <div class="convo-list-actions" style="height: 50px;">
 
+        <a href="/convos/new" class="pull-right btn btn-success">
+          <span class="glyphicon glyphicon-plus"></span>
+          Create Convo
+        </a>
 
-{% block side %}
-  <style>
-   .folder-list .list-group-item {
-     background-color: #3d3a3a;
-     border-color: #7d7c7c;
-     position: relative;
-     padding: 0;
-   }
-   .folder-list .list-group-item .badge {
-     position: absolute;
-     right: 10px;
-     border-color: #000;
-   }
-   .folder-list .list-group-item:hover {
-     background-color: #7d7c7c;
-   }
-   .folder-list .list-group-item a {
-     display: block;
-     color: #ccc;
-     padding: 10px 15px;
-   }
-   .folder-list .list-group-item a:hover {
-     text-decoration: none;
-   }
-  </style>
+        <form action="/me/notifications/convos" method="post" class="pull-right">
+          <input type="hidden" name="_method" value="delete">
+          <input type="submit"
+                value="Clear PM Notifications"
+                class="btn btn-default"
+                style="margin-right: 10px;">
+        </form>
 
-  <h3 class="text-center">
-    Folders
-  </h3>
+      </div><!--/.convo-list-actions-->
 
-  <ul class="list-group folder-list">
-    <li class="
-          list-group-item
-          {% if ctx.path == '/me/convos' %}active{% endif %}
-        ">
-      <a href="/me/convos">
-        <span class="glyphicon glyphicon-inbox"></span>
-        &nbsp;
-        Inbox
-        <span class="badge">{{ counts.inbox_count }}</span>
-      </a>
-    </li>
-    <li class="
-          list-group-item
-          {% if ctx.path == '/me/convos/star' %}active{% endif %}
-        ">
-      <a href="/me/convos/star">
-        <span class="glyphicon glyphicon-star"></span>
-        &nbsp;
-        Starred
-        <span class="badge">{{ counts.star_count }}</span>
-      </a>
-    </li>
-    <li class="
-          list-group-item
-          {% if ctx.path == '/me/convos/archive' %}active{% endif %}
-        ">
-      <a href="/me/convos/archive">
-        <span class="glyphicon glyphicon-folder-open"></span>
-        &nbsp;
-        Archived
-        <span class="badge">{{ counts.archive_count }}</span>
-      </a>
-    </li>
-    <li class="
-          list-group-item
-          {% if ctx.path == '/me/convos/trash' %}active{% endif %}
-        ">
-      <a href="/me/convos/trash">
-        <span class="glyphicon glyphicon-trash"></span>
-        &nbsp;
-        Trash
-        <span class="badge">{{ counts.trash_count }}</span>
-      </a>
-    </li>
-  </ul>
+      <!-- Pagination -->
 
-  <p class="text-center text-muted">
-    &uarr;
-    <br>The folder system is
-    <br>a work in progress.
-    <br>It doesn't do much, yet.
-  </p>
-{% endblock %}
+      {{ paginate.renderFullPaginator(fullPaginator) }}
 
-
-
-
-
-
-{% block main %}
-
-  <div class="convo-list-actions" style="height: 50px;">
-
-    <a href="/convos/new" class="pull-right btn btn-success">
-      <span class="glyphicon glyphicon-plus"></span>
-      Create Convo
-    </a>
-
-    <form action="/me/notifications/convos" method="post" class="pull-right">
-      <input type="hidden" name="_method" value="delete">
-      <input type="submit"
-            value="Clear PM Notifications"
-            class="btn btn-default"
-            style="margin-right: 10px;">
-    </form>
-
-  </div><!--/.convo-list-actions-->
-
-  <!-- Pagination -->
-
-  {{ paginate.renderFullPaginator(fullPaginator) }}
-
-  <div class="panel panel-default" style="border: 0; background-color: #111">
-    <div class="panel-body" style="">
-      <div class="row">
-        <div class="col-sm-7">Convo</div>
-        <div class="col-sm-2">Messages</div>
-        <div class="col-sm-3">Latest PM</div>
-      </div>
-    </div>
-  </div>
-  {% if folderEmpty %}
-    <div class="panel panel-default">
-      <div class="panel-body">
-        <p class="text-center lead">
-          You haven't moved any convos into this folder, yet
-        </p>
-      </div>
-    </div>
-  {% elif convos.length == 0 %}
-    <div class="panel panel-default">
-      <div class="panel-body">
-        <p class="text-center lead">
-          Page is empty.
-          <br>In the future I'll prevent you from landing on an empty page.
-          <br><a href="{{ ctx.path }}">&larr; Back to Page 1</a>
-        </p>
-      </div>
-    </div>
-  {% endif %}
-  {% for convo in convos %}
-    <div class="panel panel-default">
-      <div class="panel-body">
-        <div class="row">
-          <div class="col-sm-7">
-            <a href="{{ convo.url }}">{{ convo.title }}</a>
-            <div>
-              by
-              <a href="{{ convo.user.url }}" style="color: white">{{ convo.user.uname }}</a>,
-              <abbr class="timeago" title="{{ convo.created_at.toISOString() }}">
-                {{ convo.created_at|formatDate }}
-              </abbr>
-            </div>
-            <div>
-              Participants:
-              {% for user in convo.participants %}
-                <a href="{{ user.url }}">{{ user.uname }}</a>{% if not loop.last %}, {% endif %}
-              {% endfor %}
-            </div>
-            <span class="label label-default">{{ convo.folder }}</span>
-          </div> <!-- /.col-sm-7 -->
-          <div class="col-sm-2">
-            <small class="text-muted">
-              {{ convo.pms_count }} Messages
-            </small>
-          </div>
-          <div class="col-sm-3 text-right">
-            Latest:
-            <a href="{{ convo.latest_user.url }}" style="color: white">
-              {{ convo.latest_user.uname }}
-            </a>
-            <a href="{{ convo.latest_pm.url }}" class="btn btn-default btn-xs latest-post-btn">
-              &rarr;
-            </a>
-            <div>
-              <abbr class="timeago"
-                    title="{{ convo.latest_pm.created_at.toISOString() }}">
-                {{ convo.latest_pm.created_at|formatDate }}
-              </abbr>
-            </div>
+      <div class="panel panel-default" style="border: 0; background-color: #111">
+        <div class="panel-body" style="">
+          <div class="row">
+            <div class="col-sm-7">Convo</div>
+            <div class="col-sm-2">Messages</div>
+            <div class="col-sm-3">Latest PM</div>
           </div>
         </div>
       </div>
+      {% if folderEmpty %}
+        <div class="panel panel-default">
+          <div class="panel-body">
+            <p class="text-center lead">
+              You haven't moved any convos into this folder, yet
+            </p>
+          </div>
+        </div>
+      {% elif convos.length == 0 %}
+        <div class="panel panel-default">
+          <div class="panel-body">
+            <p class="text-center lead">
+              Page is empty.
+              <br>In the future I'll prevent you from landing on an empty page.
+              <br><a href="{{ ctx.path }}">&larr; Back to Page 1</a>
+            </p>
+          </div>
+        </div>
+      {% endif %}
+      {% for convo in convos %}
+        <div class="panel panel-default">
+          <div class="panel-body">
+            <div class="row">
+              <div class="col-sm-7">
+                <a href="{{ convo.url }}">{{ convo.title }}</a>
+                <div>
+                  by
+                  <a href="{{ convo.user.url }}" style="color: white">{{ convo.user.uname }}</a>,
+                  <abbr class="timeago" title="{{ convo.created_at.toISOString() }}">
+                    {{ convo.created_at|formatDate }}
+                  </abbr>
+                </div>
+                <div>
+                  Participants:
+                  {% for user in convo.participants %}
+                    <a href="{{ user.url }}">{{ user.uname }}</a>{% if not loop.last %}, {% endif %}
+                  {% endfor %}
+                </div>
+                <span class="label label-default">{{ convo.folder }}</span>
+              </div> <!-- /.col-sm-7 -->
+              <div class="col-sm-2">
+                <small class="text-muted">
+                  {{ convo.pms_count }} Messages
+                </small>
+              </div>
+              <div class="col-sm-3 text-right">
+                Latest:
+                <a href="{{ convo.latest_user.url }}" style="color: white">
+                  {{ convo.latest_user.uname }}
+                </a>
+                <a href="{{ convo.latest_pm.url }}" class="btn btn-default btn-xs latest-post-btn">
+                  &rarr;
+                </a>
+                <div>
+                  <abbr class="timeago"
+                        title="{{ convo.latest_pm.created_at.toISOString() }}">
+                    {{ convo.latest_pm.created_at|formatDate }}
+                  </abbr>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+
+      <!-- Pagination -->
+
+      {{ paginate.renderFullPaginator(fullPaginator) }}
     </div>
-  {% endfor %}
-
-  <!-- Pagination -->
-
-  {{ paginate.renderFullPaginator(fullPaginator) }}
-
+  </div>
 {% endblock %}
