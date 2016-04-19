@@ -76,7 +76,7 @@
             </button>
           {% else %}
               <form method="POST" action="{{ user.url }}/nuke">
-                <button type="submit" class="btn btn-danger">
+                <button type="submit" class="btn btn-danger" id="nuke-user">
                   <span class="glyphicon glyphicon-flag"></span>
                   Nuke Spambot
                 </button>
@@ -637,5 +637,14 @@
         $('.status-text-counter').css('color', '#999');
 
     });
+  </script>
+
+  <script>
+   $('#nuke-user').on('click', function (e) {
+     if (confirm('Are you sure you want to ban and delete this user\'s stuff? (May take a while after clicking Yes, so please wait.)')) {
+       return true
+     }
+     return false;
+   });
   </script>
 {% endblock %}
