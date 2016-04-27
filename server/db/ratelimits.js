@@ -21,7 +21,7 @@ exports.bump = function * (userId, ipAddress, maxDate) {
     recentRatelimit: `
       SELECT *
       FROM ratelimits
-      WHERE user_id = $1
+      WHERE ip_root(ip_address) = ip_root($1)
       ORDER BY id DESC
       LIMIT 1
     `,
@@ -33,7 +33,7 @@ exports.bump = function * (userId, ipAddress, maxDate) {
   return yield dbUtil.withTransaction(function * (client) {
     yield client.queryPromise('SET TRANSACTION ISOLATION LEVEL SERIALIZABLE');
     // Get latest ratelimit for this user
-    const row = yield client.queryOnePromise(sql.recentRatelimit, [userId]);
+    const row = yield client.queryOnePromise(sql.recentRatelimit, [ipAddress]);
     // If it's too soon, throw the Date when ratelimit expires
     if (row && row.created_at > maxDate) {
       const elapsed = new Date() - row.created_at; // since ratelimit
