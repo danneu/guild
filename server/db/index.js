@@ -3534,7 +3534,7 @@ ORDER BY u1.last_online_at DESC NULLS LAST
 LIMIT $2
   `;
 
-  return yield queryMany(sql, [user_id, limit || 10]);
+  return yield queryMany(sql, [user_id, limit || 100]);
 };
 
 exports.findFriendshipBetween = function*(from_id, to_id) {

@@ -659,7 +659,7 @@ app.get('/', function*() {
   // Get users friends for the sidebar
   var friendships;
   if (this.currUser) {
-    friendships = yield db.findFriendshipsForUserId(this.currUser.id);
+    friendships = yield db.findFriendshipsForUserId(this.currUser.id, 10);
     friendships = friendships.map(pre.presentFriendship);
   }
 
