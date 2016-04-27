@@ -1,6 +1,6 @@
 {
   "engines": {
-    "node": "5.4.x"
+    "node": "6.x"
   },
   "scripts": {
     "start": "node --max_old_space_size=400 ./server",
