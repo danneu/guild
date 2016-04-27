@@ -1241,7 +1241,7 @@ app.put('/topics/:topicSlug/tags', function*() {
 // - tag-ids: Array of StringIntegers (IntChecks/RPs only for now)
 // - join-status
 //
-app.post('/forums/:slug/topics', /* middleware.ensureRecaptcha, */ function*() {
+app.post('/forums/:slug/topics', middleware.ratelimit(), /* middleware.ensureRecaptcha, */ function*() {
   var forumId = belt.extractId(this.params.slug);
   this.assert(forumId, 404);
 
