@@ -96,7 +96,7 @@ exports.ensureRecaptcha = function * (next) {
 function postCountToMaxDate (postCount) {
   assert(Number.isInteger(postCount));
   // prevent double-posts with a min of ~1 second ratelimit
-  if (postCount > 10) { 
+  if (postCount > 10) {
     return new Date(Date.now() - 1000);
   }
   const mins = 5 - (postCount / 2);
@@ -112,29 +112,29 @@ function waitLength (tilDate) {
   const mins = Math.floor(diff / 60);
   const secs = diff % 60;
   let output = '';
-  if (mins > 1) 
-    output += `${mins} minutes, `;
+  if (mins > 1)
+    output += `${mins} minutes and `;
   else if (mins === 1)
-    output += `${mins} minute, `;
+    output += `${mins} minute and `;
   if (secs === 1)
     output += `${secs} second`
-  else 
+  else
     output += `${secs} seconds`
   return output;
 }
 
 exports.ratelimit = function () {
   return function * (next) {
-    console.log('*** REFERER =', this.headers['referer']);
-    // Check ratelimits
     const maxDate = postCountToMaxDate(this.currUser.posts_count);
-    console.log('mw:ratelimit maxDate:', maxDate);
-    console.log((new Date - maxDate) / 1000)
     try {
       yield db.ratelimits.bump(this.currUser.id, this.ip, maxDate);
     } catch (err) {
       if (_.isDate(err)) {
-        this.check(false, `ratelimited: ${waitLength(err)}`);
+        const msg = `Ratelimited! Since you are a new member, you must wait
+          ${waitLength(err)} longer before posting. The ratelimit goes away as you
+          make more posts.
+        `;
+        this.check(false, msg);
         return;
       }
       throw err;
