@@ -965,7 +965,16 @@ var XBBCODE = (function() {
             return '&#91;url&#93;';
         }
 
-        return '<a rel="nofollow" href="' + myUrl + '">';
+
+        // dumb way to see if user is linking internally or externally
+        // keep synced with Autolinker#replaceFn definedin this file
+        if (/roleplayerguild.com/i.test(myUrl)) {
+          // internal link
+          return '<a href="' + myUrl + '">';
+        } else {
+          // external link
+          return '<a target="_blank" rel="nofollow noopener" href="' + myUrl + '">';
+        }
       },
       closeTag: function(params,content) {
         var ret = hasError.url ? '&#91;/url&#93;' : '</a>';
@@ -1292,7 +1301,18 @@ var autolinkerOpts = {
   email: false,
   phone: false,
   twitter: false,
-  hashtag: false
+  hashtag: false,
+  newWindow: false,
+  // keep synced with [url] logic
+  replaceFn: function (autolinker, match) {
+    //var tag = autolinker.getTagBuilder().build(match);
+    var tag = match.buildTag();
+    // dumb way to see if user is linking internally or externally
+    if (!/roleplayerguild.com/i.test(match.getAnchorHref())) {
+      tag.setAttr('rel', 'nofollow noopener').setAttr('target', '_blank');
+    }
+    return tag;
+  }
 };
 
 // Allow bbcode_editor.js to access it
@@ -1323,6 +1343,12 @@ if (typeof window === 'undefined') {
   };
 }
 
+
+/*
+   The following comment block is the original license, though
+   this file has been significantly modified/hacked from what
+   it originally was.
+*/
 
 /*
   Copyright (C) 2011 Patrick Gillespie, http://patorjk.com/

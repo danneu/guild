@@ -146,9 +146,9 @@
       "resolved": "https://registry.npmjs.org/async-each/-/async-each-1.0.0.tgz"
     },
     "autolinker": {
-      "version": "0.22.0",
-      "from": "autolinker@0.22.0",
-      "resolved": "https://registry.npmjs.org/autolinker/-/autolinker-0.22.0.tgz"
+      "version": "0.26.0",
+      "from": "autolinker@0.26.0",
+      "resolved": "https://registry.npmjs.org/autolinker/-/autolinker-0.26.0.tgz"
     },
     "autoprefixer": {
       "version": "6.3.6",
@@ -1603,6 +1603,11 @@
       "version": "1.0.1",
       "from": "graceful-readlink@>=1.0.0",
       "resolved": "https://registry.npmjs.org/graceful-readlink/-/graceful-readlink-1.0.1.tgz"
+    },
+    "gulp-header": {
+      "version": "1.7.1",
+      "from": "gulp-header@>=1.7.1 <2.0.0",
+      "resolved": "https://registry.npmjs.org/gulp-header/-/gulp-header-1.7.1.tgz"
     },
     "gulp-util": {
       "version": "3.0.7",
