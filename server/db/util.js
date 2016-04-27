@@ -97,6 +97,9 @@ function* withClient(runner) {
     } else if (err.code === '40P01') { // Deadlock
       done();
       return yield withClient(runner);
+    } else if (err.code === '40001') { // Serialization failure
+      done();
+      return yield withClient(runner);
     } else {
       done();
       throw err;

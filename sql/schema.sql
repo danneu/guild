@@ -806,3 +806,21 @@ CREATE UNIQUE INDEX keyvals_key ON keyvals (key);
 INSERT INTO keyvals (key, value) VALUES 
   ('REGISTRATION_ENABLED', 'true'::json)
 ;
+
+------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION ip_root(ip_address inet) RETURNS inet AS $$
+  BEGIN
+    RETURN host(network(set_masklen(ip_address, (CASE family(ip_address) WHEN 4 THEN 24 ELSE 48 END))));
+  END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+CREATE TABLE ratelimits (
+  id             bigserial        PRIMARY KEY,
+  user_id        int              NOT NULL REFERENCES users(id),
+  ip_address     inet             NOT NULL,
+  created_at     timestamptz      NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX ratelimits_user_id ON ratelimits (user_id);
+CREATE INDEX ratelimits_ip_root ON ratelimits (ip_root(ip_address));

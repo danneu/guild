@@ -1064,7 +1064,7 @@ app.get('/forums/:forumSlug', function*() {
 // - post-type
 // - markup
 //
-app.post('/topics/:topicSlug/posts', /* middleware.ensureRecaptcha, */ function*() {
+app.post('/topics/:topicSlug/posts', middleware.ratelimit(), /* middleware.ensureRecaptcha, */ function*() {
   var topicId = belt.extractId(this.params.topicSlug);
   this.assert(topicId, 404);
 

@@ -1,16 +1,17 @@
 "use strict";
 // Node
 var util = require('util');
+// 3rd party
+var debug = require('debug')('app:middleware');
+var recaptcha = require('recaptcha-validator');
+var _ = require('lodash');
+var assert = require('better-assert');
 // 1st party
 var db = require('./db');
 var pre = require('./presenters');
 var belt = require('./belt');
 var config = require('./config');
 var bouncer = require('koa-bouncer');
-// 3rd party
-var debug = require('debug')('app:middleware');
-var recaptcha = require('recaptcha-validator');
-var _ = require('lodash');
 
 // Assoc ctx.currUser if the sessionId cookie (UUIDv4 String)
 // is an active session.
@@ -85,4 +86,59 @@ exports.ensureRecaptcha = function * (next) {
   }
 
   yield * next;
+};
+
+////////////////////////////////////////////////////////////
+// RATELIMITING
+////////////////////////////////////////////////////////////
+
+// Int -> Date
+function postCountToMaxDate (postCount) {
+  assert(Number.isInteger(postCount));
+  // prevent double-posts with a min of ~1 second ratelimit
+  if (postCount > 10) { 
+    return new Date(Date.now() - 1000);
+  }
+  const mins = 5 - (postCount / 2);
+  return new Date(Date.now() - mins * 1000 * 60);
+}
+
+// Date -> String
+//
+// 'in 1 minute and 13 seconds'
+function waitLength (tilDate) {
+  // diff is in seconds
+  const diff = Math.max(0, Math.ceil((tilDate - new Date()) / 1000));
+  const mins = Math.floor(diff / 60);
+  const secs = diff % 60;
+  let output = '';
+  if (mins > 1) 
+    output += `${mins} minutes, `;
+  else if (mins === 1)
+    output += `${mins} minute, `;
+  if (secs === 1)
+    output += `${secs} second`
+  else 
+    output += `${secs} seconds`
+  return output;
+}
+
+exports.ratelimit = function () {
+  return function * (next) {
+    console.log('*** REFERER =', this.headers['referer']);
+    // Check ratelimits
+    const maxDate = postCountToMaxDate(this.currUser.posts_count);
+    console.log('mw:ratelimit maxDate:', maxDate);
+    console.log((new Date - maxDate) / 1000)
+    try {
+      yield db.ratelimits.bump(this.currUser.id, this.ip, maxDate);
+    } catch (err) {
+      if (_.isDate(err)) {
+        this.check(false, `ratelimited: ${waitLength(err)}`);
+        return;
+      }
+      throw err;
+    }
+    yield * next;
+  };
 };
