@@ -785,3 +785,24 @@ CREATE TABLE nuked_users (
 -- Users can only be nuked once
 CREATE UNIQUE INDEX nuked_user_id ON nuked_users (user_id);
 CREATE INDEX nuked_user_nuker ON nuked_users (nuker_id);
+
+------------------------------------------------------------
+
+-- keyvals = general key-value pair storage
+CREATE TABLE keyvals (
+  id             serial           PRIMARY KEY,
+  key            text             NOT NULL,
+  value          json             NOT NULL,
+  updated_at     timestamptz      NOT NULL DEFAULT NOW(),
+  -- log the last user to change the value
+  updated_by_id  int              NULL REFERENCES users(id),
+  created_at     timestamptz      NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX keyvals_key ON keyvals (key);
+
+-- seed the default keyvals
+
+INSERT INTO keyvals (key, value) VALUES 
+  ('REGISTRATION_ENABLED', 'true'::json)
+;

@@ -16,6 +16,10 @@ var config = require('../config');
 var belt = require('../belt');
 var pre = require('../presenters');
 
+// Re-exports
+
+exports.keyvals = require('./keyvals');
+
 // If a client is not provided to fn as first argument,
 // we'll pass one into it.
 function wrapOptionalClient(fn) {
