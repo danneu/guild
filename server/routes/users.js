@@ -46,7 +46,7 @@ router.get('/users/:slug/edit', function*() {
 // checked
 router.post('/users', function*() {
   if (!(yield db.keyvals.getValueByKey('REGISTRATION_ENABLED'))) {
-    return this.body = 'Registration temporarily disabled. Check back soon.'
+    return this.redirect('/register');
   }
 
   // Validation
