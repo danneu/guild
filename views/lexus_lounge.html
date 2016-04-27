@@ -26,6 +26,37 @@
     </div>
   {% endif %}
 
+  <div class="well">
+    Registrations are currently:
+    {% if registration.value %}
+      <form method="POST" action="/lexus-lounge/registration" class="pull-right">
+        <input type="hidden" name="enable" value="">
+        <button type="submit" class="btn btn-default pull-right">Disable</button>
+      </form>
+      <span class="green-glow">
+        ENABLED
+      </span>
+    {% else %}
+      <form method="POST" action="/lexus-lounge/registration" class="pull-right">
+        <input type="hidden" name="enable" value="true">
+        <button type="submit" class="btn btn-default pull-right">Enable</button>
+      </form>
+      <span class="red-glow">
+        DISABLED
+      </span>
+    {% endif %}
+    {% if registration.updated_by %}
+      <p class="text-muted">
+        <span class="glyphicon glyphicon-pencil"></span>
+        Updated by 
+        <a href="{{ registration.updated_by.url }}">{{ registration.updated_by.uname }}</a>
+        (<abbr class="timeago" title="{{ registration.updated_at.toISOString() }}">
+          {{ registration.updated_at | formatDate }}
+        </abbr>)
+      </p>
+    {% endif %}
+  </div>
+
   <div class="row">
     <div class="col-sm-12">
       <div class="list-group">

@@ -45,9 +45,9 @@ router.get('/users/:slug/edit', function*() {
 // - g-recaptcha-response
 // checked
 router.post('/users', function*() {
-
-  this.body = 'Registration temporarily disabled while we address the recent spambot issue.';
-  return;
+  if (!(yield db.keyvals.getValueByKey('REGISTRATION_ENABLED'))) {
+    return this.body = 'Registration temporarily disabled. Check back soon.'
+  }
 
   // Validation
 

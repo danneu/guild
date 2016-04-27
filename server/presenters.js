@@ -65,6 +65,7 @@ function presentForum(forum) {
 
 exports.presentUser = presentUser;
 function presentUser(user) {
+  if (!user) return user;
   user.url = '/users/' + user.slug;
 
   // Reminder: Only avatar uploads since the S3 bucket update will
@@ -246,4 +247,10 @@ exports.presentVm = function(vm) {
   }
 
   return vm;
+};
+
+exports.presentKeyval = function (x) {
+  if (!x) return x;
+  exports.presentUser(x.updated_by);
+  return x;
 };

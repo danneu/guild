@@ -594,9 +594,11 @@ app.get('/bbcode', function*() {
 app.get('/register', function*() {
   assert(config.RECAPTCHA_SITEKEY);
   assert(config.RECAPTCHA_SITESECRET);
+  const registration = yield db.keyvals.getRowByKey('REGISTRATION_ENABLED');
   yield this.render('register', {
     ctx: this,
     recaptchaSitekey: config.RECAPTCHA_SITEKEY,
+    registration,
     title: 'Register'
   });
 });
@@ -904,14 +906,25 @@ app.get('/lexus-lounge', function*() {
   var latestUserLimit = 50;
   var latestUsers = yield db.findLatestUsers(latestUserLimit);
   latestUsers = latestUsers.map(pre.presentUser);
+  const registration = yield db.keyvals.getRowByKey('REGISTRATION_ENABLED');
   yield this.render('lexus_lounge', {
     ctx: this,
-    category: category,
-    latestUsers: latestUsers,
-    latestUserLimit: latestUserLimit,
-    title: 'Lexus Lounge — Mod Forum',
-    staffRep: staffRep
+    category,
+    latestUsers,
+    latestUserLimit,
+    staffRep,
+    registration,
+    title: 'Lexus Lounge — Mod Forum'
   });
+});
+
+// toggle user registration on/off
+app.post('/lexus-lounge/registration', function * () {
+  this.assertAuthorized(this.currUser, 'LEXUS_LOUNGE');
+  const enable = this.request.body.enable === 'true';
+  yield db.keyvals.setKey('REGISTRATION_ENABLED', enable, this.currUser.id);
+  this.flash = { message: ['success', `Registrations ${enable ? 'enabled' : 'disabled'}`] };
+  this.redirect('/lexus-lounge');
 });
 
 //

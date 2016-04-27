@@ -8,78 +8,89 @@
   <h1>Register</h1>
 </div>
 
-<div class="row">
-  <div class="col-sm-6 col-sm-offset-3">
-    <form action="/users" method="post">
-      <div class="panel panel-default">
-        <div class="panel-body">
-      <div class="form-group">
-        <label for="uname-input">Username:</label>
-        <input id="uname-input"
-               type="text"
-               name="uname"
-               class="form-control"
-               {% if ctx.flash.params %}
-                value="{{ ctx.flash.params.uname }}"
-               {% endif %}
-               required
-               >
-        <div class="help-block" style="color: #ccc">
-          Allowed: letters (A-Z), numbers (0-9), spaces
-        </div>
-      </div>
-      <div class="form-group">
-        <label for="email-input">Email:</label>
-        <input id="email-input"
-               type="email"
-               name="email"
-               class="form-control"
-               {% if ctx.flash.params %}
-                value="{{ ctx.flash.params.email }}"
-               {% endif %}
-               required
-               >
-      </div>
-      <div class="form-group">
-        <label for="password1-input">Password:</label>
-        <input id="password1-input" type="password" name="password1"
-               {% if ctx.flash.params %}
-                value="{{ ctx.flash.params.password1 }}"
-               {% endif %}
-               class="form-control" required>
-      </div>
-      <div class="form-group">
-        <label for="password2-input">Confirm Password:</label>
-        <input id="password2-input" type="password" name="password2"
-               {% if ctx.flash.params %}
-                value="{{ ctx.flash.params.password2 }}"
-               {% endif %}
-               class="form-control" required>
-      </div>
-      <div class="form-group" style="min-height: 78px;">
-        <label>Human Test:</label>
-        <div class="g-recaptcha"
-             data-sitekey="{{ recaptchaSitekey }}"
-             data-callback="recaptchaSuccessCallback">
-        </div>
-      </div>
-          </div> <!-- /.panel-body -->
-        <div class="panel-footer">
-          <div class="text-right">
-            <span id="recaptcha-reminder">You must satisfy the human test before you can submit</span>
-            <input id="register-submit"
-                   type="submit"
-                   value="Submit"
-                   class="btn btn-danger"
-                   disabled>
-          </div>
-        </div> <!-- /.panel-footer -->
-        </div> <!-- /.panel -->
-
-    </form>
+  {% if registration.value == false %}
+  <div class="alert alert-info">
+    <p>
+      Registrations were temporarily disabled
+      <abbr class="timeago" title="{{ registration.updated_at.toISOString() }}">
+        {{ registration.updated_at | formatDate }}
+      </abbr>.
+    <p>
+    <p>Check back soon!</p>
   </div>
+  {% else %}
+  <div class="row">
+    <div class="col-sm-6 col-sm-offset-3">
+      <form action="/users" method="post">
+        <div class="panel panel-default">
+          <div class="panel-body">
+        <div class="form-group">
+          <label for="uname-input">Username:</label>
+          <input id="uname-input"
+                 type="text"
+                 name="uname"
+                 class="form-control"
+                 {% if ctx.flash.params %}
+                  value="{{ ctx.flash.params.uname }}"
+                 {% endif %}
+                 required
+                 >
+          <div class="help-block" style="color: #ccc">
+            Allowed: letters (A-Z), numbers (0-9), spaces
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="email-input">Email:</label>
+          <input id="email-input"
+                 type="email"
+                 name="email"
+                 class="form-control"
+                 {% if ctx.flash.params %}
+                  value="{{ ctx.flash.params.email }}"
+                 {% endif %}
+                 required
+                 >
+        </div>
+        <div class="form-group">
+          <label for="password1-input">Password:</label>
+          <input id="password1-input" type="password" name="password1"
+                 {% if ctx.flash.params %}
+                  value="{{ ctx.flash.params.password1 }}"
+                 {% endif %}
+                 class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label for="password2-input">Confirm Password:</label>
+          <input id="password2-input" type="password" name="password2"
+                 {% if ctx.flash.params %}
+                  value="{{ ctx.flash.params.password2 }}"
+                 {% endif %}
+                 class="form-control" required>
+        </div>
+        <div class="form-group" style="min-height: 78px;">
+          <label>Human Test:</label>
+          <div class="g-recaptcha"
+               data-sitekey="{{ recaptchaSitekey }}"
+               data-callback="recaptchaSuccessCallback">
+          </div>
+        </div>
+            </div> <!-- /.panel-body -->
+          <div class="panel-footer">
+            <div class="text-right">
+              <span id="recaptcha-reminder">You must satisfy the human test before you can submit</span>
+              <input id="register-submit"
+                     type="submit"
+                     value="Submit"
+                     class="btn btn-danger"
+                     disabled>
+            </div>
+          </div> <!-- /.panel-footer -->
+          </div> <!-- /.panel -->
 
-</div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
 {% endblock %}
 
 {% block scripts %}
