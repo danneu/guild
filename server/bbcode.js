@@ -1308,9 +1308,9 @@ if (typeof window === 'undefined') {
     // Linkify URLs
     var html = Autolinker.link(result.html, autolinkerOpts);
     var diff = Date.now() - start;
-    console.log(util.format('[bbcode.js] Rendered %s chars of BBCode in %sms', markup.length, diff));
-    console.log('[bbcode.js] result.error:', result.error);
-    console.log('[bbcode.js] result.errorQueue',result.errorQueue);
+    // console.log(util.format('[bbcode.js] Rendered %s chars of BBCode in %sms', markup.length, diff));
+    // console.log('[bbcode.js] result.error:', result.error);
+    // console.log('[bbcode.js] result.errorQueue',result.errorQueue);
 
     return html;
   };
