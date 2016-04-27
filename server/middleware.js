@@ -1,16 +1,17 @@
 "use strict";
 // Node
 var util = require('util');
+// 3rd party
+var debug = require('debug')('app:middleware');
+var recaptcha = require('recaptcha-validator');
+var _ = require('lodash');
+var assert = require('better-assert');
 // 1st party
 var db = require('./db');
 var pre = require('./presenters');
 var belt = require('./belt');
 var config = require('./config');
 var bouncer = require('koa-bouncer');
-// 3rd party
-var debug = require('debug')('app:middleware');
-var recaptcha = require('recaptcha-validator');
-var _ = require('lodash');
 
 // Assoc ctx.currUser if the sessionId cookie (UUIDv4 String)
 // is an active session.
@@ -85,4 +86,59 @@ exports.ensureRecaptcha = function * (next) {
   }
 
   yield * next;
+};
+
+////////////////////////////////////////////////////////////
+// RATELIMITING
+////////////////////////////////////////////////////////////
+
+// Int -> Date
+function postCountToMaxDate (postCount) {
+  assert(Number.isInteger(postCount));
+  // prevent double-posts with a min of ~1 second ratelimit
+  if (postCount > 10) {
+    return new Date(Date.now() - 1000);
+  }
+  const mins = 5 - (postCount / 2);
+  return new Date(Date.now() - mins * 1000 * 60);
+}
+
+// Date -> String
+//
+// 'in 1 minute and 13 seconds'
+function waitLength (tilDate) {
+  // diff is in seconds
+  const diff = Math.max(0, Math.ceil((tilDate - new Date()) / 1000));
+  const mins = Math.floor(diff / 60);
+  const secs = diff % 60;
+  let output = '';
+  if (mins > 1)
+    output += `${mins} minutes and `;
+  else if (mins === 1)
+    output += `${mins} minute and `;
+  if (secs === 1)
+    output += `${secs} second`
+  else
+    output += `${secs} seconds`
+  return output;
+}
+
+exports.ratelimit = function () {
+  return function * (next) {
+    const maxDate = postCountToMaxDate(this.currUser.posts_count);
+    try {
+      yield db.ratelimits.bump(this.currUser.id, this.ip, maxDate);
+    } catch (err) {
+      if (_.isDate(err)) {
+        const msg = `Ratelimited! Since you are a new member, you must wait
+          ${waitLength(err)} longer before posting. The ratelimit goes away as you
+          make more posts.
+        `;
+        this.check(false, msg);
+        return;
+      }
+      throw err;
+    }
+    yield * next;
+  };
 };

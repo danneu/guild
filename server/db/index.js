@@ -19,6 +19,7 @@ var pre = require('../presenters');
 // Re-exports
 
 exports.keyvals = require('./keyvals');
+exports.ratelimits = require('./ratelimits');
 
 // If a client is not provided to fn as first argument,
 // we'll pass one into it.

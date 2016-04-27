@@ -1064,7 +1064,7 @@ app.get('/forums/:forumSlug', function*() {
 // - post-type
 // - markup
 //
-app.post('/topics/:topicSlug/posts', /* middleware.ensureRecaptcha, */ function*() {
+app.post('/topics/:topicSlug/posts', middleware.ratelimit(), /* middleware.ensureRecaptcha, */ function*() {
   var topicId = belt.extractId(this.params.topicSlug);
   this.assert(topicId, 404);
 
@@ -1241,7 +1241,7 @@ app.put('/topics/:topicSlug/tags', function*() {
 // - tag-ids: Array of StringIntegers (IntChecks/RPs only for now)
 // - join-status
 //
-app.post('/forums/:slug/topics', /* middleware.ensureRecaptcha, */ function*() {
+app.post('/forums/:slug/topics', middleware.ratelimit(), /* middleware.ensureRecaptcha, */ function*() {
   var forumId = belt.extractId(this.params.slug);
   this.assert(forumId, 404);
 
