@@ -13,14 +13,14 @@ const dbUtil = require('./util');
 // If user is ratelimited, it throws the JSDate that the ratelimit expires
 // that can be shown to the user (e.g. try again in 24 seconds)
 exports.bump = function * (userId, ipAddress, maxDate) {
-  console.log('[bump] userId=%j, ipAddress=%j, maxDate=%j', userId, ipAddress, maxDate);
+  debug('[bump] userId=%j, ipAddress=%j, maxDate=%j', userId, ipAddress, maxDate);
   assert(Number.isInteger(userId));
   assert(typeof ipAddress === 'string');
   assert(_.isDate(maxDate));
   const sql = {
     recentRatelimit: `
-      SELECT * 
-      FROM ratelimits 
+      SELECT *
+      FROM ratelimits
       WHERE user_id = $1
       ORDER BY id DESC
       LIMIT 1
@@ -34,14 +34,11 @@ exports.bump = function * (userId, ipAddress, maxDate) {
     yield client.queryPromise('SET TRANSACTION ISOLATION LEVEL SERIALIZABLE');
     // Get latest ratelimit for this user
     const row = yield client.queryOnePromise(sql.recentRatelimit, [userId]);
-    console.log('row:', row);
     // If it's too soon, throw the Date when ratelimit expires
     if (row && row.created_at > maxDate) {
       const elapsed = new Date() - row.created_at; // since ratelimit
       const duration = new Date() - maxDate; // ratelimit length
-      console.log(row.created_at, elapsed, duration)
       const expires = new Date(Date.now() + duration - elapsed);
-      console.log('now=%j, expires=%j', new Date(), expires);
       throw expires;
     }
     // Else, insert new ratelimit
