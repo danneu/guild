@@ -254,3 +254,19 @@ exports.presentKeyval = function (x) {
   exports.presentUser(x.updated_by);
   return x;
 };
+
+exports.presentImage = function (x) {
+  console.log(x);
+  if (!x) return x;
+  exports.presentUser(x.user);
+  const ext = (function () {
+    switch (x.mime) {
+    case 'image/jpeg': return 'jpg';
+    case 'image/gif': return 'gif';
+    case 'image/png': return 'png';
+    }
+  })();
+  x.url = x.user.url + `/images/${x.id}`;
+  x.src = `/images/${x.id}.${ext}`;
+  return x;
+};

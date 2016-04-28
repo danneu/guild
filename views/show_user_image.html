@@ -1,0 +1,26 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <div class="page-header">
+    <h2>
+      {{ user.uname }}'s image
+    </h2>
+    <p>
+      &larr; <a href="{{ user.url }}/images">Back to {{ user.uname }}'s images</a>
+    </p>
+  </div>
+  <div class="well">
+    <ul>
+      <li><strong>Direct Link:</strong> <code>{{ image.src }}</code></li>
+      {% if image.description %}
+        <li><strong>Description:</strong> {{ image.description }}</li>
+      {% endif %}
+      <li><strong>Uploaded:</strong>
+        <abbr class="timeago" title="{{ image.created_at.toISOString() }}">
+          {{ image.created_at | formatDate }}
+        </abbr>
+      </li>
+    </ul>
+    <img src="{{ image.src }}" style="width: 100%;">
+  </div>
+{% endblock %}
