@@ -51,6 +51,7 @@ function extToMime (ext) {
 
 router.get('/images/:image_id.:ext', loadImage, function * () {
   this.assert(extToMime(this.params.ext) === this.state.image.mime, 404);
+  this.set('Cache-Control', 'max-age=31556926');
   this.type = this.state.image.mime;
   this.body = this.state.image.blob;
 });
