@@ -61,9 +61,7 @@
     </a>
   </div>
 
-    {% if ctx.path == '/' and config.NODE_ENV == 'production' %}
-      <h1 id="tagline">Play-by-Post Role Playing Forum</h1>
-    {% endif %}
+  {% block aboveNavbar %}{% endblock %}
 
     <!-- Static navbar -->
     <nav class="navbar navbar-inverse" role="navigation"

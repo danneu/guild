@@ -2,8 +2,20 @@
 {% import './macros/macros.html' as macros %}
 {% import './macros/ads.html' as ads %}
 
-{% block embed %}
+{% block aboveNavbar %}
+  <div class="text-center" style="color: #666;">
+    <h1 id="tagline">Play-by-Post Role Playing Forum</h1>
+    <ul class="list-inline">
+      <li>Est. 2007</li>
+      <li>
+        <span class="green-glow">{{ stats.onlineUsers.length }}</span> members online
+      </li>
+    </ul>
+  </div>
+{% endblock %}
 
+
+{% block embed %}
   {{ ads.topResponsive() }}
 
   {% if false and ftopic %}
