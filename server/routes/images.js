@@ -29,6 +29,18 @@ function * loadImage (next) {
 
 ////////////////////////////////////////////////////////////
 
+// ImageMagick identify object -> Mimetype string
+function identifyToMime (data) {
+  if (data['Mime type']) {
+    return data['Mime type'];
+  }
+  switch (data.format) {
+    case 'GIF': return 'image/gif';
+    case 'JPEG': return 'image/jpeg';
+    case 'PNG': return 'image/png';
+  }
+}
+
 function extToMime (ext) {
   switch (ext) {
     case 'gif': return 'image/gif';
@@ -106,10 +118,9 @@ router.post('/users/:user_slug/images', loadUser, function * () {
     this.flash = { message: ['danger', 'Image cannot exceed 10mb.'] };
     return this.redirect('back');
   }
-  // { 'Mime type': 'image/jpeg' }
+  // { 'Mime type': 'image/jpeg' OR 'format': 'JPEG' }
   const data = yield identify(upload.path);
-  console.log('==IDENTIFY==', data);
-  const mime = data['Mime type'];
+  const mime = identifyToMime(data);
   if (!mime || ['image/jpeg', 'image/png', 'image/gif'].indexOf(mime) < 0) {
     this.flash = { message: ['danger', 'Invalid image format. Must be jpg, gif, png.'] };
     return this.redirect('back');
