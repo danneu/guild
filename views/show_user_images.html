@@ -1,0 +1,78 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  {{ uploadModal(ctx) }}
+  <div class="alert alert-info">
+    <strong>Note:</strong> The image system is new and under construction,
+    so it's a bit rough around the edges. #willimprove
+  </div>
+  <div class="page-header">
+    <h2>
+      {{ user.uname }}'s images
+    </h2>
+    <p>
+      &larr; <a href="{{ user.url }}">Back to {{ user.uname }}'s profile</a>
+    </p>
+  </div>
+  <div class="text-right" style="margin-bottom: 10px;">
+    <button class="btn btn-primary"
+            data-toggle="modal"
+            data-target="#upload-modal"
+    >
+      <span class="glyphicon glyphicon-plus"></span>
+      Upload Image
+    </button>
+  </div>
+  {% if images.length == 0 %}
+    <div class="well">No images</div>
+  {% else %}
+    <a name="images"></a>
+    <h3>
+      Images
+      <small>{{ images.length }} total</small>
+    </h3>
+    {% for image in images %}
+      <a href="{{ image.url }}">
+        <img src="{{ image.src }}" width="200">
+      </a>
+    {% endfor %}
+  {% endif %}
+{% endblock %}
+
+
+
+{% macro uploadModal (ctx) %}
+  <form method="POST" action="{{ user.url }}/images" enctype="multipart/form-data">
+    <div class="modal fade" id="upload-modal" tabindex="-1" role="dialog" aria-labelledby="upload-modal" style="color: black;">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title" id="upload-modal">
+              New Image
+            </h4>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="image-input">Image:</label>
+              <input type="file" id="image-input" name="image">
+              <p class="help-block">Max size: 10mb. Must be jpeg, gif, png.</p>
+            </div>
+            <div class="form-group">
+              <label for="description-input">Description (optional):</label>
+              <textarea id="description-input" name="description"
+                        class="form-control"
+                        placeholder="Add a note to this image"
+                        maxlength="10000"
+              ></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            <button type="submit" class="btn btn-primary">Submit</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+{% endmacro %}

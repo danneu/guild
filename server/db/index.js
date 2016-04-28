@@ -20,6 +20,7 @@ var pre = require('../presenters');
 
 exports.keyvals = require('./keyvals');
 exports.ratelimits = require('./ratelimits');
+exports.images = require('./images');
 
 // If a client is not provided to fn as first argument,
 // we'll pass one into it.
@@ -365,7 +366,7 @@ exports.findUserById = exports.findUser = function*(id) {
 
 ////////////////////////////////////////////////////////////
 
-exports.findUserBySlug = function*(slug) {
+exports.findUserBySlug = exports.getUserBySlug = function*(slug) {
   assert(_.isString(slug));
 
   const sql = `
