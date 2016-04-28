@@ -5,11 +5,14 @@
 
 A forum running in production.
 
+**Disclaimer:** The majority of the code was written when I was new to Koa
+and SQL.
+
 ## Setup and Install
 
 The Guild is a Node.js app that talks to a Postgres database.
 
-- Install the latest stable version of Node (v5.4.x).
+- Install the latest stable version of Node (v6.x).
 
 - The Guild depends on the `plv8` Postgres extension.
 
