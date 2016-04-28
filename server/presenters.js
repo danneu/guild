@@ -267,6 +267,10 @@ exports.presentImage = function (x) {
     }
   })();
   x.url = x.user.url + `/images/${x.id}`;
-  x.src = `/images/${x.id}.${ext}`;
+  if (config.NODE_ENV === 'production') {
+    x.src = `http://img.roleplayerguild.com/images/${x.id}.${ext}`;
+  } else {
+    x.src = `http://localhost:${config.PORT}/images/${x.id}.${ext}`;
+  }
   return x;
 };
