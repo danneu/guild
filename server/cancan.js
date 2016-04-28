@@ -496,6 +496,11 @@ function can(user, action, target) {
       // staff can ban non-staff
       if (isStaffRole(user.role) && !isStaffRole(target.role)) return true;
       return false;
+    case 'UPLOAD_IMAGE': // target is user the image is uploaded to
+      if (!user) return false;
+      if (user.role === 'banned') return false;
+      if (user.id === target.id) return true;
+      return false;
     default:
       debug('Unsupported cancan action: ' + action);
       return false;

@@ -88,6 +88,7 @@ function readPath (path) {
 }
 
 router.post('/users/:user_slug/images', loadUser, function * () {
+  this.assertAuthorized(this.currUser, 'UPLOAD_IMAGE', this.state.user);
   // FIXME: Lame validation
   // fields
   this.assert(this.request.body.fields, 400);
