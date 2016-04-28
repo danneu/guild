@@ -189,6 +189,27 @@
     </div>
   {% endif %}
 
+  {# TODO: set unique colors for these awards #}
+  {# FIXME: just copied this color from prev trophies #}
+
+  {% if user.active_trophy_id == 40 %}
+    <div style="color: #2ecc71; font-weight: bold; font-family: Georgia,Times,'Times New Roman',serif;">
+      Stymphalian Questor
+    </div>
+  {% endif %}
+
+  {% if user.active_trophy_id == 42 %}
+    <div style="color: #2ecc71; font-weight: bold; font-family: Georgia,Times,'Times New Roman',serif;">
+      Audacious Cretan
+    </div>
+  {% endif %}
+
+  {% if user.active_trophy_id == 44 %}
+    <div style="color: #2ecc71; font-weight: bold; font-family: Georgia,Times,'Times New Roman',serif;">
+      Thracian Slayer
+    </div>
+  {% endif %}
+
   {% if user.avatar_url and not ctx.currUser.hide_avatars %}
     <div class="post-avatar"
          style="margin-top: 10px;">
