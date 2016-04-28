@@ -905,8 +905,10 @@ app.get('/lexus-lounge', function*() {
   category = pre.presentCategory(category);
   var latestUserLimit = 50;
   var latestUsers = yield db.findLatestUsers(latestUserLimit);
-  latestUsers = latestUsers.map(pre.presentUser);
+  latestUsers.map(pre.presentUser);
   const registration = yield db.keyvals.getRowByKey('REGISTRATION_ENABLED');
+  const images = yield db.images.getLatestImages(25);
+  images.forEach(pre.presentImage);
   yield this.render('lexus_lounge', {
     ctx: this,
     category,
@@ -914,6 +916,7 @@ app.get('/lexus-lounge', function*() {
     latestUserLimit,
     staffRep,
     registration,
+    images,
     title: 'Lexus Lounge — Mod Forum'
   });
 });

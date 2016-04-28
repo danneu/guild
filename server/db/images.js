@@ -23,6 +23,23 @@ exports.getImage = function * (uuid) {
   return yield util.queryOne(sql, [uuid]);
 };
 
+// limit is optional
+exports.getLatestImages = function * (limit) {
+  const sql = `
+    SELECT
+      images.*,
+      json_build_object(
+        'uname', users.uname,
+        'slug', users.slug
+      ) "user"
+    FROM images
+    JOIN users ON images.user_id = users.id
+    ORDER BY images.created_at DESC
+    LIMIT $1
+  `;
+  return yield util.queryMany(sql, [limit || 10]);
+};
+
 exports.getUserImages = function * (userId) {
   assert(Number.isInteger(userId));
   const sql = `
