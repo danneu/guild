@@ -31,7 +31,9 @@ exports.bump = function * (userId, ipAddress, maxDate) {
     `,
   };
   return yield dbUtil.withTransaction(function * (client) {
-    yield client.queryPromise('SET TRANSACTION ISOLATION LEVEL SERIALIZABLE');
+    // -- Temporarily commented out to test if it's causing aggressive loop
+    // yield client.queryPromise('SET TRANSACTION ISOLATION LEVEL SERIALIZABLE');
+
     // Get latest ratelimit for this user
     const row = yield client.queryOnePromise(sql.recentRatelimit, [ipAddress]);
     // If it's too soon, throw the Date when ratelimit expires
