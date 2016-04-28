@@ -3,7 +3,7 @@
     "node": "6.x"
   },
   "scripts": {
-    "start": "node --optimize_for_size --max_old_space_size=460 ./server",
+    "start": "node --max_old_space_size=460 ./server",
     "start-dev": "env $(cat .env | xargs) nodemon ./server",
     "start-sandbox": "env $(cat .env | xargs) node ./server/sandbox",
     "start-sandbox-nodemon": "env $(cat .env | xargs) nodemon ./server/sandbox",
