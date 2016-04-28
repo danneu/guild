@@ -108,6 +108,7 @@ router.post('/users/:user_slug/images', loadUser, function * () {
   }
   // { 'Mime type': 'image/jpeg' }
   const data = yield identify(upload.path);
+  console.log('==IDENTIFY==', data);
   const mime = data['Mime type'];
   if (!mime || ['image/jpeg', 'image/png', 'image/gif'].indexOf(mime) < 0) {
     this.flash = { message: ['danger', 'Invalid image format. Must be jpg, gif, png.'] };
