@@ -1,21 +1,21 @@
-"use strict";
+'use strict';
 // Node
-var util = require('util');
+const util = require('util');
 // 3rd party
-var Router = require('koa-router');
-var _ = require('lodash');
-var debug = require('debug')('app:routes:users');
+const Router = require('koa-router');
+const _ = require('lodash');
+const debug = require('debug')('app:routes:users');
 // 1st party
-var db = require('../db');
-var belt = require('../belt');
-var pre = require('../presenters');
-var config = require('../config');
-var welcomePm = require('../welcome_pm');
-var cancan = require('../cancan');
-var avatar = require('../avatar');
-var bbcode = require('../bbcode');
+const db = require('../db');
+const belt = require('../belt');
+const pre = require('../presenters');
+const config = require('../config');
+const welcomePm = require('../welcome_pm');
+const cancan = require('../cancan');
+const avatar = require('../avatar');
+const bbcode = require('../bbcode');
 
-var router = new Router();
+const router = new Router();
 
 ////////////////////////////////////////////////////////////
 
@@ -23,15 +23,15 @@ var router = new Router();
 // Edit user
 //
 // checked
-router.get('/users/:slug/edit', function*() {
+router.get('/users/:slug/edit', function * () {
   this.assert(this.currUser, 404);
-  var user = yield db.findUserBySlug(this.params.slug);
+  const user = yield db.findUserBySlug(this.params.slug);
   this.assert(user, 404);
   this.assertAuthorized(this.currUser, 'UPDATE_USER', user);
-  user = pre.presentUser(user);
+  pre.presentUser(user);
   yield this.render('edit_user', {
     ctx: this,
-    user: user,
+    user,
     title: 'Edit ' + user.uname
   });
 });
@@ -44,7 +44,7 @@ router.get('/users/:slug/edit', function*() {
 // - email
 // - g-recaptcha-response
 // checked
-router.post('/users', function*() {
+router.post('/users', function * () {
   if (!(yield db.keyvals.getValueByKey('REGISTRATION_ENABLED'))) {
     return this.redirect('/register');
   }
@@ -154,23 +154,22 @@ router.post('/users', function*() {
 // Update user role
 //
 // checked
-router.put('/users/:slug/role', function*() {
-  this.checkBody('role')
+router.put('/users/:slug/role', function * () {
+  this.validateBody('role')
     .isIn(['banned', 'member', 'mod', 'conmod', 'smod', 'admin'], 'Invalid role');
-  this.assert(!this.errors, 400, belt.joinErrors(this.errors));
   // TODO: Authorize role param against role of both parties
-  var user = yield db.findUserBySlug(this.params.slug);
+  const user = yield db.findUserBySlug(this.params.slug);
   this.assert(user, 404);
   this.assertAuthorized(this.currUser, 'UPDATE_USER_ROLE', user);
   yield db.updateUserRole(user.id, this.request.body.role);
-  user = pre.presentUser(user);
+  pre.presentUser(user);
   this.flash = { message: ['success', 'User role updated'] };
   this.response.redirect(user.url + '/edit');
 });
 
 // Delete legacy sig
-router.delete('/users/:slug/legacy-sig', function*() {
-  var user = yield db.findUserBySlug(this.params.slug);
+router.delete('/users/:slug/legacy-sig', function * () {
+  const user = yield db.findUserBySlug(this.params.slug);
   this.assert(user, 404);
   this.assertAuthorized(this.currUser, 'UPDATE_USER', user);
   yield db.deleteLegacySig(user.id);
@@ -184,19 +183,15 @@ router.delete('/users/:slug/legacy-sig', function*() {
 // checked
 router.put('/api/users/:id/bio', function*() {
   // Validation markup
-  this.checkBody('markup')
-    .trim();
-    //// FIXME: Why does isLength always fail despite the optional()?
-    // .isLength(0, config.MAX_BIO_LENGTH,
-    //           'Bio must be 0-' + config.MAX_BIO_LENGTH + ' chars');
-
-  if (this.request.body.markup.length > config.MAX_BIO_LENGTH)
-    this.errors.push('Bio must be 0-' + config.MAX_BIO_LENGTH + ' chars');
+  this.validateBody('markup')
+    .trim()
+    .isLength(0, config.MAX_BIO_LENGTH,
+              `Bio must be 0-${config.MAX_BIO_LENGTH} chars`);
 
   // Return 400 with validation errors, if any
   this.assert(!this.errors, 400, belt.joinErrors(this.errors));
 
-  var user = yield db.findUserById(this.params.id);
+  const user = yield db.findUserById(this.params.id);
   this.assert(user, 404);
 
   // Ensure currUser has permission to update user
@@ -209,7 +204,7 @@ router.put('/api/users/:id/bio', function*() {
     html = bbcode(this.request.body.markup);
 
   // Save markup and html
-  var updatedUser = yield db.updateUserBio(
+  const updatedUser = yield db.updateUserBio(
     user.id, this.request.body.markup, html
   );
 
