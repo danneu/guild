@@ -11,7 +11,12 @@
   </div>
   <div class="well">
     <ul>
-      <li><strong>Direct Link:</strong> <code>{{ image.src }}</code></li>
+      <li>
+        <strong>Direct Link:</strong>
+        <a href="{{ config.HOST }}{{ image.src }}">
+          {{ config.HOST }}{{ image.src }}
+        </a>
+      </li>
       {% if image.description %}
         <li><strong>Description:</strong> {{ image.description }}</li>
       {% endif %}
@@ -22,7 +27,9 @@
       </li>
     </ul>
     <div class="text-center">
-      <img src="{{ image.src }}" style="max-width: 100%;">
+      <a href="{{ image.src }}">
+        <img src="{{ image.src }}" style="max-width: 100%;">
+      </a>
     </div>
   </div>
 {% endblock %}
