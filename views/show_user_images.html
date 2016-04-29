@@ -10,7 +10,12 @@
     <p>
       Here's the <a href="http://www.roleplayerguild.com/posts/3601560">announcement post</a>.
     </p>
-
+  </div>
+  <div class="alert alert-warning">
+    <strong>Note:</strong>
+    <p>
+      Image uploads disabled while I fix a regression.
+    </p>
   </div>
   <div class="page-header">
     <h2>
@@ -21,6 +26,7 @@
     </p>
   </div>
   {% if can(ctx.currUser, 'UPLOAD_IMAGE', user) %}
+    {#
     <div class="text-right" style="margin-bottom: 10px;">
       <button class="btn btn-primary"
               data-toggle="modal"
@@ -30,6 +36,7 @@
         Upload Image
       </button>
     </div>
+    #}
   {% endif %}
   {% if images.length == 0 %}
     <div class="well">No images</div>
