@@ -2,7 +2,6 @@
 
 {% block embed %}
   {{ uploadModal(ctx) }}
-  {{ newAlbumModal(ctx) }}
   <div class="alert alert-info">
     <strong>Note:</strong>
     <p>
@@ -14,53 +13,36 @@
   </div>
   <div class="page-header">
     <h2>
-      {{ user.uname }}'s images
+      {{ user.uname }}'s album: {{ album.title }}
       <span class="label label-info">Beta</span>
     </h2>
     <p>
-      &larr; <a href="{{ user.url }}">Back to {{ user.uname }}'s profile</a>
+      &larr; <a href="{{ user.url }}/images">Back to {{ user.uname }}'s images</a>
     </p>
+    {% if album.markup %}
+      <div class="well">
+        <p><strong>Description:</strong></p>
+  {{ album.markup }}
+      </div>
+    {% endif %}
   </div>
-
-
   {% if can(ctx.currUser, 'UPLOAD_IMAGE', user) %}
     <div class="text-right" style="margin-bottom: 10px;">
       <button class="btn btn-primary"
               data-toggle="modal"
-              data-target="#new-album-modal"
+              data-target="#upload-modal"
       >
         <span class="glyphicon glyphicon-plus"></span>
-        New Album
+        Upload Image
       </button>
     </div>
   {% endif %}
-  <h3>
-    Albums
-    <small>{{ albums.length }} total</small>
-  </h3>
-  {% if albums.length == 0 %}
-    <div class="well">
-      No albums
-    </div>
-  {% else %}
-    {% for album in albums %}
-      <ul>
-        <a href="{{ album.url }}">
-          {{ album.title }}
-        </a>
-      </ul>
-    {% endfor %}
-  {% endif %}
-
-  <hr>
-
-
   {% if images.length == 0 %}
     <div class="well">No images</div>
   {% else %}
     <a name="images"></a>
     <h3>
-      Images
+      Images in this album
       <small>{{ images.length }} total</small>
     </h3>
     {% for image in images %}
@@ -71,13 +53,13 @@
       </div>
     {% endfor %}
   {% endif %}
-
 {% endblock %}
 
 
 
 {% macro uploadModal (ctx) %}
   <form method="POST" action="{{ user.url }}/images" enctype="multipart/form-data">
+    <input type="hidden" name="album_id" value="{{ album.id }}">
     <div class="modal fade" id="upload-modal" tabindex="-1" role="dialog" aria-labelledby="upload-modal" style="color: black;">
       <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -98,44 +80,6 @@
               <textarea id="description-input" name="description"
                         class="form-control"
                         placeholder="Add a note to this image"
-                        maxlength="10000"
-              ></textarea>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-            <button type="submit" class="btn btn-primary">Submit</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </form>
-{% endmacro %}
-
-
-
-
-{% macro newAlbumModal (ctx) %}
-  <form method="POST" action="{{ user.url }}/albums">
-    <div class="modal fade" id="new-album-modal" tabindex="-1" role="dialog" aria-labelledby="new-album-modal" style="color: black;">
-      <div class="modal-dialog" role="document">
-        <div class="modal-content">
-          <div class="modal-header">
-            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-            <h4 class="modal-title">
-              New Album
-            </h4>
-          </div>
-          <div class="modal-body">
-            <div class="form-group">
-              <label for="image-input">Title:</label>
-              <input type="type" name="title" class="form-control">
-            </div>
-            <div class="form-group">
-              <label for="description-input">Description (optional):</label>
-              <textarea id="description-input" name="markup"
-                        class="form-control"
-                        placeholder="Add a description to this album"
                         maxlength="10000"
               ></textarea>
             </div>
