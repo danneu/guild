@@ -11,22 +11,16 @@
       Here's the <a href="http://www.roleplayerguild.com/posts/3601560">announcement post</a>.
     </p>
   </div>
-  <div class="alert alert-warning">
-    <strong>Note:</strong>
-    <p>
-      Image uploads disabled while I fix a regression.
-    </p>
-  </div>
   <div class="page-header">
     <h2>
       {{ user.uname }}'s images
+      <span class="label label-info">Beta</span>
     </h2>
     <p>
       &larr; <a href="{{ user.url }}">Back to {{ user.uname }}'s profile</a>
     </p>
   </div>
   {% if can(ctx.currUser, 'UPLOAD_IMAGE', user) %}
-    {#
     <div class="text-right" style="margin-bottom: 10px;">
       <button class="btn btn-primary"
               data-toggle="modal"
@@ -36,7 +30,6 @@
         Upload Image
       </button>
     </div>
-    #}
   {% endif %}
   {% if images.length == 0 %}
     <div class="well">No images</div>
@@ -47,9 +40,19 @@
       <small>{{ images.length }} total</small>
     </h3>
     {% for image in images %}
-      <a href="{{ image.url }}">
-        <img src="{{ image.src }}" width="200">
-      </a>
+      <div style="display: inline-block;">
+        <a href="{{ image.url }}">
+          <img src="{{ image.src }}" width="200">
+        </a>
+        {% if can(ctx.currUser, 'MANAGE_IMAGES', user) %}
+          <form method="POST" action="{{ image.url }}">
+            <input type="hidden" name="_method" value="DELETE">
+            <button type="submit" class="btn btn-xs btn-danger">
+              &uarr; Delete
+            </button>
+          </form>
+        {% endif %}
+      </div>
     {% endfor %}
   {% endif %}
 {% endblock %}
@@ -71,7 +74,7 @@
             <div class="form-group">
               <label for="image-input">Image:</label>
               <input type="file" id="image-input" name="image">
-              <p class="help-block">Max size: 10mb. Must be jpeg, gif, png.</p>
+              <p class="help-block">Max size: 1mb. Must be jpeg, gif, png.</p>
             </div>
             <div class="form-group">
               <label for="description-input">Description (optional):</label>

@@ -830,7 +830,7 @@ CREATE INDEX ratelimits_ip_root ON ratelimits (ip_root(ip_address));
 CREATE TABLE images (
   id             uuid             PRIMARY KEY,
   user_id        int              NOT NULL REFERENCES users(id),
-  blob           bytea            NOT NULL,
+  src            text             NOT NULL,
   mime           text             NOT NULL,
   description    text             NULL,
   is_hidden      boolean          NOT NULL DEFAULT false,
