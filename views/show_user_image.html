@@ -31,5 +31,14 @@
         <img src="{{ image.src }}" style="max-width: 100%;">
       </a>
     </div>
+
+    {% if can(ctx.currUser, 'MANAGE_IMAGES', user) %}
+      <form method="POST" action="{{ image.url }}">
+        <input type="hidden" name="_method" value="DELETE">
+        <button type="submit" class="btn btn-xs btn-danger">
+          Delete
+        </button>
+      </form>
+    {% endif %}
   </div>
 {% endblock %}

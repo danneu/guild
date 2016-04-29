@@ -44,14 +44,6 @@
         <a href="{{ image.url }}">
           <img src="{{ image.src }}" width="200">
         </a>
-        {% if can(ctx.currUser, 'MANAGE_IMAGES', user) %}
-          <form method="POST" action="{{ image.url }}">
-            <input type="hidden" name="_method" value="DELETE">
-            <button type="submit" class="btn btn-xs btn-danger">
-              &uarr; Delete
-            </button>
-          </form>
-        {% endif %}
       </div>
     {% endfor %}
   {% endif %}

@@ -19,6 +19,7 @@ exports.getImage = function * (uuid) {
     FROM images
     JOIN users ON images.user_id = users.id
     WHERE images.id = $1
+      AND deleted_at IS NULL
   `;
   return yield util.queryOne(sql, [uuid]);
 };
@@ -52,7 +53,7 @@ exports.getUserImages = function * (userId) {
     FROM images
     JOIN users ON images.user_id = users.id
     WHERE images.user_id = $1
-      AND images.is_hidden = false
+      AND images.deleted_at IS NULL
     ORDER BY images.created_at DESC
   `;
   return yield util.queryMany(sql, [userId]);
@@ -72,11 +73,11 @@ exports.insertImage = function * (imageId, userId, src, mime, description) {
 };
 
 // TODO: Also delete from S3
-// TODO: Mark as hidden
 exports.deleteImage = function * (imageId) {
   assert(typeof imageId === 'string');
   return yield util.query(`
-    DELETE FROM images
+    UPDATE images
+    SET deleted_at = NOW()
     WHERE id = $1
   `, [imageId]);
 };

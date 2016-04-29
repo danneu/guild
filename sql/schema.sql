@@ -803,7 +803,7 @@ CREATE UNIQUE INDEX keyvals_key ON keyvals (key);
 
 -- seed the default keyvals
 
-INSERT INTO keyvals (key, value) VALUES 
+INSERT INTO keyvals (key, value) VALUES
   ('REGISTRATION_ENABLED', 'true'::json)
 ;
 
@@ -833,7 +833,7 @@ CREATE TABLE images (
   src            text             NOT NULL,
   mime           text             NOT NULL,
   description    text             NULL,
-  is_hidden      boolean          NOT NULL DEFAULT false,
+  deleted_at     timestamptz      NULL,
   is_private     boolean          NOT NULL DEFAULT false,
   created_at     timestamptz      NOT NULL DEFAULT NOW()
 );
