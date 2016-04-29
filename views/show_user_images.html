@@ -54,15 +54,14 @@
 
   <hr>
 
-
+  <a name="images"></a>
+  <h3>
+    Images
+    <small>{{ images.length }} total</small>
+  </h3>
   {% if images.length == 0 %}
     <div class="well">No images</div>
   {% else %}
-    <a name="images"></a>
-    <h3>
-      Images
-      <small>{{ images.length }} total</small>
-    </h3>
     {% for image in images %}
       <div style="display: inline-block;">
         <a href="{{ image.url }}">
