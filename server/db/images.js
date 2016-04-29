@@ -7,7 +7,7 @@ const util = require('./util');
 
 ////////////////////////////////////////////////////////////
 
-exports.getImage = function * (uuid) {
+exports.getImageWithBlob = function * (uuid) {
   assert(typeof uuid === 'string');
   const sql = `
     SELECT
@@ -23,11 +23,31 @@ exports.getImage = function * (uuid) {
   return yield util.queryOne(sql, [uuid]);
 };
 
+exports.getImageWithoutBlob = function * (uuid) {
+  assert(typeof uuid === 'string');
+  const sql = `
+    SELECT
+      images.id,
+      images.mime,
+      images.description,
+      images.created_at,
+      json_build_object(
+        'uname', users.uname,
+        'slug', users.slug
+      ) "user"
+    FROM images
+    JOIN users ON images.user_id = users.id
+    WHERE images.id = $1
+  `;
+  return yield util.queryOne(sql, [uuid]);
+};
+
 // limit is optional
 exports.getLatestImages = function * (limit) {
   const sql = `
     SELECT
-      images.*,
+      images.id,
+      images.mime,
       json_build_object(
         'uname', users.uname,
         'slug', users.slug
@@ -44,7 +64,8 @@ exports.getUserImages = function * (userId) {
   assert(Number.isInteger(userId));
   const sql = `
     SELECT
-      images.*,
+      images.id,
+      images.mime,
       json_build_object(
         'uname', users.uname,
         'slug', users.slug

@@ -19,8 +19,16 @@ function * loadUser (next) {
   yield * next;
 }
 
-function * loadImage (next) {
-  const image = yield db.images.getImage(this.params.image_id);
+function * loadImageWithBlob (next) {
+  const image = yield db.images.getImageWithBlob(this.params.image_id);
+  pre.presentImage(image);
+  this.assert(image, 404);
+  this.state.image = image;
+  yield * next;
+}
+
+function * loadImageWithoutBlob (next) {
+  const image = yield db.images.getImageWithoutBlob(this.params.image_id);
   pre.presentImage(image);
   this.assert(image, 404);
   this.state.image = image;
@@ -49,14 +57,14 @@ function extToMime (ext) {
   }
 }
 
-router.get('/images/:image_id.:ext', loadImage, function * () {
+router.get('/images/:image_id.:ext', loadImageWithBlob, function * () {
   this.assert(extToMime(this.params.ext) === this.state.image.mime, 404);
   this.set('Cache-Control', 'max-age=31556926');
   this.type = this.state.image.mime;
   this.body = this.state.image.blob;
 });
 
-router.get('/users/:user_slug/images/:image_id', loadUser, loadImage, function * () {
+router.get('/users/:user_slug/images/:image_id', loadUser, loadImageWithoutBlob, function * () {
   yield this.render('show_user_image', {
     ctx: this,
     image: this.state.image,
