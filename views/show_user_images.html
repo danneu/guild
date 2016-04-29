@@ -14,6 +14,7 @@
   <div class="page-header">
     <h2>
       {{ user.uname }}'s images
+      <span class="label label-info">Beta</span>
     </h2>
     <p>
       &larr; <a href="{{ user.url }}">Back to {{ user.uname }}'s profile</a>
@@ -43,12 +44,14 @@
         <a href="{{ image.url }}">
           <img src="{{ image.src }}" width="200">
         </a>
-        <form method="POST" action="{{ image.url }}">
-          <input type="hidden" name="_method" value="DELETE">
-          <button type="submit" class="btn btn-xs btn-danger">
-            X
-          </button>
-        </form>
+        {% if can(ctx.currUser, 'MANAGE_IMAGES', user) %}
+          <form method="POST" action="{{ image.url }}">
+            <input type="hidden" name="_method" value="DELETE">
+            <button type="submit" class="btn btn-xs btn-danger">
+              &uarr; Delete
+            </button>
+          </form>
+        {% endif %}
       </div>
     {% endfor %}
   {% endif %}
