@@ -4,7 +4,7 @@ const fs = require('fs');
 // 3rd
 const assert = require('better-assert');
 const router = require('koa-router')();
-const debug = require('debug')('routes:images');
+const debug = require('debug')('app:routes:images');
 const gm = require('gm').subClass({ imageMagick: true });
 const Uploader = require('s3-streaming-upload').Uploader;
 const uuidGen = require('node-uuid');
@@ -33,6 +33,14 @@ function * loadImage (next) {
   pre.presentImage(image);
   this.assert(image, 404);
   this.state.image = image;
+  yield * next;
+}
+
+function * loadAlbum (next) {
+  const album = yield db.images.getAlbum(this.params.album_id);
+  pre.presentAlbum(album);
+  this.assert(album, 404);
+  this.state.album = album;
   yield * next;
 }
 
@@ -86,9 +94,12 @@ router.get('/users/:user_slug/images', loadUser, function * () {
   // template: views/show_user_images.html
   const images = yield db.images.getUserImages(this.state.user.id);
   images.forEach(pre.presentImage);
+  const albums = yield db.images.getUserAlbums(this.state.user.id);
+  albums.forEach(pre.presentAlbum);
   yield this.render('show_user_images', {
     ctx: this,
     images,
+    albums,
     user: this.state.user,
     title: `${this.state.user.uname}'s Images`
   });
@@ -157,14 +168,6 @@ function deleteObject (key) {
   });
 }
 
-// TODO: Also delete from S3
-router.del('/users/:user_slug/images/:image_id', loadUser, loadImage, function * () {
-  this.assertAuthorized(this.currUser, 'MANAGE_IMAGES', this.state.user);
-  yield db.images.deleteImage(this.state.image.id);
-  this.flash = { message: ['success', 'Image deleted'] };
-  this.redirect(this.state.user.url + '/images');
-});
-
 router.post('/users/:user_slug/images', loadUser, function * () {
   if (!config.S3_IMAGE_BUCKET) {
     return this.body = 'The upload system is currently offline. (Bucket unspecified)';
@@ -176,6 +179,10 @@ router.post('/users/:user_slug/images', loadUser, function * () {
   this.assert(typeof this.request.body.fields.description === 'string', 400);
   const description = this.request.body.fields.description;
   this.assert(description.length <= 10000, 400);
+  const albumId = this.request.body.fields.album_id;
+  this.assert(Number.parseInt(albumId), 400);
+  const album = yield db.images.getAlbum(albumId);
+  this.assert(album, 404);
   // files
   this.assert(this.request.body.files, 400);
   this.assert(this.request.body.files.image, 400);
@@ -204,13 +211,48 @@ router.post('/users/:user_slug/images', loadUser, function * () {
 
   // INSERT
 
-  yield db.images.insertImage(uuid, this.state.user.id, url, mime, description);
+  yield db.images.insertImage(uuid, album.id, this.state.user.id, url, mime, description);
 
   // RESPOND
 
   this.flash = { message: ['success', 'Image uploaded'] };
   this.redirect(this.state.user.url + '/images');
 });
+
+// TODO: Also delete from S3
+router.del('/users/:user_slug/images/:image_id', loadUser, loadImage, function * () {
+  this.assertAuthorized(this.currUser, 'MANAGE_IMAGES', this.state.user);
+  yield db.images.deleteImage(this.state.image.id);
+  this.flash = { message: ['success', 'Image deleted'] };
+  this.redirect(this.state.user.url + '/images');
+});
+
+// albums
+
+router.get('/albums/:album_id', loadAlbum, function * () {
+  const images = yield db.images.getAlbumImages(this.state.album.id);
+  images.forEach(pre.presentImage);
+  yield this.render('show_album', {
+    ctx: this,
+    user: this.state.album.user,
+    album: this.state.album,
+    images
+  });
+});
+
+router.post('/users/:user_slug/albums', loadUser, function * () {
+  this.assertAuthorized(this.currUser, 'MANAGE_IMAGES', this.state.user);
+  this.validateBody('title')
+    .isString()
+    .isLength(1, 300, 'Title must be 1-300 chars');
+  this.validateBody('markup')
+    .isLength(0, 10000, 'Description cannot be more than 10k chars');
+  const album = yield db.images.insertAlbum(this.state.user.id, this.vals.title, this.vals.markup);
+  pre.presentAlbum(album);
+  this.flash = { message: ['success', 'Album created'] };
+  this.redirect(album.url);
+});
+
 
 ////////////////////////////////////////////////////////////
 

@@ -268,3 +268,10 @@ exports.presentImage = function (x) {
   x.src = 'https://' + nodeUrl.parse(x.src).pathname.slice(1)
   return x;
 };
+
+exports.presentAlbum = function (x) {
+  if (!x) return x;
+  exports.presentUser(x.user);
+  x.url = `/albums/${x.id}`;
+  return x;
+};
