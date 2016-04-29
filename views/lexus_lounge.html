@@ -48,7 +48,7 @@
     {% if registration.updated_by %}
       <p class="text-muted">
         <span class="glyphicon glyphicon-pencil"></span>
-        Updated by 
+        Updated by
         <a href="{{ registration.updated_by.url }}">{{ registration.updated_by.uname }}</a>
         (<abbr class="timeago" title="{{ registration.updated_at.toISOString() }}">
           {{ registration.updated_at | formatDate }}
@@ -120,6 +120,7 @@
     }
   </style>
 
+  {#
   <div class="row">
     <div class="col-sm-12">
       <div class="well">
@@ -137,6 +138,7 @@
       </div>
     </div>
   </div>
+  #}
 
   <div class="row">
     <div class="col-sm-12">
