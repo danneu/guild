@@ -42,8 +42,12 @@ exports.HOST = process.env.HOST || ('http://localhost:' + exports.PORT);
 exports.AWS_KEY = process.env.AWS_KEY;
 exports.AWS_SECRET = process.env.AWS_SECRET;
 exports.S3_AVATAR_BUCKET = process.env.S3_AVATAR_BUCKET;
+exports.S3_IMAGE_BUCKET = process.env.S3_IMAGE_BUCKET;
 if (!exports.S3_AVATAR_BUCKET) {
   console.warn('S3_AVATAR_BUCKET not set. Cannot process avatars.');
+}
+if (!exports.S3_IMAGE_BUCKET) {
+  console.warn('S3_IMAGE_BUCKET not set. Cannot process image uploads.');
 }
 exports.FROM_EMAIL = process.env.FROM_EMAIL;
 

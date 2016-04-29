@@ -198,11 +198,10 @@ exports.presentNotification = function(n) {
 
 ////////////////////////////////////////////////////////////
 
-exports.presentStatus = function(s) {
-  if (s.user)
-    s.user = exports.presentUser(s.user);
-
-  return s;
+exports.presentStatus = function(x) {
+  if (!x) return x;
+  exports.presentUser(x.user);
+  return x;
 };
 
 exports.presentTrophy = function(t) {
@@ -256,7 +255,6 @@ exports.presentKeyval = function (x) {
 };
 
 exports.presentImage = function (x) {
-  console.log(x);
   if (!x) return x;
   exports.presentUser(x.user);
   const ext = (function () {
@@ -267,10 +265,6 @@ exports.presentImage = function (x) {
     }
   })();
   x.url = x.user.url + `/images/${x.id}`;
-  if (config.NODE_ENV === 'production') {
-    x.src = `http://img.roleplayerguild.com/images/${x.id}.${ext}`;
-  } else {
-    x.src = `http://localhost:${config.PORT}/images/${x.id}.${ext}`;
-  }
+  x.src = 'https://' + nodeUrl.parse(x.src).pathname.slice(1)
   return x;
 };

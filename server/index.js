@@ -2490,7 +2490,7 @@ app.post('/me/statuses', function*() {
 // Show all statuses
 app.get('/statuses', function*() {
   var statuses = yield db.findAllStatuses();
-  statuses = statuses.map(pre.presentStatus);
+  statuses.forEach(pre.presentStatus);
   yield this.render('list_statuses', {
     ctx: this,
     statuses: statuses

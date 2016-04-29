@@ -7,7 +7,7 @@ const util = require('./util');
 
 ////////////////////////////////////////////////////////////
 
-exports.getImageWithBlob = function * (uuid) {
+exports.getImage = function * (uuid) {
   assert(typeof uuid === 'string');
   const sql = `
     SELECT
@@ -23,31 +23,11 @@ exports.getImageWithBlob = function * (uuid) {
   return yield util.queryOne(sql, [uuid]);
 };
 
-exports.getImageWithoutBlob = function * (uuid) {
-  assert(typeof uuid === 'string');
-  const sql = `
-    SELECT
-      images.id,
-      images.mime,
-      images.description,
-      images.created_at,
-      json_build_object(
-        'uname', users.uname,
-        'slug', users.slug
-      ) "user"
-    FROM images
-    JOIN users ON images.user_id = users.id
-    WHERE images.id = $1
-  `;
-  return yield util.queryOne(sql, [uuid]);
-};
-
 // limit is optional
 exports.getLatestImages = function * (limit) {
   const sql = `
     SELECT
-      images.id,
-      images.mime,
+      images.*,
       json_build_object(
         'uname', users.uname,
         'slug', users.slug
@@ -64,8 +44,7 @@ exports.getUserImages = function * (userId) {
   assert(Number.isInteger(userId));
   const sql = `
     SELECT
-      images.id,
-      images.mime,
+      images.*,
       json_build_object(
         'uname', users.uname,
         'slug', users.slug
@@ -80,13 +59,24 @@ exports.getUserImages = function * (userId) {
 };
 
 // description is optional
-exports.insertImage = function * (userId, buffer, mime, description) {
+exports.insertImage = function * (imageId, userId, src, mime, description) {
+  assert(typeof imageId === 'string');
   assert(Number.isInteger(userId));
-  assert(Buffer.isBuffer(buffer));
+  assert(typeof src === 'string');
   assert(['image/jpeg', 'image/gif', 'image/png'].indexOf(mime) > -1);
   const sql = `
-    INSERT INTO images (id, user_id, blob, mime, description)
+    INSERT INTO images (id, user_id, src, mime, description)
     VALUES ($1, $2, $3, $4, $5)
   `;
-  return yield util.query(sql, [uuidGen.v4(), userId, buffer, mime, description]);
+  return yield util.query(sql, [imageId, userId, src, mime, description]);
+};
+
+// TODO: Also delete from S3
+// TODO: Mark as hidden
+exports.deleteImage = function * (imageId) {
+  assert(typeof imageId === 'string');
+  return yield util.query(`
+    DELETE FROM images
+    WHERE id = $1
+  `, [imageId]);
 };
