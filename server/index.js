@@ -15,7 +15,10 @@ app.use(require('koa-static')('dist', {
 }));
 app.use(require('koa-conditional-get')()); // Works with koa-etag
 app.use(require('koa-etag')());
-app.use(require('koa-logger')());
+// heroku already has access logger
+if (config.NODE_ENV !== 'production') {
+  app.use(require('koa-logger')());
+}
 app.use(require('koa-body')({
   multipart: true,
   // Max payload size allowed in request form body
