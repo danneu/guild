@@ -1542,7 +1542,6 @@ app.put('/api/pms/:id', function*() {
 
   var updatedPm = yield db.updatePm(this.params.id, this.request.body.markup, html);
   updatedPm = pre.presentPm(updatedPm);
-  console.log('updatedPm', updatedPm);
 
   this.body = JSON.stringify(updatedPm);
 });
