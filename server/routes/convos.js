@@ -327,7 +327,6 @@ router.get('/me/convos/archive', showConvosHandler('ARCHIVE'));
 router.get('/me/convos/trash', showConvosHandler('TRASH'));
 
 router.put('/convos/:convoId/folder', function*() {
-  debug(this.request.body);
   var folder = this.request.body.folder;
   this.assert(_.contains(['INBOX', 'STAR', 'ARCHIVE', 'TRASH'], folder), 400)
 
