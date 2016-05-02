@@ -465,7 +465,7 @@ exports.roll = function (syntax) {
   // Now do actual rolls
   rolls.forEach(roll => {
     if (roll.type === 'DiceRoll') {
-      roll.values = rollValues(roll.count, roll.sides);
+      roll.values = rollValues(roll.sign, roll.count, roll.sides);
     } else {
       roll.values = [roll.sign === '-' ? -roll.value : roll.value];
     }
@@ -502,10 +502,12 @@ function validateRoll (roll) {
 }
 
 // for '3d6', diceCount=3, sides=6, output=[1, 5, 6]
-function rollValues (diceCount, sides) {
+function rollValues (sign, diceCount, sides) {
   let values = [];
   for (let i = 0; i < diceCount; i++) {
-    values.push(Math.floor(Math.random() * sides) + 1);
+    var val = Math.floor(Math.random() * sides) + 1;
+    if (sign === '-') val = -val;
+    values.push(val);
   }
   return values;
 };
