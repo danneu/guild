@@ -507,6 +507,32 @@ function can(user, action, target) {
       if (user.role === 'banned') return false;
       if (user.id === target.id) return true;
       return false;
+    //
+    // DICE
+    //
+    case 'UPDATE_CAMPAIGN': // target is campaign
+      if (!user) return false;
+      if (user.role === 'banned') return false;
+      // people can update their own campaigns
+      if (user.id === target.user_id) return true;
+      // staff can update any campaign
+      if (isStaffRole(user.role)) return true;
+      return false;
+    case 'READ_CAMPAIGN': // target is campaign
+      // anyone can
+      return true;
+    case 'CREATE_CAMPAIGN': // no target
+      if (!user) return false;
+      // anyone that's not banned can
+      if (user.role !== 'banned') return true;
+      return false;
+    // TODO: yes if they are coGM/GM of target.topic_id
+    case 'CREATE_ROLL': // target is campaign
+      if (!user) return false;
+      if (user.role === 'banned') return false;
+      // can if they own the campaign
+      if (user.id === target.user_id) return true;
+      return false;
     default:
       debug('Unsupported cancan action: ' + action);
       return false;

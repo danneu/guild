@@ -411,6 +411,7 @@ app.get('/search', function*() {
 app.use(require('./routes/users').routes());
 app.use(require('./routes/convos').routes());
 app.use(require('./routes/images').routes());
+app.use(require('./routes/dice').routes());
 
 // Useful to redirect users to their own profiles since canonical edit-user
 // url is /users/:slug/edit
