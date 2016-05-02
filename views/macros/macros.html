@@ -397,14 +397,6 @@
 
 {% macro renderSidebar(ctx, latestChecks, latestRoleplays, latestStatuses, currentContest, friendships, latest_rpgn_topic) %}
 
-  {# Only show this if within 3 days of this deploy #}
-
-  {% if Date.now() - 1436243708720 < 1000 * 60 * 60 * 24 * 3%}
-    <p style="color: #65f598;" class="text-center">
-      Sidebar Updated!
-    </p>
-  {% endif %}
-
   <!-- Junk drawer links -->
 
   {#
@@ -420,6 +412,15 @@
     <img src="/img/fb_button.png" width="22" height="22" style="position: absolute; left: 5px; top: 3px;">
     <span style="color: #fff; display: inline-block; margin-left: 10px;">
       Our FB Group
+    </span>
+  </a>
+
+  <a href="/campaigns" class="btn btn-default btn-sm btn-block"
+     style="margin-bottom: 10px; position: relative;"
+  >
+    <img src="/img/dice/dice.png" width="22" height="22" style="position: absolute; left: 5px; top: 3px;">
+    <span style="color: #fff; display: inline-block; margin-left: 10px;">
+      Dice
     </span>
   </a>
 
