@@ -890,8 +890,8 @@ ALTER TABLE campaigns ADD COLUMN last_roll_id int NULL REFERENCES rolls(id);
 -- INDEXES
 
 -- Looking up all campaigns started by a user
-CREATE INDEX campaigns_user_id ON campaigns (user_id);
+CREATE INDEX campaigns__user_id ON campaigns (user_id);
 -- Sorting campaigns by latest roll
-CREATE INDEX campaigns_last_roll_id ON campaigns (last_roll_id);
+CREATE INDEX campaigns__last_roll_id ON campaigns (last_roll_id);
 -- Looking up all rows for a campaign
-CREATE INDEX rolls_campaign_id ON rolls (campaign_id);
+CREATE INDEX rolls__campaign_id ON rolls (campaign_id);
