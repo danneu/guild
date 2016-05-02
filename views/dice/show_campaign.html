@@ -45,7 +45,51 @@
   </div>
 
   {% if can(ctx.currUser, 'CREATE_ROLL', campaign) %}
-    <h3>New Roll</h3>
+    <h3>
+      New Roll
+      <button id="toggle-dice-help" class="btn btn-xs btn-default">
+        [+] Toggle Help
+      </button>
+    </h3>
+    <div id="dice-help" style="display: none; border: 2px dotted #ccc;">
+      <ul>
+        <li>
+          Valid rolls:
+          <code>42</code>
+          ,<code>-3</code>
+          ,<code>1d6</code> (6-sided dice)
+          ,<code>3d2</code> (three coin flips)
+          ,<code>1d6+4-1d100-42</code>
+        </li>
+        <li>
+          A dice roll is one or more terms chained together with "+" and "-".
+        </li>
+        <li>
+          Can have up to five terms per roll. (Let me know if this isn't enough
+          for your use-case.)
+        </li>
+        <li>
+          Terms:
+          <ul>
+            <li>
+              ConstantRoll: Always rolls the same number.
+              <ul>
+                <li>Format: <code>+/-<u>n</u></code></li>
+                <li>Examples: <code>+8</code>, <code>-2</code>, <code>+42</code>
+              </ul>
+            </li>
+            <li>
+              RandomRoll: Rolls dice with <code>x</code> sides <code>y</code>
+              different times.
+              <ul>
+                <li>Format: <code>+/-<u>x</u>d<u>y</u></code></li>
+                <li>Examples: <code>1d6</code> (6-sided dice), <code>1d2</code> (coin flip), <code>-2d100</code> (always negative)
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
     <div class="well">
       <form method="POST" action="{{ campaign.url }}/rolls" class="form-inline">
         <div class="form-group">
@@ -626,6 +670,12 @@ var parser = (function() {
        $(this).parent().removeClass('has-success').addClass('has-error');
        $submit.removeClass('btn-success').addClass('btn-danger').attr('disabled', true);
      }
+   });
+  </script>
+
+  <script>
+   $('#toggle-dice-help').on('click', function () {
+     $('#dice-help').toggle();
    });
   </script>
 
