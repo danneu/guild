@@ -1,0 +1,135 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  {{ newCampaignModal(ctx) }}
+
+  <ol class="breadcrumb">
+    <li>
+      <a href="/">Home</a>
+    </li>
+    <li>
+      <a href="/campaigns">Dice Campaigns</a>
+    </li>
+  </ol>
+
+  <div class="alert alert-info">
+    <span class="label label-info">Note</span>
+    The dice system is new and experimental.
+    <p>
+      <strong>TODO:</strong>
+      In the future I'd like to let GMs hook a campaign up to their
+      roleplay and create rolls conveniently while they write a post.
+    </p>
+  </div>
+
+  <div class="page-header" style="border-color: #000">
+    <button id="new-campaign" class="pull-right btn btn-success"
+            data-toggle="modal"
+            data-target="#new-campaign-modal"
+    >
+      New Campaign
+    </button>
+    <h3>Dice Campaigns</h3>
+    <p>
+      Dice rolls are grouped into campaigns. Create a new campaign
+      to begin rolling.
+    </p>
+  </div>
+
+  <div class="well">
+    {% if campaigns.length == 0 %}
+      No campaigns yet
+    {% else %}
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Campaign</th>
+            <th>Rolls</th>
+            <th>Created</th>
+            <th>Last Roll</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for campaign in campaigns %}
+            <tr>
+              <td>
+                <a href="{{ campaign.url }}">
+                  {{ campaign.title }}
+                </a>
+                <small>
+                  by
+                  <a href="{{ campaign.user.url }}">
+                    {{ campaign.user.uname }}
+                  </a>
+                </small>
+              </td>
+              <td class="text-muted">
+                {{ campaign.roll_count }} rolls
+              </td>
+              <td>
+                <abbr class="timeago" title="{{ campaign.created_at.toISOString() }}">
+                  {{ campaign.created_at | formatDate }}
+                </abbr>
+              </td>
+              <td>
+                {% if campaign.last_roll %}
+                  <a href="{{ campaign.last_roll.url }}">Roll {{ campaign.last_roll.id }}</a>
+                  <abbr class="timeago" title="{{ campaign.last_roll_at.toISOString() }}">
+                    {{ campaign.last_roll_at | formatDate }}
+                  </abbr>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    $('#markup-input').bbcode({
+      charLimit: 10000
+    });
+  </script>
+
+  {# Focus title when modal spawns #}
+  <script>
+   $('#new-campaign-modal').on('shown.bs.modal', function (e) {
+     $('#title-input').focus();
+   });
+  </script>
+{% endblock %}
+
+{% macro newCampaignModal (ctx) %}
+  <form method="POST" action="/campaigns">
+  <div class="modal fade" id="new-campaign-modal" tabindex="-1" role="dialog"
+       style="color: black;"
+  >
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+          <h4 class="modal-title">New Campaign</h4>
+        </div>
+        <div class="modal-body">
+          <label for="title-input">Title:</label>
+          <input type="text" id="title-input" name="title" class="form-control">
+          <label for="markup-input">Description: (Optional)</label>
+          <textarea id="markup-input"
+                    placeholder="Click here and begin writing"
+                    name="markup"
+                    rows=10
+                    class="form-control"
+          >{{ ctx.flash.params.markup }}</textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-primary">Submit</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  </form>
+{% endmacro %}

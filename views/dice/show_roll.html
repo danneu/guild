@@ -1,0 +1,84 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li>
+      <a href="/dice">Dice</a>
+    </li>
+    <li>
+      <a href="{{ campaign.url }}">Campaign {{ campaign.id }}</a>
+    </li>
+    <li>
+      <a href="{{ roll.url }}">Roll {{ roll.id }}</a>
+    </li>
+  </ol>
+
+  <div class="page-header" style="border-color: #000">
+    <h2>Roll {{ roll.id }}</h2>
+    <p>
+      In campaign <a href="{{ campaign.url }}">{{ campaign.title }}</a>
+    </p>
+  </div>
+
+  <div class="well">
+    <ul>
+      <li>
+        <strong>Link:</strong>
+        <a href="{{ roll.absoluteUrl }}">{{ roll.absoluteUrl }}</a>
+        <button class="btn btn-xs copy-link" data-clipboard-text="{{ config.HOST }}{{ roll.url }}">
+          Copy link
+        </button>
+      </li>
+      <li>
+        <strong>Roll:</strong>
+        <code>{{ roll.syntax }}</code>
+      </li>
+      <li>
+        <strong>Total:</strong>
+        <code>{{ roll.total }}</code>
+      </li>
+    </ul>
+    <p>Breakdown:</p>
+    <ul>
+      {% for term in roll.rolls %}
+        <li>
+          <code>{{ term.type }}[{{ term.syntax }}]</code>
+          {% if term.type == 'Constant' %}
+            &rarr; {{ term.values[0] }}
+          {% elif term.type == 'DiceRoll' %}
+            &rarr;
+            {% for value in term.values %}
+              {% if value == term.sides %}
+                <span style="text-decoration: underline;">{{ value }}</span>
+              {% else %}
+                {{ value }}
+              {% endif %}
+              {% if not loop.last %}, {% endif %}
+            {% endfor %}
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/1.5.10/clipboard.min.js"></script>
+  <script>
+   new Clipboard('button.copy-link');
+  </script>
+  <script>
+   $('button.copy-link').tooltip({
+     title: 'Link copied',
+     trigger: 'click',
+     placement: 'right'
+   });
+   $('button.copy-link').on('click', function () {
+     var $this = $(this);
+     setTimeout(function () {
+       $this.tooltip('hide');
+     }, 1000);
+   });
+  </script>
+
+{% endblock %}

@@ -275,3 +275,23 @@ exports.presentAlbum = function (x) {
   x.url = `/albums/${x.id}`;
   return x;
 };
+
+// DICE
+
+exports.presentCampaign = function (x) {
+  debug(x);
+  if (!x) return x;
+  exports.presentUser(x.user);
+  exports.presentRoll(x.last_roll);
+  x.url = `/campaigns/${x.id}`;
+  return x;
+};
+
+exports.presentRoll = function (x) {
+  if (!x) return x;
+  exports.presentUser(x.user);
+  exports.presentCampaign(x.campaign);
+  x.absoluteUrl = `${config.HOST}/rolls/${x.id}`;
+  x.url = `/rolls/${x.id}`;
+  return x;
+};

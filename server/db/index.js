@@ -16,12 +16,6 @@ var config = require('../config');
 var belt = require('../belt');
 var pre = require('../presenters');
 
-// Re-exports
-
-exports.keyvals = require('./keyvals');
-exports.ratelimits = require('./ratelimits');
-exports.images = require('./images');
-
 // If a client is not provided to fn as first argument,
 // we'll pass one into it.
 function wrapOptionalClient(fn) {
@@ -3875,3 +3869,11 @@ exports.nukeUser = function * (opts) {
     yield client.queryPromise(sql.insertNukelist, [opts.spambot, opts.nuker]);
   });
 };
+
+
+// Re-exports
+
+exports.keyvals = require('./keyvals');
+exports.ratelimits = require('./ratelimits');
+exports.images = require('./images');
+exports.dice = require('./dice');

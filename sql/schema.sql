@@ -830,7 +830,7 @@ CREATE INDEX ratelimits_ip_root ON ratelimits (ip_root(ip_address));
 CREATE TABLE images (
   id             uuid             PRIMARY KEY,
   user_id        int              NOT NULL REFERENCES users(id),
-  album_id       int              NOT NULL REFERENCES albums(id),
+  --album_id       int              NOT NULL REFERENCES albums(id),
   src            text             NOT NULL,
   mime           text             NOT NULL,
   description    text             NULL,
@@ -853,3 +853,45 @@ CREATE TABLE albums (
 );
 
 CREATE INDEX albums_user_id ON albums (user_id, created_at);
+
+ALTER TABLE images ADD COLUMN
+album_id       int              NOT NULL REFERENCES albums(id);
+
+------------------------------------------------------------
+
+-- TODO: campaigns.topic_id NULL
+CREATE TABLE campaigns (
+  id             serial           PRIMARY KEY,
+  user_id        int              NOT NULL REFERENCES users(id),
+  title          text             NOT NULL,
+  markup         text             NULL,
+  html           text             NULL,
+  created_at     timestamptz      NOT NULL DEFAULT NOW(),
+  roll_count     int              NOT NULL DEFAULT 0,
+  last_roll_at   timestamptz      NULL
+  --, last_roll_id   int              NULL REFERENCES rolls(id)
+);
+
+CREATE TABLE rolls (
+  id             serial           PRIMARY KEY,
+  user_id        int              NOT NULL REFERENCES users(id),
+  campaign_id    int              NOT NULL REFERENCES campaigns(id),
+  syntax         text             NOT NULL,
+  rolls          json             NOT NULL,
+  total          int              NOT NULL,
+  note           text             NULL,
+  created_at     timestamptz      NOT NULL DEFAULT NOW()
+);
+
+-- TWEAKS
+
+ALTER TABLE campaigns ADD COLUMN last_roll_id int NULL REFERENCES rolls(id);
+
+-- INDEXES
+
+-- Looking up all campaigns started by a user
+CREATE INDEX campaigns__user_id ON campaigns (user_id);
+-- Sorting campaigns by latest roll
+CREATE INDEX campaigns__last_roll_id ON campaigns (last_roll_id);
+-- Looking up all rows for a campaign
+CREATE INDEX rolls__campaign_id ON rolls (campaign_id);
