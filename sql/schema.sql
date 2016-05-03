@@ -216,6 +216,22 @@ CREATE TABLE convos_participants (
   UNIQUE (user_id, convo_id)
 );
 
+CREATE TYPE convo_folder AS ENUM (
+  'INBOX'
+, 'STAR'
+, 'ARCHIVE'
+, 'TRASH'
+);
+
+ALTER TABLE convos_participants
+ADD COLUMN id serial NOT NULL PRIMARY KEY
+;
+ALTER TABLE convos_participants
+ADD COLUMN folder convo_folder NOT NULL DEFAULT 'INBOX'
+;
+
+CREATE INDEX convos_participants__folder ON convos_participants(folder);
+
 --
 -- Notifications
 --
