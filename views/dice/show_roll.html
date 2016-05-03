@@ -3,10 +3,13 @@
 {% block embed %}
   <ol class="breadcrumb">
     <li>
-      <a href="/dice">Dice</a>
+      <a href="/">Home</a>
     </li>
     <li>
-      <a href="{{ campaign.url }}">Campaign {{ campaign.id }}</a>
+      <a href="/campaigns">Dice Campaigns</a>
+    </li>
+    <li>
+      <a href="{{ campaign.url }}">{{ campaign.title }}</a>
     </li>
     <li>
       <a href="{{ roll.url }}">Roll {{ roll.id }}</a>
