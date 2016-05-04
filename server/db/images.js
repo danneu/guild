@@ -121,7 +121,7 @@ exports.deleteImage = function * (imageId) {
 exports.insertAlbum = function * (userId, title, markup) {
   assert(Number.isInteger(userId));
   assert(typeof title === 'string');
-  return yield util.query(`
+  return yield util.queryOne(`
     INSERT INTO albums (user_id, title, markup)
     VALUES ($1, $2, $3)
     RETURNING *
