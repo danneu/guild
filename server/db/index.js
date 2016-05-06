@@ -3868,13 +3868,16 @@ exports.nukeUser = function * (opts) {
     insertNukelist: `
       INSERT INTO nuked_users (user_id, nuker_id)
       VALUES ($1, $2)
-    `
+    `,
+    deleteVms: `DELETE FROM vms WHERE from_user_id = $1`
+
   };
   return yield withTransaction(function * (client) {
     yield client.queryPromise(sql.banUser, [opts.spambot]);
     yield client.queryPromise(sql.hideTopics, [opts.spambot]);
     yield client.queryPromise(sql.hidePosts, [opts.spambot]);
     yield client.queryPromise(sql.insertNukelist, [opts.spambot, opts.nuker]);
+    yield client.queryPromise(sql.deleteVms, [opts.spambot]);
   });
 };
 
