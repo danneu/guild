@@ -188,6 +188,23 @@
                 <li>PMs: {{ user.pms_count }}</li>
               {% endif %}
               <li>VMs: {{ user.toplevel_vms_count }}</li>
+              {% if latestViewers.length > 0 %}
+                <li>
+                  Latest 10 profile visitors:
+                  <ul class="list-inline">
+                    {% for user in latestViewers %}
+                      {% if loop.first %}
+                        <span class="text-muted" style="font-style: italic;">Most recent &rarr;</span>
+                      {% endif %}
+                      <a href="{{ user.url }}">
+                      {% if user.avatar_url %}
+                        <img src="{{ user.avatar_url }}" height="20">
+                      {% endif %}
+                        {{ user.uname }}</a>{% if not loop.last %},{% endif %}
+                    {% endfor %}
+                  </ul>
+                </li>
+              {% endif %}
             </ul>
           </div>
         </div>

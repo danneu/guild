@@ -911,3 +911,17 @@ CREATE INDEX campaigns__user_id ON campaigns (user_id);
 CREATE INDEX campaigns__last_roll_id ON campaigns (last_roll_id);
 -- Looking up all rows for a campaign
 CREATE INDEX rolls__campaign_id ON rolls (campaign_id);
+
+------------------------------------------------------------
+
+CREATE TABLE profile_views (
+  id             serial           PRIMARY KEY,
+  viewer_id      int              NOT NULL REFERENCES users(id),
+  viewed_id      int              NOT NULL REFERENCES users(id),
+  created_at     timestamptz      NOT NULL DEFAULT NOW()
+);
+
+-- INDEXES
+
+-- Looking up the last 10 views for a given viewed profile
+CREATE INDEX profile_views__viewed_id ON profile_views (viewed_id, created_at);

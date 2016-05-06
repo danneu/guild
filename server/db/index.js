@@ -3874,3 +3874,4 @@ exports.keyvals = require('./keyvals');
 exports.ratelimits = require('./ratelimits');
 exports.images = require('./images');
 exports.dice = require('./dice');
+exports.profileViews = require('./profile-views');
