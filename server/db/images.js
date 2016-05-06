@@ -35,6 +35,7 @@ exports.getLatestImages = function * (limit) {
       ) "user"
     FROM images
     JOIN users ON images.user_id = users.id
+    WHERE images.deleted_at IS NULL
     ORDER BY images.created_at DESC
     LIMIT $1
   `;
