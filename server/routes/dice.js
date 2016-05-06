@@ -32,10 +32,16 @@ function * loadRoll (next) {
 router.get('/campaigns', function * () {
   const campaigns = yield db.dice.listCampaignsByActivity();
   campaigns.forEach(pre.presentCampaign);
+  let myCampaigns = [];
+  if (this.currUser) {
+    myCampaigns = yield db.dice.getCampaignsForUser(this.currUser.id);
+    myCampaigns.forEach(pre.presentCampaign);
+  }
   // RESPOND
   yield this.render('dice/list_campaigns', {
     ctx: this,
     campaigns,
+    myCampaigns,
     title: 'All Campaigns'
   });
 });

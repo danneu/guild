@@ -41,6 +41,37 @@
     </p>
   </div>
 
+  {% if ctx.currUser %}
+    <h4>
+      My Campaigns
+    </h4>
+    <div class="well">
+      {% if myCampaigns.length == 0 %}
+        You have no campaigns yet
+      {% else %}
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Campaign</th>
+              <th>Rolls</th>
+              <th>Created</th>
+              <th>Last Roll</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for campaign in myCampaigns %}
+              {{ renderCampaignRow(ctx, campaign) }}
+            {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <h4>
+    Recently Updated Campaigns
+  </h4>
+
   <div class="well">
     {% if campaigns.length == 0 %}
       No campaigns yet
@@ -56,35 +87,7 @@
         </thead>
         <tbody>
           {% for campaign in campaigns %}
-            <tr>
-              <td>
-                <a href="{{ campaign.url }}">
-                  {{ campaign.title }}
-                </a>
-                <small>
-                  by
-                  <a href="{{ campaign.user.url }}">
-                    {{ campaign.user.uname }}
-                  </a>
-                </small>
-              </td>
-              <td class="text-muted">
-                {{ campaign.roll_count }} rolls
-              </td>
-              <td>
-                <abbr class="timeago" title="{{ campaign.created_at.toISOString() }}">
-                  {{ campaign.created_at | formatDate }}
-                </abbr>
-              </td>
-              <td>
-                {% if campaign.last_roll %}
-                  <a href="{{ campaign.last_roll.url }}">Roll {{ campaign.last_roll.id }}</a>
-                  <abbr class="timeago" title="{{ campaign.last_roll_at.toISOString() }}">
-                    {{ campaign.last_roll_at | formatDate }}
-                  </abbr>
-                {% endif %}
-              </td>
-            </tr>
+            {{ renderCampaignRow(ctx, campaign) }}
           {% endfor %}
         </tbody>
       </table>
@@ -137,4 +140,39 @@
     </div>
   </div>
   </form>
+{% endmacro %}
+
+
+
+{# belongs in a <td> #}
+{% macro renderCampaignRow (ctx, campaign) %}
+  <tr>
+    <td>
+      <a href="{{ campaign.url }}">
+        {{ campaign.title }}
+      </a>
+      <small>
+        by
+        <a href="{{ campaign.user.url }}">
+          {{ campaign.user.uname }}
+        </a>
+      </small>
+    </td>
+    <td class="text-muted">
+      {{ campaign.roll_count }} rolls
+    </td>
+    <td>
+      <abbr class="timeago" title="{{ campaign.created_at.toISOString() }}">
+        {{ campaign.created_at | formatDate }}
+      </abbr>
+    </td>
+    <td>
+      {% if campaign.last_roll %}
+        <a href="{{ campaign.last_roll.url }}">Roll {{ campaign.last_roll.id }}</a>
+        <abbr class="timeago" title="{{ campaign.last_roll_at.toISOString() }}">
+          {{ campaign.last_roll_at | formatDate }}
+        </abbr>
+      {% endif %}
+    </td>
+  </tr>
 {% endmacro %}

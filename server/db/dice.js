@@ -32,6 +32,23 @@ exports.listCampaignsByActivity = function * () {
   `);
 };
 
+// Ordered by newest first
+exports.getCampaignsForUser = function * (userId) {
+  assert(userId);
+  return yield util.queryMany(`
+    SELECT
+      c.*,
+      to_json(users.*) "user",
+      to_json(r.*) "last_roll"
+    FROM campaigns c
+    JOIN users ON c.user_id = users.id
+    LEFT OUTER JOIN rolls r ON c.last_roll_id = r.id
+    WHERE c.user_id = $1
+    ORDER BY c.id DESC
+    LIMIT 100
+  `, [userId]);
+};
+
 exports.getCampaignRolls = function * (campaignId) {
   assert(campaignId);
   return yield util.queryMany(`
