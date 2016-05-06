@@ -497,7 +497,7 @@ function validateRoll (roll) {
     throw 'DiceRoll cannot have more than 999 sides';
   }
   if (roll.count > 999) {
-    throw 'DiceRoll cannot have more than 999 sides';
+    throw 'DiceRoll cannot roll more than 999 dice';
   }
 }
 
