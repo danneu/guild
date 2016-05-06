@@ -3851,7 +3851,18 @@ exports.nukeUser = function * (opts) {
   assert(Number.isInteger(opts.spambot));
   assert(Number.isInteger(opts.nuker));
   const sql = {
-    banUser: `UPDATE users SET role = 'banned', is_nuked = true WHERE id = $1`,
+    banUser: `
+      UPDATE users
+      SET role = 'banned'
+        , is_nuked = true
+        , bio_markup = NULL
+        , bio_html = NULL
+        , avatar_url = ''
+        , sig_html = ''
+        , sig = ''
+        , custom_title = ''
+      WHERE id = $1
+    `,
     hideTopics: `UPDATE topics SET is_hidden = true WHERE user_id = $1`,
     hidePosts: `UPDATE posts SET is_hidden = true WHERE user_id = $1`,
     insertNukelist: `
