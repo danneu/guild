@@ -27,7 +27,7 @@ exports.listCampaignsByActivity = function * () {
     FROM campaigns c
     JOIN users ON c.user_id = users.id
     LEFT OUTER JOIN rolls r ON c.last_roll_id = r.id
-    ORDER BY c.last_roll_id DESC
+    ORDER BY c.last_roll_id DESC NULLS LAST
     LIMIT 100
   `);
 };
