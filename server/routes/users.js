@@ -428,19 +428,19 @@ router.get('/users/:userIdOrSlug', function*() {
     // insert in the background
     co(db.profileViews.insertView(this.currUser.id, user.id));
   }
-  const latestViewers = yield db.profileViews.getLatestViews(user.id);
-  latestViewers.forEach(pre.presentUser);
 
   var results = yield [
     db.findLatestStatusesForUserId(user.id),
     user.current_status_id ?
       db.findStatusById(user.current_status_id) : function*(){},
     this.currUser ?
-      db.findFriendshipBetween(this.currUser.id, user.id) : function*(){}
+      db.findFriendshipBetween(this.currUser.id, user.id) : function*(){},
+    db.profileViews.getLatestViews(user.id)
   ];
   var statuses = results[0];
   user.current_status = results[1];
   var friendship = results[2];
+  var latestViewers = results[3].map(pre.presentUser);
 
   // The ?before-id=_ of the "Next" button. i.e. the lowest
   // id of the posts on the current page
