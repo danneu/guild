@@ -19,14 +19,15 @@ exports.insertView = function * (viewerId, viewedId) {
 exports.getLatestViews = function * (viewedId) {
   assert(Number.isInteger(viewedId));
   const rows = yield util.queryMany(`
-    SELECT DISTINCT sub.*
-    FROM (
-      SELECT viewers.*
-      FROM profile_views pv
-      JOIN users viewers ON pv.viewer_id = viewers.id
-      WHERE pv.viewed_id = $1
-      ORDER BY pv.created_at
-    ) sub
+    SELECT viewers.uname
+         , viewers.slug
+         , viewers.avatar_url
+         , MAX(pv.created_at) as "maxstamp"
+    FROM profile_views pv
+    JOIN users viewers ON pv.viewer_id = viewers.id
+    WHERE pv.viewed_id = $1
+    GROUP BY viewers.uname, viewers.slug, viewers.avatar_url
+    ORDER BY maxstamp DESC
     LIMIT 10
   `, [viewedId]);
   return rows;
