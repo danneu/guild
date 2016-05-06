@@ -5,6 +5,7 @@ const util = require('util');
 const Router = require('koa-router');
 const _ = require('lodash');
 const debug = require('debug')('app:routes:users');
+const co = require('co');
 // 1st party
 const db = require('../db');
 const belt = require('../belt');
@@ -423,6 +424,13 @@ router.get('/users/:userIdOrSlug', function*() {
 
   // FIXME: Way too many queries in this route.
 
+  if (this.currUser && this.currUser.id !== user.id) {
+    // insert in the background
+    co(db.profileViews.insertView(this.currUser.id, user.id));
+  }
+  const latestViewers = yield db.profileViews.getLatestViews(user.id);
+  latestViewers.forEach(pre.presentUser);
+
   var results = yield [
     db.findLatestStatusesForUserId(user.id),
     user.current_status_id ?
@@ -447,6 +455,7 @@ router.get('/users/:userIdOrSlug', function*() {
     title: user.uname,
     statuses: statuses,
     friendship: friendship,
+    latestViewers,
     // Pagination
     nextBeforeId: nextBeforeId,
     recentPostsPerPage: config.RECENT_POSTS_PER_PAGE
