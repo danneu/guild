@@ -63,8 +63,7 @@ function *query(sql, params) {
     done();  // Release client back to pool
     return result;
   } catch(ex) {
-    // Passing truthy value removes (instead of releases) conn
-    done(ex);
+    done();
     throw ex;
   }
 }
