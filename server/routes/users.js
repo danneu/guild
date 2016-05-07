@@ -19,6 +19,17 @@ const bbcode = require('../bbcode');
 const router = new Router();
 
 ////////////////////////////////////////////////////////////
+// Middleware helpers
+
+function * loadUserFromSlug (next) {
+  const user = yield db.findUserBySlug(this.params.slug);
+  this.assert(user, 404);
+  pre.presentUser(user);
+  this.state.user = user;
+  yield * next;
+}
+
+////////////////////////////////////////////////////////////
 
 //
 // Edit user
@@ -717,6 +728,19 @@ router.post('/users/:slug/avatar', function*() {
 
   this.flash = { message: ['success', 'Avatar uploaded and saved'] };
   this.response.redirect(user.url + '/edit#avatar');
+});
+
+////////////////////////////////////////////////////////////
+
+// Body:
+// - gender: '' | 'MALE' | 'FEMALE'
+router.post('/users/:slug/gender', loadUserFromSlug, function * () {
+  this.assertAuthorized(this.currUser, 'UPDATE_USER', this.state.user);
+  this.validateBody('gender')
+    .tap(x => ['MALE', 'FEMALE'].indexOf(x) > -1 ? x : null);
+  yield db.users.updateUser(this.state.user.id, { gender: this.vals.gender });
+  this.flash = { message: ['success', 'Gender updated'] };
+  this.redirect(this.state.user.url);
 });
 
 ////////////////////////////////////////////////////////////

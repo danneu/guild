@@ -378,6 +378,48 @@
       </form>
       #}
 
+      <!-- GENDER -->
+
+      <a name="gender"></a>
+      <form method="POST" action="{{ user.url }}/gender">
+        <div class="panel panel-default no-select" style="border-color: #000">
+          <div class="panel-heading">Gender</div>
+          <!-- PANEL BODY -->
+          <div class="panel-body">
+            <div class="form-group">
+              <div class="btn-group btn-group-justified" data-toggle="buttons">
+                <label class="btn btn-default {% if not user.gender %}active{% endif %}">
+                  <input type="radio" name="gender" autocomplete="off"
+                         {% if not user.gender %}checked{% endif %}
+                  >
+                  Not Telling
+                </label>
+                <label class="btn btn-default {% if user.gender == 'MALE' %}active{% endif %}">
+                  <input type="radio" name="gender" autocomplete="off" value="MALE"
+                         {% if user.gender == 'MALE' %}checked{% endif %}
+                  >
+                  <img src="/img/gender/male.png">
+                  Male
+                </label>
+                <label class="btn btn-default {% if user.gender == 'FEMALE' %}active{% endif %}">
+                  <input type="radio" name="gender" autocomplete="off" value="FEMALE"
+                         {% if user.gender == 'FEMALE' %}checked{% endif %}
+                  >
+                  <img src="/img/gender/female.png">
+                  Female
+                </label>
+              </div>
+            </div>
+          </div>
+          <!-- PANEL FOOTER -->
+          <div class="panel-footer" style="border-color: #000">
+            <div class="text-right">
+              <input type="submit" value="Save" class="btn btn-primary">
+            </div>
+          </div>
+        </div>
+      </form>
+
       <!-- Toggle grayscale avatars -->
 
       <a name="grayscale-avatars"></a>
