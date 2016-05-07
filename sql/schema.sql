@@ -11,6 +11,8 @@ CREATE EXTENSION IF NOT EXISTS plv8;
 CREATE TYPE role_type AS ENUM ('admin', 'smod', 'mod', 'member', 'banned');
 ALTER TYPE role_type ADD VALUE 'conmod';
 
+CREATE TYPE user_gender AS ENUM ('MALE', 'FEMALE');
+
 CREATE TABLE users (
   id             serial PRIMARY KEY,
   uname          text   NOT NULL,  -- Unique index added later in schema
@@ -20,6 +22,7 @@ CREATE TABLE users (
   created_at     timestamp with time zone NOT NULL  DEFAULT NOW(),
   last_online_at timestamp with time zone NULL,
   is_ghost       boolean   NOT NULL  DEFAULT false,
+  gender         user_gender NULL,
   role           role_type NOT NULL  DEFAULT 'member',
   slug           text      NOT NULL,
   custom_title   text      NOT NULL  DEFAULT '',
