@@ -3843,6 +3843,30 @@ WHERE user_id = $1
 // NUKING
 ////////////////////////////////////////////////////////////
 
+exports.unnukeUser = function * (userId) {
+  assert(Number.isInteger(userId));
+  const sql = {
+    unbanUser: `
+      UPDATE users
+      SET role = 'member'
+        , is_nuked = false
+      WHERE id = $1
+    `,
+    unhideTopics: `UPDATE topics SET is_hidden = false WHERE user_id = $1`,
+    unhidePosts: `UPDATE posts SET is_hidden = false WHERE user_id = $1`,
+    deleteFromNukelist: `
+      DELETE FROM nuked_users
+      WHERE user_id = $1
+    `
+  };
+  return yield withTransaction(function * (client) {
+    yield client.queryPromise(sql.unbanUser, [userId]);
+    yield client.queryPromise(sql.unhideTopics, [userId]);
+    yield client.queryPromise(sql.unhidePosts, [userId]);
+    yield client.queryPromise(sql.deleteFromNukelist, [userId]);
+  });
+};
+
 // In one fell motion, bans a user, hides all their stuff.
 //
 // Takes an object to prevent mistakes.

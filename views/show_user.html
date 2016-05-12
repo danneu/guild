@@ -71,9 +71,12 @@
       {% if can(ctx.currUser, 'NUKE_USER', user) %}
         <div class="pull-right" style="margin-right: 10px; display: inline-block;">
           {% if user.is_nuked %}
-            <button class="btn btn-danger" disabled>
-              Already Nuked
-            </button>
+            <form method="POST" action="{{ user.url }}/unnuke">
+              <button type="submit" class="btn btn-success">
+                <span class="glyphicon glyphicon-flag"></span>
+                UN-Nuke User
+              </button>
+            </form>
           {% else %}
               <form method="POST" action="{{ user.url }}/nuke">
                 <button type="submit" class="btn btn-danger" id="nuke-user">

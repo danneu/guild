@@ -758,6 +758,17 @@ router.post('/users/:slug/nuke', function*() {
   this.redirect(user.url)
 });
 
+router.post('/users/:slug/unnuke', function * () {
+  this.assert(this.currUser, 404);
+  var user = yield db.findUserBySlug(this.params.slug);
+  this.assert(user, 404);
+  pre.presentUser(user);
+  this.assertAuthorized(this.currUser, 'NUKE_USER', user);
+  yield db.unnukeUser(user.id);
+  this.flash = { message: ['success', 'Un-nuked the user'] };
+  this.redirect(user.url);
+});
+
 ////////////////////////////////////////////////////////////
 
 module.exports = router;
