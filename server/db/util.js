@@ -94,12 +94,14 @@ function* withClient(runner) {
       err.human = 'Could not remove from pool';
       done(new Error('Removing connection from pool'));
       throw err;
-    } else if (err.code === '40P01') { // Deadlock
-      done();
-      return yield withClient(runner);
-    } else if (err.code === '40001') { // Serialization failure
-      done();
-      return yield withClient(runner);
+    // TODO: Only retry after rolling back (Issue #134)
+    // FIXME: Deadlocks/SerializeFailures now lead to 500 errors
+    //} else if (err.code === '40P01') { // Deadlock
+      //done();
+      //return yield withClient(runner);
+    //} else if (err.code === '40001') { // Serialization failure
+      //done();
+      //return yield withClient(runner);
     } else {
       done();
       throw err;
