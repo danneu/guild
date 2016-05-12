@@ -748,11 +748,18 @@ router.post('/users/:slug/gender', loadUserFromSlug, function * () {
 ////////////////////////////////////////////////////////////
 
 router.post('/users/:slug/nuke', function*() {
-  this.assert(this.currUser, 404);
   var user = yield db.findUserBySlug(this.params.slug);
   this.assert(user, 404);
   pre.presentUser(user);
   this.assertAuthorized(this.currUser, 'NUKE_USER', user);
+  // prevent accidental nukings. if a user is over 2 weeks old,
+  // they aren't likely to be a spambot.
+  var twoWeeks = 1000 * 60 * 60 * 24 * 7 * 2;
+  console.log(Date.now() - user.created_at.getTime());
+  if (Date.now() - user.created_at.getTime() > twoWeeks) {
+    this.body = '[Accidental Nuke Prevention] User is too old to be nuked. If this really is a spambot, let Mahz know in the mod forum.';
+    return;
+  }
   yield db.nukeUser({ spambot: user.id, nuker: this.currUser.id });
   this.flash = { message: ['success', 'Nuked the bastard'] };
   this.redirect(user.url)
