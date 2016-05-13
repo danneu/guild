@@ -81,6 +81,7 @@ module.exports = function() {
 
   // Every 5 min
   cache.every(1000 * 60 * 5, function*() {
+    console.log('[CACHE] Populating uname-regex-trie');
     var trie = new RegexTrie();
     var unames = yield db.findAllUnames();
     trie.add(unames.map(function(uname) {
@@ -122,12 +123,14 @@ module.exports = function() {
 
   // Every 60 minutes
   cache.every(1000 * 60 * 60, function*() {
+    console.log('[CACHE] Populating unames->ids');
     var unamesToIds = yield db.getUnamesMappedToIds();
     this.set('unames->ids', unamesToIds);
   });
 
   // Every 12 hours
   cache.every(1000 * 60 * 60 * 12, function*() {
+    console.log('[CACHE] Populating sitemap.txt');
     var MAX_SITEMAP_URLS = 50000;
     var results = yield [
       db.findAllPublicTopicUrls(),
