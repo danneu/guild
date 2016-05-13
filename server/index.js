@@ -2748,6 +2748,7 @@ app.get('/chatlogs/:when', function*() {
 
   var log = yield db.findLogByDateTrunc(this.vals.when);
   this.assert(log, 404);
+  this.assert(log.length > 0, 404);
 
   yield this.render('show_chatlog', {
     ctx: this,
