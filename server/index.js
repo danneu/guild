@@ -1748,7 +1748,6 @@ app.put('/topics/:slug/edit', function*() {
 });
 
 // Go to first unread post in a topic
-// TODO: If user is not logged in, just go to last page
 app.get('/topics/:slug/:postType/first-unread', function*() {
   // This page should not be indexed
   this.set('X-Robots-Tag', 'noindex');
@@ -1766,7 +1765,10 @@ app.get('/topics/:slug/:postType/first-unread', function*() {
   this.assert(topic, 404);
   topic = pre.presentTopic(topic);
 
-  // TODO: If user is not logged in, just go to last page
+  // If user is not logged in, just go to first page
+  if (!this.currUser) {
+    return this.redirect(topic.url);
+  }
 
   var postId = yield db.findFirstUnreadPostId({
     topic_id: topic.id,
