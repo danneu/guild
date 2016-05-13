@@ -59,12 +59,9 @@ function *query(sql, params) {
   var client = conn_result[0];
   var done = conn_result[1];
   try {
-    var result = yield client.queryPromise(sql, params);
-    done();  // Release client back to pool
-    return result;
-  } catch(ex) {
+    return yield client.queryPromise(sql, params);
+  } finally {
     done();
-    throw ex;
   }
 }
 
