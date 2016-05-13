@@ -89,28 +89,55 @@ var queryMany = function*(sql, params) {
 //     return { fromAccount: updatedFromAccount, toAccount: updatedToAccount };
 //   });
 //
-function* withTransaction(runner) {
-  var connResult = yield pg.connectPromise(config.DATABASE_URL);
-  var client = connResult[0];
-  var done = connResult[1];
+exports.withTransaction = withTransaction;
+function * withTransaction(runner) {
+  const connResult = yield pg.connectPromise(config.DATABASE_URL);
+  const client = connResult[0];
+  const done = connResult[1];
+
+  function * rollback(err) {
+    try {
+      yield client.queryPromise('ROLLBACK');
+    } catch (ex) {
+      console.error('[INTERNAL_ERROR] Could not rollback transaction, removing from pool');
+      done(ex);
+      throw ex;
+    }
+    done();
+
+    if (err.code === '40P01') { // Deadlock
+      console.warn('Caught deadlock error, retrying');
+      return yield * withTransaction(runner);
+    }
+    if (err.code === '40001') { // Serialization error
+      console.warn('Caught serialization error, retrying');
+      return yield * withTransaction(runner);
+    }
+    throw err;
+  }
 
   try {
     yield client.queryPromise('BEGIN');
-    var result = yield runner(client);
-    yield client.queryPromise('COMMIT');
-    done();
-
-    return result;
-  } catch(ex) {
-    try {
-      yield client.queryPromise('ROLLBACK');
-      done();  // Release the rolled back conn
-    } catch(ex) {
-      done(ex);  // Kill the botched conn
-    }
-
-    throw ex;
+  } catch (ex) {
+    console.error('[INTERNAL_ERROR] There was an error calling BEGIN');
+    return yield * rollback(ex);
   }
+
+  let result;
+  try {
+    result = yield * runner(client);
+  } catch (ex) {
+    return yield * rollback(ex);
+  }
+
+  try {
+    yield client.queryPromise('COMMIT');
+  } catch (ex) {
+    return yield * rollback(ex);
+  }
+  done();
+
+  return result;
 }
 
 exports.updatePostStatus = function*(postId, status) {
