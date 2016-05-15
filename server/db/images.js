@@ -2,6 +2,8 @@
 // 3rd
 const assert = require('better-assert');
 const uuidGen = require('node-uuid');
+const knex = require('knex')({ client: 'pg' });
+const _ = require('lodash');
 // 1st
 const util = require('./util');
 
@@ -139,4 +141,27 @@ FROM albums a
 JOIN users u ON a.user_id = u.id
 WHERE a.id = $1
   `, [albumId]);
+};
+
+// Generalized update function that takes an object of
+// field/values to be updated.
+exports.updateAlbum = function * (albumId, fields) {
+  assert(albumId);
+  assert(_.isPlainObject(fields));
+  // Validate fields
+  const WHITELIST = [
+    'title',
+    'markup'
+  ];
+  Object.keys(fields).forEach(key => {
+    if (WHITELIST.indexOf(key) === -1) {
+      throw new Error('FIELD_NOT_WHITELISTED');
+    }
+  });
+  // Build SQL string
+  const sql = knex('albums')
+    .where({ id: albumId })
+    .update(fields)
+    .toString();
+  return yield util.query(sql);
 };

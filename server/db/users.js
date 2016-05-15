@@ -2,9 +2,7 @@
 // 3rd
 const debug = require('debug')('app:db:dice');
 const assert = require('better-assert');
-const knex = require('knex')({
-  client: 'pg'
-});
+const knex = require('knex')({ client: 'pg' });
 const _ = require('lodash');
 // 1st
 const util = require('./util');

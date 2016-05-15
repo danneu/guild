@@ -240,6 +240,31 @@ router.get('/albums/:album_id', loadAlbum, function * () {
   });
 });
 
+// update album
+//
+// Body:
+// - title: Required String
+// - markup: Optional String
+router.put('/users/:user_slug/albums/:album_id', loadUser, loadAlbum, function * () {
+  // AUTHZ
+  this.assertAuthorized(this.currUser, 'MANAGE_IMAGES', this.state.user);
+  // VALIDATE
+  this.validateBody('title')
+    .isString()
+    .isLength(1, 300, 'Title must be 1-300 chars');
+  this.validateBody('markup')
+    .toString()
+    .isLength(0, 10000, 'Description cannot be more than 10k chars');
+  // SAVE
+  yield db.images.updateAlbum(this.state.album.id, {
+    title: this.vals.title,
+    markup: this.vals.markup
+  });
+  // RESPOND
+  this.flash = { message: ['success', 'Album updated'] };
+  this.redirect(this.state.album.url);
+});
+
 router.post('/users/:user_slug/albums', loadUser, function * () {
   this.assertAuthorized(this.currUser, 'MANAGE_IMAGES', this.state.user);
   this.validateBody('title')
