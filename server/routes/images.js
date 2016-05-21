@@ -189,9 +189,9 @@ router.post('/users/:user_slug/images', loadUser, function * () {
   const upload = this.request.body.files.image;
   this.assert(Number.isInteger(upload.size), 400);
   this.assert(typeof upload.path === 'string', 400);
-  // ensure <= 1mb
-  if (upload.size > 1e6) {
-    this.flash = { message: ['danger', `Image cannot exceed 1mb. Max: 1,000,000. Yours: ${upload.size}`] };
+  // ensure max upload size
+  if (upload.size > 2e6) {
+    this.flash = { message: ['danger', `Image cannot exceed 2 MB. Max: 2,000,000. Yours: ${upload.size}`] };
     return this.redirect('back');
   }
   // { 'Mime type': 'image/jpeg' OR 'format': 'JPEG' }
