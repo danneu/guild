@@ -1,6 +1,7 @@
 'use strict';
+// newrelic agent must load first
+require('newrelic');
 var config = require('./config');
-
 // Koa deps
 var app = require('koa')();
 app.poweredBy = false;
