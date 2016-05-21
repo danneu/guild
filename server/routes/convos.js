@@ -2,7 +2,6 @@
 // 3rd party
 var Router = require('koa-router');
 var _ = require('lodash');
-var coParallel = require('co-parallel');
 var debug = require('debug')('app:routes:convos');
 var bouncer = require('koa-bouncer');
 // 1st party
@@ -105,16 +104,16 @@ router.post('/convos', function*() {
     html: html,
     ipAddress: this.request.ip
   });
-  convo = pre.presentConvo(convo);
+  pre.presentConvo(convo);
 
   // Create CONVO notification for each recipient
-  yield coParallel(toUserIds.map(function*(toUserId) {
-    yield db.createConvoNotification({
+  yield toUserIds.map(function (toUserId) {
+    return db.createConvoNotification({
       from_user_id: ctx.currUser.id,
       to_user_id: toUserId,
       convo_id: convo.id
     });
-  }), 5);
+  });
 
   this.response.redirect(convo.url);
 });
@@ -185,7 +184,7 @@ router.post('/convos/:convoId/pms', function*() {
     markup: this.vals.markup,
     html: html
   });
-  pm = pre.presentPm(pm);
+  pre.presentPm(pm);
 
   // Get only userIds of the *other* participants
   // Don't want to create notification for ourself
@@ -195,13 +194,13 @@ router.post('/convos/:convoId/pms', function*() {
 
   // Upsert notifications table
   // TODO: config.MAX_CONVO_PARTICIPANTS instead of hard-coded 5
-  yield coParallel(toUserIds.map(function*(toUserId) {
-    yield db.createPmNotification({
+  yield toUserIds.map(function (toUserId) {
+    return db.createPmNotification({
       from_user_id: ctx.currUser.id,
       to_user_id: toUserId,
       convo_id: ctx.params.convoId
     });
-  }), 5);
+  });
 
   this.redirect(pm.url);
 });

@@ -381,11 +381,6 @@
       "from": "co-fs@1.2.0",
       "resolved": "https://registry.npmjs.org/co-fs/-/co-fs-1.2.0.tgz"
     },
-    "co-parallel": {
-      "version": "1.0.0",
-      "from": "co-parallel@1.0.0",
-      "resolved": "https://registry.npmjs.org/co-parallel/-/co-parallel-1.0.0.tgz"
-    },
     "co-pg": {
       "version": "2.0.0",
       "from": "co-pg@2.0.0",
@@ -400,11 +395,6 @@
       "version": "0.2.0",
       "from": "co-render@>=0.0.0 <1.0.0",
       "resolved": "https://registry.npmjs.org/co-render/-/co-render-0.2.0.tgz"
-    },
-    "co-thread": {
-      "version": "0.0.1",
-      "from": "co-thread@0.0.1",
-      "resolved": "https://registry.npmjs.org/co-thread/-/co-thread-0.0.1.tgz"
     },
     "co-views": {
       "version": "0.3.0",

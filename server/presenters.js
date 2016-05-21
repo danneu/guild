@@ -137,6 +137,7 @@ exports.presentCategory = function(category) {
 
 exports.presentConvo = presentConvo;
 function presentConvo(convo) {
+  if (!convo) return;
   if (_.isString(convo.created_at))
     convo.created_at = new Date(convo.created_at);
   convo.url = '/convos/' + convo.id;
@@ -174,6 +175,7 @@ function presentPost(post) {
 
 exports.presentPm = presentPm;
 function presentPm(pm) {
+  if (!pm) return;
   if (_.isString(pm.created_at))
     pm.created_at = new Date(pm.created_at);
   pm.formattedCreatedAt = formatDate(pm.created_at);

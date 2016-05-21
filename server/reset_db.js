@@ -6,7 +6,6 @@ var fs = require('co-fs');
 var pg = require('co-pg')(require('pg'));
 var co = require('co');
 var _ = require('lodash');
-var coParallel = require('co-parallel');
 // 1st party
 var db = require('./db');
 var config = require('./config');
@@ -43,7 +42,9 @@ function* resetDb() {
         isRoleplay: false, postType: 'ooc'
       });
     });
-    yield coParallel(thunks1, 1);
+    for (var i = 0; i < thunks1.length; i++) {
+      yield thunks1[i];
+    }
 
     // Insert 100 posts for user1, forum1
     let thunks2 = _.range(100).map(function(n) {
@@ -55,7 +56,9 @@ function* resetDb() {
         type: 'ooc'
       });
     });
-    yield coParallel(thunks2, 1);
+    for (var i = 0; i < thunks2.length; i++) {
+      yield thunks2[i];
+    }
   }
 }
 
