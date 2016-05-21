@@ -413,6 +413,7 @@ app.use(require('./routes/users').routes());
 app.use(require('./routes/convos').routes());
 app.use(require('./routes/images').routes());
 app.use(require('./routes/dice').routes());
+app.use(require('./routes/statuses').routes());
 
 // Useful to redirect users to their own profiles since canonical edit-user
 // url is /users/:slug/edit
@@ -2467,132 +2468,10 @@ app.get('/trophies/:id', function*() {
   });
 });
 
-// Create status
-//
-// Required params
-// - text: String
-app.post('/me/statuses', function*() {
-  // Ensure user is authorized
-  this.assertAuthorized(this.currUser, 'CREATE_USER_STATUS', this.currUser);
-
-  // Validate params
-  this.validateBody('text')
-    .notEmpty('text is required')
-    .trim()
-    .isLength(1, 200, 'text must be 1-200 chars');
-
-  var html = belt.autolink(belt.escapeHtml(this.vals.text));
-
-  yield db.createStatus({
-    user_id: this.currUser.id,
-    text:    this.vals.text,
-    html:    html
-  });
-
-  this.flash = { message: ['success', 'Status updated'] };
-  this.redirect('/users/' + this.currUser.slug + '#status');
-});
-
-// Show all statuses
-app.get('/statuses', function*() {
-  var statuses = yield db.findAllStatuses();
-  statuses.forEach(pre.presentStatus);
-  yield this.render('list_statuses', {
-    ctx: this,
-    statuses: statuses
-  });
-});
-
-app.del('/me/current-status', function*() {
-  // Ensure user is logged in
-  this.assert(this.currUser, 403, 'You must log in to do that');
-
-  yield db.clearCurrentStatusForUserId(this.currUser.id);
-
-  this.flash = { message: ['success', 'Current status cleared'] };
-  this.redirect('/users/' + this.currUser.slug);
-});
-
-app.del('/statuses/:status_id', function*() {
-  var status = yield db.findStatusById(this.params.status_id);
-
-  // Ensure status exists
-  this.assert(status, 404);
-  status = pre.presentStatus(status);
-
-  // Ensure user is authorized to delete it
-  this.assertAuthorized(this.currUser, 'DELETE_USER_STATUS', status);
-
-  // Delete it
-  yield db.deleteStatusById(status.id);
-
-  // Redirect back to profile
-  this.flash = { message: ['success', 'Status deleted'] };
-  this.redirect(status.user.url + '#status');
-});
-
 app.get('/refresh-homepage/:anchor_name', function*() {
   this.set('X-Robots-Tag', 'none');
   this.status = 301;
   this.redirect(util.format('/#%s', this.params.anchor_name));
-});
-
-// This is browser endpoint
-// TODO: remove /browser/ scope once i add /api/ scope to other endpoint
-// Sync with POST /api/statuses/:status_id/like
-app.post('/browser/statuses/:status_id/like', function*() {
-  // Load status
-  var status = yield db.findStatusById(this.params.status_id);
-  this.assert(status, 404);
-
-  // Authorize user
-  this.assertAuthorized(this.currUser, 'LIKE_STATUS', status);
-
-  // Ensure it's been 30 seconds since user's last like
-  var latestLikeAt = yield db.latestStatusLikeAt(this.currUser.id);
-  if (latestLikeAt && belt.isNewerThan(latestLikeAt, { seconds: 30 })) {
-    this.check(false, 'Can only like a status once every 30 seconds. Don\'t wear \'em out!');
-    return;
-  }
-
-  // Create like
-  yield db.likeStatus({
-    status_id: status.id,
-    user_id:   this.currUser.id
-  });
-
-  // Redirect
-  this.flash = {
-    message: ['success', 'Success. Imagine how much that\'s gonna brighten their day!']
-  };
-  this.redirect('/statuses');
-});
-
-// This is AJAX endpoint
-// TODO: scope to /api/statuses/...
-// Sync with POST /browser/statuses/:status_id/like
-app.post('/statuses/:status_id/like', function*() {
-  // Load status
-  var status = yield db.findStatusById(this.params.status_id);
-  this.assert(status, 404);
-
-  // Authorize user
-  this.assertAuthorized(this.currUser, 'LIKE_STATUS', status);
-
-  // Ensure it's been 30 seconds since user's last like
-  var latestLikeAt = yield db.latestStatusLikeAt(this.currUser.id);
-  if (latestLikeAt && belt.isNewerThan(latestLikeAt, { seconds: 30 })) {
-    this.status = 400;
-    this.body = JSON.stringify({ error: 'TOO_SOON' });
-    return;
-  }
-
-  yield db.likeStatus({
-    status_id: status.id,
-    user_id:   this.currUser.id
-  });
-
-  this.status = 200;
 });
 
 app.get('/current-feedback-topic', function*() {
