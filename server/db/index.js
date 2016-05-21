@@ -9,7 +9,6 @@ var pg = require('co-pg')(require('pg'));
 var _ = require('lodash');
 var assert = require('better-assert');
 var debug = require('debug')('app:db');
-var coParallel = require('co-parallel');
 var pgArray = require('postgres-array');
 // 1st party
 var config = require('../config');
@@ -2078,7 +2077,7 @@ exports.createMentionNotification = function*(opts) {
 
 ////////////////////////////////////////////////////////////
 
-exports.parseAndCreateMentionNotifications = function*(props) {
+exports.parseAndCreateMentionNotifications = function * (props) {
   debug('[parseAndCreateMentionNotifications] Started...');
   assert(props.fromUser.id);
   assert(props.fromUser.uname);
@@ -2087,13 +2086,14 @@ exports.parseAndCreateMentionNotifications = function*(props) {
   assert(props.topic_id);
 
   // Array of lowercase unames that don't include fromUser
-  var mentionedUnames = belt.extractMentions(props.markup, props.fromUser.uname);
+  let mentionedUnames = belt.extractMentions(props.markup, props.fromUser.uname);
   mentionedUnames = _.take(mentionedUnames, config.MENTIONS_PER_POST);
 
   // Ensure these are users
-  var mentionedUsers = yield exports.findUsersByUnames(mentionedUnames);
+  const mentionedUsers = yield exports.findUsersByUnames(mentionedUnames);
 
-  var thunks = mentionedUsers.map(function(toUser) {
+  // Create the notifications in parallel
+  return yield mentionedUsers.map(function(toUser) {
     return exports.createMentionNotification({
       from_user_id: props.fromUser.id,
       to_user_id:   toUser.id,
@@ -2101,13 +2101,9 @@ exports.parseAndCreateMentionNotifications = function*(props) {
       topic_id:     props.topic_id
     });
   });
-
-  var results = yield coParallel(thunks, 5);
-
-  return results;
 };
 
-exports.createQuoteNotification = function*(opts) {
+exports.createQuoteNotification = function * (opts) {
   assert(opts.from_user_id);
   assert(opts.to_user_id);
   assert(opts.post_id);
@@ -2144,7 +2140,8 @@ exports.parseAndCreateQuoteNotifications = function*(props) {
   // Ensure these are users
   var mentionedUsers = yield exports.findUsersByUnames(mentionedUnames);
 
-  var thunks = mentionedUsers.map(function(toUser) {
+  // Create the notifications in parallel
+  return yield mentionedUsers.map(function (toUser) {
     return exports.createQuoteNotification({
       from_user_id: props.fromUser.id,
       to_user_id:   toUser.id,
@@ -2152,10 +2149,6 @@ exports.parseAndCreateQuoteNotifications = function*(props) {
       topic_id:     props.topic_id
     });
   });
-
-  var results = yield coParallel(thunks, 5);
-
-  return results;
 };
 
 exports.findReceivedNotificationsForUserId = function*(toUserId) {
