@@ -2630,30 +2630,23 @@ FROM tag_groups tg
 
 // topicId :: String | Int
 // tagIds :: [Int]
-exports.updateTopicTags = function*(topicId, tagIds) {
+exports.updateTopicTags = function * (topicId, tagIds) {
   assert(topicId);
   assert(_.isArray(tagIds));
-
-  var sql;
-  return yield withTransaction(function*(client) {
+  return yield withTransaction(function * (client) {
     // Delete all tags for this topic from the bridge table
     yield client.queryPromise(`
-DELETE FROM tags_topics
-WHERE topic_id = $1
+      DELETE FROM tags_topics
+      WHERE topic_id = $1
     `, [topicId]);
-
     // Now create the new bridge links
-    var thunks = [];
-    tagIds.forEach(function(tagId) {
-      var thunk = client.queryPromise(`
-INSERT INTO tags_topics (topic_id, tag_id)
-VALUES ($1, $2)
+    // Now create the new bridge links in parallel
+    yield tagIds.map((tagId) => {
+      return client.queryPromise(`
+        INSERT INTO tags_topics (topic_id, tag_id)
+        VALUES ($1, $2)
       `, [topicId, tagId]);
-
-      thunks.push(thunk);
     });
-
-    yield coParallel(thunks, 5);
   });
 };
 
