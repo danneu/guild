@@ -3208,40 +3208,24 @@ WHERE user_id = $1
 
 ////////////////////////////////////////////////////////////
 
-exports.updateTopicWatermark = function*(props) {
+exports.updateTopicWatermark = function * (props) {
   debug('[updateTopicWatermark] props:', props);
   assert(props.topic_id);
   assert(props.user_id);
   assert(props.post_type);
   assert(props.post_id);
-
-  try {
-    yield query(`
-INSERT INTO topics_users_watermark (topic_id, user_id, post_type, watermark_post_id)
-VALUES ($1, $2, $3, $4)
-    `, [
-      props.topic_id,
-      props.user_id,
-      props.post_type,
-      props.post_id
-    ]);
-  } catch(ex) {
-    // If unique violation...
-    if (ex.code === '23505') {
-      yield query(`
-UPDATE topics_users_watermark
-SET watermark_post_id = GREATEST(watermark_post_id, $4)
-WHERE topic_id = $1 AND user_id = $2 AND post_type = $3
-      `, [
-        props.topic_id,
-        props.user_id,
-        props.post_type,
-        props.post_id
-      ]);
-      return;
-    }
-    throw ex;
-  }
+  return yield query(`
+    INSERT INTO topics_users_watermark
+      (topic_id, user_id, post_type, watermark_post_id)
+    VALUES ($1, $2, $3, $4)
+    ON CONFLICT (topic_id, user_id, post_type) DO UPDATE
+      SET watermark_post_id = GREATEST(topics_users_watermark.watermark_post_id, $4)
+  `, [
+    props.topic_id,
+    props.user_id,
+    props.post_type,
+    props.post_id
+  ]);
 };
 
 ////////////////////////////////////////////////////////////

@@ -1944,17 +1944,13 @@ app.get('/topics/:slug/:postType', function*() {
     }, this);
   }
 
-  // TODO: Catch errors
   // Update watermark
   if (this.currUser && posts.length > 0) {
-    var self = this;
-    co(function*() {
-      yield db.updateTopicWatermark({
-        topic_id: topic.id,
-        user_id: self.currUser.id,
-        post_type: self.params.postType,
-        post_id: _.last(posts).id
-      });
+    yield db.updateTopicWatermark({
+      topic_id: topic.id,
+      user_id: this.currUser.id,
+      post_type: this.params.postType,
+      post_id: _.last(posts).id
     });
   }
 
