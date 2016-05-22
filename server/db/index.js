@@ -1826,31 +1826,17 @@ exports.createVmNotification = function*(data) {
   assert(Number.isInteger(data.from_user_id));
   assert(Number.isInteger(data.to_user_id));
   assert(Number.isInteger(data.vm_id));
-
-  const createSql = `
-INSERT INTO notifications (type, from_user_id, to_user_id, vm_id, count)
-VALUES ($1, $2, $3, $4, 1)
-  `;
-
-  const updateSql = `
-UPDATE notifications
-SET count = count + 1
-WHERE vm_id = $1 AND to_user_id = $2
-  `;
-
-  return yield withTransaction(function*(client) {
-    try {
-      yield client.queryPromise(createSql, [data.type, data.from_user_id, data.to_user_id, data.vm_id]);
-    } catch(ex) {
-      // Unique constraint violation
-      if (ex.code === '23505') {
-        yield client.queryPromise('ROLLBACK');
-        yield client.queryPromise(updateSql, [data.vm_id, data.to_user_id]);
-        return;
-      }
-      throw ex;
-    }
-  });
+  return yield query(`
+    INSERT INTO notifications (type, from_user_id, to_user_id, vm_id, count)
+    VALUES ($1, $2, $3, $4, 1)
+    ON CONFLICT (vm_id, to_user_id) DO UPDATE
+      SET count = COALESCE(notifications.count, 0) + 1
+  `, [
+    data.type,
+    data.from_user_id,
+    data.to_user_id,
+    data.vm_id
+  ]);
 };
 
 exports.findParticipantIds = function*(convoId) {
