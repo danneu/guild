@@ -511,9 +511,9 @@ app.post('/posts/:postId/rate', function*() {
   // (To prevent rating spamming)
   var prevRating = yield db.findLatestRatingForUserId(this.currUser.id);
   if (prevRating) {
-    var thirtySecondsAgo = new Date(Date.now() - 1000 * 30);
-    // If this user's previous rating is newer than 30 seconds ago, fail.
-    if (prevRating.created_at > thirtySecondsAgo) {
+    var threeSecondsAgo = new Date(Date.now() - 3000);
+    // If this user's previous rating is newer than 3 seconds ago, fail.
+    if (prevRating.created_at > threeSecondsAgo) {
       this.body = JSON.stringify({ error: 'TOO_SOON' });
       this.status = 400;
       return;

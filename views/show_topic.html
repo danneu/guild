@@ -837,7 +837,7 @@ $(function () {
           throw ex;
         }
         if (json.error === 'TOO_SOON')
-          alert('Must wait 30 seconds between ratings.');
+          alert('Must wait 3 seconds between ratings.');
       },
       success: function(rating) {
         var undoForm = '<form action="/me/ratings/'+ rating.post_id +'" method="post" style="display: inline-block;">'+
