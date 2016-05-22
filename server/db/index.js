@@ -3110,18 +3110,46 @@ WHERE id = $1
 ////////////////////////////////////////////////////////////
 
 exports.findAllStatuses = function*() {
+  // This query was hilariously slow. But I hate the rewrite
+  // below. Is there a better way?
+  //
+  // SELECT
+  //   s.*,
+  //   to_json(u.*) "user",
+  //   json_agg(likers.uname) "likers"
+  // FROM statuses s
+  // JOIN users u ON s.user_id = u.id
+  // LEFT OUTER JOIN status_likes ON s.id = status_likes.status_id
+  // LEFT OUTER JOIN users likers ON status_likes.user_id = likers.id
+  // GROUP BY s.id, u.id
+  // ORDER BY s.created_at DESC
+  // LIMIT 100
   const sql = `
+WITH sids AS (
+  SELECT id
+  FROM statuses
+  ORDER BY created_at DESC
+  LIMIT 100
+)
 SELECT
   s.*,
-  to_json(u.*) "user",
-  json_agg(likers.uname) "likers"
+  (
+    SELECT to_json(u.*)
+    FROM users u
+    WHERE u.id = s.user_id
+  ) "user",
+  (
+    SELECT json_agg(u2.uname)
+    FROM users u2
+    LEFT OUTER JOIN status_likes
+      ON s.id = status_likes.status_id
+      AND u2.id = status_likes.user_id
+    WHERE status_likes.status_id = s.id
+  ) "likers"
 FROM statuses s
-JOIN users u ON s.user_id = u.id
-LEFT OUTER JOIN status_likes ON s.id = status_likes.status_id
-LEFT OUTER JOIN users likers ON status_likes.user_id = likers.id
-GROUP BY s.id, u.id
+WHERE s.id IN (SELECT id FROM sids)
+GROUP BY s.id
 ORDER BY s.created_at DESC
-LIMIT 100
   `;
 
   const result = yield query(sql, []);

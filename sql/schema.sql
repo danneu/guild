@@ -491,6 +491,8 @@ CREATE TABLE status_likes (
 
 -- To quickly find latest liked status (created_at) for a user_id
 CREATE INDEX statuses_likes__created_at ON status_likes (created_at);
+-- Quickly join status_likes to the user
+CREATE INDEX status_likes__user_id ON status_likes (user_id);
 
 ------------------------------------------------------------
 
