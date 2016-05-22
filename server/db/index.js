@@ -187,18 +187,15 @@ RETURNING *
   return result.rows[0];
 };
 
-exports.subscribeToTopic = function*(userId, topicId) {
-  var sql = `
-INSERT INTO topic_subscriptions (user_id, topic_id)
-VALUES ($1, $2)
-  `;
-  try {
-  var result = yield query(sql, [userId, topicId]);
-  } catch(ex) {
-    if (ex.code === '23505')
-      return;
-    throw ex;
-  }
+// Do nothing if subscription already exists
+exports.subscribeToTopic = function * (userId, topicId) {
+  assert(userId);
+  assert(topicId);
+  return yield query(`
+    INSERT INTO topic_subscriptions (user_id, topic_id)
+    VALUES ($1, $2)
+    ON CONFLICT (user_id, topic_id) DO NOTHING
+  `, [userId, topicId]);
 };
 
 exports.unsubscribeFromTopic = function*(userId, topicId) {
