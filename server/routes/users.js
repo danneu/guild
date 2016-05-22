@@ -600,23 +600,33 @@ router.post('/users/:slug/vms', function*() {
     parent_vm_id: this.vals.parent_vm_id
   });
 
-  // Notifications
-  // - Only send notification if user isn't sending themself a VM
-  if (vm.from_user_id !== vm.to_user_id) {
-    let opts = {
+  // if VM is a reply, notify everyone in the thread and the owner of the
+  // profile. but don't notify currUser.
+  if (vm.parent_vm_id) {
+    let userIds = yield db.getVmThreadUserIds(vm.parent_vm_id || vm.id);
+    // push on the profile owner
+    userIds.push(vm.to_user_id);
+    // don't notify anyone twice
+    userIds = _.uniq(userIds);
+    // don't notify self
+    userIds = userIds.filter(id => id !== this.currUser.id);
+    // send out notifications in parallel
+    yield userIds.map((toUserId) => {
+      return db.createVmNotification({
+        type: 'REPLY_VM',
+        from_user_id: vm.from_user_id,
+        to_user_id: toUserId,
+        vm_id: vm.parent_vm_id || vm.id
+      });
+    });
+  } else {
+    // else, it's a top-level VM. just notify profile owner
+    yield db.createVmNotification({
+      type: 'TOPLEVEL_VM',
       from_user_id: vm.from_user_id,
       to_user_id: vm.to_user_id,
       vm_id: vm.parent_vm_id || vm.id
-    };
-    if (vm.parent_vm_id) {
-      // REPLY_VM notification since VM has a parent
-      opts.type = 'REPLY_VM';
-      yield db.createVmNotification(opts);
-    } else {
-      // TOPLEVEL_VM notification
-      opts.type = 'TOPLEVEL_VM';
-      yield db.createVmNotification(opts);
-    }
+    });
   }
 
   this.flash = {

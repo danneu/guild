@@ -3560,6 +3560,18 @@ ORDER BY sub.id
   return yield queryMany(sql, [when]);
 };
 
+// Returns array of all unique user IDs that have posted a VM
+// in a thread, given the root VM ID of that thread
+exports.getVmThreadUserIds = function * (parentVmId) {
+  assert(Number.isInteger(parentVmId));
+  return (yield queryMany(`
+    SELECT DISTINCT from_user_id
+    FROM vms
+    WHERE id = $1
+       OR parent_vm_id = $1
+  `, [parentVmId])).map(row => row.from_user_id);
+};
+
 // data:
 // - to_user_id: Int
 // - from_user_id: Int
