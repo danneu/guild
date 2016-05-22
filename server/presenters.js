@@ -68,6 +68,15 @@ function presentUser(user) {
   if (!user) return user;
   user.url = '/users/' + user.slug;
 
+  if (user.is_nuked) {
+    user.bio_markup = null;
+    user.bio_html = null;
+    user.sig_html = '';
+    user.sig = '';
+    user.avatar_url = '';
+    user.custom_title = '';
+  }
+
   // Reminder: Only avatar uploads since the S3 bucket update will
   // be served from the avatars.roleplayeguild.com bucket,
   // so here we'll check for that and only write those to go through

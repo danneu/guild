@@ -35,55 +35,58 @@
     </div>
   {% endif %}
 
-  <h3>
-    Visitor Messages
-
-    {% if ctx.can(ctx.currUser, 'CREATE_VM') %}
-      <button type="button" class="btn btn-primary new-vm-btn">
-        New Visitor Message
-      </button>
-    {% endif %}
-  </h3>
-
-  {% if user.toplevel_vms_count == 0 %}
+  {% if user.is_nuked %}
     <div class="well">
-      User has no visitor messages, yet
+      User was nuked, so their visitor messages are hidden.
     </div>
-  {% endif %}
+  {% else %}
+    <h3>
+      Visitor Messages
 
-  {% for vm in vms %}
-    {{ macros.renderVm(ctx, vm, user) }}
-  {% endfor %}
+      {% if ctx.can(ctx.currUser, 'CREATE_VM') %}
+        <button type="button" class="btn btn-primary new-vm-btn">
+          New Visitor Message
+        </button>
+      {% endif %}
+    </h3>
 
-  <!-- New VM form -->
-
-    <li id="vm-reply-box-template" style="display: none;" class="vm-reply-box">
-      <div class="media">
-        <div class="media-left">
-          <a href="{{ ctx.currUser.url }}">
-            {% if ctx.currUser.avatar_url %}
-              <img src="{{ ctx.currUser.avatar_url }}" width="50">
-            {% else %}
-              <img src="https://placeholdit.imgix.net/~text?w=50&h=50" width="50">
-            {% endif %}
-          </a>
-        </div>
-        <div class="media-body" style="width:100%;">
-          <form action="{{ user.url }}/vms" method="post" style="margin-bottom: 10px;">
-            <input type="hidden" name="parent_vm_id" value="">
-            <textarea placeholder="Click here and begin writing"
-                      name="markup"
-                      rows="5"
-                      class="form-control"
-                      ></textarea>
-            <input type="submit" class="btn btn-primary" value="Submit Reply"
-                  style="margin-top: 10px;">
-            <button type="button" class="cancel-btn btn btn-default" style="margin-top: 10px;">Cancel</button>
-          </form>
-        </div>
+    {% if user.toplevel_vms_count == 0 %}
+      <div class="well">
+        User has no visitor messages, yet
       </div>
+    {% endif %}
 
-    </li>
+    {% for vm in vms %}
+      {{ macros.renderVm(ctx, vm, user) }}
+    {% endfor %}
+    <!-- New VM form -->
+      <li id="vm-reply-box-template" style="display: none;" class="vm-reply-box">
+        <div class="media">
+          <div class="media-left">
+            <a href="{{ ctx.currUser.url }}">
+              {% if ctx.currUser.avatar_url %}
+                <img src="{{ ctx.currUser.avatar_url }}" width="50">
+              {% else %}
+                <img src="https://placeholdit.imgix.net/~text?w=50&h=50" width="50">
+              {% endif %}
+            </a>
+          </div>
+          <div class="media-body" style="width:100%;">
+            <form action="{{ user.url }}/vms" method="post" style="margin-bottom: 10px;">
+              <input type="hidden" name="parent_vm_id" value="">
+              <textarea placeholder="Click here and begin writing"
+                        name="markup"
+                        rows="5"
+                        class="form-control"
+                        ></textarea>
+              <input type="submit" class="btn btn-primary" value="Submit Reply"
+                    style="margin-top: 10px;">
+              <button type="button" class="cancel-btn btn btn-default" style="margin-top: 10px;">Cancel</button>
+            </form>
+          </div>
+        </div>
+      </li>
+  {% endif %} {# /is not nuked #}
 
 {% endblock %}
 

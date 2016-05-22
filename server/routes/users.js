@@ -757,6 +757,7 @@ router.post('/users/:slug/gender', loadUserFromSlug, function * () {
 // NUKING
 ////////////////////////////////////////////////////////////
 
+// if ?override=true, don't do thw twoWeek check
 router.post('/users/:slug/nuke', function*() {
   var user = yield db.findUserBySlug(this.params.slug);
   this.assert(user, 404);
@@ -764,11 +765,12 @@ router.post('/users/:slug/nuke', function*() {
   this.assertAuthorized(this.currUser, 'NUKE_USER', user);
   // prevent accidental nukings. if a user is over 2 weeks old,
   // they aren't likely to be a spambot.
-  var twoWeeks = 1000 * 60 * 60 * 24 * 7 * 2;
-  console.log(Date.now() - user.created_at.getTime());
-  if (Date.now() - user.created_at.getTime() > twoWeeks) {
-    this.body = '[Accidental Nuke Prevention] User is too old to be nuked. If this really is a spambot, let Mahz know in the mod forum.';
-    return;
+  if (this.query.override !== 'true') {
+    var twoWeeks = 1000 * 60 * 60 * 24 * 7 * 2;
+    if (Date.now() - user.created_at.getTime() > twoWeeks) {
+      this.body = '[Accidental Nuke Prevention] User is too old to be nuked. If this really is a spambot, let Mahz know in the mod forum.';
+      return;
+    }
   }
   yield db.nukeUser({ spambot: user.id, nuker: this.currUser.id });
   this.flash = { message: ['success', 'Nuked the bastard'] };
