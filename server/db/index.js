@@ -1808,26 +1808,16 @@ function* createPmNotification(opts) {
   assert(_.isNumber(opts.from_user_id));
   assert(_.isNumber(opts.to_user_id));
   assert(opts.convo_id);
-  // Do upsert
-  try {
-    return yield exports.createConvoNotification({
-      from_user_id: opts.from_user_id,
-      to_user_id: opts.to_user_id,
-      convo_id: opts.convo_id
-    });
-  } catch(err) {
-    // Unique constraint violation
-    if (err.code === '23505') {
-      const sql = `
-        UPDATE notifications
-        SET count = COALESCE(count, 0) + 1
-        WHERE convo_id = $1 AND to_user_id = $2
-      `;
-      return yield query(sql, [opts.convo_id, opts.to_user_id]);
-    }
-    // Else throw if it was a different error
-    throw err;
-  }
+  return yield query(`
+    INSERT INTO notifications (type, from_user_id, to_user_id, convo_id, count)
+    VALUES ('CONVO', $1, $2, $3, 1)
+    ON CONFLICT (to_user_id, convo_id) DO UPDATE
+      SET count = COALESCE(notifications.count, 0) + 1
+  `, [
+    opts.from_user_id,
+    opts.to_user_id,
+    opts.convo_id
+  ]);
 }
 
 // type is 'REPLY_VM' or 'TOPLEVEL_VM'
