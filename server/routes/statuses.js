@@ -53,6 +53,7 @@ router.post('/me/statuses', function * () {
 
 // Show all statuses
 router.get('/statuses', function * () {
+  return this.body = 'Status list currently disabled while I try to fix a performance issue with it.';
   const statuses = yield db.findAllStatuses();
   statuses.forEach(pre.presentStatus);
   yield this.render('list_statuses', {
