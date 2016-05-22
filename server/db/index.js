@@ -3152,10 +3152,10 @@ GROUP BY s.id
 ORDER BY s.created_at DESC
   `;
 
-  const result = yield query(sql, []);
-  const statuses = result.rows.map(function(r) {
-    r.likers = r.likers.filter(Boolean);
-    return r;
+  const statuses = yield queryMany(sql);
+
+  statuses.forEach((status) => {
+    status.likers = (status.likers || []).filter(Boolean);
   });
 
   return statuses;
