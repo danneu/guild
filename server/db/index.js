@@ -2218,63 +2218,35 @@ exports.deleteNotificationsForPostId = function*(toUserId, postId) {
 // Viewer tracker /////////////////////////////////////////////////
 
 // - ctx is the Koa context
+// - forumId is required
 // - topicId is optional
 // If user.is_hidden, then we count them as a guest
-exports.upsertViewer = function*(ctx, forumId, topicId) {
-  assert(_.isObject(ctx));
+//
+// yield this after the response is sent in routes so user
+// doesn't have to wait
+exports.upsertViewer = function * (ctx, forumId, topicId) {
+  debug('[upsertViewer');
+  assert(ctx);
   assert(forumId);
-
-  // First, try to insert
-
-  var sql, params;
   if (ctx.currUser && !ctx.currUser.is_ghost) {
-    sql = `
-INSERT INTO viewers (uname, forum_id, topic_id, viewed_at)
-VALUES ($1, $2, $3, NOW())
-    `;
-    params = [ctx.currUser.uname, forumId, topicId];
+    return yield query(`
+      INSERT INTO viewers (uname, forum_id, topic_id, viewed_at)
+      VALUES ($1, $2, $3, NOW())
+      ON CONFLICT (uname) DO UPDATE
+        SET forum_id = $2
+          , topic_id = $3
+          , viewed_at = NOW()
+    `, [ctx.currUser.uname, forumId, topicId]);
   } else {
-    sql = `
-INSERT INTO viewers (ip, forum_id, topic_id, viewed_at)
-VALUES ($1, $2, $3, NOW())
-    `;
-    params = [ctx.ip, forumId, topicId];
+    return yield query(`
+      INSERT INTO viewers (ip, forum_id, topic_id, viewed_at)
+      VALUES ($1, $2, $3, NOW())
+      ON CONFLICT (ip) DO UPDATE
+        SET forum_id = $2
+          , topic_id = $3
+          , viewed_at = NOW()
+    `, [ctx.ip, forumId, topicId]);
   }
-
-  var result;
-  for (var i = 0; i < 100; i++) {
-    try {
-      return yield query(sql, params);
-    } catch(ex) {
-      // If it fails, if it was unique violation (already existed), then
-      // update the row
-      if (ex.code === '23505') {
-        if (ctx.currUser && !ctx.currUser.is_ghost) {
-          sql = `
-            UPDATE viewers
-            SET forum_id = $2, topic_id = $3, viewed_at = NOW()
-            WHERE uname = $1
-          `;
-        } else {
-          sql = `
-            UPDATE viewers
-            SET forum_id = $2, topic_id = $3, viewed_at = NOW()
-            WHERE ip = $1
-          `;
-        }
-        var result = yield query(sql, params);
-
-        // Only return if we actually updated something
-        // Else, loop back so we can insert it
-        if (result.rowCount > 0)
-          return;
-      } else {
-        throw ex;
-      }
-    }  // end try/catch
-  }  // end for loop
-
-  throw new Error('Query retry limit exceeded 100 attempts');
 };
 
 // Returns map of ForumId->Int

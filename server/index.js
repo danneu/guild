@@ -5,7 +5,9 @@ var config = require('./config');
 // Koa deps
 var app = require('koa')();
 app.poweredBy = false;
-app.proxy = true;
+if (config.NODE_ENV === 'production') {
+  app.proxy = true;
+}
 app.use(require('koa-static')('public', {
   maxage: 1000 * 60 * 60 * 24 * 365,
   gzip: false
@@ -1007,7 +1009,7 @@ app.get('/forums/:forumSlug/topics/new', function*() {
 //
 // Canonical show forum
 //
-app.get('/forums/:forumSlug', function*() {
+app.get('/forums/:forumSlug', function * () {
   var forumId = belt.extractId(this.params.forumSlug);
   this.assert(forumId, 404);
 
@@ -1030,8 +1032,6 @@ app.get('/forums/:forumSlug', function*() {
   this.assertAuthorized(this.currUser, 'READ_FORUM', forum);
 
   var pager = belt.calcPager(this.request.query.page, 25, forum.topics_count);
-
-  co(db.upsertViewer(this, forum.id));
 
   // Avoid the has_posted subquery if guest
   var thunk, results, topics, viewers;
@@ -1065,6 +1065,8 @@ app.get('/forums/:forumSlug', function*() {
     // Viewers
     viewers: viewers
   });
+  // update viewers after response is sent
+  yield db.upsertViewer(this, forum.id);
 });
 
 //
@@ -1927,8 +1929,6 @@ app.get('/topics/:slug/:postType', function*() {
     return this.response.redirect(redirectUrl);
   }
 
-  co(db.upsertViewer(this, topic.forum_id, topic.id));
-
   // Get viewers and posts in parallel
   var results = yield [
     db.findViewersForTopicId(topic.id),
@@ -1984,6 +1984,8 @@ app.get('/topics/:slug/:postType', function*() {
     viewers: viewers,
     recaptchaSitekey: config.RECAPTCHA_SITEKEY
   });
+  // update viewers after response is sent
+  yield db.upsertViewer(this, topic.forum_id, topic.id);
 });
 
 // Legacy URL
