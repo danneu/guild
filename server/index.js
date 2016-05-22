@@ -2610,6 +2610,8 @@ app.get('/chatlog.txt', function*() {
 ////////////////////////////////////////////////////////////
 
 app.get('/chatlogs', function*() {
+  // Temporarily disable
+  return this.body = 'Chatlogs temporarily disabled. If you actually use this system, please let me know.';
   var logs = yield db.getChatLogDays();
 
   yield this.render('list_chatlogs', {
@@ -2620,6 +2622,8 @@ app.get('/chatlogs', function*() {
 
 // :when is 'YYYY-MM-DD'
 app.get('/chatlogs/:when', function*() {
+  // Temporarily disable
+  return this.body = 'Chatlogs temporarily disabled. If you actually use this system, please let me know.';
   // TODO: Validate
   this.validateParam('when')
     .match(/\d{4}-\d{2}-\d{2}/, 'Invalid date format');
