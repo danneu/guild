@@ -3148,7 +3148,6 @@ SELECT
   ) "likers"
 FROM statuses s
 WHERE s.id IN (SELECT id FROM sids)
-GROUP BY s.id
 ORDER BY s.created_at DESC
   `;
 
