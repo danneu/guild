@@ -18,6 +18,15 @@ if (isServer) {
   cache = require('./cache')();
 }
 
+function escapeHtml (unsafe) {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
 // String -> Maybe String
 function extractYoutubeId(url) {
   var re = /^.*(?:youtu.be\/|v\/|e\/|u\/\w+\/|embed\/|v=)([^#\&\?]{11}).*/;
@@ -362,7 +371,7 @@ var XBBCODE = (function() {
     "hider": {
       trimContents: true,
       openTag: function(params, content) {
-        var title = params ? params.slice(1) : 'Hider';
+        var title = params ? escapeHtml(params.slice(1)) : 'Hider';
         return '<div class="hider-panel">'+
           '<div class="hider-heading">'+
           '<button type="button" class="btn btn-default btn-xs hider-button" data-name="'+title+'">'+
