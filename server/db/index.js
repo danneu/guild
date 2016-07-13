@@ -2375,13 +2375,15 @@ RETURNING *
 // Ignores hidden topics in the recalculation
 // Use this to fix a forum when you hide a spambot. Otherwise the spambot
 // topic will hang around as the forum's latest post.
-exports.refreshForum = function*(forumId) {
+//
+// Sync with refreshAllForums
+exports.refreshForum = function * (forumId) {
   assert(forumId);
 
   var sql = `
 UPDATE forums
 SET
-  posts_count = sub.posts_count,
+  posts_count = COALESCE(sub.posts_count, 0),
   latest_post_id = sub.latest_post_id
 FROM (
   SELECT
@@ -2395,6 +2397,25 @@ RETURNING forums.*
   `;
 
   return yield queryOne(sql, [forumId]);
+};
+
+
+// Sync with refreshForum
+exports.refreshAllForums = function * () {
+  var sql = `
+UPDATE forums
+SET
+  posts_count = COALESCE(sub.posts_count, 0),
+  latest_post_id = sub.latest_post_id
+FROM (
+  SELECT
+    SUM(posts_count) posts_count,
+    MAX(latest_post_id) latest_post_id
+  FROM topics
+  WHERE is_hidden = false
+) sub
+  `;
+  return yield query(sql);
 };
 
 // -> JSONString

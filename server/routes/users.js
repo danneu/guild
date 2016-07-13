@@ -773,6 +773,8 @@ router.post('/users/:slug/nuke', function*() {
     }
   }
   yield db.nukeUser({ spambot: user.id, nuker: this.currUser.id });
+  // Recalculate forum caches
+  yield db.refreshAllForums();
   this.flash = { message: ['success', 'Nuked the bastard'] };
   this.redirect(user.url)
 });
