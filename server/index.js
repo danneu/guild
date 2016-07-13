@@ -417,6 +417,7 @@ app.use(require('./routes/images').routes());
 app.use(require('./routes/dice').routes());
 app.use(require('./routes/statuses').routes());
 app.use(require('./routes/chat').routes());
+app.use(require('./routes/subscriptions').routes());
 
 // Useful to redirect users to their own profiles since canonical edit-user
 // url is /users/:slug/edit
@@ -688,28 +689,6 @@ app.get('/', function*() {
 });
 
 //
-// Remove subcription
-//
-app.delete('/me/subscriptions/:topicSlug', function*() {
-  var topicId = belt.extractId(this.params.topicSlug);
-  this.assert(topicId, 404);
-
-  this.assert(this.currUser, 404);
-  var topic = yield db.findTopic(topicId);
-  this.assertAuthorized(this.currUser, 'UNSUBSCRIBE_TOPIC', topic);
-  yield db.unsubscribeFromTopic(this.currUser.id, topicId);
-  // TODO: flash
-  topic = pre.presentTopic(topic);
-
-  if (this.request.body['return-to-topic'])
-    return this.response.redirect(topic.url);
-
-  this.flash = { message: ['success', 'Successfully unsubscribed'] };
-  var redirectTo = this.query.redirectTo || '/me/subscriptions';
-  this.response.redirect(redirectTo);
-});
-
-//
 // Forgot password page
 //
 app.get('/forgot', function*() {
@@ -840,60 +819,6 @@ app.post('/reset-password', function*() {
 
   this.flash = { message: ['success', 'Your password was updated'] };
   return this.response.redirect('/');
-});
-
-//
-// Create subscription
-//
-// Body params:
-// - topic-id
-app.post('/me/subscriptions', function*() {
-  this.assert(this.currUser, 404);
-
-  // Ensure user doesn't have 200 subscriptions
-  var subs = yield db.findSubscribedTopicsForUserId(this.currUser.id);
-  if (subs.length >= 200) {
-    this.body = 'You cannot have more than 200 topic subscriptions';
-    return;
-  }
-
-  var topicId = this.request.body['topic-id'];
-  this.assert(topicId, 404);
-  var topic = yield db.findTopic(topicId);
-  this.assert(topic, 404);
-  this.assertAuthorized(this.currUser, 'SUBSCRIBE_TOPIC', topic);
-  // TODO: flash
-  yield db.subscribeToTopic(this.currUser.id, topicId);
-
-  topic = pre.presentTopic(topic);
-
-  if (this.request.body['return-to-topic'])
-    return this.response.redirect(topic.url);
-
-  var redirectTo = this.query.redirectTo || '/me/subscriptions';
-  this.response.redirect(redirectTo);
-});
-
-
-//
-// Show subscriptions
-//
-app.get('/me/subscriptions', function*() {
-  this.assert(this.currUser, 404);
-  var topics = yield db.findSubscribedTopicsForUserId(this.currUser.id);
-  topics = topics.map(pre.presentTopic);
-  var grouped = _.groupBy(topics, function(topic) {
-    return topic.forum.is_roleplay;
-  });
-  var roleplayTopics = grouped[true] || [];
-  var nonroleplayTopics = grouped[false] || [];
-  yield this.render('subscriptions', {
-    ctx: this,
-    topics: topics,
-    roleplayTopics: roleplayTopics,
-    nonroleplayTopics: nonroleplayTopics,
-    title: 'My Subscriptions'
-  });
 });
 
 //
