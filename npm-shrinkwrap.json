@@ -232,11 +232,6 @@
       "from": "blob@0.0.4",
       "resolved": "https://registry.npmjs.org/blob/-/blob-0.0.4.tgz"
     },
-    "bluebird": {
-      "version": "2.10.2",
-      "from": "bluebird@>=2.9.26 <3.0.0",
-      "resolved": "https://registry.npmjs.org/bluebird/-/bluebird-2.10.2.tgz"
-    },
     "boolbase": {
       "version": "1.0.0",
       "from": "boolbase@>=1.0.0 <1.1.0",
@@ -391,16 +386,6 @@
       "from": "co-read@0.0.1",
       "resolved": "https://registry.npmjs.org/co-read/-/co-read-0.0.1.tgz"
     },
-    "co-render": {
-      "version": "0.2.0",
-      "from": "co-render@>=0.0.0 <1.0.0",
-      "resolved": "https://registry.npmjs.org/co-render/-/co-render-0.2.0.tgz"
-    },
-    "co-views": {
-      "version": "0.3.0",
-      "from": "co-views@>=0.3.0 <0.4.0",
-      "resolved": "https://registry.npmjs.org/co-views/-/co-views-0.3.0.tgz"
-    },
     "coa": {
       "version": "1.0.1",
       "from": "coa@>=1.0.1 <1.1.0",
@@ -485,11 +470,6 @@
       "version": "1.0.4",
       "from": "concat-with-sourcemaps@>=1.0.0 <2.0.0",
       "resolved": "https://registry.npmjs.org/concat-with-sourcemaps/-/concat-with-sourcemaps-1.0.4.tgz"
-    },
-    "consolidate": {
-      "version": "0.13.1",
-      "from": "consolidate@>=0.13.0 <0.14.0",
-      "resolved": "https://registry.npmjs.org/consolidate/-/consolidate-0.13.1.tgz"
     },
     "content-disposition": {
       "version": "0.5.1",
@@ -2098,11 +2078,6 @@
       "from": "koa-validate@0.2.11",
       "resolved": "https://registry.npmjs.org/koa-validate/-/koa-validate-0.2.11.tgz"
     },
-    "koa-views": {
-      "version": "3.1.0",
-      "from": "koa-views@3.1.0",
-      "resolved": "https://registry.npmjs.org/koa-views/-/koa-views-3.1.0.tgz"
-    },
     "lazy-cache": {
       "version": "1.0.4",
       "from": "lazy-cache@>=1.0.3 <2.0.0",
@@ -3500,11 +3475,6 @@
       "version": "1.0.2",
       "from": "util-deprecate@>=1.0.1 <1.1.0",
       "resolved": "https://registry.npmjs.org/util-deprecate/-/util-deprecate-1.0.2.tgz"
-    },
-    "utils-merge": {
-      "version": "1.0.0",
-      "from": "utils-merge@>=1.0.0 <2.0.0",
-      "resolved": "https://registry.npmjs.org/utils-merge/-/utils-merge-1.0.0.tgz"
     },
     "v8flags": {
       "version": "2.0.11",
