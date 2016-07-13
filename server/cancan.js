@@ -533,6 +533,14 @@ function can(user, action, target) {
       // can if they own the campaign
       if (user.id === target.user_id) return true;
       return false;
+    //
+    // CHAT
+    //
+    case 'READ_CHATLOGS': // no target
+      if (!user) return false;
+      if (user.id === 107) return true; // HACK: Let Ellri
+      if (isStaffRole(user.role)) return true; // Only staff can
+      return false;
     default:
       debug('Unsupported cancan action: ' + action);
       return false;

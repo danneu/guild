@@ -416,6 +416,7 @@ app.use(require('./routes/convos').routes());
 app.use(require('./routes/images').routes());
 app.use(require('./routes/dice').routes());
 app.use(require('./routes/statuses').routes());
+app.use(require('./routes/chat').routes());
 
 // Useful to redirect users to their own profiles since canonical edit-user
 // url is /users/:slug/edit
@@ -2585,59 +2586,6 @@ app.get('/me/friendships', function*() {
 
 ////////////////////////////////////////////////////////////
 
-app.get('/chatlog.txt', function*() {
-  // Temporarily disable
-  this.body = 'Chatlog disabled until I implement pagination for it';
-  return;
-
-  this.type = 'text/plain';
-  var messages = yield db.getAllChatMessages();
-  var text = messages.map(function(m) {
-    if (m.user) { // User message
-      return [
-        formatChatDate(m.created_at),
-        '<' +m.user.uname + '>',
-        m.text
-      ].join(' ');
-    } else { // System message
-      return [formatChatDate(m.created_at), '::', m.text].join(' ');
-    }
-  }).join('\n');
-
-  this.body = text;
-});
-
-////////////////////////////////////////////////////////////
-
-app.get('/chatlogs', function*() {
-  // Temporarily disable
-  return this.body = 'Chatlogs temporarily disabled. If you actually use this system, please let me know.';
-  var logs = yield db.getChatLogDays();
-
-  yield this.render('list_chatlogs', {
-    ctx: this,
-    logs: logs
-  });
-});
-
-// :when is 'YYYY-MM-DD'
-app.get('/chatlogs/:when', function*() {
-  // Temporarily disable
-  return this.body = 'Chatlogs temporarily disabled. If you actually use this system, please let me know.';
-  // TODO: Validate
-  this.validateParam('when')
-    .match(/\d{4}-\d{2}-\d{2}/, 'Invalid date format');
-
-  var log = yield db.findLogByDateTrunc(this.vals.when);
-  this.assert(log, 404);
-  this.assert(log.length > 0, 404);
-
-  yield this.render('show_chatlog', {
-    ctx: this,
-    log: log,
-    when: log[0].when
-  });
-});
 
 ////////////////////////////////////////////////////////////
 // current_sidebar_contests

@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 /*jshint -W002 */
 // Node deps
 var path = require('path');
@@ -3534,59 +3534,6 @@ WHERE from_user_id = $1 AND to_user_id = $2
 
 ////////////////////////////////////////////////////////////
 
-exports.getAllChatMessages = function*() {
-  const sql = `
-SELECT
-  chat_messages.*,
-  to_json(u.*) "user"
-FROM chat_messages
-LEFT OUTER JOIN users u ON chat_messages.user_id = u.id
-ORDER BY id ASC
-  `;
-
-  return yield queryMany(sql);
-};
-
-////////////////////////////////////////////////////////////
-
-// Returns [{when: '2015-7-25', count: 64}, ...]
-exports.getChatLogDays = function*() {
-  const sql = `
-SELECT to_char(sub.day, 'YYYY-MM-DD') "when", sub.count "count"
-FROM (
-	SELECT date_trunc('day', cm.created_at) "day", COUNT(cm.*) "count"
-	FROM chat_messages cm
-	GROUP BY "day"
-	ORDER BY "day"
-) sub
-  `;
-
-  return yield queryMany(sql);
-};
-
-////////////////////////////////////////////////////////////
-
-// `when` is string 'YYYY-MM-DD'
-exports.findLogByDateTrunc = function*(when) {
-  assert(_.isString(when));
-
-  const sql = `
-SELECT sub.*
-FROM (
-	SELECT
-		to_char(date_trunc('day', cm.created_at), 'YYYY-MM-DD') "when",
-		cm.*,
-    u.uname "uname"
-	FROM chat_messages cm
-  LEFT OUTER JOIN users u ON cm.user_id = u.id
-) sub
-WHERE sub.when = $1
-ORDER BY sub.id
-  `;
-
-  return yield queryMany(sql, [when]);
-};
-
 // Returns array of all unique user IDs that have posted a VM
 // in a thread, given the root VM ID of that thread
 exports.getVmThreadUserIds = function * (parentVmId) {
@@ -3883,3 +3830,4 @@ exports.images = require('./images');
 exports.dice = require('./dice');
 exports.profileViews = require('./profile-views');
 exports.users = require('./users');
+exports.chat = require('./chat');
