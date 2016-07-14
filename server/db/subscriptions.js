@@ -126,7 +126,7 @@ exports.subscribeToTopic = function * (userId, topicId) {
 ////////////////////////////////////////////////////////////
 
 exports.unsubscribeFromTopic = function * (userId, topicId) {
-  return dbUtil.query(`
+  return yield dbUtil.query(`
 DELETE FROM topic_subscriptions
 WHERE user_id = $1 AND topic_id = $2
   `, [userId, topicId]);
