@@ -453,36 +453,31 @@ router.get('/users/:userIdOrSlug', async (ctx) => {
       .catch((err) => console.error('insertView error', err, err.stack))
   }
 
-  const results = await Promise.all([
+  const [statuses, friendship, latestViewers] = await Promise.all([
     db.findLatestStatusesForUserId(user.id),
-    user.current_status_id ?
-      db.findStatusById(user.current_status_id) : null,
-    ctx.currUser ?
-      db.findFriendshipBetween(ctx.currUser.id, user.id) : null,
+    ctx.currUser
+      ? db.findFriendshipBetween(ctx.currUser.id, user.id) : null,
     db.profileViews.getLatestViews(user.id)
+      .then((xs) => xs.map(pre.presentUser))
   ])
-  var statuses = results[0];
-  user.current_status = results[1];
-  var friendship = results[2];
-  var latestViewers = results[3].map(pre.presentUser);
 
   // The ?before-id=_ of the "Next" button. i.e. the lowest
   // id of the posts on the current page
-  var nextBeforeId = recentPosts.length > 0 ? _.last(recentPosts).id : null;
+  const nextBeforeId = recentPosts.length > 0 ? _.last(recentPosts).id : null;
 
   ctx.set('Link', util.format('<%s>; rel="canonical"', config.HOST + user.url));
 
   await ctx.render('show_user', {
     ctx,
-    user: user,
-    recentPosts: recentPosts,
+    user,
+    recentPosts,
     title: user.uname,
-    statuses: statuses,
+    statuses,
     currStatus: statuses.find((x) => x.id === user.current_status_id),
-    friendship: friendship,
+    friendship,
     latestViewers,
     // Pagination
-    nextBeforeId: nextBeforeId,
+    nextBeforeId,
     recentPostsPerPage: config.RECENT_POSTS_PER_PAGE
   });
 });
@@ -492,41 +487,39 @@ router.get('/users/:userIdOrSlug', async (ctx) => {
 //
 // TODO: Sync up with regular show-user route
 router.get('/users/:slug/trophies', async (ctx) => {
-  var user = await db.findUserWithRatingsBySlug(ctx.params.slug);
+  const user = await db.findUserWithRatingsBySlug(ctx.params.slug)
+    .then(pre.presentUser)
   ctx.assert(user, 404);
-  user = pre.presentUser(user);
 
   // TODO: Merge this query into the findUser query
   // Until then, only execute query if user's column cache indicates that
   // they actually have trophies
-  var trophies = [];
-  if (user.trophy_count > 0)
-    trophies = await db.findTrophiesForUserId(user.id);
-  // Hide anon trophies from their list
-  // TODO: Display anon trophies as a mysterious trophy
-  trophies = trophies.filter(function(t) {
-    return !t.is_anon;
-  }).map(pre.presentTrophy);
+  let trophies = user.trophy_count === 0
+    ? []
+    : (await db.findTrophiesForUserId(user.id))
+        // Hide anon trophies from their list
+        // TODO: Display anon trophies as a mysterious trophy
+        .filter((t) => !t.is_anon)
+        .map(pre.presentTrophy)
 
   trophies = _.sortBy(trophies, [
     // Put the activeTrophy on top if there is one
-    function(t) { return t.id === user.active_trophy_id ? 0 : 1; },
+    (t) => t.id === user.active_trophy_id ? 0 : 1,
     // Sort the rest by newest first
-    function(t) { return -t.awarded_at; }
+    (t) => -t.awarded_at
   ]);
 
-  const [statuses, currStatus, friendship] = await Promise.all([
+  const [statuses, friendship] = await Promise.all([
     db.findLatestStatusesForUserId(user.id),
-    user.current_status_id ? db.findStatusById(user.current_status_id) : null,
     ctx.currUser ? db.findFriendshipBetween(ctx.currUser.id, user.id) : null
   ])
-  user.current_status = currStatus
 
   await ctx.render('show_user_trophies', {
     ctx,
     user,
     trophies,
     statuses,
+    currStatus: statuses.find((x) => x.id === user.current_status_id),
     friendship,
   });
 });
@@ -555,24 +548,21 @@ router.get('/users/:slug/vms', async (ctx) => {
     .then(pre.presentUser)
   ctx.assert(user, 404)
 
-  const [statuses, currStatus, friendship, vms] = await Promise.all([
+  const [statuses, friendship, vms] = await Promise.all([
     db.findLatestStatusesForUserId(user.id),
-    user.current_status_id
-      ? db.findStatusById(user.current_status_id)
-      : null,
     ctx.currUser
       ? db.findFriendshipBetween(ctx.currUser.id, user.id)
       : null,
     db.findLatestVMsForUserId(user.id)
       .then((xs) => xs.map(pre.presentVm))
   ])
-  user.current_status = currStatus
 
   await ctx.render('show_user_visitor_messages', {
     ctx,
     user,
     vms,
     statuses,
+    currStatus: statuses.find((x) => x.id === user.current_status_id),
     friendship,
   });
 });
