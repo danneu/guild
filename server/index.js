@@ -52,7 +52,7 @@ const util = require('util')
 const _ = require('lodash')
 const debug = require('debug')('app:index')
 const assert = require('better-assert')
-const koaCompressor = require('koa-compressor')
+const compress = require('koa-compress')
 // 1st party
 const db = require('./db')
 const pre = require('./presenters')
@@ -2046,7 +2046,7 @@ router.get('/users/:slug/ips', async (ctx) => {
     }).join('<br>');
 });
 
-router.get('/sitemap.txt', koaCompressor(), async (ctx) => {
+router.get('/sitemap.txt', compress(), async (ctx) => {
   var text = cache.get('sitemap.txt');
   ctx.set('Content-Type', 'text/plain');
   ctx.body = text;
