@@ -1826,6 +1826,7 @@ LEFT OUTER JOIN posts p ON n.post_id = p.id
 LEFT OUTER JOIN vms ON n.vm_id = vms.id
 WHERE n.to_user_id = ${toUserId}
 ORDER BY n.id DESC
+LIMIT 50
   `)
 }
 

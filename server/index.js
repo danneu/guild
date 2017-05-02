@@ -550,7 +550,7 @@ router.post('/posts/:postId/rate', async (ctx) => {
     post_id:      post.id,
     topic_id:     post.topic_id,
     rating_type:  rating.type
-  }).catch((err) => console.error(err))
+  }).catch((err) => console.error(err, err.stack))
 
   ctx.body = JSON.stringify(rating);
 });
