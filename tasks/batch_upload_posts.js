@@ -1,29 +1,29 @@
 // Node
 // 3rd party
 var _ = require('lodash');
-var co = require('co');
 var debug = require('debug')('task:batch_upload_posts');
 var assert = require('better-assert');
 var AWS = require('aws-sdk');
 // 1st party
-var db = require('../server/db');
 var config = require('../server/config');
+const {pool} = require('../server/db/util')
+const {sql} = require('pg-extra')
 
 assert(config.NODE_ENV === 'production');
 assert(config.IS_CLOUDSEARCH_CONFIGURED);
 
 AWS.config.region = 'us-east-1';
 
-var client = new AWS.CloudSearchDomain({
+const client = new AWS.CloudSearchDomain({
   apiVersion: '2013-01-01',
   endpoint: config.AWS_CLOUDSEARCH_DOCUMENT_ENDPOINT
-});
+})
 
 ////////////////////////////////////////////////////////////
 
 // Can only allow markup chars that are valid in xml 1.0
 // according to CloudSearch docs.
-var replaceInvalidChars = function(str) {
+const replaceInvalidChars = function (str) {
   return str.replace(/\u00B7/g,'')
     .replace(/\u00C2/g,'')
     .replace(/\u00A0/g,'')
@@ -70,68 +70,65 @@ var postToBodyItem = function(post) {
 };
 
 // [Posts] -> AmazonResponse
-function* batchUploadPosts(posts) {
+function batchUploadPosts (posts) {
   return new Promise(function(resolve, reject) {
     var params = {
       contentType: 'application/json',
       documents: JSON.stringify(_.compact(posts.map(postToBodyItem)))
-    };
-    client.uploadDocuments(params, function(err, data) {
+    }
+    client.uploadDocuments(params, (err, data) => {
       if (err) return reject(err);
       return resolve(data);
-    });
+    })
   });
 }
 
 var queries = {
-  findPostsToUpload: function*() {
-    var sql = `
-SELECT
-  *
-FROM (
-	SELECT
-		p.*,
-		to_json(f.*) "forum",
-	  (
-		 SELECT array_agg(id)
-		 FROM tags
-		 JOIN tags_topics ON tags.id = tags_topics.tag_id
-		 WHERE tags_topics.topic_id = t.id
-		) tag_ids,
+  findPostsToUpload: async () => {
+    return pool.many(sql`
+      SELECT
+        *
+      FROM (
+        SELECT
+          p.*,
+          to_json(f.*) "forum",
+          (
+          SELECT array_agg(id)
+          FROM tags
+          JOIN tags_topics ON tags.id = tags_topics.tag_id
+          WHERE tags_topics.topic_id = t.id
+          ) tag_ids,
 
-		sum(char_length(p.markup)) over (order by p.id asc) as char_total
-	FROM posts p
-	JOIN topics t ON p.topic_id = t.id
-	JOIN forums f ON t.forum_id = f.id
-	WHERE
-    p.markup IS NOT NULL
-    AND (
-      -- Has not yet been uploaded
-      p.uploaded_at IS NULL
-      -- Has been edited since last upload
-      OR p.updated_at > p.uploaded_at
-    )
-  GROUP BY p.id, f.id, t.id
-	ORDER BY p.id
-) pp
-WHERE char_total <= 4500000  -- 4.5 MB
-    `;
-    var result = yield db.query(sql);
-    return result.rows;
+          sum(char_length(p.markup)) over (order by p.id asc) as char_total
+        FROM posts p
+        JOIN topics t ON p.topic_id = t.id
+        JOIN forums f ON t.forum_id = f.id
+        WHERE
+          p.markup IS NOT NULL
+          AND (
+            -- Has not yet been uploaded
+            p.uploaded_at IS NULL
+            -- Has been edited since last upload
+            OR p.updated_at > p.uploaded_at
+          )
+        GROUP BY p.id, f.id, t.id
+        ORDER BY p.id
+      ) pp
+      WHERE char_total <= 4500000  -- 4.5 MB
+    `)
   },
-  massUpdatePostUploadedAt: function*(post_ids) {
+  massUpdatePostUploadedAt: async (post_ids) => {
     assert(_.isArray(post_ids));
-    var sql = `
-UPDATE posts
-SET uploaded_at = now()
-WHERE id = ANY ($1::int[])
-    `;
-    yield db.query(sql, [post_ids]);
+    return pool.query(sql`
+      UPDATE posts
+      SET uploaded_at = now()
+      WHERE id = ANY (${post_ids}::int[])
+    `)
   }
 };
 
-co(function*() {
-  var posts = yield queries.findPostsToUpload();
+(async () => {
+  const posts = await queries.findPostsToUpload()
 
   // Noop if no posts found
   if (_.isEmpty(posts)) {
@@ -142,14 +139,14 @@ co(function*() {
   // Posts found, so let's upload them
   console.log('Batch uploading', posts.length, 'posts to CloudSearch...');
 
-  var response = yield batchUploadPosts(posts);
+  const response = await batchUploadPosts(posts)
   console.log('Response came back');
   if (response.status === 'success') { //&& response.adds === posts.length) {
     // Update the uploaded_at of the uploaded posts
-    yield queries.massUpdatePostUploadedAt(_.pluck(posts, 'id'));
+    await queries.massUpdatePostUploadedAt(posts.map((x) => x.id));
     console.log('Success');
   }
-}).then(
+})().then(
   function() {
     console.log('OK');
     process.exit(0);
@@ -158,4 +155,35 @@ co(function*() {
     console.log('Error:', ex, ex.stack);
     process.exit(1);
   }
-);
+)
+
+/* co(function*() {
+ *   var posts = yield queries.findPostsToUpload();
+ *
+ *   // Noop if no posts found
+ *   if (_.isEmpty(posts)) {
+ *     console.log('No posts to upload');
+ *     return;
+ *   }
+ *
+ *   // Posts found, so let's upload them
+ *   console.log('Batch uploading', posts.length, 'posts to CloudSearch...');
+ *
+ *   var response = yield batchUploadPosts(posts);
+ *   console.log('Response came back');
+ *   if (response.status === 'success') { //&& response.adds === posts.length) {
+ *     // Update the uploaded_at of the uploaded posts
+ *     yield queries.massUpdatePostUploadedAt(_.pluck(posts, 'id'));
+ *     console.log('Success');
+ *   }
+ * })
+ *   .then(
+ *   function() {
+ *     console.log('OK');
+ *     process.exit(0);
+ *   },
+ *   function(ex) {
+ *     console.log('Error:', ex, ex.stack);
+ *     process.exit(1);
+ *   }
+ * );*/

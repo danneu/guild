@@ -1,81 +1,97 @@
-"use strict";
 // Node deps
-var path = require('path');
-var fs = require('co-fs');
+const path = require('path');
+const fs = require('fs');
 // 3rd party
-var pg = require('co-pg')(require('pg'));
-var co = require('co');
-var _ = require('lodash');
+const pg = require('co-pg')(require('pg'));
+const _ = require('lodash');
+const promiseMap = require('promise.map')
 // 1st party
-var db = require('./db');
-var config = require('./config');
+const config = require('./config');
+const db = require('./db')
+const {pool} = require('./db/util')
+const {sql, _raw} = require('pg-extra')
+
+
+if (config.NODE_ENV !== 'development') {
+  console.log('can only reset db in development')
+  process.exit(1)
+}
+
+if (!/localhost/.test(config.DATABASE_URL)) {
+  console.log('can only reset a localhost db')
+  process.exit(1)
+}
+
 
 ////////////////////////////////////////////////////////////
 
-function* slurpSql(filePath) {
-  var relativePath = '../sql/' + filePath;
-  var fullPath = path.join(__dirname, relativePath);
-  return yield fs.readFile(fullPath, 'utf8');
+function slurpSqlSync (filePath) {
+  const relativePath = '../sql/' + filePath
+  const fullPath = path.join(__dirname, relativePath)
+  return fs.readFileSync(fullPath, 'utf8')
 }
 
-function* resetDb() {
-  // Create tables
-  var sql = yield slurpSql('schema.sql');
-  yield db.query(sql);
-  console.log('Reset schema.sql');
-  // Link up triggers
-  sql = yield slurpSql('functions_and_triggers.sql');
-  yield db.query(sql);
-  console.log('Reset functions_and_triggers.sql');
-  if (config.NODE_ENV === 'development') {
-    sql = yield slurpSql('dev_seeds.sql');
-    yield db.query(sql);
-    console.log('Inserted dev_seeds.sql');
+function timeout (ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
 
-    // Insert 100 topics for forum1
-    let thunks1 = _.range(100).map(function(n) {
-      var markup = 'Post ' + n;
+async function resetDb () {
+  // Create tables
+  await (async () => {
+    const str = slurpSqlSync('schema.sql');
+    await pool.query(_raw`${str}`);
+    console.log('Reset schema.sql');
+  })()
+
+  // Triggers
+  await (async () => {
+    const str = slurpSqlSync('functions_and_triggers.sql');
+    await pool.query(_raw`${str}`);
+    console.log('Reset functions_and_triggers.sql');
+  })()
+
+  // Seed data
+  await (async () => {
+    const str = slurpSqlSync('dev_seeds.sql');
+    await pool.query(_raw`${str}`);
+    console.log('Inserted dev_seeds.sql');
+  })()
+
+  // Insert 100 topics for forum1
+  await (async () => {
+    console.log('Inserting 100 topics into forum 1')
+    await promiseMap(_.range(100), (n) => {
+      const markup = 'Post ' + n;
       return db.createTopic({
         userId: 1, forumId: 1, ipAddress: '1.2.3.4',
         title: 'My topic ' + n,
         markup: markup, html: markup,
         isRoleplay: false, postType: 'ooc'
-      });
-    });
-    for (var i = 0; i < thunks1.length; i++) {
-      yield thunks1[i];
-    }
+      })
+    }, 1)
+  })()
 
-    // Insert 100 posts for user1, forum1
-    let thunks2 = _.range(100).map(function(n) {
-      var markup = n.toString();
+  // Insert 100 posts for topic1
+  await (async () => {
+    console.log('Inserting 100 posts into topic 1')
+    await promiseMap(_.range(100), (n) => {
+      const markup = n.toString()
       return db.createPost({
         userId: 1, ipAddress: '1.2.3.4',
         markup: markup, html: markup,
         topicId: 1, isRoleplay: false,
         type: 'ooc'
       });
-    });
-    for (var i = 0; i < thunks2.length; i++) {
-      yield thunks2[i];
-    }
-  }
+    }, 1)
+  })()
 }
 
 if (!module.parent) {
   // Called from cli
-  var succBack = function() {
-    console.log('Database reset!');
-    process.exit();
-  };
-  var errBack = function(err) {
-    console.error('Caught error: ', err, err.stack);
-  };
-  co(function*() {
-    console.log('Resetting the database...');
-    yield resetDb();
-  }).then(succBack, errBack);
-} else {
-  // Loaded by a script
-  module.exports = resetDb;
+  const succBack = () => { console.log('Database reset!'); process.exit() }
+  const errBack = (err) => { console.error('Caught error: ', err, err.stack) };
+  console.log('Resetting the database...');
+  resetDb().then(succBack, errBack)
 }

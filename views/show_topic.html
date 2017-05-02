@@ -372,7 +372,7 @@
             {% else %}
               <div class="corner-ribbon top-right">OP</div>
             {% endif %}
-          {% elif _.contains(topic.co_gm_ids, post.user_id) %}
+          {% elif topic.co_gm_ids.includes(post.user_id) %}
             <div class="corner-ribbon top-right orange">coGM</div>
           {% endif %}
 

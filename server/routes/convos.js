@@ -26,38 +26,36 @@ var router = new Router();
 // - 'title'
 // - 'markup'
 //
-router.post('/convos', function*() {
+router.post('/convos', async (ctx) => {
   if (!config.IS_PM_SYSTEM_ONLINE) {
-    this.body = 'PM system currently disabled';
+    ctx.body = 'PM system currently disabled';
     return;
   }
 
-  var ctx = this;
-  this.assertAuthorized(this.currUser, 'CREATE_CONVO');
+  ctx.assertAuthorized(ctx.currUser, 'CREATE_CONVO');
 
   // Light input validation
-  this.validateBody('title')
+  ctx.validateBody('title')
     .isLength(config.MIN_TOPIC_TITLE_LENGTH,
               config.MAX_TOPIC_TITLE_LENGTH,
               'Title required');
-  this.validateBody('markup')
+  ctx.validateBody('markup')
     .isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH,
               'Post text must be ' + config.MIN_POST_LENGTH +
               '-' + config.MAX_POST_LENGTH + ' chars long');
   // Array of lowercase uname strings
   // Remove empty (Note: unames contains lowercase unames)
-  this.validateBody('to')
-    .tap(function(v) {
-      return v.split(',').map(function(uname) {
-        return uname.trim().toLowerCase();
-      });
+  ctx.validateBody('to')
+    .tap((v) => {
+      return v.split(',').map((uname) => {
+        return uname.trim().toLowerCase()
+      }).filter(Boolean)
     })
-    .compact()
     // Ensure user didn't specify themself
-    .tap(function(unames) {
-      return unames.filter(function(uname) {
+    .tap((unames) => {
+      return unames.filter((uname) => {
         return uname !== ctx.currUser.uname.toLowerCase();
-      });
+      })
     })
     // Remove duplicates
     .uniq()
@@ -65,15 +63,15 @@ router.post('/convos', function*() {
 
   // TODO: Validation, Error msgs, preserve params
 
-  var unames = this.vals.to;
-  var title = this.vals.title;
-  var markup = this.vals.markup;
+  var unames = ctx.vals.to;
+  var title = ctx.vals.title;
+  var markup = ctx.vals.markup;
 
   debug('==============');
-  debug(this.vals);
+  debug(ctx.vals);
 
   // Ensure they are all real users
-  var users = yield db.findUsersByUnames(unames);
+  var users = await db.findUsersByUnames(unames);
 
   // If not all unames resolved into users, then we return user to form
   // to fix it.
@@ -81,13 +79,13 @@ router.post('/convos', function*() {
     var rejectedUnames = _.difference(unames, users.map(function(user) {
       return user.uname.toLowerCase();
     }));
-    this.flash = {
+    ctx.flash = {
       message: [
         'danger',
         'No users were found with these names: ' + rejectedUnames.join(', ')
       ]
     };
-    this.response.redirect('/convos/new?to=' + unames.join(','));
+    ctx.response.redirect('/convos/new?to=' + unames.join(','));
     return;
   }
 
@@ -95,19 +93,18 @@ router.post('/convos', function*() {
   var html = bbcode(markup);
 
   // If all unames are valid, then we can create a convo
-  var toUserIds = _.pluck(users, 'id');
-  var convo = yield db.createConvo({
-    userId: this.currUser.id,
-    toUserIds: toUserIds,
-    title: title,
-    markup: markup,
-    html: html,
-    ipAddress: this.request.ip
-  });
-  pre.presentConvo(convo);
+  const toUserIds = users.map((x) => x.id)
+  const convo = await db.createConvo({
+    userId: ctx.currUser.id,
+    toUserIds,
+    title,
+    markup,
+    html,
+    ipAddress: ctx.request.ip
+  }).then(pre.presentConvo);
 
   // Create CONVO notification for each recipient
-  yield toUserIds.map(function (toUserId) {
+  toUserIds.map(function (toUserId) {
     return db.createConvoNotification({
       from_user_id: ctx.currUser.id,
       to_user_id: toUserId,
@@ -115,7 +112,7 @@ router.post('/convos', function*() {
     });
   });
 
-  this.response.redirect(convo.url);
+  ctx.response.redirect(convo.url);
 });
 
 ////////////////////////////////////////////////////////////
@@ -124,17 +121,17 @@ router.post('/convos', function*() {
 // New Convo
 //
 // TODO: Implement typeahead
-router.get('/convos/new', function*() {
+router.get('/convos/new', async (ctx) => {
   if (!config.IS_PM_SYSTEM_ONLINE) {
-    this.body = 'PM system currently disabled';
+    ctx.body = 'PM system currently disabled';
     return;
   }
 
-  this.assertAuthorized(this.currUser, 'CREATE_CONVO');
+  ctx.assertAuthorized(ctx.currUser, 'CREATE_CONVO');
   // TODO: Validation, Error msgs, preserve params
-  yield this.render('new_convo', {
-    ctx: this,
-    to: this.request.query.to,
+  await ctx.render('new_convo', {
+    ctx,
+    to: ctx.request.query.to,
     title: 'New Conversation'
   });
 });
@@ -146,55 +143,53 @@ router.get('/convos/new', function*() {
 // Body params
 // - markup
 //
-router.post('/convos/:convoId/pms', function*() {
+router.post('/convos/:convoId/pms', async (ctx) => {
   if (!config.IS_PM_SYSTEM_ONLINE) {
-    this.body = 'PM system currently disabled';
+    ctx.body = 'PM system currently disabled';
     return;
   }
 
-  var ctx = this;
-
-  this.assert(this.currUser, 403);
+  ctx.assert(ctx.currUser, 403);
 
   try {
-    this.validateBody('markup')
+    ctx.validateBody('markup')
       .isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH);
   } catch(ex) {
     if (ex instanceof bouncer.ValidationError) {
-      this.flash = {
+      ctx.flash = {
         message: ['danger', ex.message],
-        params: this.request.body
+        params: ctx.request.body
       };
-      this.redirect('/convos/' + this.params.convoId);
+      ctx.redirect('/convos/' + ctx.params.convoId);
     }
     throw ex;
   }
 
-  var convo = yield db.findConvo(this.params.convoId);
-  this.assert(convo, 404);
-  this.assertAuthorized(this.currUser, 'CREATE_PM', convo);
+  var convo = await db.findConvo(ctx.params.convoId);
+  ctx.assert(convo, 404);
+  ctx.assertAuthorized(ctx.currUser, 'CREATE_PM', convo);
 
   // Render bbcode
-  var html = bbcode(this.vals.markup);
+  var html = bbcode(ctx.vals.markup);
 
-  var pm = yield db.createPm({
-    userId: this.currUser.id,
-    ipAddress: this.request.ip,
-    convoId: this.params.convoId,
-    markup: this.vals.markup,
+  var pm = await db.createPm({
+    userId: ctx.currUser.id,
+    ipAddress: ctx.request.ip,
+    convoId: ctx.params.convoId,
+    markup: ctx.vals.markup,
     html: html
   });
   pre.presentPm(pm);
 
   // Get only userIds of the *other* participants
   // Don't want to create notification for ourself
-  var toUserIds = (yield db.findParticipantIds(this.params.convoId)).filter(function(userId) {
+  var toUserIds = (await db.findParticipantIds(ctx.params.convoId)).filter(function(userId) {
     return userId !== ctx.currUser.id;
   });
 
   // Upsert notifications table
   // TODO: config.MAX_CONVO_PARTICIPANTS instead of hard-coded 5
-  yield toUserIds.map(function (toUserId) {
+  toUserIds.map(function (toUserId) {
     return db.createPmNotification({
       from_user_id: ctx.currUser.id,
       to_user_id: toUserId,
@@ -202,7 +197,7 @@ router.post('/convos/:convoId/pms', function*() {
     });
   });
 
-  this.redirect(pm.url);
+  ctx.redirect(pm.url);
 });
 
 ////////////////////////////////////////////////////////////
@@ -210,62 +205,60 @@ router.post('/convos/:convoId/pms', function*() {
 //
 // Show convo
 //
-router.get('/convos/:convoId', function*() {
-  var convoId = this.params.convoId;
+router.get('/convos/:convoId', async (ctx) => {
+  var convoId = ctx.params.convoId;
 
   if (!config.IS_PM_SYSTEM_ONLINE) {
-    this.body = 'PM system currently disabled';
+    ctx.body = 'PM system currently disabled';
     return;
   }
 
-  this.assert(this.currUser, 404);
-  var convo = yield db.findConvo(convoId);
-  this.assert(convo, 404);
-  this.assertAuthorized(this.currUser, 'READ_CONVO', convo);
+  ctx.assert(ctx.currUser, 404);
+  var convo = await db.findConvo(convoId);
+  ctx.assert(convo, 404);
+  ctx.assertAuthorized(ctx.currUser, 'READ_CONVO', convo);
 
   const folder = (() => {
-    return convo.cp.filter(cp => cp.user_id === this.currUser.id)[0].folder;
+    return convo.cp.filter(cp => cp.user_id === ctx.currUser.id)[0].folder;
   })();
 
-  this.validateQuery('page')
-    .default(1)
+  ctx.validateQuery('page')
+    .defaultTo(1)
     .toInt()
     // Clamp it to minimum of 1
-    .tap(function(n) {
-      return Math.max(1, n);
-    });
+    .tap((n) => Math.max(1, n))
 
   // If ?page=1 was given, then redirect without param
   // since page 1 is already the canonical destination of a convo url
-  if (this.query.page && this.vals.page === 1) {
-    this.status = 301;
-    return this.redirect(this.path);
+  if (ctx.query.page && ctx.vals.page === 1) {
+    ctx.status = 301;
+    return ctx.redirect(ctx.path);
   }
 
-  var page = this.vals.page;
+  var page = ctx.vals.page;
   var totalItems = convo.pms_count;
   var totalPages = belt.calcTotalPostPages(totalItems);
 
   // Redirect to the highest page if page parameter exceeded it
   if (page > totalPages) {
-    var redirectUrl = page === 1 ? this.path : this.path + '?page=' + totalPages;
-    return this.redirect(redirectUrl);
+    var redirectUrl = page === 1 ? ctx.path : ctx.path + '?page=' + totalPages;
+    return ctx.redirect(redirectUrl);
   }
 
   // 0 or 1
-  var count = yield db.deleteConvoNotification(this.currUser.id, convoId);
+  var count = await db.deleteConvoNotification(ctx.currUser.id, convoId);
 
   // Update the stale user's counts so that the notification count is reduced
   // appropriately when the page loads. Otherwise, the counts won't be updated
   // til next request.
-  this.currUser.notifications_count -= count;
-  this.currUser.convo_notifications_count -= count;
+  ctx.currUser.notifications_count -= count;
+  ctx.currUser.convo_notifications_count -= count;
 
-  var pms = yield db.findPmsByConvoId(convoId, page);
+  var pms = await db.findPmsByConvoId(convoId, page);
   convo.pms = pms;
   convo = pre.presentConvo(convo);
-  yield this.render('show_convo', {
-    ctx: this,
+  await ctx.render('show_convo', {
+    ctx,
     convo: convo,
     title: convo.title,
     // Pagination
@@ -277,46 +270,44 @@ router.get('/convos/:convoId', function*() {
 
 ////////////////////////////////////////////////////////////
 
-function showConvosHandler(folder) {
-  return function* _showConvosHandler() {
+function showConvosHandler (folder) {
+  return async function _showConvosHandler (ctx) {
     if (!config.IS_PM_SYSTEM_ONLINE) {
-      this.body = 'PM system currently disabled';
-      return;
+      ctx.body = 'PM system currently disabled'
+      return
     }
 
-    this.validateQuery('page')
+    ctx.validateQuery('page')
       .defaultTo(1)
       .toInt()
-      .tap(n => Math.max(1, n));
+      .tap(n => Math.max(1, n))
 
-    this.assert(this.currUser, 404);
+    ctx.assert(ctx.currUser, 404)
 
-    const results = yield {
-      convos: db.findConvosInvolvingUserId(
-        this.currUser.id, folder, this.vals.page
-      ),
-      counts: db.getConvoFolderCounts(this.currUser.id)
-    }
-    const convos = results.convos.map(pre.presentConvo);
+    const [convos, counts] = await Promise.all([
+      db.findConvosInvolvingUserId(ctx.currUser.id, folder, ctx.vals.page)
+        .then((xs) => xs.map(pre.presentConvo)),
+      db.getConvoFolderCounts(ctx.currUser.id)
+    ])
 
-    const itemsInFolder = results.counts[`${folder.toLowerCase()}_count`];
-    const fullPaginator = paginate.makeFullPaginator(this.vals.page, itemsInFolder);
+    const itemsInFolder = counts[`${folder.toLowerCase()}_count`]
+    const fullPaginator = paginate.makeFullPaginator(ctx.vals.page, itemsInFolder)
 
-    var nextBeforeId = convos.length > 0 ? _.last(convos).latest_pm_id : null;
-    yield this.render('me_convos', {
-      ctx: this,
+    var nextBeforeId = convos.length > 0 ? _.last(convos).latest_pm_id : null
+    await ctx.render('me_convos', {
+      ctx,
       title: 'My Private Conversations',
-      counts: results.counts,
+      counts,
       folderEmpty: itemsInFolder === 0,
       convos,
       folder,
       // FullPagination
       fullPaginator,
       // Pagination
-      beforeId: this.vals['before-id'],
+      beforeId: ctx.vals['before-id'],
       nextBeforeId: nextBeforeId,
       perPage: config.CONVOS_PER_PAGE
-    });
+    })
   }
 }
 
@@ -325,18 +316,18 @@ router.get('/me/convos/star', showConvosHandler('STAR'));
 router.get('/me/convos/archive', showConvosHandler('ARCHIVE'));
 router.get('/me/convos/trash', showConvosHandler('TRASH'));
 
-router.put('/convos/:convoId/folder', function*() {
-  var folder = this.request.body.folder;
-  this.assert(_.contains(['INBOX', 'STAR', 'ARCHIVE', 'TRASH'], folder), 400)
+router.put('/convos/:convoId/folder', async (ctx) => {
+  var folder = ctx.request.body.folder;
+  ctx.assert(['INBOX', 'STAR', 'ARCHIVE', 'TRASH'].includes(folder), 400)
 
-  let convo = yield db.findConvo(this.params.convoId);
-  this.assert(convo, 404);
-  this.assertAuthorized(this.currUser, 'READ_CONVO', convo);
+  let convo = await db.findConvo(ctx.params.convoId);
+  ctx.assert(convo, 404);
+  ctx.assertAuthorized(ctx.currUser, 'READ_CONVO', convo);
 
-  yield db.updateConvoFolder(this.currUser.id, convo.id, folder);
+  await db.updateConvoFolder(ctx.currUser.id, convo.id, folder);
 
-  this.flash = { message: ['success', 'Convo updated'] };
-  this.redirect(`/convos/${convo.id}`);
+  ctx.flash = { message: ['success', 'Convo updated'] };
+  ctx.redirect(`/convos/${convo.id}`);
 });
 
 ////////////////////////////////////////////////////////////

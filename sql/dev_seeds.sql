@@ -147,6 +147,7 @@ VALUES
 ,(3, 1, 'Test Topic C',        1, false, false, false, false) -- nonrp
 ,(4, 3, 'The Flob''s Journey', 1, false, false, false, true)  -- free-rp
 ;
+SELECT setval('topics_id_seq'::regclass, (SELECT MAX(id) FROM topics));
 
 
 -- Add tags to the flob's journey RP
@@ -164,7 +165,6 @@ VALUES
 ,(2, 2, 1, 'First post', 'First post', '1.2.3.4', 'ooc', false)
 ,(3, 3, 1, 'First post', 'First post', '1.2.3.4', 'ooc', false)
 ,(4, 4, 1, 'First IC post', 'First IC post', '1.2.3.4', 'ic', true);
-SELECT setval('topics_id_seq'::regclass, (SELECT MAX(id) FROM topics));
 SELECT setval('posts_id_seq'::regclass, (SELECT MAX(id) FROM posts));
 
 ---- Topic subscriptions

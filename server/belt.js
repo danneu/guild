@@ -215,11 +215,11 @@ exports.calcTotalPostPages = function(totalItems) {
 exports.isDBClient = function(obj) {
   var keys = Object.keys(obj);
 
-  return _.contains(keys, 'database') &&
-         _.contains(keys, 'connection') &&
-         _.contains(keys, 'readyForQuery') &&
-         _.contains(keys, 'hasExecuted') &&
-         _.contains(keys, 'queryQueue');
+  return keys.includes('database') &&
+         keys.includes('connection') &&
+         keys.includes('readyForQuery') &&
+         keys.includes('hasExecuted') &&
+         keys.includes('queryQueue')
 };
 
 exports.slugifyUname = function(uname) {

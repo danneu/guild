@@ -1,19 +1,19 @@
 "use strict";
 // 3rd party
-var nodemailer = require('nodemailer');
-var ses = require('nodemailer-ses-transport');
-var assert = require('better-assert');
-var _ = require('lodash');
-var nunjucks = require('nunjucks');
-var debug = require('debug')('app:emailer');
+const nodemailer = require('nodemailer');
+const ses = require('nodemailer-ses-transport');
+const assert = require('better-assert');
+const _ = require('lodash');
+const nunjucks = require('nunjucks');
+const debug = require('debug')('app:emailer');
 // 1st party
-var belt = require('./belt');
-var config = require('./config');
+const belt = require('./belt');
+const config = require('./config');
 
 function getTransporter() {
   assert(config.AWS_KEY, 'AWS_KEY must be set to send emails');
   assert(config.AWS_SECRET, 'AWS_SECRET must be set to send emails');
-  var transporter = nodemailer.createTransport(ses({
+  const transporter = nodemailer.createTransport(ses({
     accessKeyId: config.AWS_KEY,
     secretAccessKey: config.AWS_SECRET
   }));

@@ -1,17 +1,19 @@
 'use strict';
 // 3rd
-const assert = require('better-assert');
-const uuidGen = require('node-uuid');
-const knex = require('knex')({ client: 'pg' });
-const _ = require('lodash');
+const debug = require('debug')('app:db:images')
+const assert = require('better-assert')
+const uuidGen = require('node-uuid')
+const knex = require('knex')({ client: 'pg' })
+const _ = require('lodash')
 // 1st
-const util = require('./util');
+const {pool} = require('./util')
+const {sql} = require('pg-extra')
 
 ////////////////////////////////////////////////////////////
 
-exports.getImage = function * (uuid) {
-  assert(typeof uuid === 'string');
-  const sql = `
+exports.getImage = async function (uuid) {
+  assert(typeof uuid === 'string')
+  return pool.one(sql`
     SELECT
       images.*,
       json_build_object(
@@ -20,15 +22,14 @@ exports.getImage = function * (uuid) {
       ) "user"
     FROM images
     JOIN users ON images.user_id = users.id
-    WHERE images.id = $1
+    WHERE images.id = ${uuid}
       AND deleted_at IS NULL
-  `;
-  return yield util.queryOne(sql, [uuid]);
-};
+  `)
+}
 
-// limit is optional
-exports.getLatestImages = function * (limit) {
-  const sql = `
+exports.getLatestImages = async function (limit = 10) {
+  debug(`[getLatestImages]`)
+  return pool.many(sql`
     SELECT
       images.*,
       json_build_object(
@@ -39,14 +40,13 @@ exports.getLatestImages = function * (limit) {
     JOIN users ON images.user_id = users.id
     WHERE images.deleted_at IS NULL
     ORDER BY images.created_at DESC
-    LIMIT $1
-  `;
-  return yield util.queryMany(sql, [limit || 10]);
-};
+    LIMIT ${limit}
+  `)
+}
 
-exports.getUserAlbums = function * (userId) {
-  assert(Number.isInteger(userId));
-  const sql = `
+exports.getUserAlbums = async function (userId) {
+  assert(Number.isInteger(userId))
+  return pool.many(sql`
     SELECT
       albums.*,
       json_build_object(
@@ -55,15 +55,14 @@ exports.getUserAlbums = function * (userId) {
       ) "user"
     FROM albums
     JOIN users ON albums.user_id = users.id
-    WHERE albums.user_id = $1
+    WHERE albums.user_id = ${userId}
     ORDER BY albums.created_at DESC
-  `;
-  return yield util.queryMany(sql, [userId]);
-};
+  `)
+}
 
-exports.getUserImages = function * (userId) {
-  assert(Number.isInteger(userId));
-  const sql = `
+exports.getUserImages = async function (userId) {
+  assert(Number.isInteger(userId))
+  return pool.many(sql`
     SELECT
       images.*,
       json_build_object(
@@ -72,16 +71,15 @@ exports.getUserImages = function * (userId) {
       ) "user"
     FROM images
     JOIN users ON images.user_id = users.id
-    WHERE images.user_id = $1
+    WHERE images.user_id = ${userId}
       AND images.deleted_at IS NULL
     ORDER BY images.created_at DESC
-  `;
-  return yield util.queryMany(sql, [userId]);
-};
+  `)
+}
 
-exports.getAlbumImages = function * (albumId) {
-  assert(Number.isInteger(albumId));
-  const sql = `
+exports.getAlbumImages = async function (albumId) {
+  assert(Number.isInteger(albumId))
+  return pool.many(sql`
     SELECT
       images.*,
       json_build_object(
@@ -90,78 +88,77 @@ exports.getAlbumImages = function * (albumId) {
       ) "user"
     FROM images
     JOIN users ON images.user_id = users.id
-    WHERE images.album_id = $1
+    WHERE images.album_id = ${albumId}
       AND images.deleted_at IS NULL
     ORDER BY images.created_at DESC
-  `;
-  return yield util.queryMany(sql, [albumId]);
-};
+  `)
+}
+
 // description is optional
-exports.insertImage = function * (imageId, albumId, userId, src, mime, description) {
-  assert(typeof imageId === 'string');
-  assert(Number.isInteger(userId));
-  assert(Number.isInteger(albumId));
-  assert(typeof src === 'string');
-  assert(['image/jpeg', 'image/gif', 'image/png'].indexOf(mime) > -1);
-  const sql = `
+exports.insertImage = async function (imageId, albumId, userId, src, mime, description) {
+  assert(typeof imageId === 'string')
+  assert(Number.isInteger(userId))
+  assert(Number.isInteger(albumId))
+  assert(typeof src === 'string')
+  assert(['image/jpeg', 'image/gif', 'image/png'].indexOf(mime) > -1)
+  return pool.query(sql`
     INSERT INTO images (id, album_id, user_id, src, mime, description)
-    VALUES ($1, $2, $3, $4, $5, $6)
-  `;
-  return yield util.query(sql, [imageId, albumId, userId, src, mime, description]);
-};
+    VALUES (${imageId}, ${albumId}, ${userId}, ${src}, ${mime}, ${description})
+  `)
+}
 
 // TODO: Also delete from S3
-exports.deleteImage = function * (imageId) {
-  assert(typeof imageId === 'string');
-  return yield util.query(`
+exports.deleteImage = async function (imageId) {
+  assert(typeof imageId === 'string')
+  return pool.query(sql`
     UPDATE images
     SET deleted_at = NOW()
-    WHERE id = $1
-  `, [imageId]);
-};
+    WHERE id = ${imageId}
+  `)
+}
 
 // markup is optional
-exports.insertAlbum = function * (userId, title, markup) {
-  assert(Number.isInteger(userId));
-  assert(typeof title === 'string');
-  return yield util.queryOne(`
+exports.insertAlbum = async function (userId, title, markup) {
+  assert(Number.isInteger(userId))
+  assert(typeof title === 'string')
+  return pool.one(sql`
     INSERT INTO albums (user_id, title, markup)
-    VALUES ($1, $2, $3)
+    VALUES (${userId}, ${title}, ${markup})
     RETURNING *
-  `, [userId, title, markup]);
-};
+  `)
+}
 
-exports.getAlbum = function * (albumId) {
-  assert(albumId);
-  return yield util.queryOne(`
-SELECT
-  a.*,
-  to_json(u.*) "user"
-FROM albums a
-JOIN users u ON a.user_id = u.id
-WHERE a.id = $1
-  `, [albumId]);
-};
+exports.getAlbum = async function (albumId) {
+  assert(albumId)
+  return pool.one(sql`
+    SELECT
+      a.*,
+      to_json(u.*) "user"
+    FROM albums a
+    JOIN users u ON a.user_id = u.id
+    WHERE a.id = ${albumId}
+  `)
+}
 
 // Generalized update function that takes an object of
 // field/values to be updated.
-exports.updateAlbum = function * (albumId, fields) {
-  assert(albumId);
-  assert(_.isPlainObject(fields));
+exports.updateAlbum = async function (albumId, fields) {
+  assert(albumId)
+  assert(_.isPlainObject(fields))
   // Validate fields
   const WHITELIST = [
     'title',
     'markup'
-  ];
-  Object.keys(fields).forEach(key => {
+  ]
+  Object.keys(fields).forEach((key) => {
     if (WHITELIST.indexOf(key) === -1) {
-      throw new Error('FIELD_NOT_WHITELISTED');
+      throw new Error('FIELD_NOT_WHITELISTED')
     }
-  });
+  })
   // Build SQL string
-  const sql = knex('albums')
+  const str = knex('albums')
     .where({ id: albumId })
     .update(fields)
-    .toString();
-  return yield util.query(sql);
-};
+    .toString()
+  return pool._query(str)
+}

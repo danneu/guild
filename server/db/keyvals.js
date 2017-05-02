@@ -1,46 +1,50 @@
 'use strict';
 // 3rd
-const assert = require('better-assert');
-const debug = require('debug')('db:keyvals');
+const assert = require('better-assert')
+const debug = require('debug')('db:keyvals')
 // 1st
-const dbUtil = require('./util');
-const pre = require('../presenters');
+const {pool} = require('./util')
+const {sql} = require('pg-extra')
+const pre = require('../presenters')
 
 // String -> keyvals record object
-exports.getRowByKey = function * (key) {
-  assert(typeof key === 'string');
-  const row = yield dbUtil.queryOne(`
-    SELECT 
+exports.getRowByKey = async function (key) {
+  debug(`[getRowByKey] key=${key}`)
+  assert(typeof key === 'string')
+  const row = await pool.one(sql`
+    SELECT
       *,
       json_build_object(
         'uname', users.uname,
         'slug', users.slug
       ) "updated_by"
-    FROM keyvals 
+    FROM keyvals
     LEFT OUTER JOIN users ON keyvals.updated_by_id = users.id
-    WHERE key = $1
-  `, [key]);
-  pre.presentKeyval(row);
-  return row;
-};
+    WHERE key = ${key}
+  `)
+
+  pre.presentKeyval(row)
+
+  return row
+}
 
 // String -> Undefined | JSValue
-exports.getValueByKey = function * getValueByKey (key) {
-  assert(typeof key === 'string');
-  const row = yield exports.getRowByKey(key);
-  return row && row.value;
-};
+exports.getValueByKey = async function (key) {
+  assert(typeof key === 'string')
+  const row = await exports.getRowByKey(key)
+  return row && row.value
+}
 
 // updatedById (Optional Int): user_id that's updating the row
-exports.setKey = function * (key, value, updatedById) {
-  debug('[setKey] key=%j, value=%j, updatedById=%j', key, value, updatedById);
-  assert(typeof key === 'string');
-  const sql = `
+exports.setKey = async function (key, value, updatedById) {
+  debug('[setKey] key=%j, value=%j, updatedById=%j', key, value, updatedById)
+  assert(typeof key === 'string')
+
+  return pool.query(sql`
     UPDATE keyvals
-    SET value = $2,
+    SET value = ${value},
         updated_at = NOW(),
-        updated_by_id = $3
-    WHERE key = $1
-  `;
-  return yield dbUtil.query(sql, [key, value, updatedById]);
-};
+        updated_by_id = ${updatedById}
+    WHERE key = ${key}
+  `)
+}

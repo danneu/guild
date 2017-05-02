@@ -751,7 +751,7 @@
               </div>
               <div class="col-sm-6">
                 <h5 class="list-group-item-heading topic-panel-title">
-                  {% if topic.moved_at and topic.moved_from_forum_id == forum.id %}
+                  {% if false and topic.moved_at and topic.moved_from_forum_id != forum.id %}
                     <span class="glyphicon glyphicon-share-alt" title="Moved" data-toggle="tooltip"></span>
                   {% endif %}
                   {% if topic.is_closed %}
@@ -789,7 +789,7 @@
                   {% endif %}
                 </div>
               </div> <!-- /col6 -->
-              {% if topic.moved_at and topic.moved_from_forum_id == forum.id %}
+              {% if false and topic.moved_at and topic.moved_from_forum_id != forum.id %}
                 <div class="col-sm-6">
                   Moved to
                   <a href="/forums/{{ topic.forum_id }}">{{ topic.forum.title }}</a>
@@ -849,7 +849,7 @@
             <div class="row">
               <div class="col-sm-6">
                 <h5 class="list-group-item-heading topic-panel-title">
-                  {% if topic.moved_at and topic.moved_from_forum_id == forum.id %}
+                  {% if false and topic.moved_at and topic.moved_from_forum_id != forum.id %}
                     <span class="glyphicon glyphicon-share-alt" title="Moved" data-toggle="tooltip"></span>
                   {% endif %}
                   {% if topic.is_closed %}
@@ -922,7 +922,7 @@
                   {% endif %}
                 </div>
               </div> <!-- /col6 -->
-              {% if topic.moved_at and topic.moved_from_forum_id == forum.id %}
+              {% if false and topic.moved_at and topic.moved_from_forum_id != forum.id %}
                 <div class="col-sm-6">
                   Moved to
                   <a href="/forums/{{ topic.forum_id }}">{{ topic.forum.title }}</a>
@@ -983,7 +983,7 @@
             <div class="row">
               <div class="col-sm-6">
                 <h5 class="list-group-item-heading topic-panel-title">
-                  {% if topic.moved_at and topic.moved_from_forum_id == forum.id %}
+                  {% if false and topic.moved_at and topic.moved_from_forum_id != forum.id %}
                     <span class="glyphicon glyphicon-share-alt" title="Moved" data-toggle="tooltip"></span>
                   {% endif %}
                   {% if topic.is_closed %}
@@ -1007,7 +1007,7 @@
                   </div>
                 </div>
               </div> <!-- /col6 -->
-              {% if topic.moved_at and topic.moved_from_forum_id == forum.id %}
+              {% if false and topic.moved_at and topic.moved_from_forum_id != forum.id %}
                 <div class="col-sm-6">
                   Moved to
                   <a href="/forums/{{ topic.forum_id }}">{{ topic.forum.title }}</a>

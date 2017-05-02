@@ -9,37 +9,37 @@ const pre = require('../presenters');
 
 // HELPERS
 
-function * loadCampaign (next) {
-  const campaign = yield db.dice.getCampaign(this.params.campaign_id);
-  this.assert(campaign, 404);
+async function loadCampaign (ctx, next) {
+  const campaign = await db.dice.getCampaign(ctx.params.campaign_id);
+  ctx.assert(campaign, 404);
   pre.presentCampaign(campaign);
-  this.state.campaign = campaign;
-  yield * next;
+  ctx.state.campaign = campaign;
+  return next()
 }
 
-function * loadRoll (next) {
-  const roll = yield db.dice.getRoll(this.params.roll_id);
-  this.assert(roll, 404);
+async function loadRoll (ctx, next) {
+  const roll = await db.dice.getRoll(ctx.params.roll_id);
+  ctx.assert(roll, 404);
   pre.presentRoll(roll);
-  this.state.roll = roll;
-  yield * next;
+  ctx.state.roll = roll;
+  return next()
 }
 
 ////////////////////////////////////////////////////////////
 
 // List all dice campaigns/rolls
 //
-router.get('/campaigns', function * () {
-  const campaigns = yield db.dice.listCampaignsByActivity();
+router.get('/campaigns', async (ctx) => {
+  const campaigns = await db.dice.listCampaignsByActivity();
   campaigns.forEach(pre.presentCampaign);
   let myCampaigns = [];
-  if (this.currUser) {
-    myCampaigns = yield db.dice.getCampaignsForUser(this.currUser.id);
+  if (ctx.currUser) {
+    myCampaigns = await db.dice.getCampaignsForUser(ctx.currUser.id);
     myCampaigns.forEach(pre.presentCampaign);
   }
   // RESPOND
-  yield this.render('dice/list_campaigns', {
-    ctx: this,
+  await ctx.render('dice/list_campaigns', {
+    ctx,
     campaigns,
     myCampaigns,
     title: 'All Campaigns'
@@ -48,82 +48,82 @@ router.get('/campaigns', function * () {
 
 // Create campaign
 //
-router.post('/campaigns', function * () {
-  this.assertAuthorized(this.currUser, 'CREATE_CAMPAIGN');
+router.post('/campaigns', async (ctx) => {
+  ctx.assertAuthorized(ctx.currUser, 'CREATE_CAMPAIGN');
   // VALIDATE
-  this.validateBody('title').isString().trim().isLength(1, 300);
-  this.validateBody('markup').isString().trim().isLength(0, 10000);
+  ctx.validateBody('title').isString().trim().isLength(1, 300);
+  ctx.validateBody('markup').isString().trim().isLength(0, 10000);
   // INSERT
-  const campaign = yield db.dice.insertCampaign(this.currUser.id, this.vals.title, this.vals.markup);
+  const campaign = await db.dice.insertCampaign(ctx.currUser.id, ctx.vals.title, ctx.vals.markup);
   // RESPOND
   pre.presentCampaign(campaign);
-  this.flash = { message: ['success', 'Dice campaign created'] };
-  this.redirect(campaign.url);
+  ctx.flash = { message: ['success', 'Dice campaign created'] };
+  ctx.redirect(campaign.url);
 });
 
 // Show campaign
 //
-router.get('/campaigns/:campaign_id', loadCampaign, function * () {
-  this.assertAuthorized(this.currUser, 'READ_CAMPAIGN', this.state.campaign);
+router.get('/campaigns/:campaign_id', loadCampaign, async (ctx) => {
+  ctx.assertAuthorized(ctx.currUser, 'READ_CAMPAIGN', ctx.state.campaign);
   // LOAD
-  const rolls = yield db.dice.getCampaignRolls(this.state.campaign.id);
+  const rolls = await db.dice.getCampaignRolls(ctx.state.campaign.id);
   rolls.forEach(pre.presentRoll);
   // RESPOND
-  yield this.render('dice/show_campaign', {
-    ctx: this,
-    campaign: this.state.campaign,
+  await ctx.render('dice/show_campaign', {
+    ctx,
+    campaign: ctx.state.campaign,
     rolls,
-    title: `Dice: ${this.state.campaign.title} by ${this.state.campaign.user.uname}`
+    title: `Dice: ${ctx.state.campaign.title} by ${ctx.state.campaign.user.uname}`
   });
 });
 
 // Create roll
 //
-router.post('/campaigns/:campaign_id/rolls', loadCampaign, function * () {
+router.post('/campaigns/:campaign_id/rolls', loadCampaign, async (ctx) => {
   // AUTHZ
-  this.assertAuthorized(this.currUser, 'CREATE_ROLL', this.state.campaign);
+  ctx.assertAuthorized(ctx.currUser, 'CREATE_ROLL', ctx.state.campaign);
   // VALIDATE
-  this.validateBody('syntax').isString().isLength(1, 300);
-  this.validateBody('note').isString().isLength(0, 300);
+  ctx.validateBody('syntax').isString().isLength(1, 300);
+  ctx.validateBody('note').isString().isLength(0, 300);
   // INSERT
   try {
-    yield db.dice.insertRoll(this.currUser.id, this.state.campaign.id, this.vals.syntax, this.vals.note);
+    await db.dice.insertRoll(ctx.currUser.id, ctx.state.campaign.id, ctx.vals.syntax, ctx.vals.note);
   } catch (err) {
     console.log('err:', err)
     if (typeof err === 'string') {
-      this.check(false, 'Dice error: ' + err);
+      ctx.check(false, 'Dice error: ' + err);
     } else {
       throw err;
     }
   }
   // RESPOND
-  this.flash = { message: ['success', 'Roll created'] };
-  this.redirect(this.state.campaign.url);
+  ctx.flash = { message: ['success', 'Roll created'] };
+  ctx.redirect(ctx.state.campaign.url);
 });
 
 // Show roll
 //
-router.get('/rolls/:roll_id', loadRoll, function * () {
-  yield this.render('dice/show_roll', {
-    ctx: this,
-    campaign: this.state.roll.campaign,
-    roll: this.state.roll
+router.get('/rolls/:roll_id', loadRoll, async (ctx) => {
+  await ctx.render('dice/show_roll', {
+    ctx,
+    campaign: ctx.state.roll.campaign,
+    roll: ctx.state.roll
   });
 });
 
 // Update campaign
 //
-router.put('/campaigns/:campaign_id', loadCampaign, function * () {
+router.put('/campaigns/:campaign_id', loadCampaign, async (ctx) => {
   // AUTHZ
-  this.assertAuthorized(this.currUser, 'UPDATE_CAMPAIGN', this.state.campaign);
+  ctx.assertAuthorized(ctx.currUser, 'UPDATE_CAMPAIGN', ctx.state.campaign);
   // VALIDATE
-  this.validateBody('title').isString().trim().isLength(1, 300);
-  this.validateBody('markup').isString().trim().isLength(0, 10000);
+  ctx.validateBody('title').isString().trim().isLength(1, 300);
+  ctx.validateBody('markup').isString().trim().isLength(0, 10000);
   // SAVE
-  yield db.dice.updateCampaign(this.state.campaign.id, this.vals.title, this.vals.markup);
+  await db.dice.updateCampaign(ctx.state.campaign.id, ctx.vals.title, ctx.vals.markup);
   // RESPOND
-  this.flash = { message: ['success', 'Campaign updated'] };
-  this.redirect(this.state.campaign.url);
+  ctx.flash = { message: ['success', 'Campaign updated'] };
+  ctx.redirect(ctx.state.campaign.url);
 });
 
 ////////////////////////////////////////////////////////////

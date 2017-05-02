@@ -27,7 +27,7 @@
     </div>
   {% endif %}
 
-  {% if _.contains(user.roles, 'ARENA_MOD') %}
+  {% if user.roles.includes('ARENA_MOD') %}
     <div class="alert alert-info">
       <img src="http://i.imgur.com/5xQBdAv.png">
       {{ user.uname }} is an Arena Moderator
@@ -120,15 +120,14 @@
       <h3 style="margin-top: 0;">{{ user.custom_title|replaceTitleNewlines|safe }}</h3>
     {% endif %}
 
-    {% if user.current_status_id %}
-      {% set _s = _.findWhere(statuses, { id: user.current_status_id }) %}
+    {% if currStatus %}
       <span class="glyphicon glyphicon-comment"></span>
       <span class="lead" style="margin-bottom: 0;">
         <span class="text-muted" style="font-size: 70%; font-weight: 900;">STATUS: </span>
-        {{ _s.html|safe }}
+        {{ currStatus.html|safe }}
       </span>
-      <abbr class="timeago" title="{{ _s.created_at.toISOString() }}">
-        {{ _s.created_at|formatDate }}
+      <abbr class="timeago" title="{{ currStatus.created_at.toISOString() }}">
+        {{ currStatus.created_at|formatDate }}
       </abbr>
     {% endif %}
 

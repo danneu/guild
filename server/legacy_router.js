@@ -15,53 +15,53 @@ var uidTable = {
   '2485': '/users/izaka-sazaka'
 };
 
-router.get('/member.php', function*() {
-  var redirectTo = uidTable[this.query.u];
-  this.assert(redirectTo, 404);
+router.get('/member.php', async (ctx) => {
+  const redirectTo = uidTable[ctx.query.u]
+  ctx.assert(redirectTo, 404)
 
-  this.status = 301;
-  this.redirect(redirectTo);
-});
+  ctx.status = 301
+  ctx.redirect(redirectTo)
+})
 
 ////////////////////////////////////////////////////////////
 
 // For forumdisplay.php?f=xx URLs
-var fidTable = {
+const fidTable = {
   // No more "Free OOC" forum
   '18': '/forums/3-free-roleplay',
   '5': '/forums/33-off-topic-discussion'
-};
+}
 
-router.get('/forumdisplay.php', function*() {
-  if (_.contains(_.keys(this.query), '15-Casual-OOC')) {
-    this.status = 301;
-    this.redirect('/forums/4-casual-roleplay');
-    return;
+router.get('/forumdisplay.php', async (ctx) => {
+  if (_.keys(ctx.query).includes('15-Casual-OOC')) {
+    ctx.status = 301
+    ctx.redirect('/forums/4-casual-roleplay')
+    return
   }
 
-  if (_.contains(_.keys(this.query), '42-Forum-Games-Spam')) {
-    this.status = 301;
-    this.redirect('/forums/30-spam-forum');
-    return;
+  if (_.keys(ctx.query).includes('42-Forum-Games-Spam')) {
+    ctx.status = 301
+    ctx.redirect('/forums/30-spam-forum')
+    return
   }
 
-  this.validateQuery('f');
+  ctx.validateQuery('f')
 
-  var redirectTo = fidTable[this.vals.f];
-  this.assert(redirectTo, 404);
+  const redirectTo = fidTable[ctx.vals.f]
+  ctx.assert(redirectTo, 404)
 
-  this.status = 301;
-  this.redirect(redirectTo);
-});
+  ctx.status = 301
+  ctx.redirect(redirectTo)
+})
 
 ////////////////////////////////////////////////////////////
 
 // legacy_html/showthread/:id
-var tids = {
+const tids = {
   '106673': true
-};
+}
 
-var tidQueries = {
+const tidQueries = {
   // showthread.php?139029-Sobetsu-Cloaked-Rancor-OOC
   '139029-Sobetsu-Cloaked-Rancor-OOC': true,
   '130932-Shadows-of-Edin-OOC-always-open': true,
@@ -75,28 +75,28 @@ var tidQueries = {
   '186461-Vampire-The-Masquerade-The-Final-Nights-Guide': true // busted assets
 };
 
-router.get('/showthread.php', function*() {
-  this.validateQuery('t');
+router.get('/showthread.php', async (ctx) => {
+  ctx.validateQuery('t')
 
-  var staticPath;
-  if (tids[this.vals.t])
-    staticPath = this.vals.t;
-  else if (tidQueries[Object.keys(this.query)[0]])
-    staticPath = Object.keys(this.query)[0];
+  let staticPath;
+  if (tids[ctx.vals.t])
+    staticPath = ctx.vals.t
+  else if (tidQueries[Object.keys(ctx.query)[0]])
+    staticPath = Object.keys(ctx.query)[0]
 
-  this.assert(staticPath, 404);
+  ctx.assert(staticPath, 404)
 
-  yield koaSend(this, staticPath + '.html', {
+  await koaSend(ctx, staticPath + '.html', {
     root: 'legacy_html/showthread',
     maxage: 1000 * 60 * 60 * 24 * 365
-  });
-});
+  })
+})
 
 ////////////////////////////////////////////////////////////
 
 // 301 Redirects
 
-[
+;[
   ['/index.php', '/'],
   ['/members/drakell', '/users/drakel'],
   ['/memberlist.php', '/users'],
@@ -109,24 +109,22 @@ router.get('/showthread.php', function*() {
   ['/members/gamerdude369', '/users/gamerdude369'],
   ['/f9', '/forums/5-advanced-roleplay'],
   ['/f8/the-morlat-death-march-8', '/f9/the-morlat-death-march-8']
-].forEach(function(pair) {
-  var oldUrl = pair[0];
-  var newUrl = pair[1];
-  router.get(oldUrl, function*() {
-    this.status = 301;
-    this.redirect(newUrl);
-  });
-});
+].forEach(([oldUrl, newUrl]) => {
+  router.get(oldUrl, async (ctx) => {
+    ctx.status = 301
+    ctx.redirect(newUrl)
+  })
+})
 
-router.get('member.php', function*() {
-  if (_.contains(_.keys(this.query), '34089-Komamisa')) {
-    this.status = 301;
-    this.redirect('/users/komamisa');
-    return;
+router.get('member.php', async () => {
+  if (_.keys(ctx.query).includes('34089-Komamisa')) {
+    ctx.status = 301
+    ctx.redirect('/users/komamisa')
+    return
   }
 
-  this.status = 404;
-});
+  ctx.status = 404
+})
 
 // 410 scraper output (also checked the t=_ version of most of these
 // /showthread.php?153742
@@ -173,7 +171,7 @@ router.get('member.php', function*() {
 
 ////////////////////////////////////////////////////////////
 
-var rehosted = [
+const rehosted = [
   '/f9/mechanical-possession-78',
   '/f7/the-night-wars-3137',
   '/f13/an-indepth-look-of-firearms-2801',
@@ -184,17 +182,17 @@ var rehosted = [
   '/f27/arena-basics-4119',
   '/f13/a-basic-guide-of-weapons-and-fighting-97',
   '/f8/the-wolves-of-the-eternal-mountain-21224'
-];
+]
 
-rehosted.forEach(function(url) {
-  router.get(url, function*() {
-    yield koaSend(this, this.path + '.html', {
+rehosted.forEach((url) => {
+  router.get(url, async (ctx) => {
+    await koaSend(ctx, ctx.path + '.html', {
       root: 'legacy_html',
       maxage: 1000 * 60 * 60 * 24 * 365
-    });
-  });
-});
+    })
+  })
+})
 
 ////////////////////////////////////////////////////////////
 
-module.exports = router;
+module.exports = router

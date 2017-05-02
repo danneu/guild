@@ -1,92 +1,90 @@
 "use strict";
 // Node
-var util = require('util');
+const util = require('util')
 // 3rd party
-var debug = require('debug')('app:middleware');
-var recaptcha = require('recaptcha-validator');
-var _ = require('lodash');
-var assert = require('better-assert');
+const debug = require('debug')('app:middleware')
+const recaptcha = require('recaptcha-validator')
+const _ = require('lodash')
+const assert = require('better-assert')
 // 1st party
-var db = require('./db');
-var pre = require('./presenters');
-var belt = require('./belt');
-var config = require('./config');
-var bouncer = require('koa-bouncer');
+const db = require('./db')
+const pre = require('./presenters')
+const belt = require('./belt')
+const config = require('./config')
+const bouncer = require('koa-bouncer')
 
 // Assoc ctx.currUser if the sessionId cookie (UUIDv4 String)
 // is an active session.
-exports.currUser = function() {
-  return function *(next) {
-    var sessionId = this.cookies.get('sessionId');
+exports.currUser = function () {
+  return async (ctx, next) => {
+    const sessionId = ctx.cookies.get('sessionId')
     // Skip if no session id
-    if (!sessionId) return yield next;
+    if (!sessionId) return next()
     // Skip if it's not a uuid
-    if (!belt.isValidUuid(sessionId)) yield next;
+    if (!belt.isValidUuid(sessionId)) return next()
 
-    var user = yield db.findUserBySessionId(sessionId);
-    this.currUser = user && pre.presentUser(user);  // or null
-    this.state.session_id = sessionId;
+    const user = await db.findUserBySessionId(sessionId)
+    ctx.currUser = user && pre.presentUser(user)  // or null
+    ctx.state.session_id = sessionId
     // this.log = this.log.child({ currUser: user });
-    yield next;
-  };
-};
+    return next()
+  }
+}
 
 // Expose req.flash (getter) and res.flash = _ (setter)
 // Flash data persists in user's sessions until the next ~successful response
-exports.flash = function(cookieName) {
-  return function *(next) {
-    var data;
-    if (this.cookies.get(cookieName)) {
-      data = JSON.parse(decodeURIComponent(this.cookies.get(cookieName)));
+exports.flash = function (cookieName = 'flash') {
+  return async (ctx, next) => {
+    let data
+    if (ctx.cookies.get(cookieName)) {
+      data = JSON.parse(decodeURIComponent(ctx.cookies.get(cookieName)))
     } else {
-      data = {};
+      data = {}
     }
 
-    Object.defineProperty(this, 'flash', {
+    Object.defineProperty(ctx, 'flash', {
       enumerable: true,
-      get: function() {
-        return data;
+      get: function () {
+        return data
       },
-      set: function(val) {
-        this.cookies.set(cookieName, encodeURIComponent(JSON.stringify(val)));
+      set: function (val) {
+        ctx.cookies.set(cookieName, encodeURIComponent(JSON.stringify(val)))
       }
-    });
+    })
 
-    yield next;
+    await next()
 
-    if (this.response.status < 300) {
-      this.cookies.set(cookieName, null);
+    if (ctx.response.status < 300) {
+      ctx.cookies.set(cookieName, null)
     }
-  };
-};
+  }
+}
 
-exports.ensureRecaptcha = function * (next) {
-  if (_.includes(['development', 'test'], config.NODE_ENV) && !this.request.body['g-recaptcha-response']) {
-    console.log('Development mode, so skipping recaptcha check');
-    yield* next;
-    return;
+exports.ensureRecaptcha = async function (ctx, next) {
+  if (['development', 'test'].includes(config.NODE_ENV) && !ctx.request.body['g-recaptcha-response']) {
+    console.log('Development mode, so skipping recaptcha check')
+    return next()
   }
 
   if (!config.RECAPTCHA_SITEKEY) {
-    console.warn('Warn: Recaptcha environment variables not set, so skipping recaptcha check');
-    yield* next;
-    return;
+    console.warn('Warn: Recaptcha environment variables not set, so skipping recaptcha check')
+    return next()
   }
 
-  this.validateBody('g-recaptcha-response')
-    .notEmpty('You must attempt the human test');
+  ctx.validateBody('g-recaptcha-response')
+    .isString('You must attempt the human test')
 
   try {
-    yield recaptcha.promise(config.RECAPTCHA_SITESECRET, this.vals['g-recaptcha-response'], this.request.ip);
+    await recaptcha.promise(config.RECAPTCHA_SITESECRET, ctx.vals['g-recaptcha-response'], ctx.request.ip)
   } catch (err) {
-    console.warn('Got invalid captcha: ', this.vals['g-recaptcha-response'], err);
-    this.validateBody('g-recaptcha-response')
-      .check(false, 'Could not verify recaptcha was correct');
-    return;
+    console.warn('Got invalid captcha: ', ctx.vals['g-recaptcha-response'], err)
+    ctx.validateBody('g-recaptcha-response')
+      .check(false, 'Could not verify recaptcha was correct')
+    return
   }
 
-  yield * next;
-};
+  return next()
+}
 
 ////////////////////////////////////////////////////////////
 // RATELIMITING
@@ -94,13 +92,13 @@ exports.ensureRecaptcha = function * (next) {
 
 // Int -> Date
 function postCountToMaxDate (postCount) {
-  assert(Number.isInteger(postCount));
+  assert(Number.isInteger(postCount))
   // prevent double-posts with a min of ~1 second ratelimit
   if (postCount > 10) {
-    return new Date(Date.now() - 1000);
+    return new Date(Date.now() - 1000)
   }
-  const mins = 5 - (postCount / 2);
-  return new Date(Date.now() - mins * 1000 * 60);
+  const mins = 5 - (postCount / 2)
+  return new Date(Date.now() - mins * 1000 * 60)
 }
 
 // Date -> String
@@ -108,37 +106,56 @@ function postCountToMaxDate (postCount) {
 // 'in 1 minute and 13 seconds'
 function waitLength (tilDate) {
   // diff is in seconds
-  const diff = Math.max(0, Math.ceil((tilDate - new Date()) / 1000));
-  const mins = Math.floor(diff / 60);
-  const secs = diff % 60;
-  let output = '';
+  const diff = Math.max(0, Math.ceil((tilDate - new Date()) / 1000))
+  const mins = Math.floor(diff / 60)
+  const secs = diff % 60
+  let output = ''
   if (mins > 1)
-    output += `${mins} minutes and `;
+    output += `${mins} minutes and `
   else if (mins === 1)
-    output += `${mins} minute and `;
+    output += `${mins} minute and `
   if (secs === 1)
     output += `${secs} second`
   else
     output += `${secs} seconds`
-  return output;
+  return output
 }
 
 exports.ratelimit = function () {
-  return function * (next) {
-    const maxDate = postCountToMaxDate(this.currUser.posts_count);
+  return async (ctx, next) => {
+    const maxDate = postCountToMaxDate(ctx.currUser.posts_count)
     try {
-      yield db.ratelimits.bump(this.currUser.id, this.ip, maxDate);
+      await db.ratelimits.bump(ctx.currUser.id, ctx.ip, maxDate)
     } catch (err) {
       if (_.isDate(err)) {
         const msg = `Ratelimited! Since you are a new member, you must wait
           ${waitLength(err)} longer before posting. The ratelimit goes away as you
           make more posts.
-        `;
-        this.check(false, msg);
-        return;
+        `
+        ctx.check(false, msg)
+        return
       }
-      throw err;
+      throw err
     }
-    yield * next;
-  };
-};
+    return next()
+  }
+}
+
+exports.methodOverride = function (
+  {bodyKey, headerKey} = {bodyKey: '_method', headerKey: 'x-http-method-override'}
+) {
+  return async (ctx, next) => {
+    if (typeof ctx.request.body === 'undefined') {
+      throw new Error('methodOverride middleware must be applied after the body is parsed and ctx.request.body is populated')
+    }
+
+    if (ctx.request.body[bodyKey]) {
+      ctx.method = ctx.request.body[bodyKey].toUpperCase()
+      delete ctx.request.body[bodyKey]
+    } else if (ctx.request.headers[headerKey]) {
+      ctx.method = ctx.request.headers[headerKey].toUpperCase()
+    }
+
+    await next()
+  }
+}

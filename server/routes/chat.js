@@ -11,11 +11,11 @@ const router = new Router();
 
 ////////////////////////////////////////////////////////////
 
-router.get('/chatlogs', function*() {
-  this.assertAuthorized(this.currUser, 'READ_CHATLOGS');
-  const logs = yield db.chat.getChatLogDays();
-  yield this.render('list_chatlogs', {
-    ctx: this,
+router.get('/chatlogs', async (ctx) => {
+  ctx.assertAuthorized(ctx.currUser, 'READ_CHATLOGS');
+  const logs = await db.chat.getChatLogDays();
+  await ctx.render('list_chatlogs', {
+    ctx,
     logs: logs
   });
 });
@@ -23,19 +23,19 @@ router.get('/chatlogs', function*() {
 ////////////////////////////////////////////////////////////
 
 // :when is 'YYYY-MM-DD'
-router.get('/chatlogs/:when', function * () {
+router.get('/chatlogs/:when', async (ctx) => {
   // Temporarily disable
-  this.assertAuthorized(this.currUser, 'READ_CHATLOGS');
+  ctx.assertAuthorized(ctx.currUser, 'READ_CHATLOGS');
   // TODO: Validate
-  this.validateParam('when')
+  ctx.validateParam('when')
     .match(/\d{4}-\d{2}-\d{2}/, 'Invalid date format');
 
-  const log = yield db.chat.findLogByDateTrunc(this.vals.when);
-  this.assert(log, 404);
-  this.assert(log.length > 0, 404);
+  const log = await db.chat.findLogByDateTrunc(ctx.vals.when);
+  ctx.assert(log, 404);
+  ctx.assert(log.length > 0, 404);
 
-  yield this.render('show_chatlog', {
-    ctx: this,
+  await ctx.render('show_chatlog', {
+    ctx,
     log: log,
     when: log[0].when
   });

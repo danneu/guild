@@ -47,7 +47,7 @@
       <!-- Change role form -->
       {% if ctx.can(ctx.currUser, 'UPDATE_USER_ROLE', user) %}
         <form action="{{ user.url }}/role" method="post" class="form-horizontal">
-          <input type="hidden" name="_method" value="put">
+          <input type="hidden" name="_method" value="PUT">
           <div class="panel panel-default no-select" style="border-color: #000">
             <div class="panel-heading">Edit Role</div>
             <!-- PANEL BODY -->
@@ -57,6 +57,7 @@
                 <div class="col-sm-9">
                   <select id="role-input" name="role" class="form-control"
                           autocomplete="off">
+                    {% if ctx.currUser.role == 'admin' %}
                     <option value="admin"
                             {% if user.role == 'admin' %}selected{% endif %}
                             >
@@ -77,6 +78,7 @@
                             >
                       Contest Mod
                     </option>
+                    {% endif %}
                     <option value="member"
                             {% if user.role == 'member' %}selected{% endif %}
                             >
@@ -162,7 +164,7 @@
           <div class="panel-body">
             <p>When you're in ghost-mode, you will not appear in the list of online users. Also, the site will indicate that you're Invisible instead of announcing you as Online or Offline.</p>
             <p>Recommendation: Keep it off unless you feel it's necessary. It makes things feel more alive.</p>
-            <input name="is-ghost" type="hidden" value="false">
+            <input name="is-ghost" type="hidden" value="off">
             <div class="checkbox">
               <label>
                 <input id="is-ghost-input"
@@ -197,8 +199,9 @@
 
             <p>These options allow you to stop signatures and avatars from appearing/loading.</p>
 
-            <input name="hide-sigs" type="hidden" value="false">
-            <input name="hide-avatars" type="hidden" value="false">
+            <input name="hide-sigs" type="hidden" value="off">
+            <input name="hide-avatars" type="hidden" value="off">
+
             <div class="checkbox">
               <label>
                 <input id="hide-sigs-input"
@@ -270,7 +273,6 @@
 
       <a name="avatar"></a>
       <form action="{{ user.url }}/avatar" method="POST" enctype="multipart/form-data">
-        <input type="hidden" name="_method" value="put">
         <div class="panel panel-default no-select"
              style="border-color: #000">
           <div class="panel-heading">Edit Avatar</div>
@@ -351,7 +353,7 @@
             <p>This setting forces the website to render at your device's width. You generally want to leave this on <b>unless</b> the Guild is so broken on your smartphone/tablet that you can't do anything. Disabling this setting might help in some cases.</p>
             <div class="form-group">
 
-              <input name="force-device-width" type="hidden" value="false">
+              <input name="force-device-width" type="hidden" value="off">
               <div class="checkbox">
                 <label>
                   <input id="force-device-width-input"
@@ -432,7 +434,7 @@
             <p>Enabling this will convert all avatars to black and white.</p>
             <div class="form-group">
 
-              <input name="is-grayscale" type="hidden" value="false">
+              <input name="is-grayscale" type="hidden" value="off">
               <div class="checkbox">
                 <label>
                   <input id="is-grayscale-input"
@@ -473,7 +475,7 @@
             </p>
             <div class="form-group">
 
-              <input name="show_arena_stats" type="hidden" value="false">
+              <input name="show_arena_stats" type="hidden" value="off">
               <div class="checkbox">
                 <label>
                   <input name="show_arena_stats"

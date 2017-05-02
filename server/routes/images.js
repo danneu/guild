@@ -20,28 +20,28 @@ const s3 = new AWS.S3({ apiVersion: '2006-03-01' });
 
 ////////////////////////////////////////////////////////////
 
-function * loadUser (next) {
-  const user = yield db.getUserBySlug(this.params.user_slug);
+async function loadUser (ctx, next) {
+  const user = await db.getUserBySlug(ctx.params.user_slug);
   pre.presentUser(user);
-  this.assert(user, 404);
-  this.state.user = user;
-  yield * next;
+  ctx.assert(user, 404);
+  ctx.state.user = user;
+  return next()
 }
 
-function * loadImage (next) {
-  const image = yield db.images.getImage(this.params.image_id);
+async function loadImage (ctx, next) {
+  const image = await db.images.getImage(ctx.params.image_id);
   pre.presentImage(image);
-  this.assert(image, 404);
-  this.state.image = image;
-  yield * next;
+  ctx.assert(image, 404);
+  ctx.state.image = image;
+  return next()
 }
 
-function * loadAlbum (next) {
-  const album = yield db.images.getAlbum(this.params.album_id);
+async function loadAlbum (ctx, next) {
+  const album = await db.images.getAlbum(ctx.params.album_id);
   pre.presentAlbum(album);
-  this.assert(album, 404);
-  this.state.album = album;
-  yield * next;
+  ctx.assert(album, 404);
+  ctx.state.album = album;
+  return next()
 }
 
 ////////////////////////////////////////////////////////////
@@ -74,34 +74,34 @@ function mimeToExt (mime) {
   }
 }
 
-router.get('/images/:image_id.:ext', loadImage, function * () {
-  this.assert(extToMime(this.params.ext) === this.state.image.mime, 404);
-  this.set('Cache-Control', 'max-age=31556926');
-  this.type = this.state.image.mime;
-  this.body = this.state.image.blob;
+router.get('/images/:image_id.:ext', loadImage, async (ctx) => {
+  ctx.assert(extToMime(ctx.params.ext) === ctx.state.image.mime, 404);
+  ctx.set('Cache-Control', 'max-age=31556926');
+  ctx.type = ctx.state.image.mime;
+  ctx.body = ctx.state.image.blob;
 });
 
-router.get('/users/:user_slug/images/:image_id', loadUser, loadImage, function * () {
-  yield this.render('show_user_image', {
-    ctx: this,
-    image: this.state.image,
-    user: this.state.user,
+router.get('/users/:user_slug/images/:image_id', loadUser, loadImage, async (ctx) => {
+  await ctx.render('show_user_image', {
+    ctx,
+    image: ctx.state.image,
+    user: ctx.state.user,
     title: 'Image'
   });
 });
 
-router.get('/users/:user_slug/images', loadUser, function * () {
+router.get('/users/:user_slug/images', loadUser, async (ctx) => {
   // template: views/show_user_images.html
-  const images = yield db.images.getUserImages(this.state.user.id);
+  const images = await db.images.getUserImages(ctx.state.user.id);
   images.forEach(pre.presentImage);
-  const albums = yield db.images.getUserAlbums(this.state.user.id);
+  const albums = await db.images.getUserAlbums(ctx.state.user.id);
   albums.forEach(pre.presentAlbum);
-  yield this.render('show_user_images', {
-    ctx: this,
+  await ctx.render('show_user_images', {
+    ctx,
     images,
     albums,
-    user: this.state.user,
-    title: `${this.state.user.uname}'s Images`
+    user: ctx.state.user,
+    title: `${ctx.state.user.uname}'s Images`
   });
 });
 
@@ -168,38 +168,38 @@ function deleteObject (key) {
   });
 }
 
-router.post('/users/:user_slug/images', loadUser, function * () {
+router.post('/users/:user_slug/images', loadUser, async (ctx) => {
   if (!config.S3_IMAGE_BUCKET) {
-    return this.body = 'The upload system is currently offline. (Bucket unspecified)';
+    return ctx.body = 'The upload system is currently offline. (Bucket unspecified)';
   }
-  this.assertAuthorized(this.currUser, 'UPLOAD_IMAGE', this.state.user);
+  ctx.assertAuthorized(ctx.currUser, 'UPLOAD_IMAGE', ctx.state.user);
   // FIXME: Lame validation
   // fields
-  this.assert(this.request.body.fields, 400);
-  this.assert(typeof this.request.body.fields.description === 'string', 400);
-  const description = this.request.body.fields.description;
-  this.assert(description.length <= 10000, 400);
-  const albumId = this.request.body.fields.album_id;
-  this.assert(Number.parseInt(albumId), 400);
-  const album = yield db.images.getAlbum(albumId);
-  this.assert(album, 404);
+  ctx.assert(ctx.request.body.fields, 400);
+  ctx.assert(typeof ctx.request.body.fields.description === 'string', 400);
+  const description = ctx.request.body.fields.description;
+  ctx.assert(description.length <= 10000, 400);
+  const albumId = ctx.request.body.fields.album_id;
+  ctx.assert(Number.parseInt(albumId), 400);
+  const album = await db.images.getAlbum(albumId);
+  ctx.assert(album, 404);
   // files
-  this.assert(this.request.body.files, 400);
-  this.assert(this.request.body.files.image, 400);
-  const upload = this.request.body.files.image;
-  this.assert(Number.isInteger(upload.size), 400);
-  this.assert(typeof upload.path === 'string', 400);
+  ctx.assert(ctx.request.body.files, 400);
+  ctx.assert(ctx.request.body.files.image, 400);
+  const upload = ctx.request.body.files.image;
+  ctx.assert(Number.isInteger(upload.size), 400);
+  ctx.assert(typeof upload.path === 'string', 400);
   // ensure max upload size
   if (upload.size > 2e6) {
-    this.flash = { message: ['danger', `Image cannot exceed 2 MB. Max: 2,000,000. Yours: ${upload.size}`] };
-    return this.redirect('back');
+    ctx.flash = { message: ['danger', `Image cannot exceed 2 MB. Max: 2,000,000. Yours: ${upload.size}`] };
+    return ctx.redirect('back');
   }
   // { 'Mime type': 'image/jpeg' OR 'format': 'JPEG' }
-  const data = yield identify(upload.path);
+  const data = await identify(upload.path);
   const mime = identifyToMime(data);
   if (!mime || ['image/jpeg', 'image/png', 'image/gif'].indexOf(mime) < 0) {
-    this.flash = { message: ['danger', 'Invalid image format. Must be jpg, gif, png.'] };
-    return this.redirect('back');
+    ctx.flash = { message: ['danger', 'Invalid image format. Must be jpg, gif, png.'] };
+    return ctx.redirect('back');
   }
 
   // UPLOAD
@@ -207,35 +207,35 @@ router.post('/users/:user_slug/images', loadUser, function * () {
   const uuid = uuidGen.v4();
   const envFolder = config.NODE_ENV === 'production' ? 'prod' : 'dev';
   const s3Key = `${envFolder}/users/${uuid}.${mimeToExt(mime)}`;
-  const url = yield uploadImage(s3Key, upload.path, mime);
+  const url = await uploadImage(s3Key, upload.path, mime);
 
   // INSERT
 
-  yield db.images.insertImage(uuid, album.id, this.state.user.id, url, mime, description);
+  await db.images.insertImage(uuid, album.id, ctx.state.user.id, url, mime, description);
 
   // RESPOND
 
-  this.flash = { message: ['success', 'Image uploaded'] };
-  this.redirect(this.state.user.url + '/images');
+  ctx.flash = { message: ['success', 'Image uploaded'] };
+  ctx.redirect(ctx.state.user.url + '/images');
 });
 
 // TODO: Also delete from S3
-router.del('/users/:user_slug/images/:image_id', loadUser, loadImage, function * () {
-  this.assertAuthorized(this.currUser, 'MANAGE_IMAGES', this.state.user);
-  yield db.images.deleteImage(this.state.image.id);
-  this.flash = { message: ['success', 'Image deleted'] };
-  this.redirect(this.state.user.url + '/images');
+router.del('/users/:user_slug/images/:image_id', loadUser, loadImage, async (ctx) => {
+  ctx.assertAuthorized(ctx.currUser, 'MANAGE_IMAGES', ctx.state.user);
+  await db.images.deleteImage(ctx.state.image.id);
+  ctx.flash = { message: ['success', 'Image deleted'] };
+  ctx.redirect(ctx.state.user.url + '/images');
 });
 
 // albums
 
-router.get('/albums/:album_id', loadAlbum, function * () {
-  const images = yield db.images.getAlbumImages(this.state.album.id);
+router.get('/albums/:album_id', loadAlbum, async (ctx) => {
+  const images = await db.images.getAlbumImages(ctx.state.album.id);
   images.forEach(pre.presentImage);
-  yield this.render('show_album', {
-    ctx: this,
-    user: this.state.album.user,
-    album: this.state.album,
+  await ctx.render('show_album', {
+    ctx,
+    user: ctx.state.album.user,
+    album: ctx.state.album,
     images
   });
 });
@@ -245,37 +245,37 @@ router.get('/albums/:album_id', loadAlbum, function * () {
 // Body:
 // - title: Required String
 // - markup: Optional String
-router.put('/users/:user_slug/albums/:album_id', loadUser, loadAlbum, function * () {
+router.put('/users/:user_slug/albums/:album_id', loadUser, loadAlbum, async (ctx) => {
   // AUTHZ
-  this.assertAuthorized(this.currUser, 'MANAGE_IMAGES', this.state.user);
+  ctx.assertAuthorized(ctx.currUser, 'MANAGE_IMAGES', ctx.state.user);
   // VALIDATE
-  this.validateBody('title')
+  ctx.validateBody('title')
     .isString()
     .isLength(1, 300, 'Title must be 1-300 chars');
-  this.validateBody('markup')
+  ctx.validateBody('markup')
     .toString()
     .isLength(0, 10000, 'Description cannot be more than 10k chars');
   // SAVE
-  yield db.images.updateAlbum(this.state.album.id, {
-    title: this.vals.title,
-    markup: this.vals.markup
+  await db.images.updateAlbum(ctx.state.album.id, {
+    title: ctx.vals.title,
+    markup: ctx.vals.markup
   });
   // RESPOND
-  this.flash = { message: ['success', 'Album updated'] };
-  this.redirect(this.state.album.url);
+  ctx.flash = { message: ['success', 'Album updated'] };
+  ctx.redirect(ctx.state.album.url);
 });
 
-router.post('/users/:user_slug/albums', loadUser, function * () {
-  this.assertAuthorized(this.currUser, 'MANAGE_IMAGES', this.state.user);
-  this.validateBody('title')
+router.post('/users/:user_slug/albums', loadUser, async (ctx) => {
+  ctx.assertAuthorized(ctx.currUser, 'MANAGE_IMAGES', ctx.state.user);
+  ctx.validateBody('title')
     .isString()
     .isLength(1, 300, 'Title must be 1-300 chars');
-  this.validateBody('markup')
+  ctx.validateBody('markup')
     .isLength(0, 10000, 'Description cannot be more than 10k chars');
-  const album = yield db.images.insertAlbum(this.state.user.id, this.vals.title, this.vals.markup);
+  const album = await db.images.insertAlbum(ctx.state.user.id, ctx.vals.title, ctx.vals.markup);
   pre.presentAlbum(album);
-  this.flash = { message: ['success', 'Album created'] };
-  this.redirect(album.url);
+  ctx.flash = { message: ['success', 'Album created'] };
+  ctx.redirect(album.url);
 });
 
 

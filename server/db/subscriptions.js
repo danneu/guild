@@ -2,13 +2,14 @@
 // 3rd
 const assert = require('better-assert');
 // 1st
-const dbUtil = require('./util');
+const {pool} = require('./util')
+const {sql} = require('pg-extra')
 
 ////////////////////////////////////////////////////////////
 
 // Sort them by latest_posts first
-exports.findSubscribedTopicsForUserId = function * (userId) {
-  const sql = `
+exports.findSubscribedTopicsForUserId = async function (userId) {
+  return pool.many(sql`
 SELECT
   t.*,
 
@@ -103,31 +104,29 @@ LEFT OUTER JOIN posts latest_char_post ON t.latest_char_post_id = latest_char_po
 LEFT OUTER JOIN users latest_char_user ON latest_char_post.user_id = latest_char_user.id
 JOIN users u2 ON latest_post.user_id = u2.id
 JOIN forums f ON t.forum_id = f.id
-WHERE ts.user_id = $1
+WHERE ts.user_id = ${userId}
 ORDER BY t.latest_post_id DESC
-  `;
-
-  return yield dbUtil.queryMany(sql, [userId]);
-};
+  `)
+}
 
 ////////////////////////////////////////////////////////////
 
 // Do nothing if subscription already exists
-exports.subscribeToTopic = function * (userId, topicId) {
-  assert(userId);
-  assert(topicId);
-  return yield dbUtil.query(`
+exports.subscribeToTopic = async function (userId, topicId) {
+  assert(userId)
+  assert(topicId)
+  return pool.query(sql`
     INSERT INTO topic_subscriptions (user_id, topic_id)
-    VALUES ($1, $2)
+    VALUES (${userId}, ${topicId})
     ON CONFLICT (user_id, topic_id) DO NOTHING
-  `, [userId, topicId]);
-};
+  `)
+}
 
 ////////////////////////////////////////////////////////////
 
-exports.unsubscribeFromTopic = function * (userId, topicId) {
-  return yield dbUtil.query(`
+exports.unsubscribeFromTopic = async function (userId, topicId) {
+  return pool.query(sql`
 DELETE FROM topic_subscriptions
-WHERE user_id = $1 AND topic_id = $2
-  `, [userId, topicId]);
-};
+WHERE user_id = ${userId} AND topic_id = ${topicId}
+  `)
+}

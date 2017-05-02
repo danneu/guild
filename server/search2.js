@@ -29,7 +29,7 @@ var treeToQueryString = function(tree) {
   if (_.isEmpty(tree))
     return '';
 
-  if (_.contains(['and', 'or', 'term'], tree[0]))
+  if (['and', 'or', 'term'].includes(tree[0]))
     if (_.rest(tree).length <= 1)
       return  _.rest(tree).map(treeToQueryString).join(' ');
     else

@@ -2,13 +2,14 @@
 // 3rd
 const assert = require('better-assert');
 // 1st
-const dbUtil = require('./util');
+const {pool} = require('./util')
+const {sql} = require('pg-extra')
 
 ////////////////////////////////////////////////////////////
 
 // Returns [{when: '2015-7-25', count: 64}, ...]
-exports.getChatLogDays = function * () {
-  return yield dbUtil.queryMany(`
+exports.getChatLogDays = async function () {
+  return pool.many(sql`
     SELECT to_char(sub.day, 'YYYY-MM-DD') "when", sub.count "count"
     FROM (
       SELECT date_trunc('day', cm.created_at) "day", COUNT(cm.*) "count"
@@ -16,15 +17,15 @@ exports.getChatLogDays = function * () {
       GROUP BY "day"
       ORDER BY "day"
     ) sub
-  `);
-};
+  `)
+}
 
 ////////////////////////////////////////////////////////////
 
 // `when` is string 'YYYY-MM-DD'
-exports.findLogByDateTrunc = function * (when) {
-  assert(typeof when === 'string');
-  return yield dbUtil.queryMany(`
+exports.findLogByDateTrunc = async function (when) {
+  assert(typeof when === 'string')
+  return pool.many(sql`
     SELECT sub.*
     FROM (
       SELECT
@@ -34,7 +35,7 @@ exports.findLogByDateTrunc = function * (when) {
       FROM chat_messages cm
       LEFT OUTER JOIN users u ON cm.user_id = u.id
     ) sub
-    WHERE sub.when = $1
+    WHERE sub.when = ${when}
     ORDER BY sub.id
-  `, [when]);
-};
+  `)
+}
