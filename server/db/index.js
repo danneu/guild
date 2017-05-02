@@ -2845,12 +2845,15 @@ exports.findFirstUnreadPostId = async function({topic_id, post_type, user_id}) {
 ////////////////////////////////////////////////////////////
 
 exports.findFirstUnreadPostId = async function ({topic_id, post_type, user_id}) {
+  debug(`[findFirstUnreadPostId] topic_id=%j, post_type=%j, user_id=%j`,
+        topic_id, post_type, user_id)
+  assert(user_id)
   assert(topic_id)
   assert(post_type)
 
   const row = await pool.one(sql`
 SELECT COALESCE(MIN(p.id),
-  CASE $3::post_type
+  CASE ${post_type}::post_type
     WHEN 'ic' THEN
       (SELECT t.latest_ic_post_id FROM topics t WHERE t.id = ${topic_id})
     WHEN 'ooc' THEN
