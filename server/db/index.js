@@ -3335,6 +3335,8 @@ exports.nukeUser = async function ({spambot, nuker}) {
     // that the nuked user has a latest post in
     //
     // TODO: Undo this in `unnukeUser`.
+    //
+    // FIXME: This is too slow.
     updateTopics: sql`
       UPDATE topics
       SET
@@ -3360,8 +3362,8 @@ exports.nukeUser = async function ({spambot, nuker}) {
     await client.query(sqls.hideTopics)
     await client.query(sqls.hidePosts)
     await client.query(sqls.insertNukelist)
-    await client.query(sqls.updateTopics)
-  }).then(() => exports.refreshAllForums())
+    //await client.query(sqls.updateTopics)
+  })//.then(() => exports.refreshAllForums())
 };
 
 
