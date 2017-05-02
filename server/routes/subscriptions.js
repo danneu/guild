@@ -19,16 +19,17 @@ const router = new Router();
 //
 router.get('/me/subscriptions', async (ctx) => {
   ctx.assert(ctx.currUser, 404);
-  const topics = await db.subscriptions.findSubscribedTopicsForUserId(ctx.currUser.id);
-  topics.forEach(pre.presentTopic);
+  const topics = (await db.subscriptions.findSubscribedTopicsForUserId(
+    ctx.currUser.id
+  )).map(pre.presentTopic)
   const grouped = _.groupBy(topics, (topic) => topic.forum.is_roleplay);
   const roleplayTopics = grouped[true] || [];
   const nonroleplayTopics = grouped[false] || [];
   await ctx.render('subscriptions', {
     ctx,
-    topics: topics,
-    roleplayTopics: roleplayTopics,
-    nonroleplayTopics: nonroleplayTopics,
+    topics,
+    roleplayTopics,
+    nonroleplayTopics,
     title: 'My Subscriptions'
   });
 });

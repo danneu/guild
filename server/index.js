@@ -64,6 +64,7 @@ const belt = require('./belt')
 const bbcode = require('./bbcode')
 const bouncer = require('koa-bouncer')
 require('./validation');  // Load after koa-bouncer
+const akismet = require('./akismet')
 
 app.use(middleware.methodOverride())
 
@@ -754,7 +755,18 @@ router.post('/forgot', async (ctx) => {
   //ctx.log.info({ resetToken: resetToken }, 'Created reset token');
   // Send email in background
   //ctx.log.info('Sending email to %s', user.email);
-  emailer.sendResetTokenEmail(user.uname, user.email, resetToken.token);
+  try {
+    await emailer.sendResetTokenEmail(user.uname, user.email, resetToken.token)
+  } catch (err) {
+    ctx.flash = {
+      message: [
+        'danger',
+        'For some reason, the email failed to be sent. Email me at <mahz@roleplayerguild.com> to let me know.'
+      ]
+    }
+    ctx.redirect('back')
+    return
+  }
 
   ctx.flash = { message: ['success', successMessage] };
   ctx.response.redirect('/');
@@ -839,20 +851,26 @@ router.post('/reset-password', async (ctx) => {
 var staffRep;
 router.get('/lexus-lounge', async (ctx) => {
   ctx.assertAuthorized(ctx.currUser, 'LEXUS_LOUNGE');
+
   if (!staffRep && config.STAFF_REPRESENTATIVE_ID) {
     staffRep = await db.findUser(config.STAFF_REPRESENTATIVE_ID)
       .then(pre.presentUser)
   }
-  var category = await db.findModCategory();
-  var forums = await db.findForums([category.id]);
+
+  const latestUserLimit = 50
+
+  const [latestUsers, registration, images, category] = await Promise.all([
+    db.findLatestUsers(latestUserLimit).then((xs) => xs.map(pre.presentUser)),
+    db.keyvals.getRowByKey('REGISTRATION_ENABLED'),
+    db.images.getLatestImages(25).then((xs) => xs.map(pre.presentImage)),
+    db.findModCategory()
+  ])
+
+  const forums = await db.findForums([category.id])
+
   category.forums = forums;
-  pre.presentCategory(category);
-  var latestUserLimit = 50;
-  var latestUsers = await db.findLatestUsers(latestUserLimit);
-  latestUsers.forEach(pre.presentUser);
-  const registration = await db.keyvals.getRowByKey('REGISTRATION_ENABLED');
-  const images = await db.images.getLatestImages(25);
-  images.forEach(pre.presentImage);
+  pre.presentCategory(category) // must come after .forums assignment
+
   await ctx.render('lexus_lounge', {
     ctx,
     category,
@@ -1028,6 +1046,28 @@ router.post('/topics/:topicSlug/posts', middleware.ratelimit(), /* middleware.en
   // If non-rp forum, then the post must be 'ooc' type
   if (!topic.forum.is_roleplay)
     ctx.assert(postType === 'ooc', 400);
+
+  // Check post against akismet
+  if (ctx.currUser.posts_count <= 5) {
+    const isSpam = await akismet.checkComment({
+      commentType: 'reply',
+      commentAuthor: ctx.currUser.uname,
+      commentEmail: ctx.currUser.email,
+      commentContent: ctx.vals.markup,
+      userIp: ctx.ip,
+      userAgent: ctx.headers['user-agent']
+    })
+
+    if (isSpam) {
+      await db.nukeUser({
+        spambot: ctx.currUser.id,
+        nuker: config.STAFF_REPRESENTATIVE_ID || 1
+      })
+      emailer.sendAutoNukeEmail(ctx.currUser.slug, ctx.vals.markup)
+      ctx.redirect('/')
+      return
+    }
+  }
 
   // Render the bbcode
   var html = bbcode(ctx.vals.markup);
@@ -1240,6 +1280,28 @@ router.post('/forums/:slug/topics', middleware.ratelimit(), /* middleware.ensure
   ctx.validateBody('tag-ids').defaultTo([]);
 
   // Validation succeeded
+
+  // Check topic against akismet
+  if (ctx.currUser.posts_count <= 5) {
+    const isSpam = await akismet.checkComment({
+      commentType: 'forum-post',
+      commentAuthor: ctx.currUser.uname,
+      commentEmail: ctx.currUser.email,
+      commentContent: ctx.vals.markup,
+      userIp: ctx.ip,
+      userAgent: ctx.headers['user-agent']
+    })
+
+    if (isSpam) {
+      await db.nukeUser({
+        spambot: ctx.currUser.id,
+        nuker: config.STAFF_REPRESENTATIVE_ID || 1
+      })
+      emailer.sendAutoNukeEmail(ctx.currUser.slug, ctx.vals.markup)
+      ctx.redirect('/')
+      return
+    }
+  }
 
   // Render BBCode to html
   var html = bbcode(ctx.vals.markup);

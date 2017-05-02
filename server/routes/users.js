@@ -775,8 +775,6 @@ router.post('/users/:slug/nuke', async (ctx) => {
     }
   }
   await db.nukeUser({ spambot: user.id, nuker: ctx.currUser.id });
-  // Recalculate forum caches
-  //await db.refreshAllForums();
   ctx.flash = { message: ['success', 'Nuked the bastard'] };
   ctx.redirect(user.url)
 });

@@ -49,8 +49,6 @@ if (!exports.S3_AVATAR_BUCKET) {
 if (!exports.S3_IMAGE_BUCKET) {
   console.warn('S3_IMAGE_BUCKET not set. Cannot process image uploads.');
 }
-exports.FROM_EMAIL = process.env.FROM_EMAIL;
-
 
 // The max amount of co-GMs per topic
 exports.MAX_CO_GM_COUNT = process.env.MAX_CO_GM_COUNT || 2;
@@ -87,8 +85,7 @@ console.log('PM system online:', exports.IS_PM_SYSTEM_ONLINE);
 
 exports.IS_EMAIL_CONFIGURED = !!(exports.HOST &&
                                  exports.AWS_KEY &&
-                                 exports.AWS_SECRET &&
-                                 exports.FROM_EMAIL);
+                                 exports.AWS_SECRET);
 console.log('Email is configured:', exports.IS_EMAIL_CONFIGURED);
 
 exports.IS_CLOUDSEARCH_CONFIGURED = !!(

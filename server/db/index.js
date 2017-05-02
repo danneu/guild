@@ -8,6 +8,7 @@ const _ = require('lodash')
 const assert = require('better-assert')
 const debug = require('debug')('app:db')
 const pgArray = require('postgres-array')
+const promiseMap = require('promise.map')
 // 1st party
 const config = require('../config')
 const belt = require('../belt')
@@ -1186,10 +1187,19 @@ exports.findForumById = exports.findForum = async function (forumId) {
 
 ////////////////////////////////////////////////////////////
 
+// TODO: This should be moved to some admin namespace since
+// it includes the nuke info
 exports.findLatestUsers = async function (limit = 25) {
   debug(`[findLatestUsers]`)
   return pool.many(sql`
-    SELECT u.*
+    SELECT
+      u.*,
+      (
+        SELECT to_json(users.*)
+        FROM users
+        JOIN nuked_users ON nuked_users.nuker_id = users.id
+        WHERE nuked_users.user_id = u.id
+      ) nuked_by
     FROM users u
     ORDER BY id DESC
     LIMIT ${limit}
@@ -2160,19 +2170,10 @@ exports.refreshForum = async function (forumId) {
 
 // Sync with refreshForum
 exports.refreshAllForums = async function () {
-  return pool.query(sql`
-    UPDATE forums
-    SET
-      posts_count = COALESCE(sub.posts_count, 0),
-      latest_post_id = sub.latest_post_id
-    FROM (
-      SELECT
-        SUM(posts_count) posts_count,
-        MAX(latest_post_id) latest_post_id
-      FROM topics
-      WHERE is_hidden = false
-    ) sub
-  `)
+  // TODO: Do it in one query
+  const forumIds = await pool.many(sql`SELECT id FROM forums`)
+    .then((xs) => xs.map((x) => x.id))
+  return promiseMap(forumIds, exports.refreshForum, 2)
 }
 
 // -> JSONString
@@ -3329,6 +3330,28 @@ exports.nukeUser = async function ({spambot, nuker}) {
     insertNukelist: sql`
       INSERT INTO nuked_users (user_id, nuker_id)
       VALUES (${spambot}, ${nuker})
+    `,
+    // Update the latest_post_id of every topic
+    // that the nuked user has a latest post in
+    //
+    // TODO: Undo this in `unnukeUser`.
+    updateTopics: sql`
+      UPDATE topics
+      SET
+        latest_post_id = sub2.latest_post_id
+      FROM (
+        SELECT sub.topic_id, MAX(posts.id) latest_post_id
+        FROM posts
+        JOIN (
+          SELECT t.id topic_id
+          FROM posts p
+          JOIN topics t ON p.id = t.latest_post_id
+          WHERE p.user_id = ${spambot}
+        ) sub on posts.topic_id = sub.topic_id
+        WHERE posts.is_hidden = false
+        GROUP BY sub.topic_id
+      ) sub2
+      WHERE id = sub2.topic_id
     `
   }
 
@@ -3337,7 +3360,8 @@ exports.nukeUser = async function ({spambot, nuker}) {
     await client.query(sqls.hideTopics)
     await client.query(sqls.hidePosts)
     await client.query(sqls.insertNukelist)
-  })
+    await client.query(sqls.updateTopics)
+  }).then(() => exports.refreshAllForums())
 };
 
 

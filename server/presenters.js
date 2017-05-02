@@ -80,6 +80,8 @@ exports.presentUser = function (user) {
     user.custom_title = '';
   }
 
+  exports.presentUser(user.nuked_by)
+
   // Reminder: Only avatar uploads since the S3 bucket update will
   // be served from the avatars.roleplayeguild.com bucket,
   // so here we'll check for that and only write those to go through

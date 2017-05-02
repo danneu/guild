@@ -34,17 +34,18 @@ var templates = {
   `)
 };
 
-exports.sendResetTokenEmail = function(toUname, toEmail, token) {
+const FROM = 'Mahz <mahz@roleplayerguild.com>'
+
+exports.sendResetTokenEmail = function (toUname, toEmail, token) {
   debug('[sendResetTokenEmail]');
-  assert(config.FROM_EMAIL, 'FROM_EMAIL must be set to send emails');
   assert(config.HOST, 'HOST must be set to send emails');
   assert(_.isString(toUname));
   assert(_.isString(toEmail));
   assert(belt.isValidUuid(token));
   var transporter = getTransporter();
   //var result = yield transporter._sendMailPromise({
-  var result = transporter.sendMail({
-    from: config.FROM_EMAIL,
+  return getTransporter().sendMail({
+    from: FROM,
     to: toEmail,
     subject: 'Password Reset Token - RoleplayerGuild.com',
     html: templates.resetToken.render({
@@ -52,12 +53,35 @@ exports.sendResetTokenEmail = function(toUname, toEmail, token) {
       host: config.HOST,
       token: token
     })
-  }, function(err, info) {
-    // TODO: Log errors in background.
-    // Since we don't expose to user if they entered a valid email,
-    // we can't really do anything upon email failure.
-    debug('Tried sending email from <%s> to <%s>', config.FROM_EMAIL, toEmail);
-    if (err) return console.error(err);
-    console.log(info);
-  });
-};
+  }).catch((err) => {
+    console.error(`Failed to send reset token email to ${toUname}`, err)
+    throw err
+  })
+}
+
+// Return promise
+exports.sendAutoNukeEmail = (() => {
+  const template = nunjucks.compile(`
+    <p>
+      Akismet detected spammer:
+      <a href="${config.HOST}/users/{{ slug }}">{{ slug }}</a>
+    </p>
+    <blockquote>
+      {{ markup }}
+    </blockquote>
+  `)
+
+  return (slug, markup) => {
+    assert(config.HOST, 'HOST must be set to send emails')
+
+    return getTransporter().sendMail({
+      from: FROM,
+      to: 'danrodneu@gmail.com',
+      subject: `Guild Auto-Nuke: ${slug}`,
+      html: template.render({ slug, markup })
+    }).catch((err) => {
+      console.error(`Failed to send auto-nuke email`, err)
+      throw err
+    })
+  }
+})()

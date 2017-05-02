@@ -149,6 +149,14 @@
                 <span class="text-muted">
                 {{ user.pms_count }} pms, {{ user.posts_count }} posts
                 </span>
+                {% if user.nuked_by %}
+                  <span class="text-danger">
+                    Nuked by
+                    <a href="{{ user.nuked_by.url }}">
+                      {{ user.nuked_by.uname }}
+                    </a>
+                  </span>
+                {% endif %}
             </li>
           {% endfor %}
         </ul>
