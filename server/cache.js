@@ -14,7 +14,13 @@ var config = require('./config');
 var belt = require('./belt');
 
 const cache = new IntervalCache()
-  .every('stats', 1000 * 60, () => db.getStats(), {})
+  .every('stats', 1000 * 60, () => db.getStats(), {
+    topicsCount: 0,
+    usersCount: 0,
+    postsCount: 0,
+    latestUser: null,
+    onlineUsers: []
+  })
   // 5 min
   .every('uname-regex-trie', 1000 * 60 * 5, async () => {
     console.log('[CACHE] Populating uname-regex-trie')
