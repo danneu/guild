@@ -158,21 +158,20 @@ exports.generateUuid = function() {
 // reCaptcha ///////////////////////////////////////////////
 
 // Returns Bool
-exports.makeRecaptchaRequest = function *(userResponse, remoteIp) {
-  assert(config.RECAPTCHA_SITESECRET);
-  assert(_.isString(userResponse));
-  assert(_.isString(remoteIp));
+exports.makeRecaptchaRequest = async function (userResponse, remoteIp) {
+  assert(config.RECAPTCHA_SITESECRET)
+  assert(_.isString(userResponse))
+  assert(_.isString(remoteIp))
 
-  try {
-    yield recaptchaValidator.promise(config.RECAPTCHA_SITESECRET, userResponse, remoteIp);
-    return true;
-  } catch(err) {
-    if (typeof err === 'string') {
-      return false;
-    }
-    throw err;
-  }
-};
+  return recaptchaValidator.promise(
+    config.RECAPTCHA_SITESECRET, userResponse, remoteIp
+  ).then(() => {
+    return true
+  }).catch((err) => {
+    if (typeof err === 'string') return false
+    throw err
+  })
+}
 
 ////////////////////////////////////////////////////////////
 
