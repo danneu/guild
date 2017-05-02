@@ -10,6 +10,7 @@ const Uploader = require('s3-streaming-upload').Uploader;
 const uuidGen = require('node-uuid');
 const AWS = require('aws-sdk');
 // 1st
+const belt = require('../belt')
 const db = require('../db');
 const pre = require('../presenters');
 const config = require('../config');
@@ -29,6 +30,7 @@ async function loadUser (ctx, next) {
 }
 
 async function loadImage (ctx, next) {
+  ctx.assert(belt.isValidUuid(ctx.params.image_id), 404)
   const image = await db.images.getImage(ctx.params.image_id);
   pre.presentImage(image);
   ctx.assert(image, 404);
@@ -37,6 +39,7 @@ async function loadImage (ctx, next) {
 }
 
 async function loadAlbum (ctx, next) {
+  ctx.assert(/^[0-9]+$/.test(ctx.params.album_id), 404)
   const album = await db.images.getAlbum(ctx.params.album_id);
   pre.presentAlbum(album);
   ctx.assert(album, 404);
