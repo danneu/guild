@@ -1755,8 +1755,6 @@ router.post('/topics/:slug/arena-outcomes', async (ctx) => {
 //
 
 router.get('/topics/:slug/:postType', async (ctx) => {
-  assert(config.RECAPTCHA_SITEKEY);
-  assert(config.RECAPTCHA_SITESECRET);
   ctx.assert(['ic', 'ooc', 'char'].includes(ctx.params.postType), 404);
   ctx.validateQuery('page').optional().toInt();
   const topicId = belt.extractId(ctx.params.slug);
