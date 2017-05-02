@@ -1,6 +1,6 @@
 {
   "engines": {
-    "node": "7.x"
+    "node": "7.9.0"
   },
   "scripts": {
     "start": "node --max_old_space_size=460 ./server",
