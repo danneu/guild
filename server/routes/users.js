@@ -450,6 +450,7 @@ router.get('/users/:userIdOrSlug', async (ctx) => {
   if (ctx.currUser && ctx.currUser.id !== user.id) {
     // insert in the background
     db.profileViews.insertView(ctx.currUser.id, user.id)
+      .catch((err) => console.error('insertView error', err, err.stack))
   }
 
   const results = await Promise.all([

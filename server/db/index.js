@@ -1759,7 +1759,7 @@ exports.parseAndCreateQuoteNotifications = async function (props) {
   assert(props.topic_id)
 
   // Array of lowercase unames that don't include fromUser
-  const mentionedUnames = belt.extractQuoteMentions(
+  let mentionedUnames = belt.extractQuoteMentions(
     props.markup, props.fromUser.uname
   )
 

@@ -361,7 +361,7 @@ exports.extractQuoteMentions = function(str, unameToReject) {
 exports.frequencies = function(objs, prop) {
   return _.chain(objs)
    .groupBy(prop)
-   .pairs()
+   .toPairs()
    .reduce(function(memo, pair) {
      var key = pair[0];
      var vals = pair[1];

@@ -49,7 +49,7 @@ var postToBodyItem = function(post) {
   };
 
   // Return null if markup is empty, particularly after replacing invalid chars
-  _.pairs(fields).map(function(pair) {
+  _.toPairs(fields).map(function(pair) {
     var k = pair[0], v = pair[1];
     if (!v) {
       console.log('Problem with post', post.id, 'markup.');
