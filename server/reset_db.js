@@ -2,7 +2,6 @@
 const path = require('path');
 const fs = require('fs');
 // 3rd party
-const pg = require('co-pg')(require('pg'));
 const _ = require('lodash');
 const promiseMap = require('promise.map')
 // 1st party

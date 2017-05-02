@@ -4,7 +4,6 @@ var util = require('util');
 // 3rd
 var assert = require('better-assert');
 var _ = require('lodash');
-var co = require('co');
 var debug = require('debug')('app:search');
 // 1st
 var db = require('./db');

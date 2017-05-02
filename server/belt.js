@@ -210,7 +210,7 @@ exports.calcTotalPostPages = function(totalItems) {
   return Math.max(1, Math.ceil(totalItems / config.POSTS_PER_PAGE));
 };
 
-// FIXME: This is a sloppy was to see if an object is a co-pg client
+// FIXME: This is a sloppy was to see if an object is a pg client
 exports.isDBClient = function(obj) {
   var keys = Object.keys(obj);
 

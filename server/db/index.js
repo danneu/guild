@@ -2,10 +2,8 @@
 /*jshint -W002 */
 // Node deps
 const path = require('path')
-const fs = require('co-fs')
 const util = require('util')
 // 3rd party
-const pg = require('co-pg')(require('pg'))
 const _ = require('lodash')
 const assert = require('better-assert')
 const debug = require('debug')('app:db')

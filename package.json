@@ -10,6 +10,7 @@
     "reset-db": "env $(cat .env | xargs) node ./server/reset_db",
     "tasks:batch-upload-posts": "DEBUG=* node ./tasks/batch_upload_posts"
   },
+  "main": "server/index.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/danneu/guild"
@@ -47,6 +48,7 @@
     "node-uuid": "1.4.8",
     "nodemailer": "4.0.1",
     "nodemailer-ses-transport": "1.5.1",
+    "nunjucks": "^3.0.0",
     "pg": "^6.1.5",
     "pg-extra": "0.0.13",
     "postgres-array": "1.0.2",
