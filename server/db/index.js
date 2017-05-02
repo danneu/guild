@@ -1171,6 +1171,7 @@ exports.updateUserRole = async function (userId, role) {
 
 ////////////////////////////////////////////////////////////
 
+// @fast
 exports.findForumById = exports.findForum = async function (forumId) {
   return pool.one(sql`
     SELECT
@@ -1925,6 +1926,8 @@ exports.clearExpiredViewers = async function () {
 }
 
 // Returns viewers as a map of { users: [Viewer], guests: [Viewer] }
+//
+// @fast
 exports.findViewersForTopicId = async function (topicId) {
   assert(topicId)
 
@@ -1942,6 +1945,8 @@ exports.findViewersForTopicId = async function (topicId) {
 }
 
 // Returns viewers as a map of { users: [Viewer], guests: [Viewer] }
+//
+// @fast
 exports.findViewersForForumId = async function (forumId) {
   assert(forumId)
 
@@ -1953,8 +1958,8 @@ exports.findViewersForForumId = async function (forumId) {
   `)
 
   return {
-    users: _.filter(viewers, 'uname'),
-    guests: _.filter(viewers, 'ip')
+    users: viewers.filter((x) => x.uname),
+    guests: viewers.filter((x) => x.ip)
   }
 }
 
@@ -2636,6 +2641,7 @@ exports.createStatus = async function ({user_id, html, text}) {
 
 ////////////////////////////////////////////////////////////
 
+// @fast
 exports.findLatestStatusesForUserId = async function (user_id) {
   return pool.many(sql`
     SELECT *
@@ -3042,6 +3048,7 @@ LIMIT ${limit}
   `)
 }
 
+// @fast
 exports.findFriendshipBetween = async function (from_id, to_id) {
   return pool.one(sql`
     SELECT friendships

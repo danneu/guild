@@ -53,6 +53,7 @@ CREATE TABLE users (
 CREATE UNIQUE INDEX unique_username ON users USING btree (lower(uname));
 CREATE UNIQUE INDEX unique_email ON users USING btree (lower(email));
 CREATE UNIQUE INDEX unique_slug ON users (slug);
+CREATE INDEX users__uname ON users (uname);
 
 CREATE TABLE reset_tokens (
   user_id int  NOT NULL  REFERENCES users(id)  ON DELETE CASCADE,
@@ -281,6 +282,7 @@ CREATE TABLE viewers (
 
 CREATE INDEX viewers_forum_id ON viewers (forum_id);
 CREATE INDEX viewers_topic_id ON viewers (topic_id);
+CREATE INDEX viewers_viewed_at ON viewers (viewed_at);
 
 -- Always select from this.
 -- A cronjob will delete expired views, but this lets us run the cronjob

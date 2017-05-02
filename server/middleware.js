@@ -24,9 +24,8 @@ exports.currUser = function () {
     if (!belt.isValidUuid(sessionId)) return next()
 
     const user = await db.findUserBySessionId(sessionId)
-    ctx.currUser = user && pre.presentUser(user)  // or null
+    ctx.currUser = pre.presentUser(user)
     ctx.state.session_id = sessionId
-    // this.log = this.log.child({ currUser: user });
     return next()
   }
 }
