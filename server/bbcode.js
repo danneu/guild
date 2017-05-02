@@ -15,7 +15,7 @@ if (isServer) {
   cheerio = require('cheerio');
   var Autolinker = require('autolinker');
   // 1st party
-  cache = require('./cache')();
+  cache = require('./cache');
 }
 
 function escapeHtml (unsafe) {
