@@ -14,6 +14,7 @@ var config = require('./config');
 var belt = require('./belt');
 
 const cache = new IntervalCache()
+  // 60 seconds
   .every('stats', 1000 * 60, () => db.getStats(), {
     topicsCount: 0,
     usersCount: 0,
@@ -31,20 +32,15 @@ const cache = new IntervalCache()
   }, new RegexTrie())
   // 10 seconds
   // Map of ForumId->Int (includes all ForumIds in database)
-  .every('forum-viewer-counts', 1000 * 10, () => {
-    return db.getForumViewerCounts()
-  }, { users: [], guests: [] })
+  .every('forum-viewer-counts', 1000 * 10, db.getForumViewerCounts, {})
   // 15 seconds
-  .every('categories', 1000 * 15, () => db.findCategoriesWithForums(), [])
+  .every('categories', 1000 * 15, db.findCategoriesWithForums, [])
   // 15 seconds
   .every('latest-checks', 1000 * 15, () => db.findLatestChecks(), [])
   .every('latest-roleplays', 1000 * 15, () => db.findLatestRoleplays(), [])
   .every('latest-statuses', 1000 * 15, () => db.findLatestStatuses(), [])
   // 60 minutes
-  .every('unames->ids', 1000 * 60 * 60, () => {
-    console.log('[CACHE] Populating unames->ids')
-    return db.getUnamesMappedToIds()
-  }, {})
+  .every('unames->ids', 1000 * 60 * 60, db.getUnamesMappedToIds, {})
   // 60 minutes
   .every('arena-leaderboard', 1000 * 60 * 60, () => db.getArenaLeaderboard(5), [])
   // 45 seconds
