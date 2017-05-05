@@ -268,7 +268,7 @@ const nunjucksOptions = {
   }
 };
 
-app.use(nunjucksRender('views', nunjucksOptions));
+app.use(convert(nunjucksRender('views', nunjucksOptions)));
 
 ////////////////////////////////////////////////////////////
 // Routes //////////////////////////////////////////////////
