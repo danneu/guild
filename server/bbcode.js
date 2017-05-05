@@ -1313,7 +1313,7 @@ var autolinkerOpts = {
   hashtag: false,
   newWindow: false,
   // keep synced with [url] logic
-  replaceFn: function (autolinker, match) {
+  replaceFn: function (match) {
     //var tag = autolinker.getTagBuilder().build(match);
     var tag = match.buildTag();
     // dumb way to see if user is linking internally or externally
