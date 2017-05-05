@@ -3135,7 +3135,8 @@ SELECT
   json_build_object(
     'uname', u.uname,
     'slug', u.slug,
-    'avatar_url', u.avatar_url
+    'avatar_url', u.avatar_url,
+    'role', u.role
   ) "from_user",
   (
     SELECT COALESCE(json_agg(sub.*), '[]'::json)
@@ -3146,7 +3147,8 @@ SELECT
           'uname', u2.uname,
           'slug', u2.slug,
           'avatar_url', u2.avatar_url,
-          'url', '/users/' || u2.slug
+          'url', '/users/' || u2.slug,
+          'role', u2.role
         ) "from_user"
       FROM vms vms2
       JOIN users u2 ON vms2.from_user_id = u2.id
@@ -3395,3 +3397,4 @@ exports.profileViews = require('./profile-views')
 exports.users = require('./users')
 exports.chat = require('./chat')
 exports.subscriptions = require('./subscriptions')
+exports.vms = require('./vms')

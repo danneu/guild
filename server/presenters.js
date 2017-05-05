@@ -249,13 +249,16 @@ exports.presentFriendship = function (f) {
 exports.presentVm = function (vm) {
   if (!vm) return null
 
+  vm.url = `/vms/${vm.id}`
+
   // Fix embedded
 
   if (_.isString(vm.created_at)) {
     vm.created_at = new Date(vm.created_at);
   }
 
-  exports.presentUser(vm.from_user);
+  exports.presentUser(vm.from_user)
+  exports.presentUser(vm.to_user)
 
   if (vm.child_vms) {
     vm.child_vms.forEach(exports.presentVm);

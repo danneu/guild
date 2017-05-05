@@ -541,6 +541,27 @@ router.get('/me/vms/:id', async (ctx) => {
   ctx.redirect('/users/' + ctx.currUser.slug + '/vms#vm-' + ctx.vals.id);
 });
 
+////////////////////////////////////////////////////////////
+
+// Delete VM
+router.delete('/vms/:id', async (ctx) => {
+  ctx.validateParam('id').toInt()
+  const vm = await db.vms.getVmById(ctx.vals.id)
+    .then(pre.presentVm)
+  ctx.assert(vm, 404)
+  ctx.assertAuthorized(ctx.currUser, 'DELETE_VM', vm)
+
+  await db.vms.deleteVm(vm.id)
+  await db.vms.deleteNotificationsForVmId(vm.id)
+
+  // Delete any notifications that this VM caused
+
+  ctx.flash = { message: ['success', 'VM deleted'] }
+  ctx.redirect(vm.to_user.url + '/vms#tabs')
+})
+
+////////////////////////////////////////////////////////////
+
 //
 // Show user visitor messages
 //
@@ -575,68 +596,73 @@ router.get('/users/:slug/vms', async (ctx) => {
 //
 //
 router.post('/users/:slug/vms', async (ctx) => {
-  ctx.assertAuthorized(ctx.currUser, 'CREATE_VM');
+  ctx.assertAuthorized(ctx.currUser, 'CREATE_VM')
 
   // Load user
-  var user = await db.findUserBySlug(ctx.params.slug);
-  ctx.assert(user, 404);
-  user = pre.presentUser(user);
+  const user = await db.findUserBySlug(ctx.params.slug)
+    .then(pre.presentUser)
+  ctx.assert(user, 404)
 
   // Validation
   ctx.validateBody('markup')
     .isString('Message is required')
-    .isLength(1, config.MAX_VM_LENGTH,
-              'Message must be 1-'+ config.MAX_VM_LENGTH + ' chars');
+    .isLength(
+      1, config.MAX_VM_LENGTH,
+      'Message must be 1-'+ config.MAX_VM_LENGTH + ' chars'
+    )
 
   if (ctx.request.body.parent_vm_id) {
-    ctx.validateBody('parent_vm_id').toInt();
+    ctx.validateBody('parent_vm_id').toInt()
   }
 
-  var html = bbcode(ctx.vals.markup);
+  const html = bbcode(ctx.vals.markup)
 
   // Create VM
-  var vm = await db.createVm({
+  const vm = await db.createVm({
     from_user_id: ctx.currUser.id,
     to_user_id: user.id,
     markup: ctx.vals.markup,
-    html: html,
+    html,
     parent_vm_id: ctx.vals.parent_vm_id
-  });
+  })
 
   // if VM is a reply, notify everyone in the thread and the owner of the
   // profile. but don't notify currUser.
   if (vm.parent_vm_id) {
-    let userIds = await db.getVmThreadUserIds(vm.parent_vm_id || vm.id);
+    let userIds = await db.getVmThreadUserIds(vm.parent_vm_id || vm.id)
     // push on the profile owner
-    userIds.push(vm.to_user_id);
+    userIds.push(vm.to_user_id)
     // don't notify anyone twice
-    userIds = _.uniq(userIds);
+    userIds = _.uniq(userIds)
     // don't notify self
-    userIds = userIds.filter(id => id !== ctx.currUser.id);
+    userIds = userIds.filter(id => id !== ctx.currUser.id)
     // send out notifications in parallel
-    await userIds.map((toUserId) => {
+    await Promise.all(userIds.map((toUserId) => {
       return db.createVmNotification({
         type: 'REPLY_VM',
         from_user_id: vm.from_user_id,
         to_user_id: toUserId,
         vm_id: vm.parent_vm_id || vm.id
-      });
-    });
+      })
+    }))
   } else {
     // else, it's a top-level VM. just notify profile owner
-    await db.createVmNotification({
-      type: 'TOPLEVEL_VM',
-      from_user_id: vm.from_user_id,
-      to_user_id: vm.to_user_id,
-      vm_id: vm.parent_vm_id || vm.id
-    });
+    // unless we are leaving VM on our own wall
+    if (vm.from_user_id !== vm.to_user_id) {
+      await db.createVmNotification({
+        type: 'TOPLEVEL_VM',
+        from_user_id: vm.from_user_id,
+        to_user_id: vm.to_user_id,
+        vm_id: vm.parent_vm_id || vm.id
+      })
+    }
   }
 
   ctx.flash = {
     message: ['success', 'Visitor message successfully posted']
-  };
-  ctx.redirect(user.url + '/vms#vm-' + vm.id);
-});
+  }
+  ctx.redirect(user.url + '/vms#vm-' + vm.id)
+})
 
 //
 // Show user recent topics

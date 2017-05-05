@@ -482,6 +482,25 @@ function can(user, action, target) {
       // Users can only read convos they're participants of
       if (target.participants.some((x) => x.id === user.id)) return true
       return false;
+    case 'DELETE_VM': // target is vm
+      if (!user) return false
+      if (user.role === 'banned') return false
+      // You can delete your own VM
+      if (user.id === target.from_user_id) return true
+      // You can delete VMs on your wall unless it's from staff
+      if (user.id === target.to_user_id && user.role === 'member')
+        return !isStaffRole(target.from_user.role)
+      // Staff
+      if (user.role === 'admin') {
+        return true
+      }
+      if (user.role === 'smod') {
+        return target.from_user.role !== 'admin'
+      }
+      if (user.role === 'mod') {
+        return !isStaffRole(target.from_user.role)
+      }
+      return false
     case 'CREATE_VM':  // no target
       // Guests can't
       if (!user) return false;

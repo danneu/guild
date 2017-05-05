@@ -1128,14 +1128,25 @@
         {{ vm.html|safe }}
 
         <!-- controls row -->
-        {% if not vm.parent_vm_id and can(ctx.currUser, 'CREATE_VM') %}
           <div>
+            {% if not vm.parent_vm_id and can(ctx.currUser, 'CREATE_VM') %}
             <button type="button" class="btn-link vm-reply-btn"
+                    style="display: inline-block;"
                     data-vm-id={{ vm.id }}>
               Reply
             </button>
+            {% endif %}
+
+            {% if can(ctx.currUser, 'DELETE_VM', vm) %}
+              <form method="POST" action="{{ vm.url }}"
+                    style="display:inline-block;">
+                <input type="hidden" name="_method" value="DELETE">
+                <button type="submit" class="btn-link vm-delete-btn" style="color:#e74c3c">
+                  Delete
+                </button>
+              </form>
+            {% endif %}
           </div>
-        {% endif %}
 
       </div><!-- /media-body -->
 
