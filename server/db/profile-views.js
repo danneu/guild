@@ -17,22 +17,19 @@ exports.insertView = async function (viewerId, viewedId) {
   `)
 }
 
-// FIXME: Temporarily disabled because perf is so bad
 exports.getLatestViews = async function (viewedId) {
   assert(Number.isInteger(viewedId))
 
-  return []
-
-  /* return pool.many(sql`
-   *   SELECT viewers.uname
-   *         , viewers.slug
-   *         , viewers.avatar_url
-   *         , MAX(pv.created_at) as "maxstamp"
-   *   FROM profile_views pv
-   *   JOIN users viewers ON pv.viewer_id = viewers.id
-   *   WHERE pv.viewed_id = ${viewedId}
-   *   GROUP BY viewers.uname, viewers.slug, viewers.avatar_url
-   *   ORDER BY maxstamp DESC
-   *   LIMIT 10
-   * `)*/
+  return pool.many(sql`
+    SELECT viewers.uname
+          , viewers.slug
+          , viewers.avatar_url
+          , MAX(pv.created_at) as "maxstamp"
+    FROM profile_views pv
+    JOIN users viewers ON pv.viewer_id = viewers.id
+    WHERE pv.viewed_id = ${viewedId}
+    GROUP BY viewers.uname, viewers.slug, viewers.avatar_url
+    ORDER BY maxstamp DESC
+    LIMIT 10
+ `)
 }

@@ -377,8 +377,6 @@ router.get('/users', async (ctx) => {
 
   usersList = usersList.map(pre.presentUser);
 
-  debug({ usersList })
-
   const nextBeforeId = _.last(usersList) ? _.last(usersList).id : null;
 
   ctx.set('X-Robots-Tag', 'noindex');
