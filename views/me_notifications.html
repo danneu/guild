@@ -121,10 +121,6 @@
 {% block scripts %}
 <script type="text/javascript">
   $('.delete-notification-btn').on('click', function() {
-    var confirmed = confirm('Are you sure want to delete this notification?');
-    if (!confirmed)
-      return false;
-
     var $this = $(this);
     var notificationId = $this.parent().attr('data-notification-id');
     var url = '/api/me/notifications/' + notificationId;
