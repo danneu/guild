@@ -1397,9 +1397,14 @@ exports.getApproxCount = async function (tableName) {
 
 ////////////////////////////////////////////////////////////
 
+// Ignore nuked users
 exports.getLatestUser = async function () {
   return pool.one(sql`
-    SELECT * FROM users ORDER BY created_at DESC LIMIT 1
+    SELECT *
+    FROM users
+    WHERE is_nuked = false
+    ORDER BY created_at DESC
+    LIMIT 1
   `)
 }
 
