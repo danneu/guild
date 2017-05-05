@@ -1,20 +1,18 @@
-'use strict';
 // Node
-var util = require('util');
-var url = require('url');
-var crypto = require('crypto');
+const util = require('util');
+const url = require('url');
+const crypto = require('crypto');
 // 3rd party
-var debug = require('debug')('app:belt');
-var promissory = require('promissory');
-var assert = require('better-assert');
-var _bcrypt = require('bcryptjs');
-var _ = require('lodash');
-var uuid = require('node-uuid');
-var Autolinker = require('autolinker');
-var recaptchaValidator = require('recaptcha-validator');
-var request = require('request');
+const debug = require('debug')('app:belt');
+const assert = require('better-assert');
+const bcrypt = require('bcryptjs')
+const _ = require('lodash');
+const uuid = require('node-uuid');
+const Autolinker = require('autolinker');
+const recaptchaValidator = require('recaptcha-validator');
+const request = require('request');
 // 1st party
-var config = require('./config');
+const config = require('./config');
 
 ////
 //// This module is a general utility-belt of functions.
@@ -124,22 +122,13 @@ exports.joinErrors = function(errObj) {
 // Authentication
 ////////////////////////////////////////////////////////////
 
-// Wrap bcryptjs with Promises
-var bcrypt = {
-  // Sig: hash(password, salt)
-  hash: promissory(_bcrypt.hash),
-  // Sig: compare(rawPassword, hashedPassword)
-  compare: promissory(_bcrypt.compare)
-};
-
-// String (Text) -> String (Hex)
-exports.hashPassword = function*(password) {
-  return yield bcrypt.hash(password, 4);
-};
+exports.hashPassword = (password) => {
+  return bcrypt.hash(password, 10)
+}
 
 // String -> String -> Bool
-exports.checkPassword = function*(password, digest) {
-  return yield bcrypt.compare(password, digest);
+exports.checkPassword = (password, digest) => {
+  return bcrypt.compare(password, digest)
 };
 
 ////////////////////////////////////////////////////////////

@@ -6,7 +6,6 @@ const zlib = require('zlib')
 // 3rd party
 const assert = require('better-assert')
 const gm = require('gm').subClass({ imageMagick: true })
-const promissory = require('promissory')
 const debug = require('debug')('app:avatar')
 const Uploader = require('s3-streaming-upload').Uploader
 const uuidGen = require('node-uuid')
