@@ -1049,13 +1049,23 @@ router.post('/topics/:topicSlug/posts', middleware.ratelimit(), /* middleware.en
 
   // Check post against akismet
   if (ctx.currUser.posts_count <= 5) {
-    const isSpam = await akismet.checkComment({
-      commentType: 'reply',
-      commentAuthor: ctx.currUser.uname,
-      commentEmail: ctx.currUser.email,
-      commentContent: ctx.vals.markup,
-      userIp: ctx.ip,
-      userAgent: ctx.headers['user-agent']
+    const isSpam = await Promise.race([
+      belt.timeout(10000).then(() => {
+        console.error('akismet api took longer than 10000ms to respond')
+        return false
+      }),
+      akismet.checkComment({
+        commentType: 'reply',
+        commentAuthor: ctx.currUser.uname,
+        commentEmail: ctx.currUser.email,
+        commentContent: ctx.vals.markup,
+        userIp: ctx.ip,
+        userAgent: ctx.headers['user-agent']
+      })
+    ]).catch((err) => {
+      // On error, just let them post
+      console.error('akismet error', err)
+      return false
     })
 
     if (isSpam) {
@@ -1283,13 +1293,23 @@ router.post('/forums/:slug/topics', middleware.ratelimit(), /* middleware.ensure
 
   // Check topic against akismet
   if (ctx.currUser.posts_count <= 5) {
-    const isSpam = await akismet.checkComment({
-      commentType: 'forum-post',
-      commentAuthor: ctx.currUser.uname,
-      commentEmail: ctx.currUser.email,
-      commentContent: ctx.vals.markup,
-      userIp: ctx.ip,
-      userAgent: ctx.headers['user-agent']
+    const isSpam = await Promise.race([
+      belt.timeout(10000).then(() => {
+        console.error('akismet api took longer than 10,000ms to respond')
+        return false
+      }),
+      akismet.checkComment({
+        commentType: 'forum-post',
+        commentAuthor: ctx.currUser.uname,
+        commentEmail: ctx.currUser.email,
+        commentContent: ctx.vals.markup,
+        userIp: ctx.ip,
+        userAgent: ctx.headers['user-agent']
+      })
+    ]).catch((err) => {
+      // On error, just let them post
+      console.error('akismet error', err)
+      return false
     })
 
     if (isSpam) {
