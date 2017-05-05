@@ -454,13 +454,13 @@ router.post('/topics/:topicSlug/co-gms', async (ctx) => {
     .isString('Username required');
   var user = await db.findUserByUname(ctx.vals.uname);
   // Ensure user exists
-  ctx.validate(user, 'User does not exist');
+  ctx.check(user, 'User does not exist');
   // Ensure user is not already a co-GM
-  ctx.validate(!topic.co_gm_ids.includes(user.id), 'User is already a co-GM');
+  ctx.check(!topic.co_gm_ids.includes(user.id), 'User is already a co-GM');
   // Ensure user is not the GM
-  ctx.validate(user.id !== topic.user.id, 'User is already the GM');
+  ctx.check(user.id !== topic.user.id, 'User is already the GM');
   // Ensure topic has room for another co-GM
-  ctx.validate(topic.co_gm_ids.length < config.MAX_CO_GM_COUNT,
+  ctx.check(topic.co_gm_ids.length < config.MAX_CO_GM_COUNT,
                 'Cannot have more than ' + config.MAX_CO_GM_COUNT + ' co-GMs');
 
   await db.updateTopicCoGms(topic.id, [...topic.co_gm_ids, user.id])
@@ -480,8 +480,8 @@ router.delete('/topics/:topicSlug/co-gms/:userSlug', async (ctx) => {
   ctx.assertAuthorized(ctx.currUser, 'UPDATE_TOPIC_CO_GMS', topic);
 
   var user = await db.findUserBySlug(ctx.params.userSlug);
-  ctx.validate(user, 'User does not exist');
-  ctx.validate(topic.co_gm_ids.includes(user.id), 'User is not a co-GM');
+  ctx.check(user, 'User does not exist');
+  ctx.check(topic.co_gm_ids.includes(user.id), 'User is not a co-GM');
 
   await db.updateTopicCoGms(topic.id, topic.co_gm_ids.filter((co_gm_id) => {
     return co_gm_id !== user.id;
