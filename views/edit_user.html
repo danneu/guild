@@ -68,6 +68,8 @@
                             >
                       Co-Admin
                     </option>
+                    {% endif %}
+                    {% endif ctx.currUser.role == 'smod' %}
                     <option value="mod"
                             {% if user.role == 'mod' %}selected{% endif %}
                             >
