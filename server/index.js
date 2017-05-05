@@ -429,6 +429,7 @@ app.use(require('./routes/dice').routes());
 app.use(require('./routes/statuses').routes());
 app.use(require('./routes/chat').routes());
 app.use(require('./routes/subscriptions').routes());
+app.use(require('./routes/sitemaps').routes())
 
 // Useful to redirect users to their own profiles since canonical edit-user
 // url is /users/:slug/edit
@@ -2118,12 +2119,6 @@ router.get('/users/:slug/ips', async (ctx) => {
     : ip_addresses.map(function(ip_address) {
       return '<a href="/ips/' + ip_address + '">' + ip_address + '</a>';
     }).join('<br>');
-});
-
-router.get('/sitemap.txt', compress(), async (ctx) => {
-  var text = cache.get('sitemap.txt');
-  ctx.set('Content-Type', 'text/plain');
-  ctx.body = text;
 });
 
 ////////////////////////////////////////////////////////////

@@ -2348,6 +2348,7 @@ exports.findAllPublicTopicUrls = async function () {
         FROM forums
         WHERE category_id NOT IN (4)
       )
+    ORDER BY id
   `).then((rows) => {
     return rows.map((row) => pre.presentTopic(row).url)
   })

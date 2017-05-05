@@ -7,11 +7,13 @@ var RegexTrie = require('regex-trie');
 var debug = require('debug')('app:cache');
 var assert = require('better-assert');
 const IntervalCache = require('interval-cache')
+const {sql} = require('pg-extra')
 // 1st party
 var db = require('./db');
 var pre = require('./presenters');
 var config = require('./config');
 var belt = require('./belt');
+const {pool} = require('./db/util')
 
 const cache = new IntervalCache()
   // 60 seconds
@@ -48,26 +50,29 @@ const cache = new IntervalCache()
     return db.getCurrentSidebarContest()
   }, null)
   // 12 hours
-  .every('sitemap.txt', 1000 * 60 * 60 * 12, async () => {
+  .every('sitemaps', 1000 * 60 * 60 * 12, async () => {
     console.log('[CACHE] Populating sitemap.txt')
     const MAX_SITEMAP_URLS = 50000
-    const [publicTopicUrls, users] = await Promise.all([
+    const [topicUrls, userUrls] = await Promise.all([
       db.findAllPublicTopicUrls(),
-      db.findAllUsers()
+      pool.many(sql`
+        SELECT *
+        FROM users
+        WHERE is_nuked = false
+        ORDER BY id
+      `).then((users) => users.map((u) => pre.presentUser(u).url))
     ])
-    const urls = users.map((user) => {
-      return pre.presentUser(user).url
-    }).concat(publicTopicUrls).map((url) => {
+
+    const urls = [...userUrls, ...topicUrls].map((url) => {
       return config.HOST + url
     })
-    console.log('Sitemap URLs: %s', urls.length);
 
-    if (urls.length > MAX_SITEMAP_URLS) {
-      console.warn(`Too many sitemap URLs, only using the first ${MAX_SITEMAP_URLS}`)
-    }
+    const chunks = _.chunk(urls, 50000)
 
-    return urls.slice(0, MAX_SITEMAP_URLS).join('\n')
-  }, '')
+    console.log('Sitemap URLs: %j, Chunks: %j', urls.length, chunks.length);
+
+    return chunks
+  }, [])
 
 if (config.CHAT_SERVER_URL) {
   // 12 seconds
