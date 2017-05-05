@@ -360,24 +360,26 @@ router.get('/users', async (ctx) => {
    *   return;
    * }
    */
-  var usersList;
+  var usersList = [];
   if (ctx.query['before-id']) {
     if (ctx.query['text']) {
       //ctx.checkQuery('text').notEmpty().isLength(1, 15, 'Search text must be 1-15 chars');
-      usersList = await db.findUsersContainingStringWithId(ctx.query['text'], ctx.query['before-id']);
+      usersList = await db.findUsersContainingStringWithId(ctx.vals['text'], ctx.vals['before-id']);
     }else {
-      usersList = await db.findAllUsers(ctx.query['before-id']);
+      usersList = await db.findAllUsers(ctx.vals['before-id']);
     }
-  } else if (ctx.query['text']) {
+  } else if (ctx.vals['text']) {
     //ctx.checkQuery('text').notEmpty().isLength(1, 15, 'Search text must be 1-15 chars');
-    usersList = await db.findUsersContainingString(ctx.query['text']);
+    usersList = await db.findUsersContainingString(ctx.vals['text']);
   }else {
     usersList = await db.findAllUsers();
   }
 
   usersList = usersList.map(pre.presentUser);
 
-  const nextBeforeId = _.last(usersList) !== null ? _.last(usersList).id : null;
+  debug({ usersList })
+
+  const nextBeforeId = _.last(usersList) ? _.last(usersList).id : null;
 
   ctx.set('X-Robots-Tag', 'noindex');
 
@@ -435,7 +437,7 @@ router.get('/users/:userIdOrSlug', async (ctx) => {
 
   // OPTIMIZE: Merge into single query?
   var recentPosts = await db.findRecentPostsForUserId(
-    user.id, ctx.query['before-id']
+    user.id, ctx.vals['before-id']
   );
   // TODO: Figure out how to do this so I'm not possibly serving empty or
   //       partial pages since they're being filtered post-query.
