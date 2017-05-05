@@ -55,8 +55,9 @@ var postToBodyItem = function(post) {
   });
 
   // Ensure all required fields are set to truthy values
-  if (!_.all(_.values(fields)))
-    return;
+  if (!Object.values(fields).every(Boolean)) {
+    console.log('not all fields were truthy. fields:', fields)
+  }
 
   // Set nullable fields
   if (!_.isEmpty(post.tag_ids))
