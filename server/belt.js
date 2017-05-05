@@ -493,16 +493,20 @@ exports.cookieDate = function(date) {
 //
 //     presentUserRole('conmod') => 'Contest Mod'
 //
-exports.presentUserRole = function(role) {
-  assert(_.isString(role));
+exports.presentUserRole = function (role) {
+  assert(_.isString(role))
 
   switch(role) {
     case 'conmod':
-      return 'Contest Mod';
+      return 'Contest Mod'
+    case 'mod':
+      return 'Moderator'
+    case 'smod':
+      return 'Co-Admin'
     default:
-      return _.capitalize(role);
+      return _.capitalize(role)
   }
-};
+}
 
 // Helper function for formatting chat messages for the log.txt
 exports.formatChatDate = function(date) {

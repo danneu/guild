@@ -1,5 +1,7 @@
-// newrelic agent must load first
-require('newrelic');
+if (process.env.NODE_ENV === 'production') {
+  // newrelic agent must load first
+  require('newrelic')
+}
 const config = require('./config')
 
 // Node
@@ -1988,20 +1990,16 @@ router.get('/topics/:slug', async (ctx) => {
 //
 // Staff list
 //
-// For now, just load staff upon first request, once per boot
-var staffUsers;
 router.get('/staff', async (ctx) => {
-  if (!staffUsers)
-    staffUsers = (await db.findStaffUsers()).map(pre.presentUser);
+  const users = cache.get('staff').map(pre.presentUser)
+
   await ctx.render('staff', {
     ctx,
-    mods: _.filter(staffUsers, { role: 'mod' }),
-    smods: _.filter(staffUsers, { role: 'smod' }),
-    admins: _.filter(staffUsers, { role: 'admin' }),
-    conmods: _.filter(staffUsers, { role: 'conmod' }),
-    arena_mods: _.filter(staffUsers, function(u) {
-      return u.roles.includes('ARENA_MOD');
-    })
+    mods: users.filter((u) => u.role === 'mod'),
+    smods: users.filter((u) => u.role === 'smod'),
+    conmods: users.filter((u) => u.role === 'conmod'),
+    admins: users.filter((u) => u.role === 'admin'),
+    arena_mods: users.filter((u) => u.roles.includes('ARENA_MOD'))
   });
 });
 

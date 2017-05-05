@@ -16,6 +16,10 @@ var belt = require('./belt');
 const {pool} = require('./db/util')
 
 const cache = new IntervalCache()
+  // 5 minutes
+  .every('staff', 1000 * 60 * 5, db.findStaffUsers, {
+    mods: [], smods: [], conmods: [], admins: [], arena_mods: []
+  })
   // 60 seconds
   .every('stats', 1000 * 60, () => db.getStats(), {
     topicsCount: 0,
