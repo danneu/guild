@@ -339,7 +339,7 @@ router.get('/search', async (ctx) => {
 
   // Validate params
 
-  ctx.validateQuery('term').trim()
+  ctx.validateQuery('term').defaultTo('').trim()
   // [String]
   const unamesToIds = cache.get('unames->ids')
   ctx.validateQuery('unames')
