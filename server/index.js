@@ -2084,20 +2084,18 @@ router.get('/ips/:ip_address', async (ctx) => {
   // Ensure authorization
   ctx.assertAuthorized(ctx.currUser, 'LOOKUP_IP_ADDRESS');
 
-  var results = await [
+  const [postsTable, pmsTable] = await Promise.all([
     db.findUsersWithPostsWithIpAddress(ctx.params.ip_address),
     db.findUsersWithPmsWithIpAddress(ctx.params.ip_address)
-  ];
-  var postsTable = results[0];
-  var pmsTable = results[1];
+  ])
 
   await ctx.render('show_users_with_ip_address', {
     ctx,
     ip_address: ctx.params.ip_address,
-    postsTable: postsTable,
-    pmsTable: pmsTable
-  });
-});
+    postsTable,
+    pmsTable
+  })
+})
 
 //
 // Show user ip addresses
