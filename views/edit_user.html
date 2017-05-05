@@ -68,6 +68,16 @@
                             >
                       Co-Admin
                     </option>
+                    <option value="mod"
+                            {% if user.role == 'mod' %}selected{% endif %}
+                            >
+                      Mod
+                    </option>
+                    <option value="conmod"
+                            {% if user.role == 'conmod' %}selected{% endif %}
+                            >
+                      Contest Mod
+                    </option>
                     {% endif %}
                     {% if ctx.currUser.role == 'smod' %}
                     <option value="mod"
