@@ -15,21 +15,35 @@
 
   {% if user.uname == 'Mahz' %}
     <div class="alert alert-info">
-      <img src="http://imgur.com/GuZN5tA.png">
-      {{ user.uname }} is the admin. He's the man with the plan and the guild's head honcho.
+      <img src="/img/crown.png">
+      {{ user.uname }} is the Admin. He's the man with the plan and the Guild's head honcho.
+    </div>
+  {% endif %}
+
+  {% if user.role == 'smod' %}
+    <div class="alert alert-info">
+      <img src="/img/crown.png">
+      {{ user.uname }} is a Co-Admin that helps run the Guild.
+    </div>
+  {% endif %}
+
+  {% if user.role == 'conmod' %}
+    <div class="alert alert-info">
+      <img src="/img/candle.gif">
+      {{ user.uname }} is a Contest Moderator.
     </div>
   {% endif %}
 
   {% if user.role == 'mod' %}
     <div class="alert alert-info">
-      <img src="http://i.imgur.com/w3t5YqA.png">
+      <img src="/img/star.png">
       {{ user.uname }} is a Moderator. They assist users and keep the forum running smoothly. They have power across all forums.
     </div>
   {% endif %}
 
   {% if user.roles.includes('ARENA_MOD') %}
     <div class="alert alert-info">
-      <img src="http://i.imgur.com/5xQBdAv.png">
+      <img src="/img/arms.png">
       {{ user.uname }} is an Arena Moderator
     </div>
   {% endif %}
