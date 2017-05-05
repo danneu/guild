@@ -71,19 +71,19 @@ var postToBodyItem = function(post) {
 
 // [Posts] -> AmazonResponse
 function batchUploadPosts (posts) {
-  return new Promise(function(resolve, reject) {
-    var params = {
+  return new Promise((resolve, reject) => {
+    const params = {
       contentType: 'application/json',
       documents: JSON.stringify(_.compact(posts.map(postToBodyItem)))
     }
     client.uploadDocuments(params, (err, data) => {
-      if (err) return reject(err);
-      return resolve(data);
+      if (err) return reject(err)
+      return resolve(data)
     })
-  });
+  })
 }
 
-var queries = {
+const queries = {
   findPostsToUpload: async () => {
     return pool.many(sql`
       SELECT
@@ -125,35 +125,37 @@ var queries = {
       WHERE id = ANY (${post_ids}::int[])
     `)
   }
-};
+}
 
-(async () => {
+;(async () => {
   const posts = await queries.findPostsToUpload()
 
+  console.log('posts to upload:', posts.length)
+
   // Noop if no posts found
-  if (_.isEmpty(posts)) {
-    console.log('No posts to upload');
-    return;
+  if (posts.length === 0) {
+    console.log('No posts to upload')
+    process.exit()
   }
 
   // Posts found, so let's upload them
   console.log('Batch uploading', posts.length, 'posts to CloudSearch...');
 
   const response = await batchUploadPosts(posts)
-  console.log('Response came back');
+  console.log('Response came back:', response)
   if (response.status === 'success') { //&& response.adds === posts.length) {
     // Update the uploaded_at of the uploaded posts
-    await queries.massUpdatePostUploadedAt(posts.map((x) => x.id));
+    await queries.massUpdatePostUploadedAt(posts.map((x) => x.id))
     console.log('Success');
   }
 })().then(
   function() {
-    console.log('OK');
-    process.exit(0);
+    console.log('OK')
+    process.exit()
   },
   function(ex) {
-    console.log('Error:', ex, ex.stack);
-    process.exit(1);
+    console.log('Error:', ex, ex.stack)
+    process.exit(1)
   }
 )
 
