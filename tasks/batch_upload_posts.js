@@ -1,6 +1,3 @@
-console.log('Currently disabled')
-process.exit()
-
 // Node
 // 3rd party
 var _ = require('lodash');
