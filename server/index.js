@@ -193,7 +193,7 @@ const nunjucksOptions = {
     isNewerThan: belt.isNewerThan,
     expandJoinStatus: belt.expandJoinStatus,
     // {% if user.id|isIn([1, 2, 3]) %}
-    isIn: (v, coll) => coll.includes(v),
+    isIn: (v, coll) => (coll || []).includes(v),
     // {% if things|isEmpty %}
     isEmpty: coll => _.isEmpty(coll),
     // Specifically replaces \n with <br> in user.custom_title
