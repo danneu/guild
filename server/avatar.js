@@ -1,25 +1,27 @@
 // Node
-var path = require('path')
-var nodeFs = require('fs')
-var crypto = require('crypto')
+const path = require('path')
+const nodeFs = require('fs')
+const crypto = require('crypto')
+const zlib = require('zlib')
 // 3rd party
-var gm = require('gm').subClass({ imageMagick: true });
-var promissory = require('promissory');
-var debug = require('debug')('app:avatar');
-var Uploader = require('s3-streaming-upload').Uploader;
-var uuidGen = require('node-uuid');
+const assert = require('better-assert')
+const gm = require('gm').subClass({ imageMagick: true })
+const promissory = require('promissory')
+const debug = require('debug')('app:avatar')
+const Uploader = require('s3-streaming-upload').Uploader
+const uuidGen = require('node-uuid')
 // 1st party
-var config = require('./config');
+var config = require('./config')
 
 const getFormat = (fullInPath) => {
   return new Promise((resolve, reject) => {
     gm(fullInPath)
-      .format(function(err, val) {
-        if (err) return reject(err);
-        return resolve(val);
-      });
-  });
-};
+      .format((err, val) => {
+        if (err) return reject(err)
+        return resolve(val)
+      })
+  })
+}
 
 const identify = (fullInPath) => {
   return new Promise((resolve, reject) => {
@@ -61,22 +63,26 @@ exports.handleAvatar = async (userId, fullInPath) => {
   debug('size: ', data['size'])
   const format = data['format'].toLowerCase()
   // data['Mime type'] is never set on the Heroku dyno, only exists locally...
-  const mime = data['Mime type'] || `image/${format}`
+  let mime = data['Mime type'] || `image/${format}`
+
+  // Gif mime is array on my computer, tho it worked on Heroku
+  // without this bit...
+  if (Array.isArray(mime)) {
+    mime = mime[0]
+    assert(typeof mime === 'string')
+  }
 
   // :: Stream of the original uploaded image
   const inStream = nodeFs.createReadStream(fullInPath)
 
   const hashPromise = calcStreamHash(nodeFs.createReadStream(fullInPath))
 
-  // FIXME: reject undefined. why did I write this?
-  hashPromise.catch((ex) => {
-    return reject(ex)
-  });
+  const gzip = zlib.createGzip()
 
   const handler = (resolve, reject) => {
     hashPromise.then((hash) => {
-      var folderName = config.NODE_ENV === 'production' ? 'production' : 'development';
-      var objectName = `${folderName}/${hash}.${format}`;
+      const folderName = config.NODE_ENV === 'production' ? 'production' : 'development'
+      const objectName = `${folderName}/${hash}.${format}`
 
       gm(inStream)
         // width, height, modifier
@@ -87,14 +93,15 @@ exports.handleAvatar = async (userId, fullInPath) => {
         .stream(format, (err, processedImageReadStream) => {
           if (err) return reject(err);
           var uploader = new Uploader({
-            stream: processedImageReadStream,
+            stream: processedImageReadStream.pipe(gzip),
             accessKey: config.AWS_KEY,
             secretKey: config.AWS_SECRET,
             bucket: config.S3_AVATAR_BUCKET,
             objectName: objectName,
             objectParams: {
               'ContentType': mime,
-              'CacheControl': 'max-age=31536000' // 1 year
+              'CacheControl': 'max-age=31536000', // 1 year
+              'ContentEncoding': 'gzip'
             }
           });
           uploader.send((err, data) => {
@@ -103,7 +110,7 @@ exports.handleAvatar = async (userId, fullInPath) => {
             return resolve(avatarUrl)
           })
         })
-    })
+    }).catch(reject)
   }
 
   return new Promise(handler)
