@@ -1050,10 +1050,7 @@ router.post('/topics/:topicSlug/posts', middleware.ratelimit(), /* middleware.en
   // Check post against akismet
   if (ctx.currUser.posts_count <= 5) {
     const isSpam = await Promise.race([
-      belt.timeout(10000).then(() => {
-        console.error('akismet api took longer than 10000ms to respond')
-        return false
-      }),
+      belt.timeout(10000).then(() => false),
       akismet.checkComment({
         commentType: 'reply',
         commentAuthor: ctx.currUser.uname,
@@ -1294,10 +1291,7 @@ router.post('/forums/:slug/topics', middleware.ratelimit(), /* middleware.ensure
   // Check topic against akismet
   if (ctx.currUser.posts_count <= 5) {
     const isSpam = await Promise.race([
-      belt.timeout(10000).then(() => {
-        console.error('akismet api took longer than 10,000ms to respond')
-        return false
-      }),
+      belt.timeout(10000).then(() => false),
       akismet.checkComment({
         commentType: 'forum-post',
         commentAuthor: ctx.currUser.uname,
