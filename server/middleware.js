@@ -124,6 +124,7 @@ function waitLength (tilDate) {
 
 exports.ratelimit = function () {
   return async (ctx, next) => {
+    ctx.assert(ctx.currUser, 401, 'You must be logged in')
     const maxDate = postCountToMaxDate(ctx.currUser.posts_count)
     try {
       await db.ratelimits.bump(ctx.currUser.id, ctx.ip, maxDate)
