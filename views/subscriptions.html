@@ -59,9 +59,12 @@
                   <a href="{{ topic.url }}">{{ topic.title }}</a>
                 </h5>
                 <div class="text-muted">
-                  {{ topic.ic_posts_count }} IC,
-                  {{ topic.ooc_posts_count }} OOC,
-                  {{ topic.char_posts_count }} Char
+                  {{ topic.ic_posts_count }}
+                  <a href="{{ topic.url }}/ic">IC</a>,
+                  {{ topic.ooc_posts_count }}
+                  <a href="{{ topic.url }}/ooc">OOC</a>,
+                  {{ topic.char_posts_count }}
+                  <a href="{{ topic.url }}/char">Char</a>
                 </div>
                 <p class="list-group-item-text topic-panel-desc">
                   by
