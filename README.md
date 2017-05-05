@@ -9,7 +9,7 @@ A forum running in production.
 
 The Guild is a Node.js app that talks to a Postgres database.
 
-- Install the latest stable version of Node (v6.x).
+- Install the latest stable version of Node (v7.x).
 
 - The Guild depends on the `plv8` Postgres extension.
 
@@ -43,15 +43,3 @@ It will run with the default variables, but some features are turned off until t
 
 - Email-sending system requires `AWS_KEY` and `AWS_SECRET` (your http://aws.amazon.com/ API creds)
 - User registration system requires `RECAPTCHA_SITEKEY` and `RECAPTCHA_SITESECRET` (your https://www.google.com/recaptcha/intro/index.html API creds)
-
-## TODO
-
-TODO: These are out of date. Are these even valid anymore?
-
-- Add tests for authorization abstraction
-- Create `docs/bulk_updates.sql`
-- Add online-status to post user-meta for mobile-sized devices
-- Fix slow BBCode tags like [tabs] so that I can possibly render BBCode on the fly instead of pre-baking it in the `html` columns
-- Finish BBCode support in convos
-- Create cronjob (Heroku Scheduler) for db.clearExpiredViews
-- I'm sorting friendships by latest_online_at DESC NULLS LAST on homeage. Do I have an index on that in prod?
