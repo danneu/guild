@@ -280,12 +280,12 @@ function can(user, action, target) {
       return false;
     case 'UPDATE_USER_ROLE': // target is user
       if (!user) return false;
-      if (user.role === 'admin') return true;
-      // Staff can change staff below them
-      if (['banned', 'member'].includes(target.role))
-        return ['mod', 'smod'].includes(user.role);
-      if (target.role === 'mod')
-        return user.role === 'smod';
+      if (user.role === 'admin') return true
+      // smods can change everyone except admin
+      if (user.role === 'smod') return target.role !== 'admin'
+      // mods can change non-staff
+      if (user.role === 'mod')
+        return ['banned', 'member'].includes(target.role)
       return false;
     case 'UPDATE_USER':  // target is user
       if (!user) return false;
@@ -294,10 +294,9 @@ function can(user, action, target) {
       if (user.id === target.id) return true;
       // Staff can change staff below them
       if (user.role === 'admin') return true;
-      if (['banned', 'member'].includes(target.role))
-        return ['mod', 'smod'].includes(user.role);
-      if (target.role === 'mod')
-        return user.role === 'smod';
+      if (user.role === 'smod') return target.role !== 'admin'
+      if (user.role === 'mod')
+        return ['banned', 'member'].includes(target.role)
       return false;
     // Post state -- target is post
     case 'UNHIDE_POST':
@@ -548,5 +547,5 @@ function can(user, action, target) {
 }
 
 exports.cannot = function(user, action, target) {
-  return !can(user, action, target);
-};
+  return !can(user, action, target)
+}
