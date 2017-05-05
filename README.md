@@ -5,9 +5,6 @@
 
 A forum running in production.
 
-**Disclaimer:** The majority of the code was written when I was new to Koa
-and SQL.
-
 ## Setup and Install
 
 The Guild is a Node.js app that talks to a Postgres database.
