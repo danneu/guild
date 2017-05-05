@@ -551,8 +551,12 @@ router.delete('/vms/:id', async (ctx) => {
   ctx.assert(vm, 404)
   ctx.assertAuthorized(ctx.currUser, 'DELETE_VM', vm)
 
+  // Delete VM
   await db.vms.deleteVm(vm.id)
+  // And any notifications it caused
   await db.vms.deleteNotificationsForVmId(vm.id)
+  // And all of its children
+  await db.vms.deleteVmChildren(vm.id)
 
   // Delete any notifications that this VM caused
 

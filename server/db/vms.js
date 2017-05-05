@@ -28,6 +28,15 @@ exports.deleteVm = async (id) => {
 
 ////////////////////////////////////////////////////////////
 
+exports.deleteVmChildren = async (parentId) => {
+  return pool.query(sql`
+    DELETE FROM vms
+    WHERE parent_vm_id = ${parentId}
+  `)
+}
+
+////////////////////////////////////////////////////////////
+
 exports.deleteNotificationsForVmId = async (id) => {
   return pool.query(sql`
     DELETE FROM notifications
