@@ -92,12 +92,14 @@ exports.ensureRecaptcha = async function (ctx, next) {
 // Int -> Date
 function postCountToMaxDate (postCount) {
   assert(Number.isInteger(postCount))
-  // prevent double-posts with a min of ~1 second ratelimit
-  if (postCount > 10) {
-    return new Date(Date.now() - 1000)
+  // postCount to seconds of waiting
+  const lookup = {
+    1: 30, 2: 25, 3: 20, 4: 15, 5: 10,
+    6: 10, 7: 10, 8: 10, 9: 10, 10: 10
   }
-  const mins = 5 - (postCount / 2)
-  return new Date(Date.now() - mins * 1000 * 60)
+  // there's always a 1 second minimum wait to prevent dbl-posting
+  const seconds = lookup[postCount] || 1
+  return new Date(Date.now() - seconds * 1000)
 }
 
 // Date -> String
