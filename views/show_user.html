@@ -519,19 +519,11 @@
               First Page
             </a>
           </li>
-          {% if recentPosts.length < recentPostsPerPage %}
-            <li class="disabled">
-              <a href="{{ ctx.url }}" rel="next">
-                Next Page &rarr;
-              </a>
-            </li>
-          {% else %}
-            <li>
-              <a href="{{ ctx.path }}?before-id={{ nextBeforeId }}#tabs" rel="next">
-                Next Page &rarr;
-              </a>
-            </li>
-          {% endif %}
+          <li>
+            <a href="{{ ctx.path }}?before-id={{ nextBeforeId }}#tabs" rel="next">
+              Next Page &rarr;
+            </a>
+          </li>
         </ul>
       {% endif %}
 
@@ -583,19 +575,11 @@
               First Page
             </a>
           </li>
-          {% if recentPosts.length < recentPostsPerPage %}
-            <li class="disabled">
-              <a href="{{ ctx.url }}" rel="next">
-                Next Page &rarr;
-              </a>
-            </li>
-          {% else %}
-            <li>
-              <a href="{{ ctx.path }}?before-id={{ nextBeforeId }}#tabs" rel="next">
-                Next Page &rarr;
-              </a>
-            </li>
-          {% endif %}
+          <li>
+            <a href="{{ ctx.path }}?before-id={{ nextBeforeId }}#tabs" rel="next">
+              Next Page &rarr;
+            </a>
+          </li>
         </ul>
       {% endif %}
 
