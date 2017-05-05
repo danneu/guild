@@ -171,8 +171,12 @@ router.put('/users/:slug/role', async (ctx) => {
   ctx.assert(user, 404);
   ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER_ROLE', user);
 
-  // only admin can promote mod, conmod, smod, admin
-  if (ctx.currUser.role !== 'admin') {
+  // smod can set any roles except admin/smod
+  if (ctx.currUser.role === 'smod') {
+    ctx.validateBody('role')
+      .isIn(['banned', 'member', 'conmod', 'mod'], 'Invalid role');
+  } else if (ctx.currUser.role === 'mod') {
+    // mod can only set roles to member and below
     ctx.validateBody('role')
       .isIn(['banned', 'member'], 'Invalid role');
   }
