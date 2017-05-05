@@ -2128,19 +2128,10 @@ exports.createRatingNotification = async function (props) {
   return pool.one(sql`
 INSERT INTO notifications
 (type, from_user_id, to_user_id, meta, post_id, topic_id)
-VALUES ('RATING', ${props.from_user_id},
-  ${props.to_user_id},
-  ${{type: props.rating_type}}, ${props.post_id}, ${props.topic})
+VALUES ('RATING', ${props.from_user_id}, ${props.to_user_id},
+  ${{type: props.rating_type}}, ${props.post_id}, ${props.topic_id})
 RETURNING *
   `)
-
-  /* return yield queryOne(sql, [
-   *   props.from_user_id, // $1
-   *   props.to_user_id, // $2
-   *   { type: props.rating_type }, // $3
-   *   props.post_id, // $4
-   *   props.topic_id // $5
-   * ]);*/
 }
 
 // Recalculates forum caches including the counter caches and

@@ -2015,7 +2015,7 @@ router.get('/me/notifications', async (ctx) => {
 
   await ctx.render('me_notifications', {
     ctx,
-    notifications: notifications
+    notifications
   });
 });
 
