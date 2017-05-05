@@ -474,7 +474,8 @@ function can(user, action, target) {
       // TODO: Create rules for other staff roles
       if (user.id === target.user_id) return true;
       return false;
-    case 'READ_CONVO':
+    case 'DELETE_CONVO': // target is convo
+    case 'READ_CONVO':  // target is convo
       // Banned members can't
       if (!user) return false;
       // Admin can read all convos

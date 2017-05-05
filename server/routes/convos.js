@@ -165,7 +165,7 @@ router.post('/convos/:convoId/pms', async (ctx) => {
     throw ex;
   }
 
-  var convo = await db.findConvo(ctx.params.convoId);
+  const convo = await db.convos.getConvo(ctx.params.convoId);
   ctx.assert(convo, 404);
   ctx.assertAuthorized(ctx.currUser, 'CREATE_PM', convo);
 
@@ -183,9 +183,8 @@ router.post('/convos/:convoId/pms', async (ctx) => {
 
   // Get only userIds of the *other* participants
   // Don't want to create notification for ourself
-  var toUserIds = (await db.findParticipantIds(ctx.params.convoId)).filter(function(userId) {
-    return userId !== ctx.currUser.id;
-  });
+  var toUserIds = (await db.convos.findParticipantIds(ctx.params.convoId))
+    .filter((userId) => userId !== ctx.currUser.id)
 
   // Upsert notifications table
   // TODO: config.MAX_CONVO_PARTICIPANTS instead of hard-coded 5
@@ -202,6 +201,59 @@ router.post('/convos/:convoId/pms', async (ctx) => {
 
 ////////////////////////////////////////////////////////////
 
+// Empty trash folder
+router.delete('/me/convos/trash', async (ctx) => {
+  ctx.assert(ctx.currUser, 404)
+
+  await db.convos.deleteTrash(ctx.currUser.id)
+
+  ctx.flash = { message: ['success', 'Trash deleted'] }
+  ctx.redirect('/me/convos')
+})
+
+//
+// Delete convo
+//
+// Body: { ids: [Int] }
+router.delete('/me/convos', async (ctx) => {
+  const ids = ctx.validateBody('ids')
+    .toArray()
+    .toInts()
+    .val()
+
+  const convos = await db.convos.getConvos(ids)
+    .then((xs) => xs.map(pre.presentConvo))
+
+  ctx.assert(
+    convos.every((convo) => cancan.can(ctx.currUser, 'DELETE_CONVO', convo)),
+    401,
+    'You do not have access to all of the selected convos'
+  )
+
+  await db.convos.deleteConvos(ctx.currUser.id, convos.map((c) => c.id))
+
+  ctx.flash = { message: ['success', 'Convos deleted'] }
+  ctx.redirect('/me/convos')
+})
+
+//
+// Delete convo
+//
+router.delete('/convos/:convoId', async (ctx) => {
+  const {convoId} = ctx.params
+  const convo = await db.convos.getConvo(convoId)
+    .then(pre.presentConvo)
+  ctx.assert(convo, 404)
+  ctx.assertAuthorized(ctx.currUser, 'DELETE_CONVO', convo)
+
+  await db.convos.deleteConvos(ctx.currUser.id, [convo.id])
+
+  ctx.flash = { message: ['success', 'Convo deleted'] }
+  ctx.redirect('/me/convos')
+})
+
+////////////////////////////////////////////////////////////
+
 //
 // Show convo
 //
@@ -214,7 +266,7 @@ router.get('/convos/:convoId', async (ctx) => {
   }
 
   ctx.assert(ctx.currUser, 404);
-  var convo = await db.findConvo(convoId);
+  var convo = await db.convos.getConvo(convoId)
   ctx.assert(convo, 404);
   ctx.assertAuthorized(ctx.currUser, 'READ_CONVO', convo);
 
@@ -285,9 +337,9 @@ function showConvosHandler (folder) {
     ctx.assert(ctx.currUser, 404)
 
     const [convos, counts] = await Promise.all([
-      db.findConvosInvolvingUserId(ctx.currUser.id, folder, ctx.vals.page)
+      db.convos.findConvosInvolvingUserId(ctx.currUser.id, folder, ctx.vals.page)
         .then((xs) => xs.map(pre.presentConvo)),
-      db.getConvoFolderCounts(ctx.currUser.id)
+      db.convos.getConvoFolderCounts(ctx.currUser.id)
     ])
 
     const itemsInFolder = counts[`${folder.toLowerCase()}_count`]
@@ -305,7 +357,7 @@ function showConvosHandler (folder) {
       fullPaginator,
       // Pagination
       beforeId: ctx.vals['before-id'],
-      nextBeforeId: nextBeforeId,
+      nextBeforeId,
       perPage: config.CONVOS_PER_PAGE
     })
   }
@@ -320,7 +372,7 @@ router.put('/convos/:convoId/folder', async (ctx) => {
   var folder = ctx.request.body.folder;
   ctx.assert(['INBOX', 'STAR', 'ARCHIVE', 'TRASH'].includes(folder), 400)
 
-  let convo = await db.findConvo(ctx.params.convoId);
+  let convo = await db.convos.getConvo(ctx.params.convoId);
   ctx.assert(convo, 404);
   ctx.assertAuthorized(ctx.currUser, 'READ_CONVO', convo);
 

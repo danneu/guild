@@ -82,6 +82,14 @@
             <span class="glyphicon glyphicon-trash"></span>
             &nbsp;
             Trash
+            {% if counts.trash_count > 0 %}
+              <form method="POST" action="/me/convos/trash" style="display: inline-block;">
+                <input type="hidden" name="_method" value="DELETE">
+                <button type="submit" class="btn btn-default btn-xs" id="empty-trash">
+                  Delete All Trash
+                </button>
+              </form>
+            {% endif %}
             <span class="badge">{{ counts.trash_count }}</span>
           </a>
         </li>
@@ -145,6 +153,21 @@
           </div>
         </div>
       {% endif %}
+
+      <div class="text-right">
+        <form id="delete-form" method="POST" action="/me/convos" style="display: inline-block;">
+          <input type="hidden" name="_method" value="DELETE">
+          <div></div>
+          <button type="submit" class="btn btn-danger">
+            Delete <span>0</span>
+          </button>
+        </form>
+
+        <button type="button" id="select-all" class="btn btn-default" style="display: inline-block;">
+          Select All
+        </button>
+      </div>
+
       {% for convo in convos %}
         <div class="panel panel-default">
           <div class="panel-body">
@@ -185,6 +208,9 @@
                     {{ convo.latest_pm.created_at|formatDate }}
                   </abbr>
                 </div>
+
+                <input type="checkbox" data-convo-id="{{ convo.id }}">
+
               </div>
             </div>
           </div>
@@ -196,4 +222,60 @@
       {{ paginate.renderFullPaginator(fullPaginator) }}
     </div>
   </div>
+{% endblock %}
+
+
+{% block scripts %}
+  <script>
+   var flip = false
+
+   $('#select-all').on('click', function (e) {
+     $('input:checkbox').prop('checked', flip = !flip)
+     updateDeleteForm()
+   })
+
+   function updateDeleteForm () {
+     // Reset form
+     $('#delete-form div').empty()
+     $('#delete-form button').hide()
+
+     var ids = []
+     $('input:checked').each(function (e) {
+       var $this = $(this)
+       var id = $this.attr('data-convo-id')
+       ids.push(id)
+     })
+
+     if (ids.length) {
+      $('#delete-form button span').text(ids.length)
+      $('#delete-form button').show()
+     }
+
+     ids.forEach(function (id) {
+       var input = $('<input type="hidden" name="ids" value="'+id+'">')
+      $('#delete-form div').append(input)
+     })
+   }
+
+   $('input:checkbox').on('change', function (e) {
+     updateDeleteForm()
+   })
+
+   // Initialize form
+   updateDeleteForm()
+
+   // Confirm before deletion
+   $('#delete-form button').on('click', function (e) {
+     var confirmed = confirm('Are you sure you want to delete these convos?')
+     if (!confirmed) return false
+   })
+  </script>
+
+
+  <script>
+   $('#empty-trash').on('click', function (e) {
+     var confirmed = confirm('Are you sure you want to delete all convos in the trash folder?')
+     if (!confirmed) return false
+   })
+  </script>
 {% endblock %}

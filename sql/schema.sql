@@ -216,10 +216,16 @@ ALTER TABLE convos ADD COLUMN latest_pm_id
 CREATE UNIQUE INDEX pms_convo_id_idx_idx ON pms (convo_id, idx DESC);
 
 CREATE TABLE convos_participants (
-  convo_id int NOT NULL  REFERENCES convos(id) ON DELETE CASCADE,
-  user_id  int NOT NULL  REFERENCES users(id) ON DELETE CASCADE,
+  convo_id    int           NOT NULL  REFERENCES convos(id) ON DELETE CASCADE,
+  user_id     int           NOT NULL  REFERENCES users(id) ON DELETE CASCADE,
+  deleted_at  timestamptz   NULL,
   UNIQUE (user_id, convo_id)
 );
+
+ALTER TABLE convos_participants
+ADD COLUMN deleted_at timestamptz NULL;
+CREATE INDEX cp_user_deleted ON convos_participants (user_id, deleted_at);
+
 
 CREATE TYPE convo_folder AS ENUM (
   'INBOX'
