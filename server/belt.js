@@ -491,7 +491,7 @@ exports.presentUserRole = function (role) {
     case 'mod':
       return 'Moderator'
     case 'smod':
-      return 'Co-Admin'
+      return 'Super Moderator'
     default:
       return _.capitalize(role)
   }

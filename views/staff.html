@@ -19,7 +19,7 @@
       <form action="/sessions" method="post" class="form-horizontal">
 
         <!-- Admins -->
-        {% if (admins.length + smods.length) > 0 %}
+        {% if admins.length > 0 %}
         <div class="panel panel-default no-select" style="border-color: #000">
           <div class="panel-heading">
             <img src="/img/crown.png">
@@ -27,17 +27,31 @@
           </div>
           <div class="panel-body">
             <ul>
-            {% for user in admins.concat(smods) %}
+            {% for user in admins %}
               <li>
                 <a href="{{ user.url }}">{{ user.uname }}</a>
-                {% if user.slug == 'mahz' %}
-                  &larr; Creator
-                {% endif %}
               </li>
             {% endfor %}
             </ul>
           </div>
         </div> <!-- /.panel -->
+        {% endif %}
+
+        {% if smods.length > 0 %}
+          <div class="panel panel-default no-select" style="border-color: #000">
+            <div class="panel-heading">
+              Super Moderators
+            </div>
+            <div class="panel-body">
+              <ul>
+              {% for user in smods %}
+                <li>
+                  <a href="{{ user.url }}">{{ user.uname }}</a>
+                </li>
+              {% endfor %}
+              </ul>
+            </div>
+          </div> <!-- /.panel -->
         {% endif %}
 
         <!-- Moderators -->
