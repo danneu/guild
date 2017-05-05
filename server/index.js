@@ -1,7 +1,3 @@
-if (process.env.NODE_ENV === 'production') {
-  // newrelic agent must load first
-  require('newrelic')
-}
 const config = require('./config')
 
 // Node
