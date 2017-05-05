@@ -35,7 +35,7 @@ exports.checkComment = async function ({
   const url = `https://${config.AKISMET_KEY}.rest.akismet.com/1.1/comment-check`
 
   const form = new FormData()
-  form.append('blog', 'http://roleplayerguild.com')
+  form.append('blog', 'https://roleplayerguild.com')
   form.append('user_ip', userIp)
   form.append('user_agent', userAgent)
   form.append('comment_author', commentAuthor)
