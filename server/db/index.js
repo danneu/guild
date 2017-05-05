@@ -3067,7 +3067,7 @@ exports.createFriendship = async function (from_id, to_id) {
   assert(_.isNumber(from_id))
   assert(_.isNumber(to_id))
 
-  return pool.query( `
+  return pool.query(sql`
     INSERT INTO friendships (from_user_id, to_user_id)
     VALUES (${from_id}, ${to_id})
   `)
