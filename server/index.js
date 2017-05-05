@@ -494,8 +494,8 @@ router.delete('/topics/:topicSlug/co-gms/:userSlug', async (ctx) => {
 });
 
 router.get('/unames.json', async (ctx) => {
-  ctx.type = 'application/json';
-  ctx.body = await db.findAllUnamesJson();
+  ctx.type = 'application/json'
+  ctx.body = await db.findAllUnamesJson()
 });
 
 // Required body params:

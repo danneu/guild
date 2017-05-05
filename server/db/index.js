@@ -2182,11 +2182,18 @@ exports.refreshAllForums = async function () {
 }
 
 // -> JSONString
+//
+// Only gets users that:
+// - logged on in the last year
+// - have at least one post
+// - are not nuked
 exports.findAllUnamesJson = async function () {
   return pool.one(sql`
     SELECT json_agg(uname) unames
     FROM users
-    --WHERE last_online_at IS NOT NULL
+    WHERE posts_count > 0
+      AND is_nuked = false
+      AND last_online_at > NOW() - '1 year'::interval
   `).then((row) => row.unames)
 }
 
@@ -2386,7 +2393,9 @@ exports.findPostsByIds = async function (ids) {
 ////////////////////////////////////////////////////////////
 
 exports.getUnamesMappedToIds = async function () {
-  const rows = await pool.many(sql`SELECT uname, id FROM users`)
+  const rows = await pool.many(sql`
+    SELECT uname, id FROM users
+  `)
 
   const out = {}
 
