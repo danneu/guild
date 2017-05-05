@@ -29,10 +29,10 @@ var treeToQueryString = function(tree) {
     return '';
 
   if (['and', 'or', 'term'].includes(tree[0]))
-    if (_.rest(tree).length <= 1)
-      return  _.rest(tree).map(treeToQueryString).join(' ');
+    if (_.tail(tree).length <= 1)
+      return  _.tail(tree).map(treeToQueryString).join(' ');
     else
-      return '(' + tree[0] + ' ' + _.rest(tree).map(treeToQueryString).join(' ') + ')';
+      return '(' + tree[0] + ' ' + _.tail(tree).map(treeToQueryString).join(' ') + ')';
   else if (_.isString(tree))
     return '\'' + tree + '\'';
   else
