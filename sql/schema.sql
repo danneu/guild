@@ -146,8 +146,9 @@ CREATE TABLE posts (
   legacy_html text NULL,  -- Deprecated
   topic_id   int NOT NULL  REFERENCES topics(id)  ON DELETE CASCADE,
   user_id    int NOT NULL  REFERENCES users(id)  ON DELETE CASCADE,
-  created_at timestamp with time zone NOT NULL  DEFAULT NOW(),
-  updated_at timestamp with time zone NULL,
+  created_at timestamptz NOT NULL  DEFAULT NOW(),
+  updated_at timestamptz NULL,
+  uploaded_at timestamptz NULL,
   is_roleplay boolean NOT NULL,
   type       post_type NOT NULL,
   ip_address inet NULL,
