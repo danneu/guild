@@ -363,32 +363,30 @@ router.get('/users', async (ctx) => {
   var usersList = [];
   if (ctx.query['before-id']) {
     if (ctx.query['text']) {
-      //ctx.checkQuery('text').notEmpty().isLength(1, 15, 'Search text must be 1-15 chars');
-      usersList = await db.findUsersContainingStringWithId(ctx.vals['text'], ctx.vals['before-id']);
-    }else {
-      usersList = await db.findAllUsers(ctx.vals['before-id']);
+      usersList = await db.findUsersContainingStringWithId(ctx.vals['text'], ctx.vals['before-id'])
+    } else {
+      usersList = await db.paginateUsers(ctx.vals['before-id'])
     }
   } else if (ctx.vals['text']) {
-    //ctx.checkQuery('text').notEmpty().isLength(1, 15, 'Search text must be 1-15 chars');
-    usersList = await db.findUsersContainingString(ctx.vals['text']);
-  }else {
-    usersList = await db.findAllUsers();
+    usersList = await db.findUsersContainingString(ctx.vals['text'])
+  } else {
+    usersList = await db.paginateUsers()
   }
 
-  usersList = usersList.map(pre.presentUser);
+  usersList.forEach(pre.presentUser)
 
-  const nextBeforeId = _.last(usersList) ? _.last(usersList).id : null;
+  const nextBeforeId = _.last(usersList) ? _.last(usersList).id : null
 
-  ctx.set('X-Robots-Tag', 'noindex');
+  ctx.set('X-Robots-Tag', 'noindex')
 
   await ctx.render('search_users', {
     ctx,
     term: ctx.query['text'],
     title: 'Search Users',
-    usersList: usersList,
+    usersList,
     // Pagination
     beforeId: ctx.query['before-id'],
-    nextBeforeId: nextBeforeId,
+    nextBeforeId,
     usersPerPage: config.USERS_PER_PAGE
   });
 });

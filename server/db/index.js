@@ -772,13 +772,15 @@ LIMIT ${config.USERS_PER_PAGE}::bigint
 
 ////////////////////////////////////////////////////////////
 
-exports.findAllUsers = async function (beforeId) {
+// Ignore nuked users
+exports.paginateUsers = async function (beforeId = 1e9) {
   return pool.many(sql`
-SELECT *
-FROM users
-WHERE id < ${beforeId || 1e9}
-ORDER BY id DESC
-LIMIT ${config.USERS_PER_PAGE}::bigint
+    SELECT *
+    FROM users
+    WHERE id < ${beforeId}
+      AND is_nuked = false
+    ORDER BY id DESC
+    LIMIT ${config.USERS_PER_PAGE}::bigint
   `)
 }
 
