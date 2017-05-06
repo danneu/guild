@@ -420,13 +420,14 @@ router.get('/search', async (ctx) => {
   })
 })
 
-app.use(require('./routes/users').routes());
-app.use(require('./routes/convos').routes());
-app.use(require('./routes/images').routes());
-app.use(require('./routes/dice').routes());
-app.use(require('./routes/statuses').routes());
-app.use(require('./routes/chat').routes());
-app.use(require('./routes/subscriptions').routes());
+app.use(require('./routes/users').routes())
+app.use(require('./routes/convos').routes())
+app.use(require('./routes/images').routes())
+app.use(require('./routes/dice').routes())
+app.use(require('./routes/statuses').routes())
+app.use(require('./routes/chat').routes())
+app.use(require('./routes/subscriptions').routes())
+app.use(require('./routes/friendships').routes())
 app.use(require('./routes/sitemaps').routes())
 
 // Useful to redirect users to their own profiles since canonical edit-user
@@ -679,17 +680,17 @@ router.get('/', async (ctx) => {
   // Get users friends for the sidebar
   var friendships;
   if (ctx.currUser) {
-    friendships = await db.findFriendshipsForUserId(ctx.currUser.id, 10);
-    friendships = friendships.map(pre.presentFriendship);
+    friendships = (await db.findFriendshipsForUserId(ctx.currUser.id, 10))
+      .map(pre.presentFriendship)
   }
 
   await ctx.render('homepage', {
     ctx,
-    categories: categories,
-    stats: stats,
-    latest_rpgn_topic: latest_rpgn_topic,
-    ftopic: ftopic,
-    friendships: friendships,
+    categories,
+    stats,
+    latest_rpgn_topic,
+    ftopic,
+    friendships,
     // For sidebar
     latestChecks: cache.get('latest-checks').map(pre.presentTopic),
     latestRoleplays: cache.get('latest-roleplays').map(pre.presentTopic),
@@ -2466,59 +2467,6 @@ router.get('/chat', async (ctx) => {
     chat_server_url: config.CHAT_SERVER_URL,
     //
     title: 'Chat'
-  });
-});
-
-////////////////////////////////////////////////////////////
-// Friendships
-// - to_user_id Int
-// - commit: Required 'add' | 'remove'
-//
-// Optionally pass a redirect-to (URI encoded)
-router.post('/me/friendships', async (ctx) => {
-  // ensure user logged in
-  ctx.assert(ctx.currUser, 404);
-  ctx.assert(ctx.currUser.role !== 'banned', 404);
-
-  // validate body
-  ctx.validateBody('commit').isIn(['add', 'remove']);
-  ctx.validateBody('to_user_id').toInt();
-
-  const nodeUrl = require('url');
-
-  let redirectTo;
-  if (ctx.query['redirect-to']) {
-    const parsed = nodeUrl.parse(decodeURIComponent(ctx.query['redirect-to']));
-    redirectTo = parsed.pathname;
-  }
-
-  // update db
-  if (ctx.vals.commit === 'add') {
-    await db.createFriendship(ctx.currUser.id, ctx.vals.to_user_id);
-    ctx.flash = { message: ['success', 'Friendship added'] };
-  } else {
-    await db.deleteFriendship(ctx.currUser.id, ctx.vals.to_user_id);
-    ctx.flash = { message: ['success', 'Friendship removed'] };
-  }
-
-  // redirect
-  ctx.redirect(redirectTo || '/users/' + ctx.vals.to_user_id);
-});
-
-router.get('/me/friendships', async (ctx) => {
-  // ensure user logged in
-  ctx.assert(ctx.currUser, 404);
-  ctx.assert(ctx.currUser.role !== 'banned', 404);
-
-  // load friendships
-  const friendships = await db.findFriendshipsForUserId(ctx.currUser.id)
-    .then((xs) => xs.map(pre.presentFriendship))
-
-  // render
-  await ctx.render('me_friendships', {
-    ctx,
-    friendships,
-    title: 'My Friendships'
   });
 });
 
