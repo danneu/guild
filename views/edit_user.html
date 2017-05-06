@@ -66,7 +66,7 @@
                     <option value="smod"
                             {% if user.role == 'smod' %}selected{% endif %}
                             >
-                      Super Mod
+                      Co-Admin
                     </option>
                     <option value="mod"
                             {% if user.role == 'mod' %}selected{% endif %}
@@ -80,6 +80,11 @@
                     </option>
                     {% endif %}
                     {% if ctx.currUser.role == 'smod' %}
+                    <option value="smod"
+                            {% if user.role == 'smod' %}selected{% endif %}
+                            >
+                      Co-Admin
+                    </option>
                     <option value="mod"
                             {% if user.role == 'mod' %}selected{% endif %}
                             >
