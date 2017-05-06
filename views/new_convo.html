@@ -64,7 +64,8 @@
                           rows="10"
                           placeholder="Click here and begin writing"
                           name="markup"
-                          class="form-control"></textarea>
+                          class="form-control"
+                >{% if ctx.flash.params %}{{ ctx.flash.params.markup }}{% endif %}</textarea>
             </div>
 
           </div> <!-- /.panel-body -->

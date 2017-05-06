@@ -36,9 +36,8 @@ router.post('/convos', async (ctx) => {
 
   // Light input validation
   ctx.validateBody('title')
-    .isLength(config.MIN_TOPIC_TITLE_LENGTH,
-              config.MAX_TOPIC_TITLE_LENGTH,
-              'Title required');
+     .isLength(1, config.MAX_TOPIC_TITLE_LENGTH,
+               `Title must be 1-${config.MAX_TOPIC_TITLE_LENGTH} chars`)
   ctx.validateBody('markup')
     .isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH,
               'Post text must be ' + config.MIN_POST_LENGTH +
