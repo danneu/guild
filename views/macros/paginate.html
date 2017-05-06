@@ -2,8 +2,11 @@
   urlFragment is an optional hash fragment like #tabs that can be
   used so that clicking a pagination button auto-scrolls user
   to <a name="urlFragment"></a> that's expected to exist on destination page
+
+  hiLo is '#hi' '#lo' or undefined. undefined means neither
 #}
-{% macro render(currPage, totalPages, baseUrl, urlFragment) %}
+
+{% macro render(currPage, totalPages, baseUrl, urlFragment, hiLo) %}
   {% set suffix = '' %} {# reset state of suffix #}
   {% if totalPages > 1 %}
     <ul class="pager">
@@ -23,7 +26,28 @@
       {% if currPage > 1 %}
         {% set suffix = '?page=' + currPage  %}
       {% endif %}
-      <a style="color: white;" href="{{ baseUrl + suffix }}{{ urlFragment }}">Page {{ currPage|commafy }} of {{ totalPages|commafy }}</a>
+        {% if hiLo %}
+          <a style="color: white;" href="{{ baseUrl + suffix }}{{ urlFragment }}">
+            Page
+          </a>
+          <form method="GET" action="{% if hiLo == '#hi' %}#hi{% elif hiLo == '#lo' %}#lo{% endif %}" style="display: inline-block;">
+            <input type="text"
+                  name="page"
+                  value="{{ currPage|commafy }}"
+                  class="form-control text-center"
+                  style="width: 60px; display: inline-block;"
+            >
+          </form>
+          of
+          {{ totalPages|commafy }}
+        {% else %}
+          <a style="color: white;" href="{{ baseUrl + suffix }}{{ urlFragment }}">
+            Page
+          {{ currPage|commafy }}
+          of
+          {{ totalPages|commafy }}
+          </a>
+        {% endif %}
 
       <li {% if currPage == totalPages %} class="disabled" {% endif %}>
         <a href="{{ baseUrl + '?page=' + Math.min(currPage+1, totalPages) }}{{ urlFragment }}" rel="next">

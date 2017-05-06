@@ -13,7 +13,6 @@ exports.makeFullPaginator = function(currPage, totalItems, perPage) {
   perPage = perPage || config.CONVOS_PER_PAGE;
   const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
   currPage = Math.min(currPage, totalPages);
-  debug('totalPages', totalPages);
 
   if (currPage === 1 && totalPages === 1) {
     return null;
@@ -22,8 +21,6 @@ exports.makeFullPaginator = function(currPage, totalItems, perPage) {
   let innerItems = [];
   let startPgNum = Math.max(1, currPage-3);
   let endPgNum = Math.min(totalPages, startPgNum+6);
-  debug('startPgNum', startPgNum)
-  debug('endPgNum', endPgNum);
 
   if (currPage > 1) {
     innerItems.push({ text: 'Prev', href: `?page=${currPage-1}`, kind: 'BUTTON' });
@@ -59,8 +56,6 @@ exports.makeFullPaginator = function(currPage, totalItems, perPage) {
   if (currPage < totalPages) {
     innerItems.push({ text: 'Next', href: `?page=${currPage+1}`, kind: 'BUTTON' });
   }
-
-  debug('innerItems', innerItems);
 
   return innerItems;
 };
