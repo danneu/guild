@@ -1,0 +1,40 @@
+
+{% extends 'layouts/master.html' %}
+{% import './macros/ads.html' as ads %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li>
+      <a href="/">Home</a>
+    </li>
+    <li>
+      <a href="/lexus-lounge">Lexus Lounge</a>
+    </li>
+  </ol>
+
+  {{ ads.topResponsive() }}
+
+  <div class="row">
+    <div class="col-sm-12">
+      <div class="well">
+        <h4 class="text-center">Latest Image Uploads</h4>
+        {% if images.length == 0 %}
+          <p class="text-center">
+            Nobody has uploaded an image yet.
+          </p>
+        {% endif %}
+        {% for image in images %}
+          <div class="text-center" style="display: inline-block;">
+            <p>
+              <a href="{{ image.user.url }}">{{ image.user.uname }}</a>
+            </p>
+            <a href="{{ image.url }}">
+              <img src="{{ image.src }}" style="max-width: 200px; max-height: 100px;">
+            </a>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+{% endblock %}

@@ -691,6 +691,9 @@ CREATE TABLE vms (
   created_at   timestamp with time zone NOT NULL  DEFAULT NOW()
 );
 
+
+create index vms_apple ON vms (to_user_id, parent_vm_id)
+
 -- TODO: Create FK indexes for vms table
 
 -- notifications table updates

@@ -858,10 +858,9 @@ router.get('/lexus-lounge', async (ctx) => {
 
   const latestUserLimit = 50
 
-  const [latestUsers, registration, images, category] = await Promise.all([
+  const [latestUsers, registration, category] = await Promise.all([
     db.findLatestUsers(latestUserLimit).then((xs) => xs.map(pre.presentUser)),
     db.keyvals.getRowByKey('REGISTRATION_ENABLED'),
-    db.images.getLatestImages(25).then((xs) => xs.map(pre.presentImage)),
     db.findModCategory()
   ])
 
@@ -877,10 +876,19 @@ router.get('/lexus-lounge', async (ctx) => {
     latestUserLimit,
     staffRep,
     registration,
-    images,
     title: 'Lexus Lounge — Mod Forum'
   });
 });
+
+router.get('/lexus-lounge/images', async (ctx) => {
+  ctx.assertAuthorized(ctx.currUser, 'LEXUS_LOUNGE')
+  const images = await db.images.getLatestImages(25)
+      .then((xs) => xs.map(pre.presentImage))
+  await ctx.render('lexus_lounge_images', {
+    ctx, images,
+    title: 'Latest Images - Lexus Lounge'
+  })
+})
 
 // toggle user registration on/off
 router.post('/lexus-lounge/registration', async (ctx) => {

@@ -3025,6 +3025,7 @@ RETURNING *
 exports.findLatestVMsForUserId = async function (user_id) {
   assert(Number.isInteger(user_id))
 
+  // Created index for this: create index vms_apple ON vms (to_user_id, parent_vm_id)
   return pool.many(sql`
 SELECT
   vms.*,
