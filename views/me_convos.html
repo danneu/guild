@@ -82,14 +82,12 @@
             <span class="glyphicon glyphicon-trash"></span>
             &nbsp;
             Trash
-            {% if counts.trash_count > 0 %}
               <form method="POST" action="/me/convos/trash" style="display: inline-block;">
                 <input type="hidden" name="_method" value="DELETE">
                 <button type="submit" class="btn btn-default btn-xs" id="empty-trash">
                   Delete All Trash
                 </button>
               </form>
-            {% endif %}
             <span class="badge">{{ counts.trash_count }}</span>
           </a>
         </li>
@@ -97,9 +95,8 @@
 
       <p class="text-center text-muted">
         &uarr;
-        <br>The folder system is
-        <br>a work in progress.
-        <br>It doesn't do much, yet.
+        <br>You will *not* receive notifications
+        <br>for convos deleted from the trash.
       </p>
     </div>
     <div class="col-lg-9">
@@ -155,11 +152,16 @@
       {% endif %}
 
       <div class="text-right">
-        <form id="delete-form" method="POST" action="/me/convos" style="display: inline-block;">
-          <input type="hidden" name="_method" value="DELETE">
+        <form id="move-form" method="POST" action="/me/convos/move" style="display: inline-block;">
           <div></div>
-          <button type="submit" class="btn btn-danger">
-            Delete <span>0</span>
+          <select style="display: inline-block; color: black;" name="folder" class="form-control">
+            <option value="INBOX" {% if ctx.path == '/me/convos' %}selected{% endif  %}>Inbox</option>
+            <option value="STAR" {% if ctx.path == '/me/convos/star' %}selected{% endif %}>Starred</option>
+            <option value="ARCHIVE" {% if ctx.path == '/me/convos/archive' %}selected{% endif %}>Archived</option>
+            <option value="TRASH" {% if ctx.path == '/me/convos/trash' %}selected{% endif %}>Trash</option>
+          </select>
+          <button type="submit" class="btn btn-primary">
+            Move <span>0</span>
           </button>
         </form>
 
@@ -231,13 +233,14 @@
 
    $('#select-all').on('click', function (e) {
      $('input:checkbox').prop('checked', flip = !flip)
-     updateDeleteForm()
+     updateForm()
    })
 
-   function updateDeleteForm () {
+   function updateForm () {
      // Reset form
-     $('#delete-form div').empty()
-     $('#delete-form button').hide()
+     $('#move-form div').empty()
+     $('#move-form button').hide()
+     $('#move-form select').hide()
 
      var ids = []
      $('input:checked').each(function (e) {
@@ -247,22 +250,23 @@
      })
 
      if (ids.length) {
-      $('#delete-form button span').text(ids.length)
-      $('#delete-form button').show()
+      $('#move-form button span').text(ids.length)
+      $('#move-form button').show()
+      $('#move-form select').show()
      }
 
      ids.forEach(function (id) {
        var input = $('<input type="hidden" name="ids" value="'+id+'">')
-      $('#delete-form div').append(input)
+      $('#move-form div').append(input)
      })
    }
 
    $('input:checkbox').on('change', function (e) {
-     updateDeleteForm()
+     updateForm()
    })
 
    // Initialize form
-   updateDeleteForm()
+   updateForm()
 
    // Confirm before deletion
    $('#delete-form button').on('click', function (e) {

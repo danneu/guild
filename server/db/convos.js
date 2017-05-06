@@ -164,3 +164,19 @@ exports.findParticipantIds = async function (convoId) {
       AND deleted_at IS NULL
   `).then((xs) => xs.map((x) => x.user_id))
 }
+
+////////////////////////////////////////////////////////////
+
+exports.moveConvos = async (userId, convoIds, folder) => {
+  debug(`[moveConvos] userId=%j, folder=%j, convoIds=%j`, userId, folder, convoIds)
+  assert(Number.isInteger(userId))
+  assert(typeof folder === 'string')
+  assert(Array.isArray(convoIds))
+
+  return pool.query(sql`
+    UPDATE convos_participants
+    SET folder = ${folder}
+    WHERE user_id = ${userId}
+      AND convo_id = ANY (${convoIds}::int[])
+  `)
+}

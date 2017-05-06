@@ -383,4 +383,31 @@ router.put('/convos/:convoId/folder', async (ctx) => {
 
 ////////////////////////////////////////////////////////////
 
+// body: { ids: [Int], folder: String }
+router.post('/me/convos/move', async (ctx) => {
+  const {folder} = ctx.request.body
+  ctx.assert(['INBOX', 'STAR', 'ARCHIVE', 'TRASH'].includes(folder), 400)
+
+  const ids = ctx.validateBody('ids')
+    .toArray()
+    .toInts()
+    .val()
+
+  const convos = await db.convos.getConvos(ids)
+    .then((xs) => xs.map(pre.presentConvo))
+
+  ctx.assert(
+    convos.every((convo) => cancan.can(ctx.currUser, 'READ_CONVO', convo)),
+    401,
+    'You do not have access to all of the selected convos'
+  )
+
+  await db.convos.moveConvos(ctx.currUser.id, ids, folder)
+
+  ctx.flash = { message: ['success', `Convos moved to ${folder}`] }
+  ctx.redirect(`/me/convos/${folder.toLowerCase()}`)
+})
+
+////////////////////////////////////////////////////////////
+
 module.exports = router;
