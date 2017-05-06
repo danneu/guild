@@ -93,8 +93,9 @@ exports.ensureRecaptcha = async function (ctx, next) {
 function postCountToMaxDate (postCount) {
   assert(Number.isInteger(postCount))
   // postCount to seconds of waiting
+  // Now that we have akismet, 10 seconds is long enough.
   const lookup = {
-    1: 30, 2: 25, 3: 20, 4: 15, 5: 10,
+    1: 10, 2: 10, 3: 10, 4: 10, 5: 10,
     6: 10, 7: 10, 8: 10, 9: 10, 10: 10
   }
   // there's always a 1 second minimum wait to prevent dbl-posting
