@@ -405,7 +405,11 @@ router.post('/me/convos/move', async (ctx) => {
   await db.convos.moveConvos(ctx.currUser.id, ids, folder)
 
   ctx.flash = { message: ['success', `Convos moved to ${folder}`] }
-  ctx.redirect(`/me/convos/${folder.toLowerCase()}`)
+  if (folder === 'INBOX') {
+    ctx.redirect(`/me/convos`)
+  } else {
+    ctx.redirect(`/me/convos/${folder.toLowerCase()}`)
+  }
 })
 
 ////////////////////////////////////////////////////////////
