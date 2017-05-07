@@ -383,6 +383,17 @@ router.put('/convos/:convoId/folder', async (ctx) => {
 
 ////////////////////////////////////////////////////////////
 
+router.post('/me/convos/undelete-all', async (ctx) => {
+  ctx.assert(ctx.currUser, 404)
+
+  await db.convos.undeleteAllConvos(ctx.currUser.id)
+
+  ctx.flash = { message: ['success', 'All convos restored'] };
+  ctx.redirect(`/me/convos`);
+})
+
+////////////////////////////////////////////////////////////
+
 // body: { ids: [Int], folder: String }
 router.post('/me/convos/move', async (ctx) => {
   const {folder} = ctx.request.body

@@ -98,6 +98,18 @@
         <br>You will *not* receive notifications
         <br>for convos deleted from the trash.
       </p>
+
+      {% if ctx.path == '/me/convos/trash' %}
+        <div class="text-center">
+          <form method="POST" action="/me/convos/undelete-all">
+            Accidentally delete something?
+            <button type="submit" class="btn btn-default btn-xs">
+              Undelete Everything
+            </button>
+          </form>
+        </div>
+      {% endif %}
+
     </div>
     <div class="col-lg-9">
 

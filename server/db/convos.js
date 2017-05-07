@@ -167,6 +167,18 @@ exports.findParticipantIds = async function (convoId) {
 
 ////////////////////////////////////////////////////////////
 
+exports.undeleteAllConvos = async (userId) => {
+  assert(Number.isInteger(userId))
+
+  return pool.query(sql`
+    UPDATE convos_participants
+    SET deleted_at = NULL
+    WHERE user_id = ${userId}
+  `)
+}
+
+////////////////////////////////////////////////////////////
+
 exports.moveConvos = async (userId, convoIds, folder) => {
   debug(`[moveConvos] userId=%j, folder=%j, convoIds=%j`, userId, folder, convoIds)
   assert(Number.isInteger(userId))
