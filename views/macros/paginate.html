@@ -33,7 +33,7 @@
           <form method="GET" action="{% if hiLo == '#hi' %}#hi{% elif hiLo == '#lo' %}#lo{% endif %}" style="display: inline-block;">
             <input type="text"
                   name="page"
-                  value="{{ currPage|commafy }}"
+                  value="{{ currPage }}"
                   class="form-control text-center"
                   style="width: 60px; display: inline-block;"
             >

@@ -1840,7 +1840,9 @@ router.post('/topics/:slug/arena-outcomes', async (ctx) => {
 
 router.get('/topics/:slug/:postType', async (ctx) => {
   ctx.assert(['ic', 'ooc', 'char'].includes(ctx.params.postType), 404);
-  ctx.validateQuery('page').optional().toInt();
+  ctx.validateQuery('page').optional()
+     .tap((s) => s.replace(/,/g, ''))
+     .toInt()
   const topicId = belt.extractId(ctx.params.slug);
   ctx.assert(topicId, 404);
 
@@ -1851,7 +1853,7 @@ router.get('/topics/:slug/:postType', async (ctx) => {
     return ctx.response.redirect(ctx.request.path);
   }
 
-  var page = Math.max(1, ctx.request.query.page || 1);
+  var page = Math.max(1, ctx.vals.page || 1);
 
   // Only incur the topic_subscriptions join if currUser exists
   var topic;
