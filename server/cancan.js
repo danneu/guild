@@ -336,12 +336,10 @@ function can(user, action, target) {
       if (user.role === 'banned') return false;
       // Staff can always create posts anywhere
       if (isStaffRole(user.role)) return true;
-      // Conmods can always post in contest subforums
-      if (user.role === 'conmod' && CONTEST_FORUMS.includes(target.forum_id)) {
+      if (user.role === 'conmod') {
         return true
       }
-      // Arena mods can always post in arena subforums
-      if (user.role === 'arenamod' && ARENA_FORUMS.includes(target.forum_id)) {
+      if (user.role === 'arenamod') {
         return true
       }
       // Members can post as long as it's outside the lexus lounge,
