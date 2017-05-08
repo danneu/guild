@@ -65,7 +65,7 @@
         </a>
         <span class="text-muted">Warning: High bandwidth</span>
       </li>
-      {% if ctx.currUser.role | isIn(['smod', 'admin']) %}
+      {% if ctx.currUser.role == 'admin' %}
         <li>
           <a href="/tag-groups">
             Manage Tags

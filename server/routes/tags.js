@@ -9,10 +9,10 @@ const router = new Router()
 
 ////////////////////////////////////////////////////////////
 
-// Only admin and smod can manage tags
+// Only admin can manage tags until I improve the form
 router.use(async (ctx, next) => {
   ctx.assert(ctx.currUser, 404)
-  ctx.assert(['smod', 'admin'].includes(ctx.currUser.role), 404)
+  ctx.assert(ctx.currUser.role === 'admin', 404)
   return next()
 })
 
