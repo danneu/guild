@@ -861,9 +861,6 @@ exports.findPostsByTopicId = async function (topicId, postType, page) {
     }
     row.user.current_status = row.current_status
     delete row.current_status
-    if (row.user.current_status) {
-      debug('curr: ', row.user.uname)
-    }
     return row
   })
 }
