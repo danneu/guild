@@ -1022,7 +1022,7 @@ router.get('/forums/:forumSlug', async (ctx) => {
     totalPages: pager.totalPages,
     title: forum.title,
     className: 'show-forum',
-    arenaLeaderboard: arenaLeaderboard,
+    arenaLeaderboard,
     // Viewers
     viewers
   });
@@ -2007,7 +2007,7 @@ router.get('/staff', async (ctx) => {
     smods: users.filter((u) => u.role === 'smod'),
     conmods: users.filter((u) => u.role === 'conmod'),
     admins: users.filter((u) => u.role === 'admin'),
-    arena_mods: users.filter((u) => u.roles.includes('ARENA_MOD'))
+    arena_mods: users.filter((u) => u.role === 'arenamod')
   });
 });
 

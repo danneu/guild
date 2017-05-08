@@ -165,7 +165,7 @@ router.post('/users', async (ctx) => {
 // @koa2
 router.put('/users/:slug/role', async (ctx) => {
   ctx.validateBody('role')
-    .isIn(['banned', 'member', 'mod', 'conmod', 'smod', 'admin'], 'Invalid role');
+    .isIn(['banned', 'member', 'mod', 'conmod', 'arenamod', 'smod', 'admin'], 'Invalid role');
   // TODO: Authorize role param against role of both parties
   const user = await db.findUserBySlug(ctx.params.slug);
   ctx.assert(user, 404);

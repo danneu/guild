@@ -1377,8 +1377,7 @@ exports.findStaffUsers = async function () {
   return pool.many(sql`
     SELECT u.*
     FROM users u
-    WHERE u.role IN ('mod', 'smod', 'admin', 'conmod')
-      OR 'ARENA_MOD' = ANY (u.roles)
+    WHERE u.role IN ('mod', 'smod', 'admin', 'conmod', 'arenamod')
   `)
 }
 

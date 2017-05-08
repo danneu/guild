@@ -41,7 +41,7 @@
     </div>
   {% endif %}
 
-  {% if user.roles.includes('ARENA_MOD') %}
+  {% if user.role == 'arenamod' %}
     <div class="alert alert-info">
       <img src="/img/arms.png">
       {{ user.uname }} is an Arena Moderator
@@ -124,10 +124,6 @@
         <a href="{{ user.url }}/edit" class="btn btn-default btn-xs">
           Edit
         </a>
-      {% endif %}
-
-      {% if can(ctx.currUser, 'DELETE_USER', user) %}
-        <!-- Delete button temporarily disabled -->
       {% endif %}
     </h1>
     {% if user.custom_title %}

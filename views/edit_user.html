@@ -78,6 +78,11 @@
                             >
                       Contest Mod
                     </option>
+                    <option value="arenamod"
+                            {% if user.role == 'arenamod' %}selected{% endif %}
+                            >
+                      Arena Mod
+                    </option>
                     {% endif %}
                     {% if ctx.currUser.role == 'smod' %}
                     <option value="smod"
@@ -94,6 +99,11 @@
                             {% if user.role == 'conmod' %}selected{% endif %}
                             >
                       Contest Mod
+                    </option>
+                    <option value="arenamod"
+                            {% if user.role == 'arenamod' %}selected{% endif %}
+                            >
+                      Arena Mod
                     </option>
                     {% endif %}
                     <option value="member"
