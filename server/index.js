@@ -1568,6 +1568,11 @@ router.post('/posts/:postId/:status', async (ctx) => {
 // - Keep this in sync with /pms/:pmId
 //
 router.get('/posts/:postId', async (ctx) => {
+  // "/posts/1234]" is such a common issue that we should fix it
+  ctx.params.postId = ctx.params.postId.replace(/[^\d]+$/, '')
+
+  ctx.assert(/^\d+$/.test(ctx.params.postId), 404)
+
   var post = await db.findPostWithTopicAndForum(ctx.params.postId);
   ctx.assert(post, 404);
   ctx.assertAuthorized(ctx.currUser, 'READ_POST', post);
