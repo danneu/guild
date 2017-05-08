@@ -2971,7 +2971,14 @@ exports.createFriendship = async function (from_id, to_id) {
   return pool.query(sql`
     INSERT INTO friendships (from_user_id, to_user_id)
     VALUES (${from_id}, ${to_id})
-  `)
+  `).catch((err) => {
+    // Ignore unique violation, like if user double-clicks
+    // the add-friend button
+    if (err.code === '23505') {
+      return
+    }
+    throw err
+  })
 }
 
 exports.deleteFriendship = async function (from_id, to_id) {
