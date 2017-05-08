@@ -7,6 +7,18 @@ const {pool} = require('./util')
 
 ////////////////////////////////////////////////////////////
 
+exports.getTag = async (id) => {
+  assert(Number.isInteger(id))
+
+  return pool.one(sql`
+    SELECT *
+    FROM tags
+    WHERE id = ${id}
+  `)
+}
+
+////////////////////////////////////////////////////////////
+
 exports.getGroup = async (id) => {
   return pool.one(sql`
     SELECT
@@ -59,5 +71,18 @@ exports.insertTag = async (groupId, title, desc) => {
     INSERT INTO tags (tag_group_id, title, description)
     VALUES (${groupId}, ${title}, ${desc})
     RETURNING *
+  `)
+}
+
+////////////////////////////////////////////////////////////
+
+exports.moveTag = async (tagId, toGroupId) => {
+  assert(Number.isInteger(tagId))
+  assert(Number.isInteger(toGroupId))
+
+  return pool.one(sql`
+    UPDATE tags
+    SET tag_group_id = ${toGroupId}
+    WHERE id = ${tagId}
   `)
 }

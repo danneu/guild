@@ -329,6 +329,8 @@ exports.presentTag = function (x) {
     x.created_at = new Date(x.created_at)
   }
 
+  x.url = `/tags/${x.id}`
+
   return x
 }
 
