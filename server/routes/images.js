@@ -7,7 +7,7 @@ const router = require('koa-router')();
 const debug = require('debug')('app:routes:images');
 const gm = require('gm').subClass({ imageMagick: true });
 const Uploader = require('s3-streaming-upload').Uploader;
-const uuidGen = require('node-uuid');
+const uuidGen = require('uuid');
 const AWS = require('aws-sdk');
 // 1st
 const belt = require('../belt')

@@ -2,7 +2,7 @@
 // 3rd
 const debug = require('debug')('app:db:images')
 const assert = require('better-assert')
-const uuidGen = require('node-uuid')
+const uuidGen = require('uuid')
 const knex = require('knex')({ client: 'pg' })
 const _ = require('lodash')
 // 1st

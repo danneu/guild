@@ -8,7 +8,7 @@ const assert = require('better-assert')
 const gm = require('gm').subClass({ imageMagick: true })
 const debug = require('debug')('app:avatar')
 const Uploader = require('s3-streaming-upload').Uploader
-const uuidGen = require('node-uuid')
+const uuidGen = require('uuid')
 // 1st party
 var config = require('./config')
 

@@ -9,6 +9,7 @@ const assert = require('better-assert')
 const debug = require('debug')('app:db')
 const pgArray = require('postgres-array')
 const promiseMap = require('promise.map')
+const genUuid = require('uuid')
 // 1st party
 const config = require('../config')
 const belt = require('../belt')
@@ -253,7 +254,7 @@ exports.findLatestActiveResetToken = async function (userId) {
 exports.createResetToken = async function (userId) {
   debug('[createResetToken] userId: ' + userId)
 
-  const uuid = belt.generateUuid()
+  const uuid = genUuid.v4()
 
   return pool.one(sql`
     INSERT INTO reset_tokens (user_id, token)
@@ -555,7 +556,7 @@ async function  createSession(client, props) {
   assert(_.isString(props.ipAddress))
   assert(_.isString(props.interval))
 
-  const uuid = belt.generateUuid()
+  const uuid = genUuid.v4()
 
   return client.one(sql`
     INSERT INTO sessions (user_id, id, ip_address, expired_at)
