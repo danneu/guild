@@ -132,12 +132,14 @@ SELECT setval('forums_id_seq'::regclass, (SELECT MAX(id) FROM forums));
 INSERT INTO tag_groups (id, title) VALUES
   (1, 'TestTags')
 ;
+SELECT setval('tag_groups_id_seq'::regclass, (SELECT MAX(id) FROM tag_groups));
 
 INSERT INTO tags (id, tag_group_id, title, description) VALUES
   (1, 1, 'TestTag 1', 'Just a test')
 , (2, 1, 'TestTag 2', 'Just a test')
 , (3, 1, 'TestTag 3', 'Just a test')
 ;
+SELECT setval('tags_id_seq'::regclass, (SELECT MAX(id) FROM tags));
 
 ---- Topics
 INSERT INTO topics (id, forum_id, title, user_id, is_hidden, is_closed, is_sticky, is_roleplay)

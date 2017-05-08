@@ -1,0 +1,54 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li>
+      <a href="/">Home</a>
+    </li>
+    <li>
+      <a href="/tags">Tags</a>
+    </li>
+  </ol>
+
+  {% for group in groups %}
+    {{ group.title }}
+    <ul>
+      {% for tag in group.tags %}
+        <li>
+          {{ tag.title }}
+          - {{ tag.description }}
+        </li>
+      {% endfor %}
+      <form method="POST" action="{{ group.url }}/tags" class="form-inline">
+        <div class="form-group">
+          <input type="text" class="form-control" id="tag-title" name="title"
+                 placeholder="title"
+          >
+        </div>
+        <div class="form-group">
+          <input type="text" class="form-control" id="tag-desc" name="desc"
+                 placeholder="A tiny description"
+          >
+        </div>
+        <button type="submit" class="btn btn-primary">
+          Add
+        </button>
+      </form>
+    </ul>
+  {% endfor %}
+
+  <h3>New Tag Group</h3>
+
+  <form method="POST" action="/tag-groups" class="form-inline">
+    <div class="form-group">
+      <label for="group-title">Title</label>
+      <input type="text" class="form-control" id="group-title" name="title">
+    </div>
+    <button type="submit" class="btn btn-primary">
+      Add
+    </button>
+  </form>
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}

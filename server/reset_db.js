@@ -38,6 +38,7 @@ function timeout (ms) {
 
 async function resetDb () {
   // Create tables
+  console.log('-- schema.sql')
   await (async () => {
     const str = slurpSqlSync('schema.sql');
     await pool.query(_raw`${str}`);
@@ -45,6 +46,7 @@ async function resetDb () {
   })()
 
   // Triggers
+  console.log('-- functions_and_triggers.sql')
   await (async () => {
     const str = slurpSqlSync('functions_and_triggers.sql');
     await pool.query(_raw`${str}`);

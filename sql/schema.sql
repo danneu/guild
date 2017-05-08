@@ -222,8 +222,6 @@ CREATE TABLE convos_participants (
   UNIQUE (user_id, convo_id)
 );
 
-ALTER TABLE convos_participants
-ADD COLUMN deleted_at timestamptz NULL;
 CREATE INDEX cp_user_deleted ON convos_participants (user_id, deleted_at);
 
 
@@ -692,7 +690,7 @@ CREATE TABLE vms (
 );
 
 
-create index vms_apple ON vms (to_user_id, parent_vm_id)
+create index vms_apple ON vms (to_user_id, parent_vm_id);
 
 -- TODO: Create FK indexes for vms table
 

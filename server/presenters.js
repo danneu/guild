@@ -321,3 +321,25 @@ exports.presentRoll = function (x) {
   x.url = `/rolls/${x.id}`;
   return x;
 };
+
+exports.presentTag = function (x) {
+  if (!x) return null
+
+  if (typeof x.created_at === 'string') {
+    x.created_at = new Date(x.created_at)
+  }
+
+  return x
+}
+
+exports.presentTagGroup = function (x) {
+  if (!x) return null
+
+  if (x.tags) {
+    x.tags.forEach(exports.presentTag)
+  }
+
+  x.url = `/tag-groups/${x.id}`
+
+  return x
+}
