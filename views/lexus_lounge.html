@@ -58,10 +58,21 @@
   </div>
 
   <div class="well">
-    <a href="/lexus-lounge/images">
-      View Latest Image Uploads
-    </a>
-    <span class="text-muted">Warning: High bandwidth</span>
+    <ul>
+      <li>
+        <a href="/lexus-lounge/images">
+          View Latest Image Uploads
+        </a>
+        <span class="text-muted">Warning: High bandwidth</span>
+      </li>
+      {% if ctx.currUser.role | isIn(['smod', 'admin']) %}
+        <li>
+          <a href="/tag-groups">
+            Manage Tags
+          </a>
+        </li>
+      {% endif %}
+    </ul>
   </div>
 
   <div class="row">
