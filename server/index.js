@@ -1569,9 +1569,8 @@ router.post('/posts/:postId/:status', async (ctx) => {
 //
 router.get('/posts/:postId', async (ctx) => {
   // "/posts/1234]" is such a common issue that we should fix it
-  ctx.params.postId = ctx.params.postId.replace(/[^\d]+$/, '')
-
-  ctx.assert(/^\d+$/.test(ctx.params.postId), 404)
+  ctx.params.postId = Number.parseInt(ctx.params.postId, 10)
+  ctx.assert(ctx.params.postId, 404)
 
   var post = await db.findPostWithTopicAndForum(ctx.params.postId);
   ctx.assert(post, 404);
