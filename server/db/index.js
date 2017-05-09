@@ -539,7 +539,7 @@ exports.findUserBySessionId = async function (sessionId) {
     RETURNING *
   `)
 
-  if (user) {
+  if (user && user.roles) {
     user.roles = pgArray.parse(user.roles, _.identity)
   }
 
@@ -2585,7 +2585,7 @@ exports.findLatestStatuses = async function () {
     FROM statuses us
     JOIN users u ON us.user_id = u.id
     ORDER BY created_at DESC
-    LIMIT 5
+    LIMIT 8
   `)
 }
 
