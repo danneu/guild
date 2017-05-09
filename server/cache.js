@@ -8,11 +8,11 @@ var debug = require('debug')('app:cache');
 var assert = require('better-assert');
 const IntervalCache = require('interval-cache')
 const {sql} = require('pg-extra')
+const fetch = require('node-fetch')
 // 1st party
 var db = require('./db');
 var pre = require('./presenters');
 var config = require('./config');
-var belt = require('./belt');
 const {pool} = require('./db/util')
 
 const cache = new IntervalCache()
@@ -79,15 +79,9 @@ const cache = new IntervalCache()
 if (config.CHAT_SERVER_URL) {
   // 12 seconds
   cache.every('chat-server-stats', 1000 * 12, async () => {
-    return belt.request(config.CHAT_SERVER_URL + '/stats')
-      .then((response) => {
-        // Only update on successful response
-        if (response.statusCode === 200) {
-          return JSON.parse(response.body)
-        }
-        // TODO: Support `return this.val` for returning prev val
-        return { member_count: -1 }
-      })
+    return fetch(config.CHAT_SERVER_URL + '/stats')
+      .then((res) => res.text())
+      .then((json) => JSON.parse(json))
   }, { member_count: 0 })
 } else {
   console.log('[cache.js] Skipping chat-server stats ping since CHAT_SERVER_URL is not set');

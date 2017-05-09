@@ -9,7 +9,6 @@ const bcrypt = require('bcryptjs')
 const _ = require('lodash');
 const Autolinker = require('autolinker');
 const recaptchaValidator = require('recaptcha-validator');
-const request = require('request');
 // 1st party
 const config = require('./config');
 
@@ -510,19 +509,6 @@ exports.formatChatDate = function(date) {
 };
 
 ////////////////////////////////////////////////////////////
-
-// opts is url string or object
-//
-// https://www.npmjs.com/package/request#requestoptions-callback
-exports.request = function(opts) {
-  return new Promise(function(resolve, reject) {
-    request(opts, function(err, res, body) {
-      if (err) return reject(err);
-      return resolve(res);
-    });
-  });
-};
-
 
 exports.timeout = function (ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
