@@ -213,13 +213,13 @@ var UserList = React.createClass({
                   }
                 ) : '',
               u.role === 'admin' ? ' ' : '',
-              u.role === 'mod' ?
+              (u.role === 'mod' || u.role === 'smod') ?
                 el.img(
                   {
-                    src: "http://i.imgur.com/AV5z7to.png"
+                    src: "/img/chatshield.png"
                   }
                 ) : '',
-              u.role === 'mod' ? ' ' : '',
+              (u.role === 'mod' || u.role === 'smod') ? ' ' : '',
               el.a(
                 {
                   href: 'javascript:void(0)',
@@ -342,6 +342,7 @@ var App = React.createClass({
       muteList: {},
       receivedServerPayload: false,
       waitingOnServer: false,
+      showMuteList: false,
       //
       windowIsFocused: true,
       unreadMentions: 0,
@@ -689,6 +690,7 @@ var App = React.createClass({
   // Render
   //
   render: function() {
+    var self = this
     return el.div(
       null,
       el.div(
@@ -834,10 +836,26 @@ var App = React.createClass({
             onUnameClick: this._onUnameClick
           }),
           // MuteList
-          React.createElement(MuteList, {
-            muteList: this.state.muteList,
-            receivedServerPayload: this.state.receivedServerPayload
-          })
+          _.includes(['mod', 'smod', 'admin'], this.state.user && this.state.user.role)
+            ? el.button(
+                { className: 'btn btn-default btn-xs',
+                  style: { marginTop: '15px' },
+                  onClick: function () {
+                    self.setState({
+                      showMuteList: !self.state.showMuteList
+                    })
+                  }
+
+                },
+                'Toggle Mutelist'
+              )
+            : null,
+          this.state.showMuteList
+            ? React.createElement(MuteList, {
+              muteList: this.state.muteList,
+              receivedServerPayload: this.state.receivedServerPayload
+            })
+            : null
         )
       )
     );
