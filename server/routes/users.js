@@ -313,31 +313,40 @@ router.put('/users/:slug', async (ctx) => {
 
   // TODO: use db.users.updateUser
 
-  await db.updateUser(user.id, {
-    email: ctx.vals.email || user.email,
-    sig: ctx.vals.sig,
-    sig_html: sig_html,
-    custom_title: ctx.vals['custom-title'],
-    avatar_url: ctx.request.body['avatar-url'],
-    hide_sigs: _.isBoolean(ctx.vals['hide-sigs'])
-                 ? ctx.vals['hide-sigs']
-                 : user.hide_sigs,
-    hide_avatars: _.isBoolean(ctx.vals['hide-avatars'])
-                 ? ctx.vals['hide-avatars']
-                 : user.hide_avatars,
-    is_ghost: _.isBoolean(ctx.vals['is-ghost'])
-                ? ctx.vals['is-ghost']
-                : user.is_ghost,
-    is_grayscale: _.isBoolean(ctx.vals['is-grayscale'])
-                 ? ctx.vals['is-grayscale']
-                 : user.is_grayscale,
-    force_device_width: _.isBoolean(ctx.vals['force-device-width'])
-                 ? ctx.vals['force-device-width']
-                 : user.force_device_width,
-    show_arena_stats: _.isBoolean(ctx.vals.show_arena_stats)
-                 ? ctx.vals.show_arena_stats
-                 : user.show_arena_stats
-  });
+  try {
+    await db.updateUser(user.id, {
+      email: ctx.vals.email || user.email,
+      sig: ctx.vals.sig,
+      sig_html: sig_html,
+      custom_title: ctx.vals['custom-title'],
+      avatar_url: ctx.request.body['avatar-url'],
+      hide_sigs: _.isBoolean(ctx.vals['hide-sigs'])
+                  ? ctx.vals['hide-sigs']
+                  : user.hide_sigs,
+      hide_avatars: _.isBoolean(ctx.vals['hide-avatars'])
+                  ? ctx.vals['hide-avatars']
+                  : user.hide_avatars,
+      is_ghost: _.isBoolean(ctx.vals['is-ghost'])
+                  ? ctx.vals['is-ghost']
+                  : user.is_ghost,
+      is_grayscale: _.isBoolean(ctx.vals['is-grayscale'])
+                  ? ctx.vals['is-grayscale']
+                  : user.is_grayscale,
+      force_device_width: _.isBoolean(ctx.vals['force-device-width'])
+                  ? ctx.vals['force-device-width']
+                  : user.force_device_width,
+      show_arena_stats: _.isBoolean(ctx.vals.show_arena_stats)
+                  ? ctx.vals.show_arena_stats
+                  : user.show_arena_stats
+    });
+  } catch (err) {
+    if (err === 'EMAIL_TAKEN') {
+      ctx.flash = { message: ['danger', `The email <${ctx.vals.email}> is already in use. Send a PM to Mahz if you want an email address migrated to this account.`] }
+      ctx.redirect('back')
+      return
+    }
+    throw err
+  }
   user = pre.presentUser(user);
   ctx.flash = { message: ['success', 'User updated'] };
   ctx.response.redirect(user.url + '/edit');

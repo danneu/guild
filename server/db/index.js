@@ -1061,7 +1061,14 @@ exports.updateUser = async (userId, attrs) => {
       show_arena_stats = COALESCE(${attrs.show_arena_stats}, show_arena_stats)
     WHERE id = ${userId}
     RETURNING *
-  `)
+  `).catch((err) => {
+    if (err.code === '23505') {
+      if (/"unique_email"/.test(err.toString())) {
+        throw 'EMAIL_TAKEN'
+      }
+    }
+    throw err
+  })
 }
 
 ////////////////////////////////////////////////////////////
