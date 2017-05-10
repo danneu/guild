@@ -21,7 +21,7 @@
   {% else %}
   <div class="row">
     <div class="col-sm-6 col-sm-offset-3">
-      <form action="/users" method="post">
+      <form action="/users" method="post" id="register-form">
         <div class="panel panel-default">
           <div class="panel-body">
         <div class="form-group">
@@ -45,6 +45,7 @@
                  type="email"
                  name="email"
                  class="form-control"
+                 placeholder="Required"
                  {% if ctx.flash.params %}
                   value="{{ ctx.flash.params.email }}"
                  {% endif %}
@@ -67,22 +68,18 @@
                  {% endif %}
                  class="form-control" required>
         </div>
-        <div class="form-group" style="min-height: 78px;">
-          <label>Human Test:</label>
-          <div class="g-recaptcha"
-               data-sitekey="{{ recaptchaSitekey }}"
-               data-callback="recaptchaSuccessCallback">
-          </div>
-        </div>
             </div> <!-- /.panel-body -->
-          <div class="panel-footer">
+
+          <div class="panel-footer" style="border: black">
             <div class="text-right">
-              <span id="recaptcha-reminder">You must satisfy the human test before you can submit</span>
-              <input id="register-submit"
-                     type="submit"
-                     value="Submit"
-                     class="btn btn-danger"
-                     disabled>
+              <button id="register-submit" type="submit"
+                      class="btn btn-primary g-recaptcha"
+                      data-sitekey="{{ recaptchaSitekey }}"
+                      data-callback="onSubmit"
+                      data-badge="bottomleft"
+              >
+                Submit
+              </button>
             </div>
           </div> <!-- /.panel-footer -->
           </div> <!-- /.panel -->
@@ -104,19 +101,16 @@
       });
     </script>
   {% endif %}
-<script>
-  // Called when user submits successful recaptcha, so allow them
-  // to actually submit the form.
-  function recaptchaSuccessCallback() {
-    $('#register-submit')
-      .removeClass('btn-danger')
-      .addClass('btn-primary')
-      .attr('disabled', false);
-    $('#recaptcha-reminder').text('');
+
+  <script>
+  function onSubmit(token) {
+      document.getElementById('register-form').submit()
   }
-</script>
-<script src='https://www.google.com/recaptcha/api.js'></script>
-<script>
-  $('#uname-input').focus();
-</script>
+  </script>
+
+  <script async defer src='https://www.google.com/recaptcha/api.js'></script>
+
+  <script>
+    $('#uname-input').focus()
+  </script>
 {% endblock %}
