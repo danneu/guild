@@ -10,15 +10,11 @@ const router = new Router()
 
 ////////////////////////////////////////////////////////////
 
-router.use(compress())
-
-////////////////////////////////////////////////////////////
-
-router.get('/sitemap.txt', compress(), async (ctx) => {
+router.get('/sitemap.txt', async (ctx) => {
   ctx.redirect('/sitemap.xml')
 });
 
-router.get('/sitemaps/:idx.txt', async (ctx) => {
+router.get('/sitemaps/:idx.txt', compress(), async (ctx) => {
   const idx = parseInt(ctx.params.idx) || 0
   const chunk = cache.get('sitemaps')[idx]
   ctx.assert(chunk, 404)
