@@ -49,7 +49,7 @@ var postToBodyItem = function(post) {
   _.toPairs(fields).map(function(pair) {
     var k = pair[0], v = pair[1];
     if (!v) {
-      console.log('Problem with post', post.id, 'markup.');
+      console.error('Problem with post', post.id, 'markup.');
       console.log(k, v);
     }
   });
@@ -88,47 +88,44 @@ const queries = {
   findPostsToUpload: async () => {
     return pool.many(sql`
       SELECT
-        *
-      FROM (
-        SELECT
-          p.*,
-          to_json(f.*) "forum",
-          (
+        p.*,
+        to_json(f.*) "forum",
+        (
           SELECT array_agg(id)
           FROM tags
           JOIN tags_topics ON tags.id = tags_topics.tag_id
           WHERE tags_topics.topic_id = t.id
-          ) tag_ids,
-
-          sum(char_length(p.markup)) over (order by p.id asc) as char_total
-        FROM posts p
-        JOIN topics t ON p.topic_id = t.id
-        JOIN forums f ON t.forum_id = f.id
-        WHERE
-          p.markup IS NOT NULL
-          AND (
-            -- Has not yet been uploaded
-            p.uploaded_at IS NULL
-            -- Has been edited since last upload
-            OR p.updated_at > p.uploaded_at
-          )
-        GROUP BY p.id, f.id, t.id
-        ORDER BY p.id
-      ) pp
-      WHERE char_total <= 4500000  -- 4.5 MB
+        ) tag_ids
+      FROM posts p
+      JOIN topics t ON p.topic_id = t.id
+      JOIN forums f ON t.forum_id = f.id
+      WHERE p.markup IS NOT NULL
+        AND p.is_hidden = false
+        -- Ignore test forum
+        AND f.id != 31
+        AND (
+          -- Has not yet been uploaded
+          p.uploaded_at IS NULL
+          -- Has been edited since last upload
+          OR p.updated_at > p.uploaded_at
+        )
+      GROUP BY p.id, f.id, t.id
+      ORDER BY p.id
+      LIMIT 50
     `)
   },
-  massUpdatePostUploadedAt: async (post_ids) => {
-    assert(_.isArray(post_ids));
+  massUpdatePostUploadedAt: async (postIds) => {
+    assert(_.isArray(postIds))
     return pool.query(sql`
       UPDATE posts
       SET uploaded_at = now()
-      WHERE id = ANY (${post_ids}::int[])
+      WHERE id = ANY (${postIds}::int[])
     `)
   }
 }
 
-;(async () => {
+// Returns a promise that resolves into the number of posts uploaded
+async function run () {
   const posts = await queries.findPostsToUpload()
 
   console.log('posts to upload:', posts.length)
@@ -149,16 +146,20 @@ const queries = {
     await queries.massUpdatePostUploadedAt(posts.map((x) => x.id))
     console.log('Success');
   }
-})().then(
-  function() {
-    console.log('OK')
-    process.exit()
-  },
-  function(ex) {
-    console.log('Error:', ex, ex.stack)
-    process.exit(1)
+
+  return posts.length
+}
+
+;(async () => {
+  let count = 0
+
+  while ((await run()) > 0) {
+    count += 1
+    console.log(`ran ${count} times...`)
   }
-)
+})()
+  .then(() => { console.log('DONE'); process.exit() })
+  .catch((err) => { console.error(err); process.exit(1) })
 
 /* co(function*() {
  *   var posts = yield queries.findPostsToUpload();
