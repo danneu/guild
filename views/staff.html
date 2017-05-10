@@ -1,4 +1,5 @@
 {% extends 'layouts/master.html' %}
+{% import './macros/macros.html' as macros %}
 
 {% block embed %}
   <ol class="breadcrumb">
@@ -28,8 +29,11 @@
           <div class="panel-body">
             <ul>
             {% for user in admins.concat(smods) %}
-              <li>
+              <li style="clear: both">
                 <a href="{{ user.url }}">{{ user.uname }}</a>
+                <div style="float: right">
+                  {{ macros.onlineStatus(ctx, user) }}
+                </div>
               </li>
             {% endfor %}
             </ul>
@@ -50,8 +54,11 @@
             <div class="panel-body">
               <ul>
               {% for user in mods %}
-                <li>
+                <li style="clear: both">
                   <a href="{{ user.url }}">{{ user.uname }}</a>
+                  <div style="float: right">
+                    {{ macros.onlineStatus(ctx, user) }}
+                  </div>
                 </li>
               {% endfor %}
               </ul>
@@ -72,8 +79,11 @@
             <div class="panel-body">
               <ul>
               {% for user in conmods %}
-                <li>
+                <li style="clear: both">
                   <a href="{{ user.url }}">{{ user.uname }}</a>
+                  <div style="float: right">
+                    {{ macros.onlineStatus(ctx, user) }}
+                  </div>
                 </li>
               {% endfor %}
               </ul>
@@ -94,8 +104,11 @@
             <div class="panel-body">
               <ul>
               {% for user in arena_mods %}
-                <li>
+                <li style="clear: both">
                   <a href="{{ user.url }}">{{ user.uname }}</a>
+                  <div style="float: right">
+                    {{ macros.onlineStatus(ctx, user) }}
+                  </div>
                 </li>
               {% endfor %}
               </ul>
