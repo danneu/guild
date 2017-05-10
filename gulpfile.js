@@ -9,7 +9,7 @@ gulp.task('copy-fonts', function() {
     './public/vendor/bootstrap/fonts/**',
     './public/vendor/font-awesome/fonts/**'
   ];
-  gulp.src(fontPaths)
+  return gulp.src(fontPaths)
       .pipe(gulp.dest('./dist/fonts/'));
 });
 
@@ -22,7 +22,7 @@ gulp.task('build-css', ['copy-fonts'], function() {
     './public/css/bootstrap_overrides.css',
     './public/css/general.css'
   ];
-  gulp.src(cssPaths)
+  return gulp.src(cssPaths)
       .pipe(concat('all.css'))
       .pipe(minifyCSS())
       .pipe(gulp.dest('./dist/'));
@@ -45,7 +45,7 @@ gulp.task('build-js', function() {
     // 'public/vendor/typeahead/typeahead.bundle.js',
     'public/js/bbcode_editor.js',
   ];
-  gulp.src(jsPaths)
+  return gulp.src(jsPaths)
       .pipe(concat('all.js'))
       .pipe(uglifyJS())
       .pipe(gulp.dest('./dist/'));
@@ -55,7 +55,7 @@ gulp.task('build-chat-js', function() {
   var paths = [
     'public/js/chat.js'
   ];
-  gulp.src(paths)
+  return gulp.src(paths)
     .pipe(concat('chat.js'))
     .pipe(uglifyJS())
     .pipe(gulp.dest('./dist/'));
@@ -66,7 +66,7 @@ gulp.task('build-chat-js', function() {
 // to work. Need to look into why.
 //
 gulp.task('build-assets', ['build-css', 'build-js', 'build-chat-js'], function() {
-  gulp.src(['dist/all.css', 'dist/all.js', 'dist/chat.js'])
+  return gulp.src(['dist/all.css', 'dist/all.js', 'dist/chat.js'])
   .pipe(rev())
   .pipe(gulp.dest('dist'))
   .pipe(rev.manifest())
