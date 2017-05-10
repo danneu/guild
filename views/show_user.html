@@ -426,12 +426,24 @@
       <h3>
         Bio
         {% if can(ctx.currUser, 'UPDATE_USER', user) %}
-          <button type="button"
-                  class="btn btn-xs btn-default"
-                  id="edit-bio"
-                  data-user-id="{{ user.id }}">Edit</button>
+          {% if ctx.currUser.id == user.id and user.posts_count == 0 %}
+          {% else %}
+            <button type="button"
+                    class="btn btn-xs btn-default"
+                    id="edit-bio"
+                    data-user-id="{{ user.id }}">Edit</button>
+          {% endif %}
         {% endif %}
       </h3>
+
+      {% if ctx.currUser.id == user.id and user.posts_count == 0 %}
+        <div class="alert alert-warning">
+          To prevent spam, you must make at least one forum post before you
+          can update your bio. Consider making a thread in the
+          <a style="color: #3498db" href="https://www.roleplayerguild.com/forums/2-introduce-yourself">Introduce Yourself</a> forum to say hi!
+        </div>
+      {% endif %}
+
       <div class="user-bio well">
         {% if user.bio_html %}
           {{ user.bio_html|safe }}

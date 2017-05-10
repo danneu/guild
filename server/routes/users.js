@@ -219,6 +219,11 @@ router.put('/api/users/:id/bio', async (ctx) => {
   // Ensure currUser has permission to update user
   ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER', user);
 
+  // Ensure they have at least one post
+  if (ctx.currUser.role === 'member') {
+    ctx.assert(ctx.currUser.posts_count > 0, 403)
+  }
+
   // Validation succeeded
   // Render markup to html
   var html = '';
