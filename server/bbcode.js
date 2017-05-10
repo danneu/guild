@@ -7,12 +7,11 @@
 var isServer = typeof window === 'undefined';
 var isBrowser = typeof window !== 'undefined';
 
-var cheerio, util, cache;
+var util, cache;
 if (isServer) {
   // Node
   util = require('util');
   // 3rd party
-  cheerio = require('cheerio');
   var Autolinker = require('autolinker');
   // 1st party
   cache = require('./cache');
