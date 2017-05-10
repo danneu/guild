@@ -953,3 +953,9 @@ CREATE TABLE topic_bans (
   -- A user can only be banned once per topic
   UNIQUE(topic_id, banned_id)
 );
+
+------------------------------------------------------------
+
+-- Speed up ip address lookups on /users/:id/ips
+create index posts__user_and_ip on posts (user_id, ip_address);
+create index pms__user_and_ip on pms (user_id, ip_address);
