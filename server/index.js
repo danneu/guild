@@ -1624,8 +1624,8 @@ router.post('/topics/:slug/bans', async (ctx) => {
   ctx.assert(topic, 404)
   ctx.assertAuthorized(ctx.currUser, 'UPDATE_TOPIC', topic)
 
-  if (topic.banned_ids && topic.banned_ids.length >= 5) {
-    ctx.flash = { message: ['danger', 'Cannot ban more than 5 users from a roleplay'] }
+  if (topic.banned_ids && topic.banned_ids.length >= 10) {
+    ctx.flash = { message: ['danger', 'Cannot ban more than 10 users from a roleplay'] }
     ctx.redirect('back')
     return
   }
