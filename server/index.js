@@ -456,6 +456,11 @@ router.post('/topics/:topicSlug/co-gms', async (ctx) => {
 
   await db.updateTopicCoGms(topic.id, [...topic.co_gm_ids, user.id])
 
+  // If user is topic-banned, delete the ban
+  if ((topic.banned_ids || []).includes(user.id)) {
+    await db.deleteUserTopicBan(topic.id, user.id)
+  }
+
   ctx.flash = {
     message: ['success', util.format('Co-GM added: %s', ctx.vals.uname)]
   }

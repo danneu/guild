@@ -3285,6 +3285,18 @@ exports.nukeUser = async function ({spambot, nuker}) {
 
 ////////////////////////////////////////////////////////////
 
+// Delete topic ban for given topic+user combo
+exports.deleteUserTopicBan = async (topicId, userId) => {
+  assert(Number.isInteger(topicId))
+  assert(Number.isInteger(userId))
+
+  return pool.query(sql`
+    DELETE FROM topic_bans
+    WHERE topic_id = ${topicId}
+      AND banned_id = ${userId}
+  `)
+}
+
 exports.deleteTopicBan = async (banId) => {
   assert(Number.isInteger(banId))
 
