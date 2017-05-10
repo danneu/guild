@@ -345,3 +345,15 @@ exports.presentTagGroup = function (x) {
 
   return x
 }
+
+
+exports.presentTopicBan = function (x) {
+  if (!x) return null
+
+  x.url = `/topic-bans/${x.id}`
+
+  exports.presentUser(x.banned)
+  exports.presentUser(x.banned_by)
+
+  return x
+}

@@ -484,7 +484,7 @@
                >Quote</a>
           {% endif %}
           <!-- Edit button -->
-          {% if can(ctx.currUser, 'UPDATE_POST', post) %}
+          {% if can(ctx.currUser, 'UPDATE_POST', Object.assign(post, { banned_ids: topic.banned_ids})) %}
             <a href="{{ post.url }}/edit"
                class="btn btn-default btn-xs pull-right post-edit-btn"
                style="margin-left: 5px;"
@@ -531,6 +531,21 @@
   {{ macros.renderViewers(viewers) }}
 
   {{ paginate.render(currPage, totalPages, ctx.request.path, '', '#lo') }}
+
+  <!-- Tell user they are banned -->
+
+  {% if ctx.currUser.id | isIn(topic.banned_ids) %}
+    <div class="alert alert-danger text-center">
+      <p>
+        The Game Masters (GMs) of this roleplay have suspended your posting
+        privileges from this thread.
+      </p>
+      <p>
+        <b>Reminder:</b> Game Masters get the final word in a roleplay
+        so that they can keep things moving.
+      </p>
+    </div>
+  {% endif %}
 
   <!-- New post form -->
 

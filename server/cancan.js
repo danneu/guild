@@ -344,10 +344,12 @@ function can(user, action, target) {
       }
       // Members can post as long as it's outside the lexus lounge,
       // the topic is open, and the topic is visible
+      // and they are not on topic's banlist
       if (user.role === 'member') {
         if (target.category_id === 4) return false;
         if (target.is_closed) return false;
         if (target.is_hidden) return false;
+        if ((target.banned_ids || []).includes(user.id)) return false
 
         // Topic latest_post_at must be newer than 1 month
         // if in certain forums where necro'ing is disruptive
@@ -482,11 +484,16 @@ function can(user, action, target) {
       if (target.user_id === user.id) return true;
       return false;
     case 'UPDATE_POST':  // target expected to be a post
+      // FIXME: target must have { banned_ids: null | [Int] } to prevent users
+      // from sabotaging posts after getting banned from a topic.
       if (!user) return false;
       if (user.role === 'banned') return false;
       // Admin can update any post
       if (user.role === 'admin') return true;
+      // Cannot update post if banned from topic
+      if ((target.banned_ids || []).includes(user.id)) return false
       // TODO: Create rules for other staff roles
+      // User can edit their own post
       if (user.id === target.user_id) return true;
       return false;
     case 'DELETE_CONVO': // target is convo
@@ -575,6 +582,24 @@ function can(user, action, target) {
       if (user.id === 107) return true; // HACK: Let Ellri
       if (isStaffRole(user.role)) return true; // Only staff can
       return false;
+    //
+    // GM/CO-GM
+    //
+    case 'TOPIC_BAN': // target is { topic, user }
+      if (!user) return false
+      // Staff cannot be banned
+      if (isStaffRole(target.user.role)) return false
+      // GM cannot be banned
+      if (target.user.id === target.topic.user_id) return false
+      // Co-GMs cannot be banned
+      if (target.topic.co_gm_ids.includes(target.user.id)) return false
+      // Staff can ban
+      if (isStaffRole(user.role)) return true
+      // GM can ban
+      if (user.id === target.topic.user_id) return true
+      // Co-GMs can ban
+      if (target.topic.co_gm_ids.includes(user.id)) return true
+      return false
     default:
       debug('Unsupported cancan action: ' + action);
       return false;

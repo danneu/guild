@@ -179,8 +179,9 @@ const nunjucksOptions = {
     cancan: cancan,
     can: cancan.can,
     config: config,
-    Math: Math,
-    Date: Date,
+    Math,
+    Date,
+    Object
   },
   // filters are functions that we can pipe values to from nunjucks templates.
   // e.g. {{ user.uname | md5 | toAvatarUrl }}
@@ -1629,6 +1630,54 @@ router.get('/pms/:id', async (ctx) => {
   ctx.response.redirect(redirectUrl);
 });
 
+// Add topic ban
+//
+// Body { uname: String }
+router.post('/topics/:slug/bans', async (ctx) => {
+  const topicId = belt.extractId(ctx.params.slug)
+  const topic = await db.findTopicById(topicId).then(pre.presentTopic)
+  ctx.assert(topic, 404)
+  ctx.assertAuthorized(ctx.currUser, 'UPDATE_TOPIC', topic);
+
+  if (topic.banned_ids && topic.banned_ids.length >= 5) {
+    ctx.flash = { message: ['danger', 'Cannot ban more than 5 users from a roleplay'] }
+    ctx.redirect('back')
+    return
+  }
+
+  ctx.validateBody('uname').isString()
+  const userToBan = await db.findUserByUname(ctx.vals.uname).then(pre.presentUser)
+
+  if (!userToBan) {
+    ctx.flash = { message: ['danger', 'Could not find user with that name'] }
+    ctx.redirect('back')
+    return
+  }
+
+  ctx.assertAuthorized(ctx.currUser, 'TOPIC_BAN', { topic, user: userToBan })
+
+  await db.insertTopicBan(topic.id, ctx.currUser.id, userToBan.id)
+
+  ctx.flash = { message: ['success', 'User added to topic banlist'] }
+  ctx.redirect(topic.url + '/edit#topic-bans')
+})
+
+router.delete('/topic-bans/:id', async (ctx) => {
+  ctx.validateParam('id').toInt()
+
+  const ban = await db.getTopicBan(ctx.vals.id).then(pre.presentTopicBan)
+  ctx.assert(404)
+
+  const topic = await db.findTopicById(ban.topic_id).then(pre.presentTopic)
+  ctx.assert(topic, 404);
+  ctx.assertAuthorized(ctx.currUser, 'UPDATE_TOPIC', topic)
+
+  await db.deleteTopicBan(ban.id)
+
+  ctx.flash = { message: ['success', 'Unbanned user from topic'] }
+  ctx.redirect(topic.url + '/edit#topic-bans')
+})
+
 //
 // Show topic edit form
 // For now it's just used to edit topic title
@@ -1653,13 +1702,18 @@ router.get('/topics/:slug/edit', async (ctx) => {
       .then((xs) => xs.map(pre.presentArenaOutcome))
   }
 
+  // TODO: Only do on RP/IntChk topics
+  const topicBans = (await db.listTopicBans(topic.id))
+    .map(pre.presentTopicBan)
+
   await ctx.render('edit_topic', {
     ctx,
     topic,
     selectedTagIds: (topic.tags || []).map((tag) => tag.id),
-    tagGroups: tagGroups,
-    arenaOutcomes: arenaOutcomes,
-    className: 'edit-topic'
+    tagGroups,
+    arenaOutcomes,
+    className: 'edit-topic',
+    topicBans
   });
 });
 

@@ -941,3 +941,15 @@ CREATE TABLE profile_views (
 
 -- Looking up the last 10 views for a given viewed profile
 CREATE INDEX profile_views__viewed_id ON profile_views (viewed_id, created_at);
+
+------------------------------------------------------------
+
+CREATE TABLE topic_bans (
+  id             serial           PRIMARY KEY,
+  topic_id       int              NOT NULL REFERENCES topics(id),
+  banned_id      int              NOT NULL REFERENCES users(id),
+  banned_by_id   int              NOT NULL REFERENCES users(id),
+  created_at     timestamptz      NOT NULL DEFAULT NOW(),
+  -- A user can only be banned once per topic
+  UNIQUE(topic_id, banned_id)
+);

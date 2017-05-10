@@ -172,6 +172,7 @@
           <li><span style="color:#2ecc71;">CAN</span> update topic join-status</li>
           <li><span style="color:#2ecc71;">CAN</span> update topic tags</li>
           <li><span style="color:#2ecc71;">CAN</span> update topic title</li>
+          <li><span style="color:#2ecc71;">CAN</span> update topic ban list</li>
           <li><span style="color:#e74c3c;">CANNOT</span> update topic co-GMs</li>
         </ul>
 
@@ -229,6 +230,83 @@
       </div> <!-- /.panel-footer -->
     </div> <!-- /.panel -->
   </form>
+  {% endif %}
+
+  <!-- ====================================================== -->
+  <!-- Topic Bans -->
+  <!-- ====================================================== -->
+
+  {% if topic.is_roleplay and can(ctx.currUser, 'UPDATE_TOPIC', topic) %}
+    <a name="topic-bans"></a>
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h4>Topic Bans</h4>
+        <hr>
+        <p>
+          GMs and Co-GMs get the final say on decisions made in the roleplay.
+        </p>
+        <p>
+          It's healthy to allow other players to disagree with you in
+          the OOC tab. But if you ask them to stop and they refuse to stop,
+          you can block them from further participation in the thread.
+          Please use this sparingly.
+        </p>
+      </div>
+      <div class="panel-body">
+        <p>
+          <b>Banned Users:</b>
+          ({{ topicBans.length }}/5)
+        </p>
+      {% if topicBans.length == 0 %}
+        <p class="text-muted">None</p>
+      {% else %}
+        <ul>
+          {% for ban in topicBans %}
+            <li>
+              <a href="{{ ban.banned.url }}">
+                {{ ban.banned.uname }}
+              </a>
+              <span class="text-muted">
+                Banned
+                <abbr class="timeago" title="{{ ban.created_at.toISOString() }}">
+                  {{ ban.created_at | formatDate }}
+                </abbr>
+                by
+                <a href="{{ ban.banned_by.url }}">
+                  {{ ban.banned_by.uname }}
+                </a>
+              </span>
+              <form method="POST" action="{{ ban.url }}" style="display: inline-block">
+                <input type="hidden" name="_method" value="DELETE">
+                <button type="submit" class="btn btn-danger btn-xs">
+                  X
+                </button>
+              </form>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+
+      <hr>
+
+      <form action="{{ topic.url }}/bans" method="POST">
+        <div class="form-group">
+          <label for="topic-ban-input" style="display: block;">
+            Ban User from Topic:
+          </label>
+          <input type="text" name="uname" class="form-control topic-ban-input">
+        </div>
+
+      </div> <!-- /.panel-body -->
+
+      <div class="panel-footer text-right" style="border-color: black">
+        <a href="{{ topic.url }}" class="btn btn-default">Back</a>
+        <button type="submit" class="btn btn-primary">Add Ban</button>
+      </div>
+      </form>
+
+      </div>
+    </div>
   {% endif %}
 
   <!-- ====================================================== -->
@@ -325,10 +403,10 @@
     $('[data-toggle="tooltip"]').tooltip();
   </script>
 
-  {% if can(ctx.currUser, 'UPDATE_TOPIC_CO_GMS', topic) or can(ctx.currUser, 'UPDATE_TOPIC_ARENA_OUTCOMES', topic) %}
-    <script type="text/javascript" src="/vendor/typeahead/typeahead.bundle.js"></script>
-    <script type="text/javascript">
-      var unames = new Bloodhound({
+  {# typeahead #}
+  <script type="text/javascript" src="/vendor/typeahead/typeahead.bundle.js"></script>
+  <script>
+      window.unames = new Bloodhound({
         datumTokenizer: Bloodhound.tokenizers.obj.whitespace('value'),
         queryTokenizer: Bloodhound.tokenizers.whitespace,
         limit: 5,
@@ -341,8 +419,23 @@
         }
       });
 
-      unames.initialize();
+      window.unames.initialize()
+  </script>
 
+  <script>
+      $('.topic-ban-input').typeahead({
+        hint: true,
+        highlight: true,
+        minLength: 1
+      }, {
+        name: 'Usernames',
+        displayKey: 'value',
+        source: window.unames.ttAdapter()
+      });
+  </script>
+
+  {% if can(ctx.currUser, 'UPDATE_TOPIC_CO_GMS', topic) or can(ctx.currUser, 'UPDATE_TOPIC_ARENA_OUTCOMES', topic) %}
+    <script type="text/javascript">
       $('.co-gm-input').typeahead({
         hint: true,
         highlight: true,
@@ -350,7 +443,7 @@
       }, {
         name: 'Usernames',
         displayKey: 'value',
-        source: unames.ttAdapter()
+        source: window.unames.ttAdapter()
       });
 
       $('.outcome-uname-input').typeahead({
@@ -360,7 +453,7 @@
       }, {
         name: 'Usernames',
         displayKey: 'value',
-        source: unames.ttAdapter()
+        source: window.unames.ttAdapter()
       });
     </script>
   {% endif %}

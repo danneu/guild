@@ -174,6 +174,7 @@ exports.findTopicWithIsSubscribed = async function (userId, topicId) {
       array_agg(${userId}::int) @> Array[ts.user_id::int] "is_subscribed",
       (SELECT to_json(u2.*) FROM users u2 WHERE u2.id = t.user_id) "user",
       (SELECT json_agg(u3.uname) FROM users u3 WHERE u3.id = ANY (t.co_gm_ids::int[])) co_gm_unames,
+      (SELECT json_agg(tb.banned_id) FROM topic_bans tb WHERE tb.topic_id = t.id) banned_ids,
       (
       SELECT json_agg(tags.*)
       FROM tags
@@ -735,7 +736,8 @@ exports.findPostById = exports.findPost = async function (postId) {
 SELECT
   p.*,
   to_json(t.*) "topic",
-  to_json(f.*) "forum"
+  to_json(f.*) "forum",
+  (SELECT json_agg(tb.banned_id) FROM topic_bans tb WHERE tb.topic_id = t.id) banned_ids
 FROM posts p
 JOIN topics t ON p.topic_id = t.id
 JOIN forums f ON t.forum_id = f.id
@@ -1540,6 +1542,7 @@ SELECT
   to_json(f.*) "forum",
   (SELECT to_json(u2.*) FROM users u2 WHERE u2.id = t.user_id) "user",
   (SELECT json_agg(u3.uname) FROM users u3 WHERE u3.id = ANY (t.co_gm_ids::int[])) co_gm_unames,
+  (SELECT json_agg(tb.banned_id) FROM topic_bans tb WHERE tb.topic_id = t.id) banned_ids,
   (
    SELECT json_agg(tags.*)
    FROM tags
@@ -3273,6 +3276,78 @@ exports.nukeUser = async function ({spambot, nuker}) {
   })//.then(() => exports.refreshAllForums())
 };
 
+////////////////////////////////////////////////////////////
+
+exports.deleteTopicBan = async (banId) => {
+  assert(Number.isInteger(banId))
+
+  return pool.query(sql`
+    DELETE FROM topic_bans
+    WHERE id = ${banId}
+  `)
+}
+
+exports.getTopicBan = async (banId) => {
+  assert(Number.isInteger(banId))
+
+  return pool.one(sql`
+    SELECT
+      tb.*,
+      json_build_object(
+        'id', u1.id,
+        'uname', u1.uname,
+        'slug', u1.slug
+      ) banned_by,
+      json_build_object(
+        'id', u2.id,
+        'uname', u2.uname,
+        'slug', u2.slug
+      ) banned
+    FROM topic_bans tb
+    JOIN users u1 ON u1.id = tb.banned_by_id
+    JOIN users u2 ON u2.id = tb.banned_id
+    WHERE tb.id = ${banId}
+  `)
+}
+
+exports.insertTopicBan = async (topicId, gmId, bannedId) => {
+  assert(Number.isInteger(topicId))
+  assert(Number.isInteger(gmId))
+  assert(Number.isInteger(bannedId))
+
+  return pool.query(sql`
+    INSERT INTO topic_bans (topic_id, banned_by_id, banned_id)
+    VALUES (${topicId}, ${gmId}, ${bannedId})
+  `).catch((err) => {
+    if (err.code === '23505') {
+      return
+    }
+    throw err
+  })
+}
+
+exports.listTopicBans = async (topicId) => {
+  assert(Number.isInteger(topicId))
+
+  return pool.many(sql`
+    SELECT
+      tb.*,
+      json_build_object(
+        'id', u1.id,
+        'uname', u1.uname,
+        'slug', u1.slug
+      ) banned_by,
+      json_build_object(
+        'id', u2.id,
+        'uname', u2.uname,
+        'slug', u2.slug
+      ) banned
+    FROM topic_bans tb
+    JOIN users u1 ON u1.id = tb.banned_by_id
+    JOIN users u2 ON u2.id = tb.banned_id
+    WHERE tb.topic_id = ${topicId}
+  `)
+}
 
 // Re-exports
 
