@@ -81,6 +81,7 @@ exports.presentUser = function (user) {
   }
 
   exports.presentUser(user.nuked_by)
+  exports.presentUser(user.approved_by)
 
   // Reminder: Only avatar uploads since the S3 bucket update will
   // be served from the avatars.roleplayeguild.com bucket,

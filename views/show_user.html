@@ -149,6 +149,23 @@
         <span class="glyphicon glyphicon-eye-open"></span> User Modkit
       </h4>
       <ul>
+        <li>
+          Approved:
+          {% if user.approved_at %}
+            <span style="color: #2ecc71">
+              Approved as a legit user by
+              <a href="{{ approver.url }}">
+                {{ approver.uname }}
+              </a>
+              <abbr class="timeago" title="{{ user.approved_at.toISOString() }}">
+                {{ user.approved_at | formatDate }}
+              </abbr>
+            </span>
+          {% else %}
+            This user was never approved. If they are a new user, keep an eye
+            on them and nuke them if they are a spammer.
+          {% endif %}
+        </li>
         {% if can(ctx.currUser, 'READ_USER_IP', user) %}
           <li><a href="{{ user.url }}/ips">View All IP Addresses</a></li>
         {% endif %}

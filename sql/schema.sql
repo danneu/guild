@@ -51,6 +51,13 @@ CREATE TABLE users (
   quote_notifications_count   int NOT NULL  DEFAULT 0
 );
 
+-- Approved users cannot be auto-nuked.
+-- Un-nuking a user marks them as approved.
+ALTER TABLE users ADD COLUMN approved_by_id int NULL REFERENCES users(id);
+ALTER TABLE users ADD COLUMN approved_at timestamptz NULL;
+CREATE INDEX users_approved_at ON users (approved_at)
+  WHERE approved_at IS NOT NULL;
+
 CREATE UNIQUE INDEX unique_username ON users USING btree (lower(uname));
 CREATE UNIQUE INDEX unique_email ON users USING btree (lower(email));
 CREATE UNIQUE INDEX unique_slug ON users (slug);

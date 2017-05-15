@@ -1111,6 +1111,11 @@ exports.findLatestUsers = async function (limit = 25) {
       (
         SELECT to_json(users.*)
         FROM users
+        WHERE u.approved_by_id = users.id
+      ) approved_by,
+      (
+        SELECT to_json(users.*)
+        FROM users
         JOIN nuked_users ON nuked_users.nuker_id = users.id
         WHERE nuked_users.user_id = u.id
       ) nuked_by
@@ -3195,6 +3200,8 @@ exports.updateConvoFolder = async function (userId, convoId, folder) {
 // NUKING
 ////////////////////////////////////////////////////////////
 
+// Remember to also approve an unnuked user. Didn't do it
+// here because i don't currently pass in unnuker_id
 exports.unnukeUser = async function (userId) {
   assert(Number.isInteger(userId))
   const sqls = {

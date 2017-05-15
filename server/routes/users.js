@@ -477,6 +477,11 @@ router.get('/users/:userIdOrSlug', async (ctx) => {
       .then((xs) => xs.map(pre.presentUser))
   ])
 
+  // Load approval if currUser can see it
+  const approver = cancan.isStaffRole(ctx.currUser.role)
+    ? await db.findUserById(user.approved_by_id).then(pre.presentUser)
+    : null
+
   // The ?before-id=_ of the "Next" button. i.e. the lowest
   // id of the posts on the current page
   const nextBeforeId = recentPosts.length > 0 ? _.last(recentPosts).id : null;
@@ -491,6 +496,7 @@ router.get('/users/:userIdOrSlug', async (ctx) => {
     statuses,
     currStatus: statuses.find((x) => x.id === user.current_status_id),
     friendship,
+    approver,
     latestViewers,
     // Pagination
     nextBeforeId,
@@ -821,20 +827,27 @@ router.post('/users/:slug/nuke', async (ctx) => {
     }
   }
   await db.nukeUser({ spambot: user.id, nuker: ctx.currUser.id });
+  // Unapprove in background
+  db.users.unapproveUser(user.id)
+    .catch((err) => console.error(`error when unapproving user ${user.id}`, err))
   ctx.flash = { message: ['success', 'Nuked the bastard'] };
   ctx.redirect(user.url)
 });
 
+////////////////////////////////////////////////////////////
+
 router.post('/users/:slug/unnuke', async (ctx) => {
-  ctx.assert(ctx.currUser, 404);
-  var user = await db.findUserBySlug(ctx.params.slug);
-  ctx.assert(user, 404);
-  pre.presentUser(user);
-  ctx.assertAuthorized(ctx.currUser, 'NUKE_USER', user);
-  await db.unnukeUser(user.id);
-  ctx.flash = { message: ['success', 'Un-nuked the user'] };
-  ctx.redirect(user.url);
-});
+  ctx.assert(ctx.currUser, 404)
+  const user = await db.findUserBySlug(ctx.params.slug).then(pre.presentUser)
+  ctx.assert(user, 404)
+  ctx.assertAuthorized(ctx.currUser, 'NUKE_USER', user)
+  await db.unnukeUser(user.id)
+  // Approve in background
+  db.users.approveUser({ approvedBy: ctx.currUser.id, targetUser: user.id })
+    .catch((err) => console.error(`error when approving user ${user.id}`, err))
+  ctx.flash = { message: ['success', 'Un-nuked the user'] }
+  ctx.redirect(user.url)
+})
 
 ////////////////////////////////////////////////////////////
 

@@ -1046,7 +1046,7 @@ router.post('/topics/:topicSlug/posts', middleware.ratelimit(), /* middleware.en
   if (!topic.forum.is_roleplay) { ctx.assert(postType === 'ooc', 400) }
 
   // Check post against akismet
-  if (ctx.currUser.posts_count <= 5) {
+  if (!ctx.currUser.approved_at && ctx.currUser.posts_count <= 5) {
     const isSpam = await Promise.race([
       belt.timeout(10000).then(() => false),
       akismet.checkComment({
@@ -1286,7 +1286,7 @@ router.post('/forums/:slug/topics', middleware.ratelimit(), /* middleware.ensure
   // Validation succeeded
 
   // Check topic against akismet
-  if (ctx.currUser.posts_count <= 5) {
+  if (!ctx.currUser.approved_at && ctx.currUser.posts_count <= 5) {
     const isSpam = await Promise.race([
       belt.timeout(10000).then(() => false),
       akismet.checkComment({

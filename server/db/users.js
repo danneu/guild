@@ -34,3 +34,32 @@ exports.updateUser = async function (userId, fields) {
     .toString()
   return pool._query(str);
 };
+
+////////////////////////////////////////////////////////////
+
+exports.unapproveUser = async (userId) => {
+  assert(Number.isInteger(userId))
+
+  return pool.query(sql`
+    UPDATE users
+    SET approved_by_id = NULL,
+        approved_at = NULL
+    WHERE id = ${userId}
+  `)
+}
+
+////////////////////////////////////////////////////////////
+
+exports.approveUser = async ({approvedBy, targetUser}) => {
+  assert(Number.isInteger(approvedBy))
+  assert(Number.isInteger(targetUser))
+
+  return pool.query(sql`
+    UPDATE users
+    SET approved_by_id = ${approvedBy},
+        approved_at = NOW()
+    WHERE id = ${targetUser}
+  `)
+}
+
+////////////////////////////////////////////////////////////
