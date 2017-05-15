@@ -294,6 +294,13 @@ app.use(require('./legacy_router').routes())
 
 /// /////////////////////////////////////////////////////////
 
+router.get('/rules', async (ctx) => {
+  ctx.assert(config.RULES_POST_ID, 404)
+  ctx.redirect(`/posts/${config.RULES_POST_ID}`)
+})
+
+/// /////////////////////////////////////////////////////////
+
 router.get('/search', async (ctx) => {
   // Ensure cloudsearch is configured
   ctx.assert(config.IS_CLOUDSEARCH_CONFIGURED, 400, 'Search is currently offline')

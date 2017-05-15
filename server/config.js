@@ -78,7 +78,11 @@ exports.CHAT_SERVER_URL = process.env.CHAT_SERVER_URL || 'http://localhost:3001'
 exports.NEW_RELIC_LICENSE_KEY = process.env.NEW_RELIC_LICENSE_KEY;
 exports.NEW_RELIC_APP_NAME = process.env.NEW_RELIC_APP_NAME || 'localhost-guild';
 
+// akismet
 exports.AKISMET_KEY = process.env.AKISMET_KEY
+
+// /rules redirect and sidebar link
+exports.RULES_POST_ID = Number.parseInt(process.env.RULES_POST_ID, 10) || null
 
 // Subsystem checks
 
