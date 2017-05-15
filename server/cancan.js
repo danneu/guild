@@ -59,9 +59,13 @@ function can(user, action, target) {
     case 'ACCESS_TOPIC_MODKIT': // target is topic
       if (!user) return false;
       if (['mod', 'smod', 'admin'].includes(user.role)) return true;
-      if (user.role === 'conmod' && CONTEST_FORUMS.includes(target.forum_id))
-        return true;
-      return false;
+      if (user.role === 'conmod' && CONTEST_FORUMS.includes(target.forum_id)) {
+        return true
+      }
+      if (user.role === 'arenamod' && ARENA_FORUMS.includes(target.forum_id)) {
+        return true
+      }
+      return false
     case 'MANAGE_TROPHY_SYSTEM': // no target, intended to wrap all privs
     case 'UPDATE_TROPHY': // target is trophy
     case 'CREATE_TROPHY_GROUP': // no target
