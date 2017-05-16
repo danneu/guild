@@ -41,6 +41,6 @@ exports.broadcastUserJoin = async (user) => {
 
   // Broadcast
   await client.createMessage(channel.id, {
-    content: `A new user joined: ${config.HOST}${user.url}`
+    content: `@here A new user joined: ${config.HOST}${user.url}`
   })
 }
