@@ -14,6 +14,7 @@ const welcomePm = require('../welcome_pm');
 const cancan = require('../cancan');
 const avatar = require('../avatar');
 const bbcode = require('../bbcode');
+const services = require('../services')
 
 const router = new Router();
 
@@ -126,6 +127,8 @@ router.post('/users', async (ctx) => {
     }
   }
 
+  pre.presentUser(user)
+
   if (errMessage) {
     ctx.flash = {
       message: ['danger', errMessage],
@@ -150,6 +153,10 @@ router.post('/users', async (ctx) => {
       html: welcomePm.html
     });
   }
+
+  // Broadcast user join to Discord #staff-only
+  services.discord.broadcastUserJoin(user)
+    .catch((err) => console.error('broadcastUserJoin failed', err))
 
   ctx.flash = { message: ['success', 'Registered successfully'] };
   return ctx.response.redirect('/');

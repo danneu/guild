@@ -9,7 +9,7 @@ const createError = require('create-error')
 const ResponseNotOkError = createError('ResponseNotOkError')
 
 class Client {
-  constructor ({botToken, userAgent}) {
+  constructor ({botToken, userAgent = 'GuildBot (roleplayerguild.com, 0.0.1)'}) {
     assert(typeof botToken === 'string')
     assert(typeof userAgent === 'string')
     this.botToken = botToken
@@ -81,6 +81,12 @@ class Client {
     return this.botRequest('DELETE', url)
   }
 
+  async modifyGuild (id, body) {
+    assert(typeof id === 'string')
+    const url = `https://discordapp.com/api/guilds/${id}`
+    return this.botRequest('PATCH', url, body)
+  }
+
   async createRoles (guildId, roles) {
     assert(typeof guildId === 'string')
     assert(Array.isArray(roles))
@@ -139,6 +145,12 @@ class Client {
     return this.botRequest('PATCH', url, body)
   }
 
+  async listGuildMembers (guildId) {
+    assert(typeof guildId === 'string')
+    const url = `https://discordapp.com/api/guilds/${guildId}/members?limit=1000`
+    return this.botRequest('GET', url)
+  }
+
   // Returns member object or null if userId not found
   async getGuildMember (guildId, userId) {
     assert(typeof guildId === 'string')
@@ -146,7 +158,6 @@ class Client {
     const url = `https://discordapp.com/api/guilds/${guildId}/members/${userId}`
     return this.botRequest('GET', url)
       .catch((err) => {
-        // TODO: This shouldn't fire on all 404, just when API has no results
         if (err instanceof ResponseNotOkError && err.status === 404) {
           return null
         }
@@ -168,6 +179,22 @@ class Client {
     assert(typeof body.access_token === 'string')
     const url = `https://discordapp.com/api/guilds/${guildId}/members/${userId}`
     return this.botRequest('PUT', url, body)
+  }
+
+  async listGuildChannels (guildId) {
+    assert(typeof guildId === 'string')
+    const url = `https://discordapp.com/api/guilds/${guildId}/channels`
+    return this.botRequest('GET', url)
+  }
+
+  //
+  // CHANNELS
+  //
+
+  async createMessage (channelId, body) {
+    assert(typeof channelId === 'string')
+    const url = `https://discordapp.com/api/channels/${channelId}/messages`
+    return this.botRequest('POST', url, body)
   }
 }
 

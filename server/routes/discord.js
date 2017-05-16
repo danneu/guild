@@ -42,10 +42,7 @@ const redirect_uri = config.NODE_ENV === 'production'
   ? 'https://www.roleplayerguild.com/discord/callback'
   : 'http://localhost:3000/discord/callback'
 
-const discord = new DiscordClient({
-  botToken: config.DISCORD_BOT_TOKEN,
-  userAgent: 'GuildBot (roleplayerguild.com, 0.0.1)'
-})
+const discord = new DiscordClient({botToken: config.DISCORD_BOT_TOKEN})
 
 ////////////////////////////////////////////////////////////
 
