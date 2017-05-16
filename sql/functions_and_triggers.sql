@@ -221,6 +221,73 @@ CREATE TRIGGER post_inserted_or_deleted
 
 ------------------------------------------------------------
 ------------------------------------------------------------
+-- When a post transitions to is_hidden = true, update
+-- topic.latest_post_id and forum.latest_post_id
+
+-- TODO: Also update posts_counts when a post is hidden
+
+CREATE OR REPLACE FUNCTION on_post_hidden() RETURNS trigger AS
+$$
+  var q, rows
+
+  q = ''+
+    'WITH latest_post AS ( '+
+    '  SELECT id, created_at FROM posts '+
+    '  WHERE is_hidden = false AND topic_id = $1 '+
+    '  ORDER BY id DESC LIMIT 1 '+
+    ') '+
+    'UPDATE topics '+
+    'SET latest_post_at = (SELECT created_at FROM latest_post), '+
+    '    latest_post_id = (SELECT id FROM latest_post), '+
+    '    latest_ic_post_id = ( '+
+    '      SELECT id FROM posts '+
+    '      WHERE is_hidden = false AND topic_id = $1 AND type = \'ic\' '+
+    '      ORDER BY id DESC LIMIT 1 '+
+    '    ), '+
+    '    latest_ooc_post_id = ( '+
+    '      SELECT id FROM posts '+
+    '      WHERE is_hidden = false AND topic_id = $1 AND type = \'ooc\' '+
+    '      ORDER BY id DESC LIMIT 1 '+
+    '    ), '+
+    '    latest_char_post_id = ( '+
+    '      SELECT id FROM posts '+
+    '      WHERE is_hidden = false AND topic_id = $1 AND type = \'char\' '+
+    '      ORDER BY id DESC LIMIT 1 '+
+    '    ) '+
+    'WHERE id = $1 '+
+    'RETURNING forum_id '+
+    '';
+
+  rows = plv8.execute(q, [NEW.topic_id])
+  var forum_id = rows[0].forum_id
+
+  q = ''+
+    'UPDATE forums '+
+    'SET '+
+    '  posts_count = COALESCE(sub.posts_count, 0), '+
+    '  latest_post_id = sub.latest_post_id '+
+    'FROM ( '+
+    '  SELECT '+
+    '    SUM(posts_count) posts_count, '+
+    '    MAX(latest_post_id) latest_post_id '+
+    '  FROM topics '+
+    '  WHERE forum_id = $1 '+
+    '    AND is_hidden = false '+
+    ') sub '+
+    'WHERE id = $1 '+
+    ''
+  plv8.execute(q, [forum_id])
+
+$$ LANGUAGE 'plv8';
+DROP TRIGGER IF EXISTS post_hidden ON posts;
+CREATE TRIGGER post_hidden
+    AFTER UPDATE ON posts
+    FOR EACH ROW
+    WHEN (OLD.is_hidden = false AND NEW.is_hidden = true)
+    EXECUTE PROCEDURE on_post_hidden();
+
+------------------------------------------------------------
+------------------------------------------------------------
 -- Update the containing forum's and topic's latest_post_id whenever a post
 -- is created
 
