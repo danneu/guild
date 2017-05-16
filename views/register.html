@@ -94,6 +94,14 @@
   {% if ctx.config.NODE_ENV == 'development' %}
     <script>
       $('#auto-fill-btn').on('click', function() {
+        // Only fill in uname if there isn't one
+        if ($('#uname-input').val().trim().length === 0) {
+          const uname = 'x' + Math.random()
+            .toString()
+            .replace('.', '')
+            .slice(0, 14)
+          $('#uname-input').val(uname)
+        }
         $('#email-input').val(Math.random().toString() + '@example.com');
         $('#password1-input').val('secret');
         $('#password2-input').val('secret');

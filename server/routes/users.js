@@ -15,6 +15,7 @@ const cancan = require('../cancan');
 const avatar = require('../avatar');
 const bbcode = require('../bbcode');
 const services = require('../services')
+const {discord: {broadcastManualNuke, broadcastManualUnnuke}} = require('../services')
 
 const router = new Router();
 
@@ -833,10 +834,26 @@ router.post('/users/:slug/nuke', async (ctx) => {
       return;
     }
   }
-  await db.nukeUser({ spambot: user.id, nuker: ctx.currUser.id });
+
+  try {
+    await db.nukeUser({ spambot: user.id, nuker: ctx.currUser.id })
+  } catch (err) {
+    if (err === 'ALREADY_NUKED') {
+      ctx.flash = { message: ['success', 'Nuked the bastard'] }
+      ctx.redirect(user.url)
+      return
+    }
+    throw err
+  }
+
   // Unapprove in background
   db.users.unapproveUser(user.id)
     .catch((err) => console.error(`error when unapproving user ${user.id}`, err))
+
+  // Broadcast to Discord in the background
+  broadcastManualNuke({ nuker: ctx.currUser, spambot: user })
+    .catch((err) => console.error('broadcastManualNuke error', err))
+
   ctx.flash = { message: ['success', 'Nuked the bastard'] };
   ctx.redirect(user.url)
 });
@@ -848,10 +865,17 @@ router.post('/users/:slug/unnuke', async (ctx) => {
   const user = await db.findUserBySlug(ctx.params.slug).then(pre.presentUser)
   ctx.assert(user, 404)
   ctx.assertAuthorized(ctx.currUser, 'NUKE_USER', user)
+
   await db.unnukeUser(user.id)
+
   // Approve in background
   db.users.approveUser({ approvedBy: ctx.currUser.id, targetUser: user.id })
     .catch((err) => console.error(`error when approving user ${user.id}`, err))
+
+  // Broadcast to Discord in the background
+  broadcastManualUnnuke({ nuker: ctx.currUser, spambot: user })
+    .catch((err) => console.error('broadcastManualUnnuke error', err))
+
   ctx.flash = { message: ['success', 'Un-nuked the user'] }
   ctx.redirect(user.url)
 })

@@ -62,7 +62,7 @@ const belt = require('./belt')
 const bbcode = require('./bbcode')
 const bouncer = require('koa-bouncer')
 require('./validation')  // Load after koa-bouncer
-const akismet = require('./akismet')
+const services = require('./services')
 
 app.use(middleware.methodOverride())
 
@@ -1053,35 +1053,6 @@ router.post('/topics/:topicSlug/posts', middleware.ratelimit(), /* middleware.en
   // If non-rp forum, then the post must be 'ooc' type
   if (!topic.forum.is_roleplay) { ctx.assert(postType === 'ooc', 400) }
 
-  // Check post against akismet
-  if (!ctx.currUser.approved_at && ctx.currUser.posts_count <= 5) {
-    const isSpam = await Promise.race([
-      belt.timeout(10000).then(() => false),
-      akismet.checkComment({
-        commentType: 'reply',
-        commentAuthor: ctx.currUser.uname,
-        commentEmail: ctx.currUser.email,
-        commentContent: ctx.vals.markup,
-        userIp: ctx.ip,
-        userAgent: ctx.headers['user-agent']
-      })
-    ]).catch((err) => {
-      // On error, just let them post
-      console.error('akismet error', err)
-      return false
-    })
-
-    if (isSpam) {
-      await db.nukeUser({
-        spambot: ctx.currUser.id,
-        nuker: config.STAFF_REPRESENTATIVE_ID || 1
-      })
-      emailer.sendAutoNukeEmail(ctx.currUser.slug, ctx.vals.markup)
-      ctx.redirect('/')
-      return
-    }
-  }
-
   // Render the bbcode
   var html = bbcode(ctx.vals.markup)
 
@@ -1122,6 +1093,9 @@ router.post('/topics/:topicSlug/posts', middleware.ratelimit(), /* middleware.en
   }
 
   ctx.response.redirect(post.url)
+
+  // Check if post is spam in the background
+  services.antispam.process(ctx, post.markup, post.id)
 })
 
 // (AJAX)
@@ -1293,35 +1267,6 @@ router.post('/forums/:slug/topics', middleware.ratelimit(), /* middleware.ensure
 
   // Validation succeeded
 
-  // Check topic against akismet
-  if (!ctx.currUser.approved_at && ctx.currUser.posts_count <= 5) {
-    const isSpam = await Promise.race([
-      belt.timeout(10000).then(() => false),
-      akismet.checkComment({
-        commentType: 'forum-post',
-        commentAuthor: ctx.currUser.uname,
-        commentEmail: ctx.currUser.email,
-        commentContent: ctx.vals.markup,
-        userIp: ctx.ip,
-        userAgent: ctx.headers['user-agent']
-      })
-    ]).catch((err) => {
-      // On error, just let them post
-      console.error('akismet error', err)
-      return false
-    })
-
-    if (isSpam) {
-      await db.nukeUser({
-        spambot: ctx.currUser.id,
-        nuker: config.STAFF_REPRESENTATIVE_ID || 1
-      })
-      emailer.sendAutoNukeEmail(ctx.currUser.slug, ctx.vals.markup)
-      ctx.redirect('/')
-      return
-    }
-  }
-
   // Render BBCode to html
   var html = bbcode(ctx.vals.markup)
 
@@ -1347,7 +1292,11 @@ router.post('/forums/:slug/topics', middleware.ratelimit(), /* middleware.ensure
     joinStatus: ctx.vals['join-status'],
     is_ranked: ctx.vals.is_ranked
   }).then(pre.presentTopic)
+
   ctx.response.redirect(topic.url)
+
+  // Check if post is spam in the background
+  services.antispam.process(ctx, ctx.vals.markup, topic.post.id)
 })
 
 // Edit post form
@@ -1570,7 +1519,22 @@ router.get('/posts/:postId', async (ctx) => {
 
   var post = await db.findPostWithTopicAndForum(ctx.params.postId)
   ctx.assert(post, 404)
+
+  // Instead of 404ing if a post has been hidden, keep the user in the
+  // topic and tell them what happened
+  //
+  // TODO: Implement some sort of /topics/:id/last-post that does
+  // a smart redirect, ignoring hidden posts.
+  if (cancan.cannot(ctx.currUser, 'READ_POST', post) && post.is_hidden) {
+    ctx.flash = {
+      message: ['warning', 'The post you tried to navigate to has been hidden. It was possibly spam.']
+    }
+    ctx.redirect(`/topics/${post.topic_id}`)
+    return
+  }
+
   ctx.assertAuthorized(ctx.currUser, 'READ_POST', post)
+
   post = pre.presentPost(post)
 
   // Determine the topic url and page for this post
@@ -2015,6 +1979,19 @@ router.get('/topics/:slug', async (ctx) => {
 
   var topic = await db.findTopic(topicId)
   ctx.assert(topic, 404)
+
+  // If user cannot read topic and it's deleted, redirect them to
+  // the forum and explain what happened
+  if (cancan.cannot(ctx.currUser, 'READ_TOPIC', topic) && topic.is_hidden) {
+    ctx.flash = {
+      message: ['warning', `
+        The topic you tried to view has been hidden. It was possibly spam.
+      `]
+    }
+    ctx.redirect(`/forums/${topic.forum_id}`)
+    return
+  }
+
   ctx.assertAuthorized(ctx.currUser, 'READ_TOPIC', topic)
 
   topic = pre.presentTopic(topic)

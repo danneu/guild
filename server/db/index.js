@@ -1016,13 +1016,16 @@ exports.createTopic = async function (props) {
     `)
 
     // Create topic's first post
-    await client.query(sql`
+    const post = await client.one(sql`
       INSERT INTO posts
         (topic_id, user_id, ip_address, markup, html, type, is_roleplay, idx)
       VALUES (${topic.id}, ${props.userId}, ${props.ipAddress}::inet,
        ${props.markup}, ${props.html}, ${props.postType}, ${props.isRoleplay}, 0)
       RETURNING *
-    `);
+    `)
+
+    // Attach post to topic so that it can be passed into antispam process()
+    topic.post = post
 
     // Create tags if given
     if (props.tagIds) {
@@ -3288,6 +3291,12 @@ exports.nukeUser = async function ({spambot, nuker}) {
     await client.query(sqls.insertNukelist)
     //await client.query(sqls.updateTopics)
   })//.then(() => exports.refreshAllForums())
+  .catch((err) => {
+    if (err.code === '23505') {
+      throw 'ALREADY_NUKED'
+    }
+    throw err
+  })
 };
 
 ////////////////////////////////////////////////////////////

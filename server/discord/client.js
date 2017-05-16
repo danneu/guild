@@ -196,6 +196,16 @@ class Client {
     const url = `https://discordapp.com/api/channels/${channelId}/messages`
     return this.botRequest('POST', url, body)
   }
+
+  //
+  // OAUTH2
+  //
+
+  // https://discordapp.com/developers/docs/topics/oauth2#get-current-application-information
+  async getBotApplication () {
+    const url = `https://discordapp.com/api/oauth2/applications/@me`
+    return this.botRequest('GET', url)
+  }
 }
 
 module.exports = Client
