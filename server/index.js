@@ -181,7 +181,8 @@ const nunjucksOptions = {
     config: config,
     Math,
     Date,
-    Object
+    Object,
+    cache
   },
   // filters are functions that we can pipe values to from nunjucks templates.
   // e.g. {{ user.uname | md5 | toAvatarUrl }}
@@ -857,10 +858,14 @@ router.get('/lexus-lounge', async (ctx) => {
 
   const latestUserLimit = 50
 
-  const [latestUsers, registration, category] = await Promise.all([
+  const [latestUsers, registration, category, globalAlert] = await Promise.all([
     db.findLatestUsers(latestUserLimit).then((xs) => xs.map(pre.presentUser)),
     db.keyvals.getRowByKey('REGISTRATION_ENABLED'),
-    db.findModCategory()
+    db.findModCategory(),
+    // only load for admins/smods
+    ['smod', 'admin'].includes(ctx.currUser.role)
+      ? db.keyvals.getRowByKey('GLOBAL_ALERT')
+      : null
   ])
 
   const forums = await db.findForums([category.id])
@@ -875,8 +880,38 @@ router.get('/lexus-lounge', async (ctx) => {
     latestUserLimit,
     staffRep,
     registration,
+    globalAlert,
     title: 'Lexus Lounge — Mod Forum'
   })
+})
+
+router.post('/lexus-lounge/global-alert', async (ctx) => {
+  ctx.assertAuthorized(ctx.currUser, 'LEXUS_LOUNGE')
+  ctx.validateBody('markup')
+    .isString()
+    .isLength(3, 1000, 'Must be 3-1000 chars long')
+
+  // Render the bbcode
+  const html = bbcode(ctx.vals.markup)
+
+  const globalAlert = {
+    html,
+    markup: ctx.vals.markup
+  }
+
+  await db.keyvals.setKey('GLOBAL_ALERT', globalAlert, ctx.currUser.id)
+
+  ctx.flash = { message: ['success', 'Global alert created'] }
+  ctx.redirect('/lexus-lounge')
+})
+
+router.delete('/lexus-lounge/global-alert', async (ctx) => {
+  ctx.assertAuthorized(ctx.currUser, 'LEXUS_LOUNGE')
+
+  await db.keyvals.deleteKey('GLOBAL_ALERT')
+
+  ctx.flash = { message: ['success', 'Global alert cleared'] }
+  ctx.redirect('/lexus-lounge')
 })
 
 router.get('/lexus-lounge/images', async (ctx) => {

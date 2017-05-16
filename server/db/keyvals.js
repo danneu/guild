@@ -1,11 +1,20 @@
 'use strict';
 // 3rd
 const assert = require('better-assert')
-const debug = require('debug')('db:keyvals')
+const debug = require('debug')('app:db:keyvals')
 // 1st
 const {pool} = require('./util')
 const {sql} = require('pg-extra')
 const pre = require('../presenters')
+
+exports.deleteKey = async (key) => {
+  assert(typeof key === 'string')
+
+  return pool.query(sql`
+    DELETE FROM keyvals
+    WHERE key = ${key}
+  `)
+}
 
 // String -> keyvals record object
 exports.getRowByKey = async function (key) {
@@ -40,11 +49,17 @@ exports.setKey = async function (key, value, updatedById) {
   debug('[setKey] key=%j, value=%j, updatedById=%j', key, value, updatedById)
   assert(typeof key === 'string')
 
+  if (typeof value !== 'string') {
+    value = JSON.stringify(value)
+  }
+
   return pool.query(sql`
-    UPDATE keyvals
+    INSERT INTO keyvals (key, value, updated_at, updated_by_id)
+    VALUES (${key}, ${value}, NOW(), ${updatedById})
+    ON CONFLICT (key) DO UPDATE
     SET value = ${value},
         updated_at = NOW(),
         updated_by_id = ${updatedById}
-    WHERE key = ${key}
+    WHERE keyvals.key = ${key}
   `)
 }

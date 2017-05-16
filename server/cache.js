@@ -51,6 +51,10 @@ const cache = new IntervalCache()
   .every('current-sidebar-contest', 1000 * 45, () => {
     return db.getCurrentSidebarContest()
   }, null)
+  // 30 seconds
+  .every('global-alert', 1000 * 30, () => {
+    return db.keyvals.getRowByKey('GLOBAL_ALERT')
+  }, null)
   // 12 hours
   .every('sitemaps', 1000 * 60 * 60 * 12, async () => {
     console.log('[CACHE] Populating sitemap.txt')
