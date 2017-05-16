@@ -478,7 +478,7 @@ router.get('/users/:userIdOrSlug', async (ctx) => {
   ])
 
   // Load approval if currUser can see it
-  const approver = cancan.isStaffRole(ctx.currUser.role)
+  const approver = (ctx.currUser && cancan.isStaffRole(ctx.currUser.role))
     ? await db.findUserById(user.approved_by_id).then(pre.presentUser)
     : null
 
