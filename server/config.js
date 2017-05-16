@@ -84,6 +84,19 @@ exports.AKISMET_KEY = process.env.AKISMET_KEY
 // /rules redirect and sidebar link
 exports.RULES_POST_ID = Number.parseInt(process.env.RULES_POST_ID, 10) || null
 
+// Discord / OAuth
+exports.DISCORD_APP_CLIENTID = process.env.DISCORD_APP_CLIENTID
+exports.DISCORD_APP_CLIENTSECRET = process.env.DISCORD_APP_CLIENTSECRET
+exports.DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID
+exports.DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN
+exports.IS_DISCORD_CONFIGURED = !!(
+  exports.DISCORD_APP_CLIENTID &&
+  exports.DISCORD_APP_CLIENTSECRET &&
+  exports.DISCORD_GUILD_ID &&
+  exports.DISCORD_BOT_TOKEN
+);
+console.log('Discord configured:', exports.IS_DISCORD_CONFIGURED)
+
 // Subsystem checks
 
 exports.IS_PM_SYSTEM_ONLINE = process.env.IS_PM_SYSTEM_ONLINE === 'true';

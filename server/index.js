@@ -427,6 +427,7 @@ app.use(require('./routes/subscriptions').routes())
 app.use(require('./routes/friendships').routes())
 app.use(require('./routes/sitemaps').routes())
 app.use(require('./routes/tags').routes())
+app.use(require('./routes/discord').routes())
 
 // Useful to redirect users to their own profiles since canonical edit-user
 // url is /users/:slug/edit

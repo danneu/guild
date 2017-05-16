@@ -21,6 +21,7 @@
     "aws-sdk": "^2.49.0",
     "bcryptjs": "2.4.3",
     "better-assert": "1.0.2",
+    "create-error": "^0.3.1",
     "debug": "2.6.6",
     "form-data": "^2.1.4",
     "gm": "1.23.0",
@@ -51,6 +52,7 @@
     "recaptcha-validator": "1.0.11",
     "regex-trie": "1.0.4",
     "s3-streaming-upload": "0.2.3",
+    "simple-oauth2": "^1.2.0",
     "uuid": "^3.0.1"
   },
   "devDependencies": {
