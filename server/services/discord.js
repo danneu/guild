@@ -38,7 +38,7 @@ exports.broadcastManualNuke = async ({nuker, spambot}) => {
     return
   }
 
-  const content = `@here :doctorBUTTON: :radioactive: ${nuker.uname} nuked ${config.HOST}${spambot.url}`
+  const content = `@here :radioactive: ${nuker.uname} nuked ${config.HOST}${spambot.url}`
 
   console.log(content)
 
