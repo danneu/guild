@@ -966,3 +966,9 @@ CREATE TABLE topic_bans (
 -- Speed up ip address lookups on /users/:id/ips
 create index posts__user_and_ip on posts (user_id, ip_address);
 create index pms__user_and_ip on pms (user_id, ip_address);
+
+------------------------------------------------------------
+
+ALTER TABLE viewers SET UNLOGGED;
+ALTER TABLE ratelimits SET UNLOGGED;
+ALTER TABLE profile_views SET UNLOGGED;
