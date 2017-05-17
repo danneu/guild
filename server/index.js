@@ -209,6 +209,10 @@ const nunjucksOptions = {
     sum: (nums) => {
       return (nums || []).reduce((memo, n) => memo + n, 0)
     },
+    parseIntOr: (str, defaultTo = 0) => {
+      const n = Number.parseInt(str, 10)
+      return Number.isNaN(n) ? defaultTo : n
+    },
     // Sums the values of an object
     sumValues: (obj) => {
       return (_.values(obj)).reduce((memo, n) => memo + n, 0)
@@ -883,6 +887,21 @@ router.get('/lexus-lounge', async (ctx) => {
     globalAlert,
     title: 'Lexus Lounge — Mod Forum'
   })
+})
+
+// ?watermark=secondsSinceEpoch
+router.post('/global-alerts/hide', async (ctx) => {
+  ctx.assert(ctx.currUser, 404)
+
+  const {watermark = Date.now()} = ctx.query
+
+  ctx.cookies.set('hide-global-alert', watermark, {
+    // Only lasts 1 hour
+    maxAge: 1000 * 60 * 60
+  })
+
+  ctx.flash = { message: ['success', 'The global alert will be hidden until it\'s updated'] }
+  ctx.redirect('back')
 })
 
 router.post('/lexus-lounge/global-alert', async (ctx) => {

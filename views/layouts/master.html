@@ -163,31 +163,36 @@
     {% endif %}
 
     {% set cachedAlert = cache.get('global-alert') %}
-    {% if cachedAlert %}
+    {% if cachedAlert and (ctx.cookies.get('hide-global-alert') | parseIntOr(0)) < cachedAlert.updated_at.getTime() %}
       <div class="alert alert-info">
-        <div>
-          <div class="pull-right small">
-            <abbr class="timeago" title="{{ cachedAlert.updated_at.toISOString() }}"
-                  style="color: inherit"
-            >
-              {{ cachedAlert.updated_at | formatDate }}
-            </abbr>
-            by
-            {{ cachedAlert.updated_by.uname }}
-          </div>
-          <span class="glyphicon glyphicon-bullhorn"></span>
-          <strong>Global Alert</strong>
-        </div>
-        <div style="margin-top: 10px;">
-          {{ cachedAlert.value.html | safe  }}
-        </div>
-        {% if ctx.currUser.role | isIn(['smod', 'admin']) %}
-          <div class="text-right">
+        <div class="pull-right">
+          {% if ctx.currUser.role | isIn(['smod', 'admin']) %}
             <a href="/lexus-lounge#global-alert" class="btn btn-default btn-xs">
               Edit
             </a>
-          </div>
-        {% endif %}
+          {% endif %}
+          <form method="POST" action="/global-alerts/hide?={{ cachedAlert.updated_at.toISOString() }}"
+                style="display: inline-block"
+          >
+            <button type="submit" class="btn btn-primary btn-xs">
+              Hide
+            </button>
+          </form>
+        </div>
+        <div class="pull-right small" style="margin-right: 10px;">
+          <abbr class="timeago" title="{{ cachedAlert.updated_at.toISOString() }}"
+                style="color: inherit"
+          >
+            {{ cachedAlert.updated_at | formatDate }}
+          </abbr>
+          by
+          {{ cachedAlert.updated_by.uname }}
+        </div>
+        <span class="glyphicon glyphicon-bullhorn"></span>
+        <strong>Global Alert</strong>
+        <div style="margin-top: 10px;">
+          {{ cachedAlert.value.html | safe  }}
+        </div>
       </div>
     {% endif %}
 
