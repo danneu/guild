@@ -116,7 +116,9 @@
   }
   </script>
 
-  <script async defer src='https://www.google.com/recaptcha/api.js'></script>
+  {% if config.NODE_ENV == 'production' %}
+    <script async defer src='https://www.google.com/recaptcha/api.js'></script>
+  {% endif %}
 
   <script>
     $('#uname-input').focus()
