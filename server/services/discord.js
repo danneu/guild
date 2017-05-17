@@ -38,7 +38,7 @@ exports.broadcastManualNuke = async ({nuker, spambot}) => {
     return
   }
 
-  const content = `@here :radioactive: ${nuker.uname} nuked ${config.HOST}${spambot.url}`
+  const content = `@here :doctorBUTTON: ${nuker.uname} nuked ${config.HOST}${spambot.url} :radioactive:`
 
   console.log(content)
 
@@ -102,9 +102,7 @@ exports.broadcastAutoNuke = async (user, postId, info) => {
     return
   }
 
-  const content = `@here :robot: :radioactive: User ${config.HOST}${user.url} was auto-nuked for this post: ${config.HOST}/posts/${postId}.
-
-Debug:
+  const content = `@here :robot: User ${config.HOST}${user.url} was auto-nuked for this post: ${config.HOST}/posts/${postId} :radioactive:
 
 \`\`\`
 ${JSON.stringify(info, null, 2)}
@@ -142,6 +140,6 @@ exports.broadcastUserJoin = async (user) => {
 
   // Broadcast
   await client.createMessage(channel.id, {
-    content: `@here :baby: A new user joined: ${config.HOST}${user.url}`
+    content: `@here :doctorPUNK: A new user joined: ${config.HOST}${user.url}`
   })
 }
