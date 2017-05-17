@@ -339,7 +339,8 @@ exports.findUserByUnameOrEmail = async function (unameOrEmail) {
   return pool.one(sql`
     SELECT *
     FROM users u
-    WHERE lower(u.uname) = lower($1) OR lower(u.email) = lower(${unameOrEmail})
+    WHERE lower(u.uname) = lower(${unameOrEmail})
+       OR lower(u.email) = lower(${unameOrEmail})
   `)
 }
 
