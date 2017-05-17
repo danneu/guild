@@ -1417,6 +1417,9 @@ router.put('/posts/:id', async (ctx) => {
     .then(pre.presentPost)
 
   ctx.response.redirect(updatedPost.url)
+
+  // Check if post is spam after response is sent
+  services.antispam.process(ctx, ctx.vals.markup, post.id)
 })
 
 // See and keep in sync with PUT /posts/:id
