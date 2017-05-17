@@ -59,8 +59,8 @@ async function process (ctx, markup, postId) {
     nuker: config.STAFF_REPRESENTATIVE_ID || 1
   })
 
-  // Send email
-  emailer.sendAutoNukeEmail(ctx.currUser.slug, markup)
+  // Send email (Turned off for now since it's redundant)
+  // emailer.sendAutoNukeEmail(ctx.currUser.slug, markup)
 
   // Broadcast to Discord
   broadcastAutoNuke(ctx.currUser, postId, result)
