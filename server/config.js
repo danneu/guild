@@ -70,6 +70,11 @@ exports.STAFF_REPRESENTATIVE_ID = parseInt(process.env.STAFF_REPRESENTATIVE_ID);
 // For /search endpoint
 exports.SEARCH_RESULTS_PER_PAGE = parseInt(process.env.SEARCH_RESULTS_PER_PAGE) || 50;
 
+// Users to hide from reverse-lookup
+exports.CLOAKED_SLUGS = (process.env.CLOAKED_SLUGS || '')
+  .split(',')
+  .filter(Boolean)
+
 exports.ENABLE_ADS = !!process.env.ENABLE_ADS;
 
 exports.CHAT_SERVER_URL = process.env.CHAT_SERVER_URL || 'http://localhost:3001';

@@ -2160,8 +2160,10 @@ router.get('/ips/:ip_address', async (ctx) => {
   ctx.assertAuthorized(ctx.currUser, 'LOOKUP_IP_ADDRESS')
 
   const [postsTable, pmsTable] = await Promise.all([
-    db.findUsersWithPostsWithIpAddress(ctx.params.ip_address),
+    db.findUsersWithPostsWithIpAddress(ctx.params.ip_address)
+      .then((xs) => xs.filter((x) => !config.CLOAKED_SLUGS.includes(x.slug))),
     db.findUsersWithPmsWithIpAddress(ctx.params.ip_address)
+      .then((xs) => xs.filter((x) => !config.CLOAKED_SLUGS.includes(x.slug)))
   ])
 
   await ctx.render('show_users_with_ip_address', {
@@ -2182,6 +2184,14 @@ router.get('/users/:slug/ips', async (ctx) => {
 
   // Authorize currUser
   ctx.assertAuthorized(ctx.currUser, 'READ_USER_IP', user)
+
+  ctx.type = 'html'
+
+  // If user is cloaked, render nothing
+  if (config.CLOAKED_SLUGS.includes(user.slug)) {
+    ctx.body = 'None on file'
+    return
+  }
 
   // Load ip addresses
   var ip_addresses = await db.findAllIpAddressesForUserId(user.id)
