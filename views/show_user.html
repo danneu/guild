@@ -215,7 +215,11 @@
                   {{ user.created_at|formatDate }}
                 </abbr>
               </li>
-              <li>Posts: {{ user.posts_count }}</li>
+              <li>
+                Posts:
+                {{ user.posts_count }}
+                <small class="text-muted">({{ user.posts_per_day }} / day)</small>
+              </li>
               {% if can(ctx.currUser, 'READ_USER_PM_SENT_COUNT', user) %}
                 <li>PMs: {{ user.pms_count }}</li>
               {% endif %}

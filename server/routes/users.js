@@ -496,6 +496,10 @@ router.get('/users/:userIdOrSlug', async (ctx) => {
 
   ctx.set('Link', util.format('<%s>; rel="canonical"', config.HOST + user.url));
 
+  // For view
+  user.posts_per_day = (user.posts_count / (belt.daysAgo(user.created_at) || 1))
+    .toFixed(2)
+
   await ctx.render('show_user', {
     ctx,
     user,

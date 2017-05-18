@@ -233,9 +233,7 @@ const nunjucksOptions = {
     // {{ 'firetruck'|truncate(6) }}  -> 'firetruck'
     truncate: belt.makeTruncate('…'),
     // Returns distance from now to date in days. 0 or more.
-    daysAgo: date => {
-      return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24))
-    },
+    daysAgo: belt.daysAgo,
     // FIXME: Can't render bbcode on the fly until I speed up
     // slow bbcode like tabs
     bbcode,

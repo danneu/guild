@@ -515,3 +515,7 @@ exports.formatChatDate = (() => {
 exports.timeout = function (ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
+
+exports.daysAgo = function (date) {
+  return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24))
+}
