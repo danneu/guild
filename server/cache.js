@@ -98,19 +98,6 @@ if (config.IS_DISCORD_CONFIGURED) {
   cache.once('discord-stats', async () => { online: 0 }, { online: 0 })
 }
 
-
-if (config.CHAT_SERVER_URL) {
-  // 12 seconds
-  cache.every('chat-server-stats', 1000 * 12, async () => {
-    return fetch(config.CHAT_SERVER_URL + '/stats')
-      .then((res) => res.text())
-      .then((json) => JSON.parse(json))
-  }, { member_count: 0 })
-} else {
-  console.log('[cache.js] Skipping chat-server stats ping since CHAT_SERVER_URL is not set');
-}
-
-
 if (config.LATEST_RPGN_TOPIC_ID) {
   cache.every('latest-rpgn-topic', 1000 * 60, () => {
     return db.findRGNTopicForHomepage(config.LATEST_RPGN_TOPIC_ID)
