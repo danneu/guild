@@ -28,7 +28,7 @@ function analyze (fullstring) {
   const length = longest.length
   const count = countSubstringOccurrences(longest, fullstring)
 
-  if (longest.length < 10) {
+  if (longest.length < 20) {
     return { longest, length, count, isSpam: false }
   }
 

@@ -587,12 +587,12 @@ router.get('/login', async (ctx) => {
 // Create session
 //
 router.post('/sessions', async (ctx) => {
-  ctx.validateBody('uname-or-email').required('Invalid creds')
-  ctx.validateBody('password').required('Invalid creds')
+  ctx.validateBody('uname-or-email').required('Invalid creds (1)')
+  ctx.validateBody('password').required('Invalid creds (2)')
   ctx.validateBody('remember-me').toBoolean()
   var user = await db.findUserByUnameOrEmail(ctx.vals['uname-or-email'])
-  ctx.check(user, 'Invalid creds')
-  ctx.check(await belt.checkPassword(ctx.vals.password, user.digest), 'Invalid creds')
+  ctx.check(user, 'Invalid creds (3)')
+  ctx.check(await belt.checkPassword(ctx.vals.password, user.digest), 'Invalid creds (4)')
 
   // User authenticated
   var session = await db.createSession({
