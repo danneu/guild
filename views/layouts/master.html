@@ -112,15 +112,17 @@
                 </a>
               </li>
             {% endif %}
+            {% if config.IS_DISCORD_CONFIGURED %}
             <li>
-              <a href="/chat">
+              <a href="/discord">
                 <span class="glyphicon glyphicon-comment"></span>
-                Chat
-                {% if ctx.cache.get('chat-server-stats').member_count > 0 %}
-                  <span class="label label-primary" style="color: #fff;">{{ ctx.cache.get('chat-server-stats').member_count }} Online</span>
+                Discord
+                {% if ctx.cache.get('discord-stats').online > 0 %}
+                  <span class="label label-primary" style="color: #fff;">{{ ctx.cache.get('discord-stats').online }} Online</span>
                 {% endif %}
               </a>
             </li>
+            {% endif %}
           </ul>
 
           <!-- If user is logged in, show logout button -->
