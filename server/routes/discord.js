@@ -60,14 +60,14 @@ router.get('/discord', async (ctx) => {
 
 ////////////////////////////////////////////////////////////
 
-router.get('/discord/:channelName', async (ctx) => {
+router.get('/discord/channels/:channelName', async (ctx) => {
   const channels = await discord.listChannels(config.DISCORD_GUILD_ID)
   const channel = channels.find((c) => {
     return c.name.toLowerCase() === ctx.params.channelName.toLowerCase()
   })
   ctx.assert(channel, 404, 'No Discord channel with that name was found')
 
-  const url = `https://discordapp.com/channels/${channel.id}/${config.DISCORD_GUILD_ID}`
+  const url = `https://discordapp.com/channels/${config.DISCORD_GUILD_ID}/${channel.id}`
   ctx.redirect(url)
 })
 
