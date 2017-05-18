@@ -60,6 +60,19 @@ router.get('/discord', async (ctx) => {
 
 ////////////////////////////////////////////////////////////
 
+router.get('/discord/:channelName', async (ctx) => {
+  const channels = await discord.listChannels(config.DISCORD_GUILD_ID)
+  const channel = channels.find((c) => {
+    return c.name.toLowerCase() === ctx.params.channelName.toLowerCase()
+  })
+  ctx.assert(channel, 404, 'No Discord channel with that name was found')
+
+  const url = `https://discordapp.com/channels/${channel.id}/${config.DISCORD_GUILD_ID}`
+  ctx.redirect(url)
+})
+
+////////////////////////////////////////////////////////////
+
 // FIXME: Race conditions
 router.get('/discord/callback', async (ctx) => {
   if (ctx.query.error) {

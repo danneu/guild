@@ -197,6 +197,18 @@ class Client {
     return this.botRequest('POST', url, body)
   }
 
+  async getChannel (channelId) {
+    assert(typeof channelId === 'string')
+    const url = `https://discordapp.com/api/channels/${channelId}`
+    return this.botRequest('GET', url)
+  }
+
+  async listChannels (guildId) {
+    assert(typeof guildId === 'string')
+    const url = `https://discordapp.com/api/guilds/${guildId}/channels`
+    return this.botRequest('GET', url)
+  }
+
   //
   // OAUTH2
   //
