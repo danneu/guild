@@ -1349,8 +1349,14 @@ router.post('/forums/:slug/topics', middleware.ratelimit(), /* middleware.ensure
 
   ctx.response.redirect(topic.url)
 
-  // Check if post is spam in the background
-  services.antispam.process(ctx, ctx.vals.markup, topic.post.id)
+  // Check if post is spam after response is sent
+  const result = await services.antispam.process(ctx, ctx.vals.markup, topic.post.id)
+
+  // Don't broadcast to discord if they tripped the spam detector
+  if (!result && topic.forum_id === 2) {
+    services.discord.broadcastIntroTopic(ctx.currUser, topic)
+      .catch((err) => console.error('broadcastIntroTopic failed', err))
+  }
 })
 
 // Edit post form

@@ -143,3 +143,26 @@ exports.broadcastUserJoin = async (user) => {
     content: `@here :kid: A new user joined: ${config.HOST}${user.url}`
   })
 }
+
+////////////////////////////////////////////////////////////
+
+exports.broadcastIntroTopic = async (user, topic) => {
+  // Need url
+  pre.presentUser(user)
+  pre.presentTopic(topic)
+
+  const client = makeClient()
+
+  const channel = await client.listGuildChannels(config.DISCORD_GUILD_ID)
+    .then((cs) => cs.find((c) => c.name === 'general'))
+
+  if (!channel) {
+    console.error(`Could not find a #general channel for broadcast.`)
+    return
+  }
+
+  // Broadcast
+  await client.createMessage(channel.id, {
+    content: `@here :wave: ${user.uname} created an Introduce Yourself thread: ${config.HOST}${topic.url}. Please help us welcome them!`
+  })
+}

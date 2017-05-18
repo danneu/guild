@@ -34,6 +34,7 @@ async function analyze (ctx, text) {
   return { isSpam: false }
 }
 
+// Returns falsey if they are not a spammer
 async function process (ctx, markup, postId) {
   assert(ctx.currUser)
   assert(typeof markup === 'string')
@@ -79,6 +80,7 @@ module.exports = {
         if (result) {
           console.log('antispam process detected a spammer:', result)
         }
+        return result
       })
       .catch((err) => {
         console.error('antispam process error', err)
