@@ -23,6 +23,7 @@
     "better-assert": "1.0.2",
     "create-error": "^0.3.1",
     "debug": "2.6.7",
+    "discord.js": "^11.1.0",
     "form-data": "^2.1.4",
     "gm": "1.23.0",
     "interval-cache": "0.0.1",
