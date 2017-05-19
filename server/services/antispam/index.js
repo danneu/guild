@@ -11,15 +11,17 @@ const emailer = require('../../emailer')
 
 // Returns { test: 'SUBSTRING' | 'AKISMET', isSpam: Boolean, info: ... }
 async function analyze (ctx, text) {
-  ;{
-    const info = await substring.analyze(text)
+  // SUBSTRING check is too aggressive, too many false positives.
 
-    console.log('antispam analyze (substring):', info)
-
-    if (info.isSpam) {
-      return { isSpam: true, test: 'SUBSTRING', info }
-    }
-  }
+  // ;{
+  //   const info = await substring.analyze(text)
+  //
+  //   console.log('antispam analyze (substring):', info)
+  //
+  //   if (info.isSpam) {
+  //     return { isSpam: true, test: 'SUBSTRING', info }
+  //   }
+  // }
 
   ;{
     const info = await akismet.analyze(ctx, text)
