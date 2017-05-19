@@ -315,21 +315,24 @@ router.put('/users/:slug', async (ctx) => {
   ctx.assert(user, 404);
   ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER', user);
 
-  var sig_html;
+  var sig_html, sig_markup;
   // User is only updating their sig if `sig` is a string.
   // If it's a blank string, then user is trying to clear their sig
   if (_.isString(ctx.request.body.sig))
-    if (ctx.request.body.sig.trim().length > 0)
-      sig_html = bbcode(ctx.request.body.sig);
-    else
-      sig_html = '';
+    if (ctx.request.body.sig.trim().length > 0) {
+      sig_html = bbcode(ctx.request.body.sig)
+      sig_markup = ctx.request.body.sig.trim()
+    } else {
+      sig_html = ''
+      sig_markup = ''
+    }
 
   // TODO: use db.users.updateUser
 
   try {
     await db.updateUser(user.id, {
       email: ctx.vals.email || user.email,
-      sig: ctx.vals.sig,
+      sig: sig_markup,
       sig_html: sig_html,
       custom_title: ctx.vals['custom-title'],
       avatar_url: ctx.request.body['avatar-url'],
