@@ -18,8 +18,17 @@ router.use(async (ctx, next) => {
   ctx.assert(config.IS_DISCORD_CONFIGURED, 404, 'Discord is not configured')
 
   // Ensure user exists and is not banned
-  ctx.assert(ctx.currUser, 404, 'You must be logged in to join the Discord server')
-  ctx.assert(ctx.currUser.role !== 'banned', 404, 'You are banned')
+  if (!ctx.currUser) {
+    ctx.flash = { message: ['warning', 'You must be logged into the Guild to join the Discord chat server.'] }
+    ctx.redirect('/')
+    return
+  }
+
+  if (ctx.currUser.role === 'banned') {
+    ctx.flash = { message: ['warning', 'You cannot join the Discord server since you are banned.'] }
+    ctx.redirect('/')
+    return
+  }
 
   return next()
 })
