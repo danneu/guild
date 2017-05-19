@@ -163,6 +163,6 @@ exports.broadcastIntroTopic = async (user, topic) => {
 
   // Broadcast
   await client.createMessage(channel.id, {
-    content: `@here :wave: ${user.uname} created an Introduce Yourself thread: ${config.HOST}${topic.url}. Please help us welcome them!`
+    content: `:wave: ${user.uname} created an Introduce Yourself thread: ${config.HOST}${topic.url}. Please help us welcome them!`
   })
 }
