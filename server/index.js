@@ -2688,6 +2688,7 @@ router.get('/arena-fighters', async (ctx) => {
 /// ////////////////////////////////////////////////////////
 
 require('./guildbot').connect()
+  .catch((err) => console.error('guildbot error', err))
 
 /// /////////////////////////////////////////////////////////
 

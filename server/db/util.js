@@ -17,4 +17,8 @@ const belt = require('../belt')
 // should import and use
 const pool = new pg.Pool(parseUrl(config.DATABASE_URL))
 
-module.exports = {pool}
+function getClient () {
+  return new pg.Client(parseUrl(config.DATABASE_URL))
+}
+
+module.exports = {pool, getClient}

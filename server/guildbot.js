@@ -1,14 +1,32 @@
 
-const Discord = require("discord.js")
-const bot = new Discord.Client()
+// 3rd
+const Discord = require('discord.js')
+const {sql} = require('pg-extra')
+// 1st
 const config = require('./config')
 const dice = require('./dice')
+const {getClient} = require('./db/util')
 
-module.exports = { connect () {
+module.exports = { async connect () {
   if (!config.IS_DISCORD_CONFIGURED) {
     console.log('Cannot start GuildBot because Discord is not configured')
     return
   }
+
+  // Ensure only one bot is running
+
+  const client = getClient()
+  client.connect()
+
+  const {lock} = await client.one(sql`SELECT pg_try_advisory_lock(1337) "lock"`)
+
+  if (!lock) {
+    // Release the losing clients
+    client.end()
+    return
+  }
+
+  const bot = new Discord.Client()
 
   bot.on('ready', () => {
     console.log(`Logged in as ${bot.user.username}!`)
