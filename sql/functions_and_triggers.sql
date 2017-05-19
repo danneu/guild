@@ -283,7 +283,7 @@ DROP TRIGGER IF EXISTS post_hidden ON posts;
 CREATE TRIGGER post_hidden
     AFTER UPDATE ON posts
     FOR EACH ROW
-    WHEN (OLD.is_hidden = false AND NEW.is_hidden = true)
+    WHEN (OLD.is_hidden != NEW.is_hidden)
     EXECUTE PROCEDURE on_post_hidden();
 
 ------------------------------------------------------------
