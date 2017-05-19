@@ -130,11 +130,12 @@ router.get('/discord/callback', async (ctx) => {
   }
 
   const discordUser = await discord.getUser(accessToken)
+
   let guildMember = await discord.getGuildMember(config.DISCORD_GUILD_ID, discordUser.id)
+
   if (guildMember) {
     guildMember = await discord.modifyGuildMember(config.DISCORD_GUILD_ID, discordUser.id, {
-      nick: ctx.currUser.uname,
-      roles
+      nick: ctx.currUser.uname
     })
   } else {
     guildMember = await discord.addGuildMember(config.DISCORD_GUILD_ID, discordUser.id, {
@@ -143,8 +144,6 @@ router.get('/discord/callback', async (ctx) => {
       roles
     })
   }
-
-  debug('discord guildMember', guildMember)
 
   ctx.redirect('https://discordapp.com/channels/@me')
 })
