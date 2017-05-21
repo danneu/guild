@@ -187,6 +187,12 @@ class Client {
     return this.botRequest('GET', url)
   }
 
+  async listGuildBans (guildId) {
+    assert(typeof guildId === 'string')
+    const url = `https://discordapp.com/api/guilds/${guildId}/bans`
+    return this.botRequest('GET', url)
+  }
+
   //
   // CHANNELS
   //

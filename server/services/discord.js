@@ -38,7 +38,7 @@ exports.broadcastManualNuke = async ({nuker, spambot}) => {
     return
   }
 
-  const content = `@here :button: ${nuker.uname} nuked ${config.HOST}${spambot.url} :radioactive:`
+  const content = `@here :hammer: ${nuker.uname} nuked ${config.HOST}${spambot.url} :radioactive:`
 
   console.log(content)
 
@@ -140,7 +140,7 @@ exports.broadcastUserJoin = async (user) => {
 
   // Broadcast
   await client.createMessage(channel.id, {
-    content: `@here :kid: A new user joined: ${config.HOST}${user.url}`
+    content: `@here :baby: A new user joined: ${config.HOST}${user.url}`
   })
 }
 
