@@ -38,7 +38,7 @@ exports.broadcastManualNuke = async ({nuker, spambot}) => {
     return
   }
 
-  const content = `@here :hammer: ${nuker.uname} nuked ${config.HOST}${spambot.url} :radioactive:`
+  const content = `@here :hammer: **${nuker.uname}** nuked ${config.HOST}${spambot.url} :radioactive:`
 
   console.log(content)
 
@@ -66,7 +66,7 @@ exports.broadcastManualUnnuke = async ({nuker, spambot}) => {
     return
   }
 
-  const content = `@here :white_check_mark: ${nuker.uname} UN-nuked ${config.HOST}${spambot.url}`
+  const content = `@here :white_check_mark: **${nuker.uname}** UN-nuked ${config.HOST}${spambot.url}`
 
   // Broadcast
   await client.createMessage(channel.id, { content })
@@ -163,6 +163,6 @@ exports.broadcastIntroTopic = async (user, topic) => {
 
   // Broadcast
   await client.createMessage(channel.id, {
-    content: `Howdy, :wave: ${user.uname} created an Introduce Yourself thread: ${config.HOST}${topic.url}. Please help us welcome them!`
+    content: `Howdy, :wave: **${user.uname}** created an Introduce Yourself thread: ${config.HOST}${topic.url}. Please help us welcome them!`
   })
 }
