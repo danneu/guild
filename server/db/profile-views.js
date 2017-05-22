@@ -20,8 +20,6 @@ exports.insertView = async function (viewerId, viewedId) {
 exports.getLatestViews = async function (viewedId) {
   assert(Number.isInteger(viewedId))
 
-  return []
-
   return pool.many(sql`
     SELECT viewers.uname
           , viewers.slug
