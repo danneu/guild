@@ -174,16 +174,17 @@ const nunjucksOptions = {
   throwOnUndefined: false,
   // globals are bindings we want to expose to all templates
   globals: {
-    // let us use `can(USER, ACTION, TARGET)` authorization-checks in templates
     '_': _,
     belt: belt,
     cancan: cancan,
+    // let us use `can(USER, ACTION, TARGET)` authorization-checks in templates
     can: cancan.can,
-    config: config,
+    config,
     Math,
     Date,
     Object,
-    cache
+    cache,
+    cache2
   },
   // filters are functions that we can pipe values to from nunjucks templates.
   // e.g. {{ user.uname | md5 | toAvatarUrl }}

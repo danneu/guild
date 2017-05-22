@@ -393,6 +393,14 @@
           </div> <!-- /.col-sm-2 post-meta -->
 
           <div class="col-sm-10 post-content-wrapper">
+
+            {% if post.id == config.FAQ_POST_ID %}
+              <div class="alert alert-info">
+                This post controls the contents of
+                <a href="/faq" style="color: #2980b9; text-decoration: underline">/faq</a>. All staff can edit this special post.
+              </div>
+            {% endif %}
+
             <!-- Post text -->
             {{ macros.renderPost(ctx, post) }}
             <!-- Ratings -->

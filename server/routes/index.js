@@ -6,6 +6,7 @@ const debug = require('debug')('app:routes:index')
 const cancan = require('../cancan')
 const db = require('../db')
 const cache2 = require('../cache2')
+const pre = require('../presenters')
 
 ////////////////////////////////////////////////////////////
 
@@ -15,15 +16,11 @@ const router = new Router()
 
 // Depends on FAQ_POST_ID
 router.get('/faq', async (ctx) => {
-  const post = cache2.get('faq-post')
-
-  const html = post
-    ? post.html
-    : 'FAQ_POST_ID post has not yet been configured'
+  const post = pre.presentPost(cache2.get('faq-post'))
 
   await ctx.render('faq', {
     ctx,
-    html,
+    post,
     title: 'FAQ'
   })
 })

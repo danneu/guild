@@ -7,6 +7,7 @@ var debug = require('debug')('app:cancan');
 var assert = require('better-assert');
 // 1st
 const belt = require('./belt')
+const config = require('./config')
 
 // These are forums where topics cannot be posted
 // in if the latest post is older than 1 month
@@ -515,6 +516,10 @@ function can(user, action, target) {
       // TODO: Create rules for other staff roles
       // User can edit their own post
       if (user.id === target.user_id) return true;
+      // All Staff can edit a post if it's the FAQ_POST_ID
+      if (target.id === config.FAQ_POST_ID && isStaffRole(user.role)) {
+        return true
+      }
       return false;
     case 'DELETE_CONVO': // target is convo
     case 'READ_CONVO':  // target is convo

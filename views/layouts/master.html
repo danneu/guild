@@ -104,7 +104,15 @@
                   Staff
                 </a>
               </li>
-            {% if ctx.can(ctx.currUser, 'READ_USER_LIST') %}
+            {% if cache2.get('faq-post') %}
+              <li>
+                <a href="/faq">
+                  <span class="glyphicon glyphicon-question-sign"></span>
+                  FAQ
+                </a>
+              </li>
+            {% endif %}
+            {% if false and ctx.can(ctx.currUser, 'READ_USER_LIST') %}
               <li>
                 <a href="/users">
                   <span class="glyphicon glyphicon-globe"></span>

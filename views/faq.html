@@ -13,8 +13,27 @@
   <div class="page-header">
     <h1>
       Frequently Asked Questions
+      {% if post and (ctx.currUser.role | isIn(['mod', 'smod', 'admin'])) %}
+        <a href="/posts/{{ config.FAQ_POST_ID }}" class="btn btn-default">
+          Edit
+        </a>
+      {% endif %}
     </h1>
+    {% if post.updated_at %}
+      <p class="text-muted">
+        Last updated
+        <abbr class="timeago" title="{{ post.updated_at.toISOString() }}">
+          {{ post.updated_at | formatDate }}
+        </abbr>
+      </p>
+    {% endif %}
   </div>
 
-  {{ html | safe }}
+  {% if not post %}
+    The FAQ system is currently offline.
+  {% endif %}
+
+  {% if post %}
+    {{ post.html | safe }}
+  {% endif %}
 {% endblock %}
