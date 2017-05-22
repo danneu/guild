@@ -209,7 +209,7 @@
               {% endif %}
               <li>VMs: {{ user.toplevel_vms_count }}</li>
 
-              {% if latestViewers.length > 0 %}
+              {% if user.role != 'banned' and latestViewers.length > 0 %}
                 <li>
                   Latest 10 profile visitors:
                   <ul class="list-inline">
