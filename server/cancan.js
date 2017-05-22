@@ -333,9 +333,10 @@ function can(user, action, target) {
       // Users can hide their own post if the post within 1 hour
       // Caution: remember to handle the case where this is the last unhidden
       // post in a topic.
-      if (user.id === target.user_id && belt.isNewerThan(target.created_at, { hours: 1 })) {
-        return true
-      }
+      // TEMP: Turned this off while I figure out some issues
+      /* if (user.id === target.user_id && belt.isNewerThan(target.created_at, { hours: 1 })) {
+       *   return true
+       * }*/
       return false;
     // Topic state
     case 'STICK_TOPIC':
