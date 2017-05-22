@@ -248,6 +248,8 @@
                 <a href="{{ user.url }}">{{ user.uname }}</a>
                 {% if user.is_nuked %}
                   <img src="/img/nuked.gif" height="33" width="33" title="Nuked">
+                {% elif user.avatar_url %}
+                  <img src="{{ user.avatar_url }}" width="32">
                 {% endif %}
               </span>
               <input type="text" value="{{ user.email }}" style="display: inline-block; width: 400px; font-family: monospace; box-shadow: none; color: #ccc;" class="form-control">
