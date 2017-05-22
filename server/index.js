@@ -1442,8 +1442,11 @@ router.put('/posts/:id', async (ctx) => {
 
   // If it's the FAQ post, refresh cache
   if (post.id === config.FAQ_POST_ID) {
-    console.log('should refresh faq post...')
     cache2.refresh('faq-post')
+  }
+
+  if (post.id === config.WELCOME_POST_ID) {
+    cache2.refresh('welcome-post')
   }
 
   // Check if post is spam after response is sent
@@ -1521,8 +1524,11 @@ router.put('/api/posts/:id', async (ctx) => {
 
   // If it's the FAQ post, refresh cache
   if (post.id === config.FAQ_POST_ID) {
-    console.log('should refresh faq post...')
     cache2.refresh('faq-post')
+  }
+
+  if (post.id === config.WELCOME_POST_ID) {
+    cache2.refresh('welcome-post')
   }
 
   // TODO: Submit to spam service like PUT /posts/:id

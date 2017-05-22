@@ -16,6 +16,7 @@ const avatar = require('../avatar');
 const bbcode = require('../bbcode');
 const services = require('../services')
 const {discord: {broadcastManualNuke, broadcastManualUnnuke}} = require('../services')
+const cache2 = require('../cache2')
 
 const router = new Router();
 
@@ -144,16 +145,24 @@ router.post('/users', async (ctx) => {
   });
 
   // Send user the introductory PM
-
-  if (config.STAFF_REPRESENTATIVE_ID) {
-    await db.createConvo({
+  if (config.STAFF_REPRESENTATIVE_ID && cache2.get('welcome-post')) {
+    const {markup, html} = cache2.get('welcome-post')
+    const convo = await db.createConvo({
       userId: config.STAFF_REPRESENTATIVE_ID,
       toUserIds: [user.id],
       title: 'RPGuild Welcome Package',
-      markup: welcomePm.markup,
-      html: welcomePm.html
-    });
+      markup,
+      html
+    })
+
+    // Create CONVO notification
+    await db.createConvoNotification({
+      from_user_id: config.STAFF_REPRESENTATIVE_ID,
+      to_user_id: user.id,
+      convo_id: convo.id
+    })
   }
+
 
   // Broadcast user join to Discord #staff-only
   services.discord.broadcastUserJoin(user)

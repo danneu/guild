@@ -401,6 +401,13 @@
               </div>
             {% endif %}
 
+            {% if post.id == config.WELCOME_POST_ID %}
+              <div class="alert alert-info">
+                This post controls the contents of the welcome PM sent
+                to all new users. All staff can edit this special post.
+              </div>
+            {% endif %}
+
             <!-- Post text -->
             {{ macros.renderPost(ctx, post) }}
             <!-- Ratings -->

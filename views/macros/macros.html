@@ -538,7 +538,7 @@
         <div class="row small">
         {% for friendship in friendships.ghosts %}
           {% set friend = friendship.to_user %}
-          <div class="col-md-6">
+          <div class="col-md-6" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
             <a href="{{ friend.url }}" style="color: #999">
               {{ friend.uname }}
             </a>
@@ -554,7 +554,7 @@
 
         {% for friendship in friendships.nonghosts %}
           {% set friend = friendship.to_user %}
-          <div class="col-md-6">
+          <div class="col-md-6" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
             <a href="{{ friend.url }}" style="color: #999">
               {{ friend.uname }}
             </a>

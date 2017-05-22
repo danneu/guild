@@ -16,6 +16,35 @@
       Be sure to log into the rep account periodically. Users may have responded
       to the welcome PM or contacted the rep account for help.
     </p>
+
+    {% if ctx.currUser.role == 'admin' %}
+      <ul class="list-unstyled">
+        <li>
+          {% if config.STAFF_REPRESENTATIVE_ID %}
+            <span class="glyphicon glyphicon-ok" style="color: #3BB878"></span>
+          {% else %}
+            <span class="glyphicon glyphicon-remove"></span>
+          {% endif %}
+          Staff representative set
+        </li>
+        <li>
+          {% if cache2.get('faq-post') %}
+            <span class="glyphicon glyphicon-ok" style="color: #3BB878"></span>
+          {% else %}
+            <span class="glyphicon glyphicon-remove"></span>
+          {% endif %}
+          FAQ post set and found
+        </li>
+        <li>
+          {% if cache2.get('welcome-post') %}
+            <span class="glyphicon glyphicon-ok" style="color: #3BB878"></span>
+          {% else %}
+            <span class="glyphicon glyphicon-remove"></span>
+          {% endif %}
+          Welcome PM set and found
+        </li>
+      </ul>
+    {% endif %}
   </div>
   {% else %}
     <div class="alert alert-warning">

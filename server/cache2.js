@@ -121,6 +121,11 @@ class Cache {
     this.tasks[key] = { ms, step, lastRun: 0, value: initValue }
     return this
   }
+
+  once (key, step, initValue) {
+    this.tasks[key] = { ms: Date.now(), step, lastRun: 0, value: initValue }
+    return this
+  }
 }
 
 ////////////////////////////////////////////////////////////
@@ -131,6 +136,12 @@ if (config.FAQ_POST_ID) {
   // 1 hour
   cache.every('faq-post', 1000 * 60 * 60, () => {
     return db.findPostById(config.FAQ_POST_ID)
+  })
+}
+
+if (config.WELCOME_POST_ID) {
+  cache.once('welcome-post', () => {
+    return db.findPostById(config.WELCOME_POST_ID)
   })
 }
 
