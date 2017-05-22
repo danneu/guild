@@ -524,6 +524,10 @@ function can(user, action, target) {
       if (target.id === config.FAQ_POST_ID && isStaffRole(user.role)) {
         return true
       }
+      // All Staff can edit a post if it's the WELCOME_POST_ID
+      if (target.id === config.WELCOME_POST_ID && isStaffRole(user.role)) {
+        return true
+      }
       return false;
     case 'DELETE_CONVO': // target is convo
     case 'READ_CONVO':  // target is convo
