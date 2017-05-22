@@ -661,7 +661,7 @@ CREATE TABLE feedback_topics (
   id         serial PRIMARY KEY,
   markup     text NOT NULL,
   html       text NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT NOW()
+  created_at timestamptz NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE feedback_replies (

@@ -675,10 +675,16 @@ router.get('/', async (ctx) => {
                           pre.presentTopic(cache.get('latest-rpgn-topic'))
 
   // The unacknowledged feedback_topic for the current user
-  // Will be undefined if user has no feedback to respond to
-  var ftopic
+  // Will be undefined if we have nothing to show the user.
+  let ftopic
   if (config.CURRENT_FEEDBACK_TOPIC_ID && ctx.currUser) {
     ftopic = await db.findUnackedFeedbackTopic(config.CURRENT_FEEDBACK_TOPIC_ID, ctx.currUser.id)
+      .then((ftopic) => {
+        // Discard ftopic if currUser has registered after it.
+        if (ftopic && ctx.currUser.created_at < ftopic.created_at) {
+          return ftopic
+        }
+      })
   }
 
   // Get users friends for the sidebar
