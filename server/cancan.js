@@ -313,6 +313,12 @@ function can(user, action, target) {
       return false;
     // Post state -- target is post
     case 'UNHIDE_POST':
+      if (!user) return false
+      // Staff can unhide
+      if (isStaffRole(user.role)) return true
+      if (user.role === 'conmod') return true
+      if (user.role === 'arenamod') return true
+      return false
     case 'HIDE_POST':
       if (!user) return false;
       assert(target.topic)
@@ -320,16 +326,14 @@ function can(user, action, target) {
       if (target.topic && target.topic.posts_count === 1) {
         return false
       }
-      // Staff can hide/unhide
+      // Staff can hide
       if (isStaffRole(user.role)) return true;
-      // So can conmods
       if (user.role === 'conmod') return true;
-      // So can arena mods
       if (user.role === 'arenamod') return true
-      // Users can hide their own post if the post within 10 minutes
+      // Users can hide their own post if the post within 1 hour
       // Caution: remember to handle the case where this is the last unhidden
       // post in a topic.
-      if (user.id === target.user_id && belt.isNewerThan(target.created_at, { minutes: 10 })) {
+      if (user.id === target.user_id && belt.isNewerThan(target.created_at, { hours: 1 })) {
         return true
       }
       return false;
