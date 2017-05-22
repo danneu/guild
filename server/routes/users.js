@@ -15,7 +15,11 @@ const cancan = require('../cancan');
 const avatar = require('../avatar');
 const bbcode = require('../bbcode');
 const services = require('../services')
-const {discord: {broadcastManualNuke, broadcastManualUnnuke}} = require('../services')
+const {discord: {
+  broadcastManualNuke,
+  broadcastManualUnnuke,
+  broadcastBioUpdate
+}} = require('../services')
 const cache2 = require('../cache2')
 
 const router = new Router();
@@ -254,6 +258,14 @@ router.put('/api/users/:id/bio', async (ctx) => {
   );
 
   ctx.body = JSON.stringify(updatedUser);
+
+  // Broadcast to Discord if they are setting their bio (not just making an edit)
+  // and they only have a couple posts
+  const bioSet = !user.bio_markup && updatedUser.bio_markup
+  if (user.posts_count <= 2 && bioSet) {
+    broadcastBioUpdate(user, updatedUser.bio_markup)
+      .catch((err) => console.error('broadcastBioUpdate error', err))
+  }
 });
 
 //

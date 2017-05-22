@@ -29,16 +29,10 @@ exports.broadcastManualNuke = async ({nuker, spambot}) => {
 
   const client = makeClient()
 
-  // Find the #staff-only channel
   const channel = await client.listGuildChannels(config.DISCORD_GUILD_ID)
-    .then((cs) => cs.find((c) => c.name === 'staff-only'))
+    .then((cs) => cs.find((c) => c.name === 'forum-activity'))
 
-  if (!channel) {
-    console.error(`Could not find a #staff-only channel for broadcast.`)
-    return
-  }
-
-  const content = `@here :hammer: **${nuker.uname}** nuked ${config.HOST}${spambot.url} :radioactive:`
+  const content = `:hammer: **${nuker.uname}** nuked ${config.HOST}${spambot.url} :radioactive:`
 
   console.log(content)
 
@@ -57,16 +51,10 @@ exports.broadcastManualUnnuke = async ({nuker, spambot}) => {
 
   const client = makeClient()
 
-  // Find the #staff-only channel
   const channel = await client.listGuildChannels(config.DISCORD_GUILD_ID)
-    .then((cs) => cs.find((c) => c.name === 'staff-only'))
+    .then((cs) => cs.find((c) => c.name === 'forum-activity'))
 
-  if (!channel) {
-    console.error(`Could not find a #staff-only channel for broadcast.`)
-    return
-  }
-
-  const content = `@here :white_check_mark: **${nuker.uname}** UN-nuked ${config.HOST}${spambot.url}`
+  const content = `:white_check_mark: **${nuker.uname}** UN-nuked ${config.HOST}${spambot.url}`
 
   // Broadcast
   await client.createMessage(channel.id, { content })
@@ -93,14 +81,8 @@ exports.broadcastAutoNuke = async (user, postId, info) => {
 
   const client = makeClient()
 
-  // Find the #staff-only channel
   const channel = await client.listGuildChannels(config.DISCORD_GUILD_ID)
-    .then((cs) => cs.find((c) => c.name === 'staff-only'))
-
-  if (!channel) {
-    console.error(`Could not find a #staff-only channel for broadcast.`)
-    return
-  }
+    .then((cs) => cs.find((c) => c.name === 'forum-activity'))
 
   const content = `@here :robot: User ${config.HOST}${user.url} was auto-nuked for this post: ${config.HOST}/posts/${postId} :radioactive:
 
@@ -129,14 +111,8 @@ exports.broadcastUserJoin = async (user) => {
 
   const client = makeClient()
 
-  // Find the #staff-only channel
   const channel = await client.listGuildChannels(config.DISCORD_GUILD_ID)
-    .then((cs) => cs.find((c) => c.name === 'staff-only'))
-
-  if (!channel) {
-    console.error(`Could not find a #staff-only channel for broadcast.`)
-    return
-  }
+    .then((cs) => cs.find((c) => c.name === 'forum-activity'))
 
   // Broadcast
   await client.createMessage(channel.id, {
@@ -164,5 +140,31 @@ exports.broadcastIntroTopic = async (user, topic) => {
   // Broadcast
   await client.createMessage(channel.id, {
     content: `Howdy, :wave: **${user.uname}** created an Introduce Yourself thread: ${config.HOST}${topic.url}. Please help us welcome them!`
+  })
+}
+
+////////////////////////////////////////////////////////////
+
+exports.broadcastBioUpdate = async (user, bioMarkup) => {
+  assert(user)
+  assert(typeof bioMarkup === 'string')
+
+  pre.presentUser(user)
+
+  const client = makeClient()
+
+  const channel = await client.listGuildChannels(config.DISCORD_GUILD_ID)
+    .then((cs) => cs.find((c) => c.name === 'forum-activity'))
+
+  if (!channel) {
+    console.error(`Could not find a #general channel for broadcast.`)
+    return
+  }
+
+  // Broadcast
+  await client.createMessage(channel.id, {
+    content: `:eye: ${config.HOST}${user.url} just set their bio. Is it spam?
+Snippet: \`${bioMarkup.slice(0, 140)}\`
+`
   })
 }
