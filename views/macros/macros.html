@@ -13,9 +13,9 @@
 
 {% macro onlineStatus(ctx, user, minimal) %}
   {% if user.is_ghost and user.last_online_at and Date.now() - user.last_online_at.getTime() < 1000 * 60 * 60 * 12 %}
-    <span class="text-muted">
+    <span class="text-muted" style="display: inline-block;">
       {% if not minimal %}Seen{% endif %}
-      0-12 hrs ago
+       0-12 hrs ago
       <img src="/img/ghost.png" width="14" height="11" title="Ghost mode">
     </span>
   {% elif user.last_online_at %}
@@ -535,41 +535,35 @@
         {% endif %}
       </h4>
       {% if friendships.count > 0 %}
-        <table style="width: 100%;">
+        <div class="row small">
         {% for friendship in friendships.ghosts %}
           {% set friend = friendship.to_user %}
-          <tr>
-            <td>
-              <a href="{{ friend.url }}" style="color: #999; display: inline-block; width: 100px;">
-                {{ friend.uname }}
-              </a>
-            </td>
-            <td class="text-right">
-              <small>{{ onlineStatus(ctx, friend, true) }}</small>
-            </td>
-          </tr>
+          <div class="col-md-6">
+            <a href="{{ friend.url }}" style="color: #999">
+              {{ friend.uname }}
+            </a>
+          </div>
+          <div class="col-ms-6 text-right">
+            {{ onlineStatus(ctx, friend, true) }}
+          </div>
         {% endfor %}
+
         {% if friendships.ghosts.length > 0 and friendships.nonghosts.length > 0 %}
-          <tr>
-            <td colspan="2">
-              <hr>
-            </td>
-          </tr>
+          <hr>
         {% endif %}
+
         {% for friendship in friendships.nonghosts %}
           {% set friend = friendship.to_user %}
-          <tr>
-            <td>
-              <a href="{{ friend.url }}" style="color: #999; display: inline-block; width: 100px;">
-                {{ friend.uname }}
-              </a>
-            </td>
-            <td class="text-right">
-              <small>{{ onlineStatus(ctx, friend, true) }}</small>
-            </td>
-          </tr>
+          <div class="col-md-6">
+            <a href="{{ friend.url }}" style="color: #999">
+              {{ friend.uname }}
+            </a>
+          </div>
+          <div class="col-md-6 text-right">
+              {{ onlineStatus(ctx, friend, true) }}
+          </div>
         {% endfor %}
-        </table>
+        </div>
         {% set friend = undefined %}
 
         {% if friendships.count > 0 %}
