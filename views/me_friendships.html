@@ -23,9 +23,41 @@
         </div>
 
         <div class="panel-body">
-          {% if friendships.length > 0 %}
+          {% if friendships.count > 0 %}
             <table style="width: 100%;">
-            {% for friendship in friendships %}
+            {% for friendship in friendships.ghosts %}
+              {% set friend = friendship.to_user %}
+              <tr>
+                <td>
+                  <!-- Remove btn -->
+                  <form action="/me/friendships?redirect-to={{ ctx.path | encodeURIComponent }}" method="POST" style="display: inline-block;">
+                    <input type="hidden" name="to_user_id" value="{{ friendship.to_user_id }}">
+                    <input type="hidden" name="commit" value="remove">
+                    <button type="submit" class="btn btn-xs btn-danger remove-friend-btn" data-uname="{{ friend.uname }}" style="display: inline-block;">
+                      X
+                    </button>
+                  </form>
+
+                  <!-- Friend uname -->
+                  <a href="{{ friend.url }}" style="color: #999; display: inline-block; width: 100px;">
+                    {{ friend.uname }}
+                  </a>
+                </td>
+                <td class="text-right">
+                  <small>{{ macros.onlineStatus(ctx, friend, true) }}</small>
+                </td>
+              </tr>
+            {% endfor %}
+
+            {% if friendships.ghosts.length > 0 and friendships.nonghosts.length > 0 %}
+              <tr>
+                <td colspan="2">
+                  <hr>
+                </td>
+              </tr>
+            {% endif %}
+
+            {% for friendship in friendships.nonghosts %}
               {% set friend = friendship.to_user %}
               <tr>
                 <td>
@@ -51,8 +83,12 @@
             </table>
             {% set friend = undefined %}
           {% else %}
-            You have no friends.
-            <br>To add a friend, visit their user profile and click the "Add Friend" button.
+            <div class="well text-center">
+              <p class="lead">
+                You have no friends.
+              </p>
+              To add a friend, visit their user profile and click the "Add Friend" button.
+            </div>
           {% endif %}
         </div>
 

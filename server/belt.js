@@ -520,3 +520,17 @@ exports.timeout = function (ms) {
 exports.daysAgo = function (date) {
   return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24))
 }
+
+////////////////////////////////////////////////////////////
+
+// Returns true if user has logged in 0-12 hrs ago
+exports.withinGhostRange = (() => {
+  const hours12 = 1000 * 60 * 60 * 12
+
+  return function (lastOnlineAt) {
+    // User hasn't loggin in since relaunch
+    if (!lastOnlineAt) return false
+    assert(lastOnlineAt instanceof Date)
+    return Date.now() - lastOnlineAt.getTime() < hours12
+  }
+})()

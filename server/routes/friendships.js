@@ -6,6 +6,7 @@ const Router = require('koa-router')
 // 1st
 const db = require('../db')
 const pre = require('../presenters')
+const belt = require('../belt')
 
 const router = new Router()
 
@@ -55,8 +56,19 @@ router.get('/me/friendships', async (ctx) => {
   ctx.assert(ctx.currUser.role !== 'banned', 404)
 
   // load friendships
-  const friendships = await db.findFriendshipsForUserId(ctx.currUser.id)
+  const friendships = { count: 0, ghosts: [], nonghosts: [] }
+
+  const rows = await db.findFriendshipsForUserId(ctx.currUser.id)
     .then((xs) => xs.map(pre.presentFriendship))
+
+  rows.forEach((row) => {
+    friendships.count += 1
+    if (row.to_user.is_ghost && belt.withinGhostRange(row.to_user.last_online_at)) {
+      friendships.ghosts.push(row)
+    } else {
+      friendships.nonghosts.push(row)
+    }
+  })
 
   // render
   await ctx.render('me_friendships', {

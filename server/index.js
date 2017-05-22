@@ -688,10 +688,19 @@ router.get('/', async (ctx) => {
   }
 
   // Get users friends for the sidebar
-  var friendships
+  const friendships = { count: 0, ghosts: [], nonghosts: [] }
   if (ctx.currUser) {
-    friendships = (await db.findFriendshipsForUserId(ctx.currUser.id, 10))
+    const rows = (await db.findFriendshipsForUserId(ctx.currUser.id, 10))
       .map(pre.presentFriendship)
+
+    rows.forEach((row) => {
+      friendships.count += 1
+      if (row.to_user.is_ghost && belt.withinGhostRange(row.to_user.last_online_at)) {
+        friendships.ghosts.push(row)
+      } else {
+        friendships.nonghosts.push(row)
+      }
+    })
   }
 
   await ctx.render('homepage', {

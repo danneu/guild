@@ -529,14 +529,34 @@
     <div class="panel-body">
       <h4 style="margin-bottom: 20px;" class="text-center">
         Your Friends
-        {% if friendships.length > 0 %}
+        {% if friendships.count > 0 %}
           <br>
           <small>10 Most Recent</small>
         {% endif %}
       </h4>
-      {% if friendships.length > 0 %}
+      {% if friendships.count > 0 %}
         <table style="width: 100%;">
-        {% for friendship in friendships %}
+        {% for friendship in friendships.ghosts %}
+          {% set friend = friendship.to_user %}
+          <tr>
+            <td>
+              <a href="{{ friend.url }}" style="color: #999; display: inline-block; width: 100px;">
+                {{ friend.uname }}
+              </a>
+            </td>
+            <td class="text-right">
+              <small>{{ onlineStatus(ctx, friend, true) }}</small>
+            </td>
+          </tr>
+        {% endfor %}
+        {% if friendships.ghosts.length > 0 and friendships.nonghosts.length > 0 %}
+          <tr>
+            <td colspan="2">
+              <hr>
+            </td>
+          </tr>
+        {% endif %}
+        {% for friendship in friendships.nonghosts %}
           {% set friend = friendship.to_user %}
           <tr>
             <td>
@@ -552,7 +572,7 @@
         </table>
         {% set friend = undefined %}
 
-        {% if friendships.length > 0 %}
+        {% if friendships.count > 0 %}
           <a href="/me/friendships" style="display: block;" class="text-center text-muted">
             View All
           </a>
