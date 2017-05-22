@@ -60,6 +60,11 @@ const cache = new IntervalCache()
   .every('sitemaps', 1000 * 60 * 60 * 12, async () => {
     console.log('[CACHE] Populating sitemap.txt')
     const MAX_SITEMAP_URLS = 50000
+
+    const staticPaths = [
+      '/faq'
+    ]
+
     const [topicUrls, userUrls] = await Promise.all([
       db.findAllPublicTopicUrls(),
       pool.many(sql`
@@ -70,7 +75,7 @@ const cache = new IntervalCache()
       `).then((users) => users.map((u) => pre.presentUser(u).url))
     ])
 
-    const urls = [...userUrls, ...topicUrls].map((url) => {
+    const urls = [...staticPaths, ...userUrls, ...topicUrls].map((url) => {
       return config.HOST + url
     })
 

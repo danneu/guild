@@ -1,0 +1,20 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li>
+      <a href="/">Home</a>
+    </li>
+    <li>
+      <a href="/faq">FAQ</a>
+    </li>
+  </ol>
+
+  <div class="page-header">
+    <h1>
+      Frequently Asked Questions
+    </h1>
+  </div>
+
+  {{ html | safe }}
+{% endblock %}

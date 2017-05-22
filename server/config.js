@@ -61,6 +61,8 @@ exports.USERS_PER_PAGE = parseInt(process.env.USERS_PER_PAGE, 10) || 20;
 exports.RECENT_POSTS_PER_PAGE = parseInt(process.env.RECENT_POSTS_PER_PAGE, 10) || 5;
 exports.CONVOS_PER_PAGE = parseInt(process.env.CONVOS_PER_PAGE, 10) || 10;
 
+exports.FAQ_POST_ID = parseInt(process.env.FAQ_POST_ID, 10) || undefined
+
 // Used as the sender of the welcome PM
 // On the Guild, this is set to a user named "Guild Mods" that the mods
 // can log into. You will want to periodically check this account to follow

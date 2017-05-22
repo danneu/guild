@@ -63,6 +63,7 @@ const bbcode = require('./bbcode')
 const bouncer = require('koa-bouncer')
 require('./validation')  // Load after koa-bouncer
 const services = require('./services')
+const cache2 = require('./cache2')
 
 app.use(middleware.methodOverride())
 
@@ -420,6 +421,7 @@ router.get('/search', async (ctx) => {
   })
 })
 
+app.use(require('./routes/index').routes())
 app.use(require('./routes/users').routes())
 app.use(require('./routes/convos').routes())
 app.use(require('./routes/images').routes())
@@ -1422,6 +1424,12 @@ router.put('/posts/:id', async (ctx) => {
 
   ctx.response.redirect(updatedPost.url)
 
+  // If it's the FAQ post, refresh cache
+  if (post.id === config.FAQ_POST_ID) {
+    console.log('should refresh faq post...')
+    cache2.refresh('faq-post')
+  }
+
   // Check if post is spam after response is sent
   services.antispam.process(ctx, ctx.vals.markup, post.id)
 })
@@ -1492,7 +1500,16 @@ router.put('/api/posts/:id', async (ctx) => {
 
   var updatedPost = await db.updatePost(ctx.params.id, ctx.vals.markup, html)
     .then(pre.presentPost)
+
   ctx.body = JSON.stringify(updatedPost)
+
+  // If it's the FAQ post, refresh cache
+  if (post.id === config.FAQ_POST_ID) {
+    console.log('should refresh faq post...')
+    cache2.refresh('faq-post')
+  }
+
+  // TODO: Submit to spam service like PUT /posts/:id
 })
 
 router.put('/api/pms/:id', async (ctx) => {
