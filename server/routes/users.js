@@ -278,12 +278,12 @@ router.put('/users/:slug', async (ctx) => {
     .optional();
   ctx.validateBody('avatar-url')
     .optional();
-  ctx.validateBody('custom-title')
-    .optional();
-  if (ctx.request.body['custom-title'])
+
+  if (typeof ctx.request.body['custom-title'] === 'string') {
     ctx.validateBody('custom-title')
       .tap((s) => s.trim())
-      .isLength(0, 50, 'custom-title can be up to 50 chars. Yours was ' + ctx.request.body['custom-title'].length + '.');
+      .isLength(0, 50, 'custom-title can be up to 50 chars. Yours was ' + ctx.request.body['custom-title'].length + '.')
+  }
   if (ctx.request.body['avatar-url'] && ctx.request.body['avatar-url'].length > 0)
     ctx.validateBody('avatar-url')
       .tap((s) => s.trim())
