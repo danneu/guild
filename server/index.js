@@ -1588,7 +1588,7 @@ router.get('/posts/:postId', async (ctx) => {
   // a smart redirect, ignoring hidden posts.
   if (cancan.cannot(ctx.currUser, 'READ_POST', post) && post.is_hidden) {
     ctx.flash = {
-      message: ['warning', 'The post you tried to navigate to has been hidden. It was possibly spam.']
+      message: ['warning', 'The post you tried to navigate to has been hidden.']
     }
     ctx.redirect(`/topics/${post.topic_id}`)
     return

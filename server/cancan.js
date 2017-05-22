@@ -5,6 +5,8 @@ var util = require('util');
 var _ = require('lodash');
 var debug = require('debug')('app:cancan');
 var assert = require('better-assert');
+// 1st
+const belt = require('./belt')
 
 // These are forums where topics cannot be posted
 // in if the latest post is older than 1 month
@@ -312,12 +314,23 @@ function can(user, action, target) {
     case 'UNHIDE_POST':
     case 'HIDE_POST':
       if (!user) return false;
+      assert(target.topic)
+      // Cannot hide a post if it is the last post in this topic/RP
+      if (target.topic && target.topic.posts_count === 1) {
+        return false
+      }
       // Staff can hide/unhide
       if (isStaffRole(user.role)) return true;
       // So can conmods
       if (user.role === 'conmod') return true;
       // So can arena mods
       if (user.role === 'arenamod') return true
+      // Users can hide their own post if the post within 10 minutes
+      // Caution: remember to handle the case where this is the last unhidden
+      // post in a topic.
+      if (user.id === target.user_id && belt.isNewerThan(target.created_at, { minutes: 10 })) {
+        return true
+      }
       return false;
     // Topic state
     case 'STICK_TOPIC':

@@ -224,8 +224,6 @@ CREATE TRIGGER post_inserted_or_deleted
 -- When a post transitions to is_hidden = true, update
 -- topic.latest_post_id and forum.latest_post_id
 
--- TODO: Also update posts_counts when a post is hidden
-
 CREATE OR REPLACE FUNCTION on_post_hidden() RETURNS trigger AS
 $$
   var q, rows
@@ -253,7 +251,11 @@ $$
     '      SELECT id FROM posts '+
     '      WHERE is_hidden = false AND topic_id = $1 AND type = \'char\' '+
     '      ORDER BY id DESC LIMIT 1 '+
-    '    ) '+
+    '    ), '+
+    '    posts_count = (SELECT COUNT(*) FROM posts WHERE is_hidden = false AND topic_id = $1), '+
+    '    ic_posts_count = (SELECT COUNT(*) FROM posts WHERE is_hidden = false AND topic_id = $1 AND type = \'ic\'), '+
+    '    ooc_posts_count = (SELECT COUNT(*) FROM posts WHERE is_hidden = false AND topic_id = $1 AND type = \'ooc\'), '+
+    '    char_posts_count = (SELECT COUNT(*) FROM posts WHERE is_hidden = false AND topic_id = $1 AND type = \'char\') '+
     'WHERE id = $1 '+
     'RETURNING forum_id '+
     '';

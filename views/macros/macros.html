@@ -814,6 +814,7 @@
                 </div>
                 <!-- Latest post -->
                 <div class="col-sm-3">
+                  {% if topic.latest_post %}
                   <div class="latest-post text-right">
                     Latest:
                       by <a href="{{ topic.latest_user.url }}" style="color: #fff">{{ topic.latest_user.uname }}</a>
@@ -826,6 +827,11 @@
                       {{ topic.latest_post.created_at|formatDate }}
                     </abbr>
                   </div>
+                  {% else %}
+                  <div class="text-right text-muted">
+                    None
+                  </div>
+                  {% endif %}
                 </div>
               {% endif %} <!-- /if moved -->
             </div> <!-- /.row -->
@@ -952,6 +958,7 @@
                 </div>
                 <!-- Latest post -->
                 <div class="col-sm-4">
+                  {% if topic.latest_post %}
                   <div class="latest-post text-right">
                     Latest:
                       <span class="by-line">
@@ -966,6 +973,11 @@
                       {{ topic.latest_post.created_at|formatDate }}
                     </abbr>
                   </div>
+                  {% else %}
+                  <div class="text-right text-muted">
+                    None
+                  </div>
+                  {% endif %}
                 </div>
               {% endif %} <!-- /if moved -->
             </div> <!-- /.row -->
@@ -1035,6 +1047,7 @@
                 </div>
                 <!-- Latest post -->
                 <div class="col-sm-4">
+                  {% if topic.latest_post %}
                   <div class="latest-post text-right">
                     Latest:
                       <span class="by-line">
@@ -1049,6 +1062,11 @@
                       {{ topic.latest_post.created_at|formatDate }}
                     </abbr>
                   </div>
+                  {% else %}
+                  <div class="text-right text-muted">
+                    None
+                  </div>
+                  {% endif %}
                 </div>
               {% endif %} <!-- /if moved -->
             </div> <!-- /.row -->

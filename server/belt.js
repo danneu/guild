@@ -30,6 +30,7 @@ Date.prototype.toUTCDate = function() {
 };
 
 exports.isNewerThan = function(nowDate, opts) {
+  assert(nowDate instanceof Date)
   var result = nowDate.toUTCDate() > exports.pastDate(new Date(), opts).toUTCDate();
   return result;
 };
