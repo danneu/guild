@@ -40,3 +40,8 @@ a:hover {
 .table-super-condensed > tfoot > tr > td {
     padding: 0;
 }
+
+/* Remove redundant dotted underline, this seems to be a new thing */
+abbr[title] {
+  border-bottom: 0;
+}

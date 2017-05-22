@@ -227,11 +227,18 @@ var w;
 
   $.fn.bbcode = function(opts) {
     var $this = $(this);
+    var self = this;
 
     opts = opts || {};
 
     if (!opts.charLimit)
       console.error('charLimit not set on editor');
+
+    if (opts.storageKey) {
+      console.log('autosave enabled, storageKey:', opts.storageKey);
+    } else {
+      console.log('autosave not enabled, storageKey not defined');
+    }
 
     var charLimit = parseInt(opts.charLimit);
 
@@ -278,6 +285,63 @@ var w;
             e.setSelection(start + 1, start + 1);
           }
         });
+
+        // Inject our autosave info div at end of header (after buttons)
+        var $autosaveMetaEl = $('<div class="autosave-meta"></div>');
+        e.$editor.find('.md-header').append($autosaveMetaEl);
+        $autosaveMetaEl.css('margin-left', '10px');
+        $autosaveMetaEl.css('margin-top', '5px');
+        $autosaveMetaEl.css('color', '#111');
+        $autosaveMetaEl.css('float', 'left');
+        if (opts.storageKey) {
+          $autosaveMetaEl.text('Autosaving every 5 secs');
+        } else {
+          $autosaveMetaEl.text('Autosave not supported for this form');
+        }
+
+        // Everything past this point deals with autosaving which cannot
+        // happen unless storageKey is defined
+        if (!opts.storageKey) {
+          return
+        }
+
+        // On editor load, check to see if anything exists for this storageKey
+        var markupFromStorage = postDrafts.get(opts.storageKey)
+        if (markupFromStorage) {
+          console.log('Loaded', markupFromStorage.length, 'chars from storage');
+          e.setContent(markupFromStorage);
+          e.$element.focus();
+        } else {
+          console.log('Nothing was in storage');
+        }
+
+        // -> hh:mm:ss
+        var getTimestamp = function() {
+          var d = new Date();
+          var hh = d.getHours() > 12 ? d.getHours() - 12 : d.getHours();
+          var mm = d.getMinutes();
+          var ss = d.getSeconds();
+          var ampm = d.getHours() >= 12 ? 'pm' : 'am'
+          return [
+            _.padStart(hh, 2, '0'),
+            _.padStart(mm, 2, '0'),
+            _.padStart(ss, 2, '0')
+          ].join(':') + ampm
+        };
+
+        var autosaveInterval;
+
+        e.$element.on('keydown', function(ev) {
+          if (e.isDirty() && !autosaveInterval)
+            autosaveInterval = setInterval(function() {
+              console.log('saving to storageKey:', opts.storageKey);
+              var markup = e.getContent();
+              var ttl = 1000 * 60 * 60 * 6; // 6 hours
+              postDrafts.set(opts.storageKey, markup, ttl)
+              $autosaveMetaEl.text('Autosaved ' + markup.length + ' chars at ' + getTimestamp());
+            }, 5000);
+        });
+
       },
       onPreview: function(e) {
         // if (!e.isDirty())

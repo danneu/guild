@@ -44,6 +44,7 @@ gulp.task('build-css', ['copy-fonts'], () => {
 
 gulp.task('build-js', () => {
   const jsPaths = [
+    'public/vendor/lodash-4.17.4.min.js',
     'public/vendor/jquery/jquery-2.1.3.min.js',
     'public/vendor/jquery-hotkeys/jquery.hotkeys.js',
     'public/vendor/timeago/jquery.timeago.js',
@@ -57,7 +58,9 @@ gulp.task('build-js', () => {
     'public/vendor/xbbcode/xbbcode/bbcode.js', // Symlinked to server/bbcode.js
     // Don't bundle typeahead since it's just used on edit_topic.js right now
     // 'public/vendor/typeahead/typeahead.bundle.js',
-    'public/js/bbcode_editor.js'
+    'public/js/bbcode_editor.js',
+    // Draft Auto-save
+    'public/js/store/index.js'
   ]
   return gulp.src(jsPaths)
     .pipe(concat('all.js'))

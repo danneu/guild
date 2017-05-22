@@ -1147,7 +1147,7 @@ router.post('/topics/:topicSlug/posts', middleware.ratelimit(), /* middleware.en
                   mentionNotificationsCount, quoteNotificationsCount)]
   }
 
-  ctx.response.redirect(post.url)
+  ctx.response.redirect(post.url + '?created=true')
 
   // Check if post is spam in the background
   services.antispam.process(ctx, post.markup, post.id)
@@ -1591,6 +1591,9 @@ router.post('/posts/:postId/:status', async (ctx) => {
 // mods can.
 // - Keep this in sync with /pms/:pmId
 //
+// If it has ?created=true query, then add it onto redirect:
+// /posts/:id#post-:id&created=true
+// and take it off client-side.
 router.get('/posts/:postId', async (ctx) => {
   // "/posts/1234]" is such a common issue that we should fix it
   ctx.params.postId = Number.parseInt(ctx.params.postId, 10)
@@ -1623,6 +1626,15 @@ router.get('/posts/:postId', async (ctx) => {
                   '?page=' +
                   Math.ceil((post.idx + 1) / config.POSTS_PER_PAGE) +
                   '#post-' + post.id
+  }
+
+  // Handle ?created=true
+  if (ctx.query.created) {
+    if (/#/.test(redirectUrl)) {
+      redirectUrl += '&created=true'
+    } else {
+      redirectUrl += '#created=true'
+    }
   }
 
   if (ctx.currUser) {

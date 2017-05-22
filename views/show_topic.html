@@ -560,6 +560,9 @@
   {% if can(ctx.currUser, 'CREATE_POST', topic) %}
     <a name="new-reply-form"></a>
     <h2 style="display: inline-block;">New Reply</h2>
+    <p style="color: #3498db; margin-left: 15px; margin-right: 15px;">
+      [22 May 2017]: Posts now autosave in your browser. Contact <a href="/users/mahz">Mahz</a> if you have issues.
+    </p>
     <button type="button" class="btn btn-default btn-xs"
             onclick="togglePostHint()"
             style="display: inline-block; margin-left: 10px; margin-bottom: 10px;">
@@ -651,13 +654,45 @@ $('#new-reply').submit(function() {
 });
 </script>
 
+
+  {#
+    Before we initialize the bbcode editor, set the storageKey
+    but first check to see if hash fragment wants us to delete it.
+  #}
+  <script>
+    // Accessed later when initializing .bbcode()
+    var storageKey = '/topics/{{ topic.id }}/{{ postType }}'
+
+    function getHashParams() {
+        var hashParams = {};
+        var e,
+            a = /\+/g,  // Regex for replacing addition symbol with a space
+            r = /([^&;=]+)=?([^&;]*)/g,
+            d = function (s) { return decodeURIComponent(s.replace(a, " ")); },
+            q = window.location.hash.substring(1);
+
+        while (e = r.exec(q))
+          hashParams[d(e[1])] = d(e[2]);
+
+        return hashParams;
+    }
+
+   // If URL contains fragment hash (#|&)created=true
+   // delete postsDrafts entry
+   // and remove it from hash params
+   if (getHashParams()['created']) {
+     window.location.hash = window.location.hash.replace(/(#|&)created=true/, '')
+     postDrafts.remove(storageKey)
+   }
+  </script>
+
   {% if can(ctx.currUser, 'CREATE_POST', topic) %}
     <script type="text/javascript">
       // Turn the new post editor into a bbcode editor
 
       var $M = $('#markup-input').bbcode({
         charLimit: {{ ctx.config.MAX_POST_LENGTH }},
-        storageKey: 'topic:{{ topic.id }}:{{ postType }}'
+        storageKey: storageKey
       });
 
       $('.post-mention-btn').on('click', function(e) {
