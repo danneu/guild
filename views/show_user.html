@@ -186,25 +186,9 @@
           <div class="media-body">
             <!-- Stats list -->
             <ul>
-                {% if user.is_ghost %}
-                  {% if can(ctx.currUser, 'READ_USER_ONLINE_STATUS', user) %}
-                    <li>Last Seen: <span style="color: #000">Invisible</span></li>
-                  {% endif %}
-                {% else %}
-                  <li>Last Seen:
-                    {% if user.last_online_at %}
-                      {% if user.last_online_at.getTime() >= Date.now() - (1000 * 60 * 15) %}
-                        <span style="color: #3BB878">Online now</span>
-                      {% else %}
-                        <abbr class="timeago" title="{{ user.last_online_at.toISOString() }}">
-                          {{ user.last_online_at|formatDate }}
-                        </abbr>
-                      {% endif %}
-                    {% else %}
-                      Hasn't logged in since relaunch
-                    {% endif %}
-                  </li>
-                {% endif %}
+              <li>
+                Last Seen:
+                {{ macros.onlineStatus(ctx, user, true) }}
               </li>
               {% if user.oldguild_uname %}
                 <li>Old Guild Username: {{ user.oldguild_uname }}</li>

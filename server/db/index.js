@@ -2961,7 +2961,8 @@ SELECT
     'uname', u1.uname,
     'last_online_at', u1.last_online_at,
     'avatar_url', u1.avatar_url,
-    'slug', u1.slug
+    'slug', u1.slug,
+    'is_ghost', u1.is_ghost
   ) "to_user"
 FROM friendships
 JOIN users u1 ON friendships.to_user_id = u1.id
