@@ -251,11 +251,7 @@ $$
     '      SELECT id FROM posts '+
     '      WHERE is_hidden = false AND topic_id = $1 AND type = \'char\' '+
     '      ORDER BY id DESC LIMIT 1 '+
-    '    ), '+
-    '    posts_count = (SELECT COUNT(*) FROM posts WHERE is_hidden = false AND topic_id = $1), '+
-    '    ic_posts_count = (SELECT COUNT(*) FROM posts WHERE is_hidden = false AND topic_id = $1 AND type = \'ic\'), '+
-    '    ooc_posts_count = (SELECT COUNT(*) FROM posts WHERE is_hidden = false AND topic_id = $1 AND type = \'ooc\'), '+
-    '    char_posts_count = (SELECT COUNT(*) FROM posts WHERE is_hidden = false AND topic_id = $1 AND type = \'char\') '+
+    '    ) '+
     'WHERE id = $1 '+
     'RETURNING forum_id '+
     '';
