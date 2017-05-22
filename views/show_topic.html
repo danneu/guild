@@ -1035,7 +1035,7 @@ $(function () {
   <script>
     var buildPopoverContent = function() {
       var post_id = $(this).attr('data-post-id');
-      var html = '<input class="form-control permalink-input" type="text" value="https://www.roleplayerguild.com/posts/' + post_id + '" readonly><br><small>Use this to link people directly to this post</small><br><div class="text-center"><button type="button" class="permalink-close btn btn-default btn-xs">Close</button></div>';
+      var html = '<input class="form-control permalink-input" type="text" value="{{ config.HOST }}/posts/' + post_id + '" readonly><br><small>Use this to link people directly to this post</small><br><div class="text-center"><button type="button" class="permalink-close btn btn-default btn-xs">Close</button></div>';
       return html;
     }
 
