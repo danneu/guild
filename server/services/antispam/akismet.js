@@ -11,7 +11,7 @@ async function analyze (ctx, markup) {
   assert(ctx.currUser)
   assert(typeof markup === 'string')
 
-  const result = await Promise.race([
+  return await Promise.race([
     belt.timeout(10000).then(() => 'API_TIMEOUT'),
     akismet.checkComment({
       commentType: 'reply',
