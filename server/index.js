@@ -1668,7 +1668,6 @@ router.get('/posts/:postId', async (ctx) => {
     ctx.currUser.notifications_count -= notificationsDeletedCount
   }
 
-  ctx.status = 301
   ctx.response.redirect(redirectUrl)
 })
 
