@@ -34,26 +34,36 @@ exports.currUser = function () {
 // Flash data persists in user's sessions until the next ~successful response
 exports.flash = function (cookieName = 'flash') {
   return async (ctx, next) => {
-    let data
+    let data = {}
+
     if (ctx.cookies.get(cookieName)) {
-      data = JSON.parse(decodeURIComponent(ctx.cookies.get(cookieName)))
-    } else {
-      data = {}
+      try {
+        data = JSON.parse(decodeURIComponent(ctx.cookies.get(cookieName)))
+      } catch (err) {
+        // If cookie had a value but was not JSON, then trash the cookie
+        ctx.cookies.set(cookieName, null)
+      }
     }
 
     Object.defineProperty(ctx, 'flash', {
       enumerable: true,
-      get: function () {
+      get: () => {
         return data
       },
-      set: function (val) {
-        ctx.cookies.set(cookieName, encodeURIComponent(JSON.stringify(val)))
+      set: (val) => {
+        const encodedVal = encodeURIComponent(JSON.stringify(val))
+        ctx.cookies.set(cookieName, encodedVal, {
+          // Expire flash cookie in 10 seconds to avoid stale cookie
+          maxAge: 10 * 1000
+        })
       }
     })
 
     await next()
 
-    if (ctx.response.status < 300) {
+    // Clear flash cookie on successful response *and* if the cookie is
+    // not already cleared
+    if (ctx.response.status < 300 && ctx.cookies.get(cookieName) !== undefined) {
       ctx.cookies.set(cookieName, null)
     }
   }
