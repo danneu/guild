@@ -334,11 +334,21 @@ function showConvosHandler (folder) {
 
     ctx.assert(ctx.currUser, 404)
 
-    const [convos, counts] = await Promise.all([
+    const [convos, counts, cps] = await Promise.all([
       db.convos.findConvosInvolvingUserId(ctx.currUser.id, folder, ctx.vals.page)
         .then((xs) => xs.map(pre.presentConvo)),
-      db.convos.getConvoFolderCounts(ctx.currUser.id)
+      db.convos.getConvoFolderCounts(ctx.currUser.id),
+      // Lets us show which folder has new convos/pms and which convos they are
+      db.convos.getConvoParticipantsWithNotifications(ctx.currUser.id)
+        .then((xs) => _.groupBy(xs, 'folder'))
     ])
+
+    // Add has_unread key for view
+    convos.forEach((c) => {
+      if (cps[folder] && cps[folder].some((x) => x.convo_id === c.id)) {
+        c.has_unread = true
+      }
+    })
 
     const itemsInFolder = counts[`${folder.toLowerCase()}_count`]
     const fullPaginator = paginate.makeFullPaginator(ctx.vals.page, itemsInFolder)
@@ -346,6 +356,7 @@ function showConvosHandler (folder) {
     var nextBeforeId = convos.length > 0 ? _.last(convos).latest_pm_id : null
     await ctx.render('me_convos', {
       ctx,
+      cps,
       title: 'My Private Conversations',
       counts,
       folderEmpty: itemsInFolder === 0,

@@ -49,7 +49,15 @@
             <span class="glyphicon glyphicon-inbox"></span>
             &nbsp;
             Inbox
-            <span class="badge">{{ counts.inbox_count }}</span>
+            <span class="badge">
+              {% if cps['INBOX'] %}
+                <span style="color: #3BB878">
+                  {{ cps['INBOX'].length }} new
+                </span>
+                /
+              {% endif %}
+              {{ counts.inbox_count }}
+            </span>
           </a>
         </li>
         <li class="
@@ -60,7 +68,15 @@
             <span class="glyphicon glyphicon-star"></span>
             &nbsp;
             Starred
-            <span class="badge">{{ counts.star_count }}</span>
+            <span class="badge">
+              {% if cps['STAR'] %}
+                <span style="color: #3BB878">
+                  {{ cps['STAR'].length }} new
+                </span>
+                /
+              {% endif %}
+              {{ counts.star_count }}
+            </span>
           </a>
         </li>
         <li class="
@@ -71,7 +87,15 @@
             <span class="glyphicon glyphicon-folder-open"></span>
             &nbsp;
             Archived
-            <span class="badge">{{ counts.archive_count }}</span>
+            <span class="badge">
+              {% if cps['ARCHIVE'] %}
+                <span style="color: #3BB878">
+                  {{ cps['ARCHIVE'].length }} new
+                </span>
+                /
+              {% endif %}
+              {{ counts.archive_count }}
+            </span>
           </a>
         </li>
         <li class="
@@ -88,7 +112,15 @@
                   Delete All Trash
                 </button>
               </form>
-            <span class="badge">{{ counts.trash_count }}</span>
+              <span class="badge">
+                {% if cps['TRASH'] %}
+                  <span style="color: #3BB878">
+                    {{ cps['TRASH'].length }} new
+                  </span>
+                  /
+                {% endif %}
+                {{ counts.trash_count }}
+              </span>
           </a>
         </li>
       </ul>
@@ -206,6 +238,9 @@
               <div class="col-sm-2">
                 <small class="text-muted">
                   {{ convo.pms_count }} Messages
+                  {% if convo.has_unread %}
+                    <span class="unread-posts-tag">!</span>
+                  {% endif %}
                 </small>
               </div>
               <div class="col-sm-3 text-right">

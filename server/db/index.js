@@ -1379,12 +1379,6 @@ exports.getStats = async function () {
   return {topicsCount, usersCount, postsCount, latestUser, onlineUsers}
 }
 
-/* exports.deleteUser = async function (id) {
- *   const sql = 'DELETE FROM users WHERE id = $1';
- *   return yield query(sql, [id]);
- * };
- * */
-
 exports.deleteLegacySig = async function (userId) {
   return pool.query(sql`
     UPDATE users SET legacy_sig = NULL WHERE id = ${userId}

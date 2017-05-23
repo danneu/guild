@@ -35,13 +35,25 @@ exports.getConvos = async (ids) => {
 
 ////////////////////////////////////////////////////////////
 
+// Also clears notifications associated with those convos
 exports.deleteTrash = async function (userId) {
-  return pool.query(sql`
-    UPDATE convos_participants
-    SET deleted_at = NOW()
-    WHERE user_id = ${userId}
-      AND folder = 'TRASH'
-  `)
+  return pool.withTransaction(async (client) => {
+    const convoIds = await client.many(sql`
+      UPDATE convos_participants
+      SET deleted_at = NOW()
+      WHERE user_id = ${userId}
+        AND folder = 'TRASH'
+      RETURNING convo_id
+    `).then((rows) => rows.map((row) => row.convo_id))
+
+    if (convoIds.length > 0) {
+      await client.query(sql`
+        DELETE FROM notifications
+        WHERE to_user_id = ${userId}
+          AND convo_id = ANY (${convoIds})
+      `)
+    }
+  })
 }
 
 ////////////////////////////////////////////////////////////
@@ -56,6 +68,19 @@ exports.deleteConvos = async (userId, convoIds) => {
     SET deleted_at = NOW()
     WHERE user_id = ${userId}
       AND convo_id = ANY (${convoIds}::int[])
+  `)
+}
+
+////////////////////////////////////////////////////////////
+
+exports.getConvoParticipantsWithNotifications = async function (userId) {
+  assert(Number.isInteger(userId))
+  return pool.many(sql`
+    select cp.*
+    from convos_participants cp
+    join notifications n ON cp.convo_id = n.convo_id AND cp.user_id = ${userId}
+    join users u on n.to_user_id = u.id
+    where u.id = ${userId}
   `)
 }
 

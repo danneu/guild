@@ -146,6 +146,11 @@ CREATE TABLE topics (
 
 CREATE TYPE post_type AS ENUM ('ic', 'ooc', 'char');
 
+-- IDEA: UPDATE topics SET  next_idx = next_idx  + 1 RETURNING next_idx
+--       to prevent race-conditions. With my current idx update trigger,
+--       it has a race, but since there's a unique index on the idx,
+--       I can simply retry on unique violation.
+
 CREATE TABLE posts (
   id         serial PRIMARY KEY,
   text       text NULL,  -- Deprecated
