@@ -359,7 +359,19 @@
   {# For my own debugging for now #}
   {% if ctx.currUser.role == 'admin' %}
     <script>
-    $('#post-drafts-debug').text(postDrafts.keys().length + ' drafts saved')
+     var keys = postDrafts.keys()
+     var html = '<p>'+keys.length + ' drafts saved</p>'
+
+      if (keys.length > 0) {
+        html += '<ul>'
+        html += '</ul>'
+      }
+
+      keys.forEach(function (key) {
+        html += '<li><a href="'+key+'">'+key+'</a></li>'
+      })
+
+     $('#post-drafts-debug').html(html)
     </script>
   {% endif %}
 
