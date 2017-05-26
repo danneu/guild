@@ -59,7 +59,7 @@
   </div>
 
   <!-- Pagination -->
-  {{ paginate.render(currPage, totalPages, ctx.request.path) }}
+  {{ paginate.render(currPage, totalPages, ctx.request.path, '', '#hi') }}
 
   <div class="page-header" style="border: 0">
     <h2><a href="{{ convo.url }}" style="color: #fff">{{ convo.title }}</a></h2>
@@ -176,7 +176,7 @@
   </div>
 
   <!-- Pagination -->
-  {{ paginate.render(currPage, totalPages, ctx.request.path) }}
+  {{ paginate.render(currPage, totalPages, ctx.request.path, '', '#hi') }}
 
   <!-- New post forum -->
 
@@ -360,5 +360,35 @@ $(function() {
     return false;
   });
 });
+  </script>
+
+  <script>
+   var $el
+   if (window.location.hash === '#hi') {
+     $el = $('input[name="page"]').first()
+   } else if (window.location.hash === '#lo') {
+     $el = $('input[name="page"]').last()
+   }
+   if ($el) {
+     $el.focus().select()
+     removeHash()
+   }
+
+    function removeHash () {
+        var scrollV, scrollH, loc = window.location;
+        if ("pushState" in history)
+            history.pushState("", document.title, loc.pathname + loc.search);
+        else {
+            // Prevent scrolling by storing the page's current scroll offset
+            scrollV = document.body.scrollTop;
+            scrollH = document.body.scrollLeft;
+
+            loc.hash = "";
+
+            // Restore the scroll offset, should be flicker free
+            document.body.scrollTop = scrollV;
+            document.body.scrollLeft = scrollH;
+        }
+    }
   </script>
 {% endblock%}
