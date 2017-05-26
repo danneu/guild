@@ -32,7 +32,9 @@ router.get('/faq', async (ctx) => {
 
 ////////////////////////////////////////////////////////////
 
-async function listRoleplays (sort = 'created', selectedTagIds = [], beforeId) {
+async function listRoleplays (logic, sort, selectedTagIds = [], beforeId) {
+  assert(['any', 'all'].includes(logic))
+  assert(['bumped', 'created'].includes(sort))
   assert(Array.isArray(selectedTagIds))
   assert(typeof beforeId === 'undefined' || Number.isInteger(beforeId))
 
@@ -98,8 +100,13 @@ async function listRoleplays (sort = 'created', selectedTagIds = [], beforeId) {
     FROM (
       SELECT topics.*
       FROM topics
-      JOIN tags_topics ON topics.id = tags_topics.topic_id
-      JOIN tags ON tags_topics.tag_id = tags.id
+      , LATERAL (
+          SELECT array_agg(tt.tag_id) "tag_ids"
+          FROM tags_topics tt
+          WHERE topics.id = tt.topic_id
+          GROUP BY topics.id
+      ) s
+      JOIN tags ON tags.id = ANY (s.tag_ids)
       WHERE topics.forum_id IN (3, 4, 5, 6, 7, 42, 39)
         AND topics.is_hidden = false
     `
@@ -112,7 +119,9 @@ async function listRoleplays (sort = 'created', selectedTagIds = [], beforeId) {
     )
     .append(
       selectedTagIds.length > 0
-      ? sql`AND tags_topics.tag_id = ANY (${selectedTagIds})`
+      ? logic === 'any'
+        ? sql`AND tags.id = ANY (${selectedTagIds})`
+        : sql`AND ${selectedTagIds} <@ s.tag_ids`
       : _raw``
     )
     .append(sql`GROUP BY topics.id`)
@@ -164,7 +173,11 @@ router.get('/roleplays', async (ctx) => {
     .toInt()
     .val()
 
-  const roleplays = await listRoleplays(sort, selectedTagIds, beforeId)
+  const logic = ctx.validateQuery('logic')
+    .tap((v) => ['any', 'all'].includes(v) ? v : 'any')
+    .val()
+
+  const roleplays = await listRoleplays(logic, sort, selectedTagIds, beforeId)
     .then((xs) => xs.map((x) => pre.presentTopic(x)))
 
   const nextBeforeId = _.last(roleplays)
@@ -192,11 +205,13 @@ router.get('/roleplays', async (ctx) => {
   await ctx.render('list_roleplays', {
     ctx,
     roleplays,
+    // pagination
     beforeId,
     nextBeforeId,
     firstPageUrl,
     nextPageUrl,
     // tag filter
+    logic,
     sort,
     tagGroups,
     selectedTagIds,
