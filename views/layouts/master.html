@@ -223,8 +223,11 @@
     <div class="text-center" style="margin-top: 100px;">
       &copy; 2007-2017
       <div><a href="/bbcode">BBCode Cheatsheet</a></div>
-      <div id="post-drafts-debug"></div>
     </div>
+
+    {% if ctx.currUser %}
+      <div id="post-drafts-debug" class="text-center" style="margin-top: 25px;"></div>
+    {% endif %}
 
   </div> <!-- /container -->
 
@@ -356,22 +359,32 @@
     }
   </script>
 
-  {# For my own debugging for now #}
-  {% if ctx.currUser.role == 'admin' %}
+  {% if ctx.currUser %}
     <script>
-     var keys = postDrafts.keys()
-     var html = '<p>'+keys.length + ' drafts saved</p>'
+      var keys = postDrafts.keys()
+      var html = '<p>'+keys.length + ' drafts saved (for 6 hours max)</p>'
 
-      if (keys.length > 0) {
-        html += '<ul>'
-        html += '</ul>'
-      }
+      html += '<ul class="list-unstyled">'
 
       keys.forEach(function (key) {
-        html += '<li><a href="'+key+'">'+key+'</a></li>'
+        html += '<li>- <a href="'+key+'">'+key+'</a></li>'
       })
 
-     $('#post-drafts-debug').html(html)
+      html += '</ul>'
+
+      if (keys.length > 0) {
+        html += '<button class="btn btn-default btn-xs">Clear</button>'
+      }
+
+      $('#post-drafts-debug').html(html)
+
+      if (keys.length > 0) {
+        $('#post-drafts-debug button').on('click', function (e) {
+          postDrafts.clear()
+          $('#post-drafts-debug').remove()
+        })
+      }
+
     </script>
   {% endif %}
 
