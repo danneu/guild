@@ -997,3 +997,14 @@ CREATE INDEX CONCURRENTLY posts_vector ON posts
 USING gin(to_tsvector('english', strip_quotes(markup)))
 WHERE is_hidden = false
   AND markup IS NOT NULL;
+
+------------------------------------------------------------
+------------------------------------------------------------
+
+CREATE TABLE forum_mods (
+  id             serial           PRIMARY KEY,
+  user_id        int              NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  forum_id       int              NOT NULL REFERENCES forums(id) ON DELETE CASCADE,
+  created_at     timestamptz      NOT NULL DEFAULT NOW(),
+  UNIQUE(forum_id, user_id)
+);

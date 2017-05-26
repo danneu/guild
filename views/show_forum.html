@@ -22,6 +22,19 @@
     {% if forum.description %}
       <div class="hidden-xs">{{ forum.description }}</div>
     {% endif %}
+    {% if forum.mods and forum.mods.length > 0 %}
+      <img src="/img/arms.png">
+      Forum Mods:
+      <ul class="list-inline" style="display: inline-block">
+      {% for user in forum.mods %}
+        <li>
+          <a href="{{ user.url }}">
+            {{ user.uname }}
+          </a>
+        </li>
+      {% endfor %}
+      </ul>
+    {% endif %}
   </div>
 
   {% if arenaLeaderboard %}

@@ -131,6 +131,20 @@ class Cache {
 ////////////////////////////////////////////////////////////
 
 const cache = new Cache()
+  // 10 minutes
+  .every('forum-mods', 1000 * 60 * 10, async () => {
+    // maps forumId -> [User]
+    const mapping = {}
+    const rows = await db.allForumMods()
+    rows.forEach((row) => {
+      if (mapping[row.forum_id]) {
+        mapping[row.forum_id].push(row.user)
+      } else {
+        mapping[row.forum_id] = [row.user]
+      }
+    })
+    return mapping
+  }, {})
 
 if (config.FAQ_POST_ID) {
   // 1 hour

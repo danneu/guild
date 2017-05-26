@@ -906,6 +906,9 @@ router.get('/forums/:forumSlug', async (ctx) => {
   var forum = await db.findForum(forumId).then(pre.presentForum)
   ctx.assert(forum, 404)
 
+  forum.mods = cache2.get('forum-mods')[forum.id] || []
+  pre.presentForum(forum)
+
   // Redirect to canonical slug
   var expectedSlug = belt.slugify(forum.id, forum.title)
   if (ctx.params.forumSlug !== expectedSlug) {
@@ -1434,6 +1437,7 @@ router.put('/topics/:topicSlug/status', async (ctx) => {
   var status = ctx.request.body.status
   ctx.assert(STATUS_WHITELIST.includes(status), 400, 'Invalid status')
   var topic = await db.findTopic(topicId)
+  topic.mods = cache2.get('forum-mods')[topic.forum_id] || []
   ctx.assert(topic, 404)
   var action = status.toUpperCase() + '_TOPIC'
   ctx.assertAuthorized(ctx.currUser, action, topic)
@@ -1889,11 +1893,12 @@ router.get('/topics/:slug/:postType', async (ctx) => {
     return ctx.response.redirect(redirectUrl)
   }
 
-  // Get viewers and posts in parallel
   const [viewers, posts] = await Promise.all([
     db.findViewersForTopicId(topic.id),
     db.findPostsByTopicId(topicId, ctx.params.postType, page)
   ])
+
+  topic.mods = cache2.get('forum-mods')[topic.forum_id] || []
 
   if (ctx.currUser) {
     posts.forEach((post) => {

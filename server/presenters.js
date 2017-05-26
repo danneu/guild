@@ -54,6 +54,9 @@ exports.presentForum = function (forum) {
   exports.presentForum(forum.parent_forum)
   exports.presentForum(forum.child_forum)
 
+  if (forum.mods) {
+    forum.mods.forEach(exports.presentUser)
+  }
   if (forum.topics) {
     forum.topics.forEach(exports.presentTopic)
   }

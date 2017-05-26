@@ -68,6 +68,10 @@ function can(user, action, target) {
       if (user.role === 'arenamod' && ARENA_FORUMS.includes(target.forum_id)) {
         return true
       }
+      // Can if they are forum mod
+      if ((target.mods || []).some((m) => m.id === user.id)) {
+        return true
+      }
       return false
     case 'MANAGE_TROPHY_SYSTEM': // no target, intended to wrap all privs
     case 'UPDATE_TROPHY': // target is trophy
@@ -331,16 +335,19 @@ function can(user, action, target) {
        * }*/
       return false;
     // Topic state
+    case 'MOVE_TOPIC':
+      if (!user) return false
+      if (isStaffRole(user.role)) return true
+      return false
     case 'STICK_TOPIC':
     case 'UNSTICK_TOPIC':
     case 'HIDE_TOPIC':
     case 'UNHIDE_TOPIC':
     case 'CLOSE_TOPIC':
     case 'OPEN_TOPIC':
-    case 'MOVE_TOPIC':
       // Guests cannot
       if (!user) return false;
-      // Only staff can do this
+      // Staff can do this
       if (isStaffRole(user.role)) return true;
       // Conmods can manage topics in contest forums
       if (user.role === 'conmod' && CONTEST_FORUMS.includes(target.forum_id))
@@ -348,6 +355,10 @@ function can(user, action, target) {
       // Arena mod can in arena forums
       if (user.role === 'arenamod' && ARENA_FORUMS.includes(target.forum_id))
         return true
+      // Can if they are forum mod
+      if ((target.mods || []).some((m) => m.id === user.id )) {
+        return true
+      }
       return false;
     case 'CREATE_POST': // target is topic
       if (!user) return false;
@@ -429,6 +440,8 @@ function can(user, action, target) {
         return user && (isStaffRole(user.role) || ['conmod', 'arenamod'].includes(user.role))
       else
         return true; // for now, anyone can read a non-lexus-lounge forum
+      // TODO: Forum mods should be able to read their own forum,
+      // maybe it canbe hidden from others? Unlisted while they work?
       return false;
     case 'LEXUS_LOUNGE':  // no target
       if (!user) return false;
@@ -471,10 +484,17 @@ function can(user, action, target) {
       // arenamod can read any topic in arena forums
       if (user && user.role === 'arenamod' && ARENA_FORUMS.includes(target.forum_id))
         return true
-      // Only staff can see hidden topics
-      if (target.is_hidden)
-        return user && isStaffRole(user.role);
-      if (!target.is_hidden) return true;
+      // Staff can always read hidden topics
+      if (user && target.is_hidden && isStaffRole(user.role)) {
+        return
+      }
+      // forum mods can read all tpics in their appointed forum
+      if (user && (target.mods || []).some((m) => m.id === user.id)) {
+        return true
+      }
+      if (!target.is_hidden) {
+        return true
+      }
       return false;
     case 'CREATE_CONVO':  // no target
       if (!user) return false;

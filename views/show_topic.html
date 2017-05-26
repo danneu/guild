@@ -83,10 +83,10 @@
           <input type="hidden" name="_method" value="put">
           {% if topic.is_hidden %}
             <input type="hidden" name="status" value="unhide">
-            <button type="submit" class="btn btn-warning btn-xs">Unhide</button>
+            <button type="submit" class="btn btn-warning btn-xs">Undelete</button>
           {% else %}
             <input type="hidden" name="status" value="hide">
-            <button type="submit" class="btn btn-default btn-xs">Hide</button>
+            <button type="submit" class="btn btn-default btn-xs">Delete</button>
           {% endif %}
         </form>
       {% endif %}

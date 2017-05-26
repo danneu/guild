@@ -3343,6 +3343,20 @@ exports.listTopicBans = async (topicId) => {
   `)
 }
 
+exports.allForumMods = async () => {
+  return pool.many(sql`
+    SELECT
+      fm.forum_id,
+      json_build_object(
+        'id', u.id,
+        'uname', u.uname,
+        'slug', u.slug
+      ) "user"
+    FROM users u
+    JOIN forum_mods fm ON u.id = fm.user_id
+  `)
+}
+
 // Re-exports
 
 exports.keyvals = require('./keyvals')
