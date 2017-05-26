@@ -4,7 +4,9 @@ const assert = require('better-assert')
 const Router = require('koa-router')
 const debug = require('debug')('app:routes:index')
 const {sql,_raw} = require('pg-extra')
+const _ = require('lodash')
 // 1st
+const config = require('../config')
 const cancan = require('../cancan')
 const db = require('../db')
 const cache2 = require('../cache2')
@@ -30,8 +32,9 @@ router.get('/faq', async (ctx) => {
 
 ////////////////////////////////////////////////////////////
 
-async function listRoleplays (sort = 'latest-post', selectedTagIds = []) {
+async function listRoleplays (sort = 'latest-post', selectedTagIds = [], beforeId) {
   assert(Array.isArray(selectedTagIds))
+  assert(typeof beforeId === 'undefined' || Number.isInteger(beforeId))
 
   const perPage = 20
 
@@ -95,7 +98,16 @@ async function listRoleplays (sort = 'latest-post', selectedTagIds = []) {
       JOIN tags ON tags_topics.tag_id = tags.id
       WHERE topics.forum_id IN (3, 4, 5, 6, 7, 42, 39)
         AND topics.is_hidden = false
-    `.append(
+    `
+    .append(
+      beforeId
+      ? sort === 'created'
+        ? sql`AND topics.id < ${beforeId}`
+        : sql`AND topics.latest_post_id < ${beforeId}`
+      : _raw``
+
+    )
+    .append(
       selectedTagIds.length > 0
       ? sql`AND tags_topics.tag_id = ANY (${selectedTagIds})`
       : _raw``
@@ -144,12 +156,43 @@ router.get('/roleplays', async (ctx) => {
     .tap((v) => ['latest-post', 'created'].includes(v) ? v : 'latest-post')
     .val()
 
-  const roleplays = await listRoleplays(sort, selectedTagIds)
+  const beforeId = ctx.validateQuery('beforeId')
+    .optional()
+    .toInt()
+    .val()
+
+  const roleplays = await listRoleplays(sort, selectedTagIds, beforeId)
     .then((xs) => xs.map((x) => pre.presentTopic(x)))
+
+  const nextBeforeId = _.last(roleplays)
+    ? sort === 'created'
+      ? _.last(roleplays).id
+      : _.last(roleplays).latest_post_id
+    : null
+
+  const nextPageUrl = nextBeforeId
+    ? require('url').format({
+        host: config.HOST,
+        pathname: ctx.path,
+        query: Object.assign({}, _.pickBy(ctx.query, Boolean), {
+          beforeId: nextBeforeId
+        })
+      })
+    : null
+
+  const firstPageUrl = require('url').format({
+    host: config.HOST,
+    pathname: ctx.path,
+    query: _.pickBy(Object.assign({}, ctx.query, {beforeId: null}), Boolean)
+  })
 
   await ctx.render('list_roleplays', {
     ctx,
     roleplays,
+    beforeId,
+    nextBeforeId,
+    firstPageUrl,
+    nextPageUrl,
     // tag filter
     sort,
     tagGroups,

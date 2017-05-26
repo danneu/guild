@@ -86,6 +86,21 @@
   </div>
   </form>
 
+  <!-- Pagers -->
+
+  <ul class="pager">
+    <li>
+      <a href="{{ firstPageUrl }}" rel="first">
+        First Page
+      </a>
+    </li>
+    <li>
+      <a href="{{ nextPageUrl }}" rel="next">
+        Next Page
+      </a>
+    </li>
+  </ul>
+
   <!-- Tabs -->
 
   <ul class="nav nav-tabs forum-tabs">
@@ -103,6 +118,25 @@
     #}
   </ul>
 
+  {% if roleplays.length == 0 %}
+    <div class="well text-center">
+      {% if nextBeforeId == null %}
+        {# We are paginated #}
+        <p class="lead">
+          No more results
+        </p>
+        <p>
+          <a href="{{ firstPageUrl }}">
+            Back to first page
+          </a>
+        </p>
+      {% else %}
+        <p class="lead">
+          No Results
+        </p>
+      {% endif %}
+    </div>
+  {% endif %}
 
   {% if roleplays.length > 0 %}
     <div class="list-group">
@@ -220,6 +254,22 @@
       {% endfor %}
     </div> <!-- /.list-group -->
   {% endif %}
+
+  <!-- Pagers -->
+
+  <ul class="pager">
+    <li>
+      <a href="{{ firstPageUrl }}" rel="first">
+        First Page
+      </a>
+    </li>
+    <li>
+      <a href="{{ nextPageUrl }}" rel="next">
+        Next Page
+      </a>
+    </li>
+  </ul>
+
 
   <!-- Top -->
   <div style="display: block; margin-bottom: 20px;">
