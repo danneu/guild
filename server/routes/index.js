@@ -41,7 +41,6 @@ async function listRoleplays (sort = 'latest-post', selectedTagIds = [], beforeI
   return pool.many(sql`
     SELECT
       t.*,
-      t.tags,
       to_json(f.*) "forum",
       json_build_object(
         'uname', u.uname,
@@ -88,11 +87,16 @@ async function listRoleplays (sort = 'latest-post', selectedTagIds = [], beforeI
         'uname', char_users.uname,
         'slug', char_users.slug
         )
-      END "latest_char_user"
+      END "latest_char_user",
+      (
+        SELECT json_agg(tags.*)
+        FROM tags
+        JOIN tags_topics ON tags.id = tags_topics.tag_id
+        JOIN topics ON tags_topics.topic_id = topics.id
+        WHERE topics.id = t.id
+      ) "tags"
     FROM (
-      SELECT
-        topics.*,
-        json_agg(tags.*) "tags"
+      SELECT topics.*
       FROM topics
       JOIN tags_topics ON topics.id = tags_topics.topic_id
       JOIN tags ON tags_topics.tag_id = tags.id
