@@ -141,16 +141,15 @@
                     {{ topic.formattedCreatedAt }}
                   </abbr>
                 </p>
-                {% if topic.tags.length > 0 %}
-                  <div>
-                    {% for tag in topic.tags %}
-                      <span class="label {% if tag.id | isIn(selectedTagIds) %}label-primary{% else %}label-default{% endif %}" style="display: inline-block;"
-                            data-toggle="tooltip" title="{{ tag.description }}">
-                        {{ tag.title }}
-                      </span>
-                    {% endfor %}
-                  </div>
-                {% endif %}
+                <div>
+                  {{ macros.renderJoinStatus(topic.join_status) }}
+                  {% for tag in topic.tags %}
+                    <span class="label {% if tag.id | isIn(selectedTagIds) %}label-primary{% else %}label-default{% endif %}" style="display: inline-block;"
+                          data-toggle="tooltip" title="{{ tag.description }}">
+                      {{ tag.title }}
+                    </span>
+                  {% endfor %}
+                </div>
               </div>
               <!-- Latest IC-->
               <div class="col-sm-3">
