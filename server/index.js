@@ -853,31 +853,6 @@ router.post('/lexus-lounge/registration', async (ctx) => {
 })
 
 //
-// Refresh forum
-//
-// Recalculates forum caches including the counter caches and
-// the latest_post_id and latest_post_at
-router.post('/forums/:forumSlug/refresh', async (ctx) => {
-  // Load forum
-  var forumId = belt.extractId(ctx.params.forumSlug)
-  ctx.assert(forumId, 404)
-  var forum = await db.findForum(forumId).then(pre.presentForum)
-  ctx.assert(forum, 404)
-
-  // Authorize user
-  ctx.assertAuthorized(ctx.currUser, 'REFRESH_FORUM', forum)
-
-  // Refresh forum
-  await db.refreshForum(forum.id)
-
-  // Redirect to homepage
-  ctx.flash = {
-    message: ['success', 'Forum refreshed. It may take up to 10 seconds for the changes to be reflected on the homepage.']
-  }
-  ctx.response.redirect('/')
-})
-
-//
 // New topic form
 //
 router.get('/forums/:forumSlug/topics/new', async (ctx) => {

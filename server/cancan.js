@@ -208,14 +208,6 @@ function can(user, action, target) {
       if (user.role === 'admin')
         return true;
       return false;
-    case 'REFRESH_FORUM':  // target is forum
-      // Guests cannot
-      if (!user) return false;
-      // Staff can
-      if (isStaffRole(user.role)) return true;
-      if (user.role === 'conmod') return true;
-      if (user.role === 'arenamod') return true
-      return false;
     // The ratings table is on the user profile
     case 'READ_USER_RATINGS_TABLE': // target is user
       // Guests cannot

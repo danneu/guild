@@ -2048,44 +2048,6 @@ RETURNING *
   `)
 }
 
-// Recalculates forum caches including the counter caches and
-// the latest_post_id and latest_post_at
-//
-// Ignores hidden topics in the recalculation
-// Use this to fix a forum when you hide a spambot. Otherwise the spambot
-// topic will hang around as the forum's latest post.
-//
-// Sync with refreshAllForums
-exports.refreshForum = async function (forumId) {
-  assert(forumId)
-
-  return pool.one(sql`
-    UPDATE forums
-    SET
-      posts_count = COALESCE(sub.posts_count, 0),
-      latest_post_id = sub.latest_post_id
-    FROM (
-      SELECT
-        SUM(posts_count) posts_count,
-        MAX(latest_post_id) latest_post_id
-      FROM topics
-      WHERE forum_id = ${forumId}
-        AND is_hidden = false
-    ) sub
-    WHERE id = ${forumId}
-    RETURNING forums.*
-  `)
-}
-
-
-// Sync with refreshForum
-exports.refreshAllForums = async function () {
-  // TODO: Do it in one query
-  const forumIds = await pool.many(sql`SELECT id FROM forums`)
-    .then((xs) => xs.map((x) => x.id))
-  return promiseMap(forumIds, exports.refreshForum, 2)
-}
-
 // -> JSONString
 //
 // Only gets users that:
@@ -3287,7 +3249,7 @@ exports.nukeUser = async function ({spambot, nuker}) {
     await client.query(sqls.hidePosts)
     await client.query(sqls.insertNukelist)
     //await client.query(sqls.updateTopics)
-  })//.then(() => exports.refreshAllForums())
+  })
   .catch((err) => {
     if (err.code === '23505') {
       throw 'ALREADY_NUKED'
