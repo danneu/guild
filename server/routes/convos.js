@@ -4,6 +4,7 @@ var Router = require('koa-router');
 var _ = require('lodash');
 var debug = require('debug')('app:routes:convos');
 var bouncer = require('koa-bouncer');
+const promiseMap = require('promise.map')
 // 1st party
 var db = require('../db');
 var belt = require('../belt');
@@ -57,16 +58,13 @@ router.post('/convos', async (ctx) => {
     })
     // Remove duplicates
     .uniq()
-    .isLength(0, 5, 'You cannot send a PM to more than 5 people at once');
+    .isLength(0, config.MAX_CONVO_PARTICIPANTS, `You cannot send a PM to more than ${config.MAX_CONVO_PARTICIPANTS} people at once`);
 
   // TODO: Validation, Error msgs, preserve params
 
   var unames = ctx.vals.to;
   var title = ctx.vals.title;
   var markup = ctx.vals.markup;
-
-  debug('==============');
-  debug(ctx.vals);
 
   // Ensure they are all real users
   var users = await db.findUsersByUnames(unames);
@@ -102,13 +100,13 @@ router.post('/convos', async (ctx) => {
   }).then(pre.presentConvo);
 
   // Create CONVO notification for each recipient
-  toUserIds.map(function (toUserId) {
+  promiseMap(toUserIds, (toUserId) => {
     return db.createConvoNotification({
       from_user_id: ctx.currUser.id,
       to_user_id: toUserId,
       convo_id: convo.id
-    });
-  });
+    })
+  }, 2).catch((err) => console.error('error sending convo notifications', err))
 
   ctx.response.redirect(convo.url);
 });
@@ -185,14 +183,13 @@ router.post('/convos/:convoId/pms', async (ctx) => {
     .filter((userId) => userId !== ctx.currUser.id)
 
   // Upsert notifications table
-  // TODO: config.MAX_CONVO_PARTICIPANTS instead of hard-coded 5
-  toUserIds.map(function (toUserId) {
+  promiseMap(toUserIds, (toUserId) => {
     return db.createPmNotification({
       from_user_id: ctx.currUser.id,
       to_user_id: toUserId,
       convo_id: ctx.params.convoId
     });
-  });
+  }, 2).catch((err) => console.error('error sending pm notifications', err))
 
   ctx.redirect(pm.url);
 });

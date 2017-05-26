@@ -48,6 +48,8 @@ if (!exports.S3_IMAGE_BUCKET) {
   console.warn('S3_IMAGE_BUCKET not set. Cannot process image uploads.');
 }
 
+exports.MAX_CONVO_PARTICIPANTS = parseInt(process.env.MAX_CONVO_PARTICIPANTS) || 10;
+
 // The max amount of co-GMs per topic
 exports.MAX_CO_GM_COUNT = process.env.MAX_CO_GM_COUNT || 2;
 
