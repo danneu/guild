@@ -32,7 +32,7 @@ router.get('/faq', async (ctx) => {
 
 ////////////////////////////////////////////////////////////
 
-async function listRoleplays (sort = 'latest-post', selectedTagIds = [], beforeId) {
+async function listRoleplays (sort = 'created', selectedTagIds = [], beforeId) {
   assert(Array.isArray(selectedTagIds))
   assert(typeof beforeId === 'undefined' || Number.isInteger(beforeId))
 
@@ -156,7 +156,7 @@ router.get('/roleplays', async (ctx) => {
     .val()
 
   const sort = ctx.validateQuery('sort')
-    .tap((v) => ['latest-post', 'created'].includes(v) ? v : 'latest-post')
+    .tap((v) => ['bumped', 'created'].includes(v) ? v : 'created')
     .val()
 
   const beforeId = ctx.validateQuery('beforeId')
