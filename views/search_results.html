@@ -97,6 +97,7 @@
         <input type="text" name="term" value="{{ searchParams.term }}"
                class="form-control" style="width: 300px; display: inline-block;">
       </li>
+      {#
       <li>
         Sort:
         <div class="btn-group" data-toggle="buttons">
@@ -117,6 +118,7 @@
         </div>
         <span class="text-muted">(Sorting by relevance only affects the results if you've entered search keywords)</span>
       </li>
+      #}
     </ul>
     <button type="submit" class="btn btn-primary pull-right">
       Update Filter
@@ -126,9 +128,6 @@
   <!-- Page title -->
 
   {% if not _.isEmpty(searchParams) %}
-
-    <h6>Debug:</h6>
-    <pre>{{ cloudParams | json }}</pre>
 
     <div class="page-header">
       <h1>

@@ -304,124 +304,6 @@ router.get('/rules', async (ctx) => {
   ctx.redirect(`/posts/${config.RULES_POST_ID}`)
 })
 
-/// /////////////////////////////////////////////////////////
-
-router.get('/search', async (ctx) => {
-  // Ensure cloudsearch is configured
-  ctx.assert(config.IS_CLOUDSEARCH_CONFIGURED, 400, 'Search is currently offline')
-
-  // Must be logged in to search
-  ctx.assert(ctx.currUser, 403, 'You must be logged in to search')
-
-  // TODO: Stop hard-coding lexus lounge authorization
-  const publicCategories = cache.get('categories').filter((c) => {
-    return c.id !== 4
-  })
-
-  ctx.set('X-Robots-Tag', 'noindex')
-
-  if (_.isEmpty(ctx.query)) {
-    await ctx.render('search_results', {
-      ctx,
-      posts: [],
-      searchParams: {},
-      className: 'search',
-      // Data that'll be serialized to DOM and read by our React components
-      reactData: {
-        searchParams: {},
-        categories: publicCategories
-      }
-    })
-    return
-  }
-
-  // Validate params
-
-  ctx.validateQuery('term').defaultTo('').trim()
-  // [String]
-  const unamesToIds = cache.get('unames->ids')
-  ctx.validateQuery('unames')
-    .toArray()
-    .uniq()
-    // Remove unames that aren't in our system
-    .tap((unames) => {
-      return unames.filter((uname) => {
-        return unamesToIds[uname.toLowerCase()]
-      })
-    })
-
-  const user_ids = _.chain(ctx.vals.unames).map((u) => {
-    return unamesToIds[u.toLowerCase()]
-  }).compact().value()
-
-  // [String]
-  ctx.validateQuery('post_types')
-    .toArray()
-  // String
-  ctx.validateQuery('sort')
-    .defaultTo(function () {
-      return (ctx.vals.term ? 'relevance' : 'newest-first')
-    })
-    .isIn(['relevance', 'newest-first', 'oldest-first'])
-
-  if (ctx.query.topic_id) {
-    ctx.validateQuery('topic_id')
-      .toInt('Topic ID must be a number')
-  }
-  if (ctx.query.forum_ids) {
-    ctx.validateQuery('forum_ids')
-      .toArray()
-      .toInts('Forum IDs must be numbers')
-  }
-
-  /// /////////////////////////////////////////////////////////
-  // TODO: Ensure currUser is authorized to read the results
-
-  const search = require('./search2')
-
-  const cloudArgs = {
-    term: ctx.vals.term,
-    post_types: ctx.vals.post_types,
-    sort: ctx.vals.sort,
-    topic_id: ctx.vals.topic_id,
-    forum_ids: ctx.vals.forum_ids,
-    user_ids: user_ids
-  }
-
-  const cloudParams = search.buildSearchParams(cloudArgs)
-  const result = await search.searchPosts(cloudArgs)
-
-  const postIds = result.hits.hit.map((hit) => hit.id)
-
-  const posts = await db.findPostsByIds(postIds)
-    .then((xs) => xs.map(pre.presentPost))
-
-  /// /////////////////////////////////////////////////////////
-
-  // If term was given, there will be highlight
-  if (ctx.vals.term) {
-    result.hits.hit.forEach((hit, idx) => {
-      if (hit.highlights && posts[idx]) {
-        posts[idx].highlight = hit.highlights.markup
-      }
-    })
-  }
-
-  await ctx.render('search_results', {
-    ctx,
-    posts: posts,
-    searchParams: ctx.vals,
-    cloudParams: cloudParams,
-    className: 'search',
-    searchResultsPerPage: config.SEARCH_RESULTS_PER_PAGE,
-    // Data that'll be serialized to DOM and read by our React components
-    reactData: {
-      searchParams: ctx.vals,
-      categories: publicCategories
-    }
-  })
-})
-
 app.use(require('./routes/index').routes())
 app.use(require('./routes/users').routes())
 app.use(require('./routes/convos').routes())
@@ -434,6 +316,7 @@ app.use(require('./routes/friendships').routes())
 app.use(require('./routes/sitemaps').routes())
 app.use(require('./routes/tags').routes())
 app.use(require('./routes/discord').routes())
+app.use(require('./routes/search').routes())
 
 // Useful to redirect users to their own profiles since canonical edit-user
 // url is /users/:slug/edit

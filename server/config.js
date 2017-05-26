@@ -12,8 +12,6 @@ exports.RECAPTCHA_SITESECRET = process.env.RECAPTCHA_SITESECRET;
 // TODO: Remove my own aws env vars (AWS_SECRET, AWS_KEY) and use these
 exports.AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
 exports.AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
-exports.AWS_CLOUDSEARCH_DOCUMENT_ENDPOINT = process.env.AWS_CLOUDSEARCH_DOCUMENT_ENDPOINT;
-exports.AWS_CLOUDSEARCH_SEARCH_ENDPOINT = process.env.AWS_CLOUDSEARCH_SEARCH_ENDPOINT;
 
 // Various configurable forum settings
 exports.MIN_TOPIC_TITLE_LENGTH = parseInt(process.env.MIN_TOPIC_TITLE_LENGTH, 10) || 3;
@@ -114,15 +112,6 @@ exports.IS_EMAIL_CONFIGURED = !!(exports.HOST &&
                                  exports.AWS_KEY &&
                                  exports.AWS_SECRET);
 console.log('Email is configured:', exports.IS_EMAIL_CONFIGURED);
-
-exports.IS_CLOUDSEARCH_CONFIGURED = !!(
-  exports.AWS_ACCESS_KEY_ID,
-  exports.AWS_SECRET_ACCESS_KEY,
-  exports.AWS_CLOUDSEARCH_DOCUMENT_ENDPOINT,
-  exports.AWS_CLOUDSEARCH_SEARCH_ENDPOINT
-);
-console.log('Cloudsearch is configured:', exports.IS_CLOUDSEARCH_CONFIGURED);
-
 
 if (exports.NODE_ENV === 'development') {
   console.log('Config vars:');

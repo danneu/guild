@@ -161,7 +161,6 @@ CREATE TABLE posts (
   user_id    int NOT NULL  REFERENCES users(id)  ON DELETE CASCADE,
   created_at timestamptz NOT NULL  DEFAULT NOW(),
   updated_at timestamptz NULL,
-  uploaded_at timestamptz NULL,
   is_roleplay boolean NOT NULL,
   type       post_type NOT NULL,
   ip_address inet NULL,
@@ -977,3 +976,24 @@ create index pms__user_and_ip on pms (user_id, ip_address);
 ALTER TABLE viewers SET UNLOGGED;
 ALTER TABLE ratelimits SET UNLOGGED;
 ALTER TABLE profile_views SET UNLOGGED;
+
+------------------------------------------------------------
+-- FULL-TEXT SEARCH
+------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION trim_whitespace(string text) RETURNS text
+AS $$
+  SELECT regexp_replace(string, '^\s+|\s+$', '', 'g');
+$$ LANGUAGE SQL IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION strip_quotes(markup text) RETURNS text
+AS $$
+  SELECT trim_whitespace(regexp_replace(regexp_replace(regexp_replace(markup, '\[quote[^\]]*\]((?!\[[[\/]*quote).)*\[\/quote\]', '', 'gi'), '\[quote[^\]]*\]((?!\[[[\/]*quote).)*\[\/quote\]', '', 'gi'), '\[quote[^\]]*\]((?!\[[[\/]*quote).)*\[\/quote\]', '', 'gi'));
+$$ LANGUAGE SQL IMMUTABLE;
+
+-- Note, if immutable functions are updated, then indexes that use them
+-- not to be dropped and rebuilt concurrently
+CREATE INDEX CONCURRENTLY posts_vector ON posts
+USING gin(to_tsvector('english', strip_quotes(markup)))
+WHERE is_hidden = false
+  AND markup IS NOT NULL;
