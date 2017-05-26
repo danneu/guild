@@ -112,7 +112,7 @@
                 </a>
               </li>
             {% endif %}
-            {% if false and ctx.can(ctx.currUser, 'READ_USER_LIST') %}
+            {% if ctx.can(ctx.currUser, 'READ_USER_LIST') %}
               <li>
                 <a href="/users">
                   <span class="glyphicon glyphicon-globe"></span>
