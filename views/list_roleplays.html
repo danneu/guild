@@ -153,12 +153,17 @@
         {% if ctx.can(ctx.currUser, 'READ_TOPIC', topic) %}
           <div class="list-group-item topic-panel"
              style="background-color: #3d3a3a; border: 1px solid #111; color: #fff;">
-            <div class="row">
-              <div class="col-sm-3">
 
+            <div class="row">
+              <div class="col-lg-12">
                 <h5 class="list-group-item-heading topic-panel-title">
                   <a href="{{ topic.url }}">{{ topic.title }}</a>
                 </h5>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-sm-3">
                 <div class="text-muted first-page-links">
                   {{ topic.ic_posts_count }}
                   <a href="{{ topic.url }}/ic">IC</a>,
@@ -175,20 +180,11 @@
                     {{ topic.formattedCreatedAt }}
                   </abbr>
                 </p>
-                <div>
-                  {{ macros.renderJoinStatus(topic.join_status) }}
-                  {% for tag in topic.tags %}
-                    <span class="label {% if tag.id | isIn(selectedTagIds) %}label-primary{% else %}label-default{% endif %}" style="display: inline-block;"
-                          data-toggle="tooltip" title="{{ tag.description }}">
-                      {{ tag.title }}
-                    </span>
-                  {% endfor %}
-                </div>
               </div>
               <!-- Latest IC-->
               <div class="col-sm-3">
+                <span class="visible-xs-inline">Latest IC:</span>
                 {% if topic.latest_ic_user %}
-                  <span class="visible-xs-inline">Latest IC:</span>
                   <div class="latest-ic">
                     <a href="{{ topic.latest_ic_user.url }}"
                        style="color: #fff">{{ topic.latest_ic_user.uname }}</a>
@@ -207,8 +203,8 @@
               </div>
               <!-- Latest OOC-->
               <div class="col-sm-3">
+                <span class="visible-xs-inline">Latest OOC:</span>
                 {% if topic.latest_ooc_user %}
-                  <span class="visible-xs-inline">Latest OOC:</span>
                   <div class="latest-ooc">
                     <div style="display: inline-block;">
                       <a href="{{ topic.latest_ooc_user.url }}"
@@ -229,8 +225,8 @@
               </div><!--/.col-2-->
               <!-- Latest Char-->
               <div class="col-sm-3">
+                <span class="visible-xs-inline">Latest Char:</span>
                 {% if topic.latest_char_user %}
-                  <span class="visible-xs-inline">Latest Char:</span>
                   <div class="latest-char">
                     <a href="{{ topic.latest_char_user.url }}"
                        style="color: #fff">{{ topic.latest_char_user.uname }}</a>
@@ -248,6 +244,20 @@
                 {% endif %}
               </div><!--/.col-2-->
             </div><!--/.row-->
+
+            <div class="row">
+              <div class="col-lg-12">
+                <div>
+                  {{ macros.renderJoinStatus(topic.join_status) }}
+                  {% for tag in topic.tags %}
+                    <span class="label {% if tag.id | isIn(selectedTagIds) %}label-primary{% else %}label-default{% endif %}" style="display: inline-block;"
+                          data-toggle="tooltip" title="{{ tag.description }}">
+                      {{ tag.title }}
+                    </span>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
 
           </div>
         {% endif %}

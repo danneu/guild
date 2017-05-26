@@ -200,7 +200,9 @@ router.get('/roleplays', async (ctx) => {
     // tag filter
     sort,
     tagGroups,
-    selectedTagIds
+    selectedTagIds,
+    //
+    title: 'Roleplays'
   })
 })
 
