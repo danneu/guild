@@ -1176,7 +1176,8 @@ SELECT
             THEN
               json_build_object(
                 'uname', u.uname,
-                'slug', u.slug
+                'slug', u.slug,
+                'avatar_url', u.avatar_url
               )
           END
         FROM users u

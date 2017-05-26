@@ -39,7 +39,10 @@ const cache = new IntervalCache()
   // Map of ForumId->Int (includes all ForumIds in database)
   .every('forum-viewer-counts', 1000 * 10, db.getForumViewerCounts, {})
   // 15 seconds
-  .every('categories', 1000 * 15, db.findCategoriesWithForums, [])
+  .every('categories', 1000 * 15, () => {
+    return db.findCategoriesWithForums()
+      .then((xs) => xs.map((x) => pre.presentCategory(x)))
+  }, [])
   // 15 seconds
   .every('latest-checks', 1000 * 15, () => db.findLatestChecks(), [])
   .every('latest-roleplays', 1000 * 15, () => db.findLatestRoleplays(), [])

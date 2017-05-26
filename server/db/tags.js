@@ -44,6 +44,7 @@ exports.listGroups = async () => {
     FROM tag_groups tg
     LEFT JOIN tags ON tags.tag_group_id = tg.id
     GROUP BY tg.id
+    ORDER BY tg.id
   `).then((xs) => xs.map((x) => {
     // Turn [null] into [] if no tags
     x.tags = x.tags.filter(Boolean)

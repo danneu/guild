@@ -109,7 +109,6 @@ async function listRoleplays (sort = 'latest-post', selectedTagIds = [], beforeI
         ? sql`AND topics.id < ${beforeId}`
         : sql`AND topics.latest_post_id < ${beforeId}`
       : _raw``
-
     )
     .append(
       selectedTagIds.length > 0

@@ -1129,7 +1129,7 @@
       {% endif %}
     </a>
 
-    <a href="/users/{{ ctx.currUser.id }}"
+    <a href="{{ ctx.currUser.url }}"
        class="btn btn-default navbar-btn">
       <span class="glyphicon glyphicon-user"></span>
       {% if showUname %}

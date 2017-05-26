@@ -1723,6 +1723,26 @@ router.put('/topics/:slug/edit', async (ctx) => {
   ctx.response.redirect(topic.url + '/edit')
 })
 
+// Always redirects to the last post of a tab
+router.get('/topics/:slug/:postType/last', async (ctx) => {
+  const {postType} = ctx.params
+  ctx.assert(['ic', 'ooc', 'char'].includes(postType), 404)
+
+  // This url should not be indexed
+  ctx.set('X-Robots-Tag', 'noindex')
+
+  // Load topic
+  const topicId = belt.extractId(ctx.params.slug)
+  ctx.assert(topicId, 404)
+  const topic = await db.findTopicById(topicId)
+  ctx.assert(topic, 404)
+
+  const lastPostId = topic[`latest_${postType}_post_id`]
+  ctx.assert(lastPostId, 404)
+
+  ctx.redirect(`/posts/${lastPostId}`)
+})
+
 // Go to first unread post in a topic
 router.get('/topics/:slug/:postType/first-unread', async (ctx) => {
   // This page should not be indexed

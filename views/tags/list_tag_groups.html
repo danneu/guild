@@ -15,6 +15,7 @@
     <ul>
       {% for tag in group.tags %}
         <li>
+          <code>{{ tag.id }}</code>
           {{ tag.title }}
           - {{ tag.description }}
           <form method="POST" action="{{ tag.url }}/move" class="form-inline" style="display: inline-block;">

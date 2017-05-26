@@ -2,7 +2,6 @@
 const path = require('path')
 const nodeFs = require('fs')
 const crypto = require('crypto')
-const zlib = require('zlib')
 // 3rd party
 const assert = require('better-assert')
 const gm = require('gm').subClass({ imageMagick: true })
@@ -11,6 +10,10 @@ const Uploader = require('s3-streaming-upload').Uploader
 const uuidGen = require('uuid')
 // 1st party
 var config = require('./config')
+
+//
+// FIXME: This file needs to be cleaned up
+//
 
 const getFormat = (fullInPath) => {
   return new Promise((resolve, reject) => {
@@ -71,48 +74,72 @@ exports.handleAvatar = async (userId, fullInPath) => {
     assert(typeof mime === 'string')
   }
 
-  // :: Stream of the original uploaded image
-  const inStream = nodeFs.createReadStream(fullInPath)
+  const hash = await calcStreamHash(nodeFs.createReadStream(fullInPath))
+  const folderName = config.NODE_ENV === 'production' ? 'production' : 'development'
 
-  const hashPromise = calcStreamHash(nodeFs.createReadStream(fullInPath))
+  const promise1 = new Promise((resolve, reject) => {
+    const objectName = `${folderName}/${hash}.${format}`
 
-  const gzip = zlib.createGzip()
-
-  const handler = (resolve, reject) => {
-    hashPromise.then((hash) => {
-      const folderName = config.NODE_ENV === 'production' ? 'production' : 'development'
-      const objectName = `${folderName}/${hash}.${format}`
-
-      gm(inStream)
-        // width, height, modifier
-        // '>' = only resize if image exceeds dimensions
-        // http://www.imagemagick.org/script/command-line-processing.php#geometry
-        .resize(150, 200, '>')
-        .strip() // Remove all metadata
-        .stream(format, (err, processedImageReadStream) => {
-          if (err) return reject(err);
-          var uploader = new Uploader({
-            stream: processedImageReadStream.pipe(gzip),
-            accessKey: config.AWS_KEY,
-            secretKey: config.AWS_SECRET,
-            bucket: config.S3_AVATAR_BUCKET,
-            objectName: objectName,
-            objectParams: {
-              'ContentType': mime,
-              'CacheControl': 'max-age=31536000', // 1 year
-              'ContentEncoding': 'gzip'
-            }
-          });
-          uploader.send((err, data) => {
-            if (err) return reject(err)
-            const avatarUrl = data.Location
-            return resolve(avatarUrl)
-          })
+    gm(nodeFs.createReadStream(fullInPath))
+      // width, height, modifier
+      // '>' = only resize if image exceeds dimensions
+      // http://www.imagemagick.org/script/command-line-processing.php#geometry
+      .resize(150, 200, '>')
+      .strip() // Remove all metadata
+      .stream(format, (err, processedImageReadStream) => {
+        if (err) return reject(err);
+        var uploader = new Uploader({
+          stream: processedImageReadStream,
+          accessKey: config.AWS_KEY,
+          secretKey: config.AWS_SECRET,
+          bucket: config.S3_AVATAR_BUCKET,
+          objectName: objectName,
+          objectParams: {
+            'ContentType': mime,
+            'CacheControl': 'max-age=31536000', // 1 year
+          }
+        });
+        uploader.send((err, data) => {
+          if (err) return reject(err)
+          const avatarUrl = data.Location
+          return resolve(avatarUrl)
         })
-    }).catch(reject)
-  }
+      })
+  })
 
-  return new Promise(handler)
+  const promise2 = new Promise((resolve, reject) => {
+    const objectName = `${folderName}/32/${hash}.${format}`
+
+    gm(nodeFs.createReadStream(fullInPath))
+      // width, height, modifier
+      // '>' = only resize if image exceeds dimensions
+      // http://www.imagemagick.org/script/command-line-processing.php#geometry
+      .resize(32, 32, '>')
+      .strip() // Remove all metadata
+      .stream(format, (err, processedImageReadStream) => {
+        if (err) return reject(err);
+        var uploader = new Uploader({
+          stream: processedImageReadStream,
+          accessKey: config.AWS_KEY,
+          secretKey: config.AWS_SECRET,
+          bucket: config.S3_AVATAR_BUCKET,
+          objectName: objectName,
+          objectParams: {
+            'ContentType': mime,
+            'CacheControl': 'max-age=31536000', // 1 year
+          }
+        });
+        uploader.send((err, data) => {
+          if (err) return reject(err)
+          const avatarUrl = data.Location
+          return resolve(avatarUrl)
+        })
+      })
+  })
+
+  // Return the large avatar url
+  return Promise.all([promise1, promise2])
+    .then(([avatarUrl]) => avatarUrl)
 }
 
 function readProcessWrite (inPath, outPath) {

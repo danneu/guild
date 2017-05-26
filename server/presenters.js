@@ -92,6 +92,8 @@ exports.presentUser = function (user) {
     if (parsed.pathname.startsWith('/avatars.roleplayerguild.com/')) {
       user.avatar_url = 'https://' + parsed.pathname.slice(1);
     }
+
+    user.avatar_url_sm = user.avatar_url.replace(/\/([a-f0-9]+\.[a-z]+)$/, '/32/$1')
   }
 
   if (user.id === 1485) {
