@@ -1,0 +1,242 @@
+{% extends 'layouts/master.html' %}
+{% import 'macros/paginate.html' as paginate %}
+{% import 'macros/macros.html' as macros %}
+{% import 'macros/ads.html' as ads %}
+
+{% block embed %}
+  <style>
+   .timeago.fresh {
+     color: #51e0db;
+   }
+   .first-page-links a {
+     text-decoration: underline;
+     color: #999;
+   }
+  </style>
+
+  <ol class="breadcrumb">
+    <li>
+      <a href="/">Home</a>
+    </li>
+    <li>
+      <a href="/roleplays">Roleplays</a>
+    </li>
+  </ol>
+
+  <!-- Viewers -->
+  {# macros.renderViewers(viewers, true) #}
+
+  {{ ads.topResponsive() }}
+
+  <!-- Page header -->
+
+  <div class="page-header" style="border-color: #000">
+    <h3>
+      <a href="/roleplays" style="color: #fff">
+        Roleplays
+      </a>
+    </h3>
+  </div>
+
+  {# paginate.render(currPage, totalPages, forum.url) #}
+
+  <!-- FILTER -->
+
+  <form>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      Filter
+    </div>
+    <div class="panel-body">
+        <div class="row">
+          <div class="col-sm-2 text-center">
+            <strong style="text-decoration: underline;">
+              Tags
+            </strong>
+          </div>
+          <div class="col-sm-10">
+          </div>
+        </div>
+        {{ macros.renderTagInputs2(tagGroups, selectedTagIds) }}
+        <hr>
+        <div class="row">
+          <div class="col-sm-2 text-center">
+            Sort By:
+          </div>
+          <div class="col-sm-10">
+            <div class="btn-group" role="group" data-toggle="buttons">
+              <label class="btn btn-default {% if sort == 'latest-post' %}active{% endif %}">
+                <input type="radio" name="sort" autocomplete="off" value="" {% if sort == 'latest-post'  %}checked{% endif %}> Latest Post
+              </label>
+              <label class="btn btn-default {% if sort == 'created' %}active{% endif %}">
+                <input type="radio" name="sort" autocomplete="off" value="created" {% if sort == 'created'  %}checked{% endif %}> Newest
+              </label>
+            </div>
+          </div>
+        </div>
+    </div>
+    <div class="panel-footer text-right">
+      <a href="/roleplays" class="btn btn-default">
+        Clear Filter
+      </a>
+      <button type="submit" class="btn btn-primary">
+        Apply Filter
+      </button>
+    </div>
+  </div>
+  </form>
+
+  <!-- Tabs -->
+
+  <ul class="nav nav-tabs forum-tabs">
+    <li class="active">
+      <a href="/roleplays">
+        Roleplays
+      </a>
+    </li>
+    {#
+    <li>
+      <a href="/interest-checks">
+        Interest Checks
+      </a>
+    </li>
+    #}
+  </ul>
+
+
+  {% if roleplays.length > 0 %}
+    <div class="list-group">
+      <div class="list-group-item"
+           style="background-color: #1D1D1D; border: 1px solid #111;">
+        <div class="row">
+          <div class="col-sm-3">Roleplay</div>
+          <div class="col-sm-3 hidden-xs">Latest IC</div>
+          <div class="col-sm-3 hidden-xs">Latest OOC</div>
+          <div class="col-sm-3 hidden-xs">Latest Char</div>
+        </div>
+      </div>
+      {% for topic in roleplays %}
+        {% if ctx.can(ctx.currUser, 'READ_TOPIC', topic) %}
+          <div class="list-group-item topic-panel"
+             style="background-color: #3d3a3a; border: 1px solid #111; color: #fff;">
+            <div class="row">
+              <div class="col-sm-3">
+
+                <h5 class="list-group-item-heading topic-panel-title">
+                  <a href="{{ topic.url }}">{{ topic.title }}</a>
+                </h5>
+                <div class="text-muted first-page-links">
+                  {{ topic.ic_posts_count }}
+                  <a href="{{ topic.url }}/ic">IC</a>,
+                  {{ topic.ooc_posts_count }}
+                  <a href="{{ topic.url }}/ooc">OOC</a>,
+                  {{ topic.char_posts_count }}
+                  <a href="{{ topic.url }}/char">Char</a>
+                </div>
+                <p class="list-group-item-text topic-panel-desc">
+                  by
+                  <a href="{{ topic.user.url }}" style="color: #fff">{{ topic.user.uname }}</a>,
+                  <abbr class="timeago" title="{{ topic.created_at.toISOString() }}"
+                        style="display: inline-block;">
+                    {{ topic.formattedCreatedAt }}
+                  </abbr>
+                </p>
+                {% if topic.tags.length > 0 %}
+                  <div>
+                    {% for tag in topic.tags %}
+                      <span class="label {% if tag.id | isIn(selectedTagIds) %}label-primary{% else %}label-default{% endif %}" style="display: inline-block;"
+                            data-toggle="tooltip" title="{{ tag.description }}">
+                        {{ tag.title }}
+                      </span>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+              <!-- Latest IC-->
+              <div class="col-sm-3">
+                {% if topic.latest_ic_user %}
+                  <span class="visible-xs-inline">Latest IC:</span>
+                  <div class="latest-ic">
+                    <a href="{{ topic.latest_ic_user.url }}"
+                       style="color: #fff">{{ topic.latest_ic_user.uname }}</a>
+                    <a href="{{ topic.latest_ic_post.url }}"
+                       class="btn btn-default btn-xs latest-post-btn">
+                      &rarr;
+                    </a>
+                  </div>
+                  <abbr class="timeago {% if topic.latest_post_id == topic.latest_ic_post_id %}fresh{% endif %}" title="{{ topic.latest_ic_post.created_at.toISOString() }}"
+                        style="display: inline-block;">
+                    {{ topic.latest_ic_post.formattedCreatedAt }}
+                  </abbr>
+                {% else %}
+                  <span class="text-muted">None</span>
+                {% endif %}
+              </div>
+              <!-- Latest OOC-->
+              <div class="col-sm-3">
+                {% if topic.latest_ooc_user %}
+                  <span class="visible-xs-inline">Latest OOC:</span>
+                  <div class="latest-ooc">
+                    <div style="display: inline-block;">
+                      <a href="{{ topic.latest_ooc_user.url }}"
+                         style="color: #fff">{{ topic.latest_ooc_user.uname }}</a>
+                      <a href="{{ topic.latest_ooc_post.url}}"
+                         class="btn btn-default btn-xs latest-post-btn">
+                        &rarr;
+                      </a>
+                    </div>
+                  </div>
+                  <abbr class="timeago {% if topic.latest_post_id == topic.latest_ooc_post_id %}fresh{% endif %}" title="{{ topic.latest_ooc_post.created_at.toISOString() }}"
+                        style="display: inline-block;">
+                    {{ topic.latest_ooc_post.formattedCreatedAt }}
+                  </abbr>
+                {% else %}
+                  <span class="text-muted">None</span>
+                {% endif %}
+              </div><!--/.col-2-->
+              <!-- Latest Char-->
+              <div class="col-sm-3">
+                {% if topic.latest_char_user %}
+                  <span class="visible-xs-inline">Latest Char:</span>
+                  <div class="latest-char">
+                    <a href="{{ topic.latest_char_user.url }}"
+                       style="color: #fff">{{ topic.latest_char_user.uname }}</a>
+                    <a href="{{ topic.latest_char_post.url}}"
+                       class="btn btn-default btn-xs latest-post-btn">
+                      &rarr;
+                    </a>
+                  </div>
+                  <abbr class="timeago {% if topic.latest_post_id == topic.latest_char_post_id %}fresh{% endif %}" title="{{ topic.latest_char_post.created_at.toISOString() }}"
+                        style="display: inline-block;">
+                    {{ topic.latest_char_post.formattedCreatedAt }}
+                  </abbr>
+                {% else %}
+                  <span class="text-muted">None</span>
+                {% endif %}
+              </div><!--/.col-2-->
+            </div><!--/.row-->
+
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div> <!-- /.list-group -->
+  {% endif %}
+
+  <!-- Top -->
+  <div style="display: block; margin-bottom: 20px;">
+    <a href="#" class="top-link">&uarr; Top</a>
+  </div>
+
+  <!-- Viewers -->
+  {# macros.renderViewers(viewers, true) #}
+
+  {# paginate.render(currPage, totalPages, forum.url) #}
+
+{% endblock %}
+
+{% block scripts %}
+  <script type="text/javascript">
+    // Activate tag tooltips
+    $('[data-toggle="tooltip"]').tooltip()
+  </script>
+{% endblock %}

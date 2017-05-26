@@ -1202,3 +1202,30 @@
       {% endif %}
     </div>
 {% endmacro %}
+
+
+
+{# Created this for /roleplays. Didn't want to generalize the existing
+   renderTagInputs yet.
+#}
+{% macro renderTagInputs2(tagGroups, selectedTagIds = []) %}
+  {% for group in tagGroups %}
+    <div class="row">
+      <div class="col-sm-2 text-center">
+        {{ group.title }}:
+      </div>
+
+      <div class="col-sm-10">
+        <div class="btn-group" data-toggle="buttons">
+          {% for tag in group.tags %}
+            <label class="btn btn-default btn-xs {% if tag.id|isIn(selectedTagIds) %}active{% endif %}"
+                   data-toggle="tooltip" title="{{ tag.description }}">
+              <input name="tags" type="checkbox" autocomplete="off" value="{{ tag.id }}" {% if tag.id|isIn(selectedTagIds) %}checked="checked"{% endif %}>
+              {{ tag.title }}
+            </label>
+          {% endfor %}
+       </div>
+      </div>
+    </div>
+  {% endfor %}
+{% endmacro %}
