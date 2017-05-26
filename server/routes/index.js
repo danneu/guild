@@ -33,6 +33,8 @@ router.get('/faq', async (ctx) => {
 async function listRoleplays (sort = 'latest-post', selectedTagIds = []) {
   assert(Array.isArray(selectedTagIds))
 
+  const perPage = 20
+
   return pool.many(sql`
     SELECT
       t.*,
@@ -91,15 +93,21 @@ async function listRoleplays (sort = 'latest-post', selectedTagIds = []) {
       FROM topics
       JOIN tags_topics ON topics.id = tags_topics.topic_id
       JOIN tags ON tags_topics.tag_id = tags.id
-    `.append((() => {
-      if (selectedTagIds.length > 0) {
-        return sql`WHERE tags_topics.tag_id = ANY (${selectedTagIds})`
-      } else {
-        return _raw``
-      }
-    })())
+      WHERE topics.forum_id IN (3, 4, 5, 6, 7, 42, 39)
+        AND topics.is_hidden = false
+    `.append(
+      selectedTagIds.length > 0
+      ? sql`AND tags_topics.tag_id = ANY (${selectedTagIds})`
+      : _raw``
+    )
+    .append(sql`GROUP BY topics.id`)
+    .append(
+      sort === 'created'
+      ? sql`ORDER BY topics.created_at DESC`
+      : sql`ORDER BY topics.latest_post_id DESC`
+    )
     .append(sql`
-        GROUP BY topics.id
+        LIMIT ${perPage}
       ) t
       JOIN users u ON t.user_id = u.id
       JOIN forums f ON t.forum_id = f.id
@@ -111,19 +119,13 @@ async function listRoleplays (sort = 'latest-post', selectedTagIds = []) {
       LEFT OUTER JOIN users ooc_users ON ooc_posts.user_id = ooc_users.id
       LEFT OUTER JOIN posts char_posts ON t.latest_char_post_id = char_posts.id
       LEFT OUTER JOIN users char_users ON char_posts.user_id = char_users.id
-      WHERE t.forum_id IN (3, 4, 5, 6, 7, 42, 39)
-        AND t.is_hidden = false
     `)
-    .append((() => {
-      switch (sort) {
-        case 'created':
-          return _raw`ORDER BY t.created_at DESC`
-        case 'latest-post':
-        default:
-          return _raw`ORDER BY t.latest_post_id DESC`
-      }
-    })())
-    .append(sql`LIMIT 20`)
+    .append(
+      sort === 'created'
+      ? sql`ORDER BY t.created_at DESC`
+      : sql`ORDER BY t.latest_post_id DESC`
+    )
+    .append(sql`LIMIT ${perPage}`)
   )
 }
 
