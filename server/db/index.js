@@ -1241,8 +1241,8 @@ exports.createUserWithSession = async function (props) {
 
     try {
       user = await client.one(sql`
-        INSERT INTO users (uname, digest, email, slug)
-        VALUES (${props.uname}, ${digest}, ${props.email}, ${slug})
+        INSERT INTO users (uname, digest, email, slug, hide_sigs)
+        VALUES (${props.uname}, ${digest}, ${props.email}, ${slug}, true)
         RETURNING *
       `)
     } catch (err) {
