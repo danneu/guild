@@ -1129,7 +1129,7 @@ router.put('/topics/:topicSlug/tags', async (ctx) => {
         return n > 0
       })
     })
-    .isLength(1, 5, 'Must select 1-5 tags')
+    .isLength(1, 7, 'Must select 1-7 tags')
 
   // Add this forum's tag_id if it has one
   var tagIds = _.chain(ctx.vals['tag-ids'])
@@ -1214,7 +1214,7 @@ router.post('/forums/:slug/topics', middleware.ratelimit(), /* middleware.ensure
       .tap((ids) => {  // One of them will be -1
         return ids.filter((n) => n > 0)
       })
-      .isLength(1, 5, 'Must select 1-5 tags')
+      .isLength(1, 7, 'Must select 1-7 tags')
   }
   ctx.validateBody('tag-ids').defaultTo([])
 
