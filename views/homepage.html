@@ -82,6 +82,11 @@
                         <h4 class="category-title">
                           {{ category.title }}
                         </h4>
+                        {% if category.description %}
+                          <p class="text-muted">
+                            {{ category.description }}
+                          </p>
+                        {% endif %}
                       </div>
                     </div> <!-- /.row -->
                   </div> <!-- /.list-group-item -->
