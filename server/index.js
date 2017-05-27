@@ -429,7 +429,7 @@ router.post('/posts/:postId/rate', async (ctx) => {
   }
 
   // Create rep
-  var rating = await db.ratePost({
+  const rating = await db.ratePost({
     post_id: post.id,
     from_user_id: ctx.currUser.id,
     from_user_uname: ctx.currUser.uname,
@@ -437,16 +437,21 @@ router.post('/posts/:postId/rate', async (ctx) => {
     type: ctx.vals.type
   })
 
-  // Send receiver a RATING notification in the background
-  db.createRatingNotification({
-    from_user_id: ctx.currUser.id,
-    to_user_id: post.user_id,
-    post_id: post.id,
-    topic_id: post.topic_id,
-    rating_type: rating.type
-  }).catch((err) => console.error(err, err.stack))
+  // If rating is falsey, rating is a dupe (user probably dbl-clicked)
+  // so do not create notification
+  if (rating) {
+    // Send receiver a RATING notification in the background
+    db.createRatingNotification({
+      from_user_id: ctx.currUser.id,
+      to_user_id: post.user_id,
+      post_id: post.id,
+      topic_id: post.topic_id,
+      rating_type: rating.type
+    }).catch((err) => console.error(err, err.stack))
+  }
 
-  ctx.body = JSON.stringify(rating)
+  ctx.type = 'json'
+  ctx.body = rating
 })
 
 //

@@ -1986,6 +1986,8 @@ exports.moveTopic = async function (topicId, fromForumId, toForumId, leaveRedire
 // - from_user_uname: String
 // - to_user_id: Int
 // - type: like | laugh | thank
+//
+// If returns falsey, then rating already exists.
 exports.ratePost = async function (props) {
   assert(props.post_id);
   assert(props.from_user_id);
@@ -1994,12 +1996,15 @@ exports.ratePost = async function (props) {
   assert(props.type);
 
   return pool.one(sql`
-    INSERT INTO ratings
-      (from_user_id, from_user_uname, post_id, type, to_user_id)
-    VALUES (${props.from_user_id},
-    ${props.from_user_uname}, ${props.post_id},
-    ${props.type}, ${props.to_user_id}
+    INSERT INTO ratings (from_user_id, from_user_uname, post_id, type, to_user_id)
+    VALUES (
+      ${props.from_user_id},
+      ${props.from_user_uname},
+      ${props.post_id},
+      ${props.type},
+      ${props.to_user_id}
     )
+    ON CONFLICT (from_user_id, post_id) DO NOTHING
     RETURNING *
   `)
 }
