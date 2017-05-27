@@ -48,7 +48,8 @@ CREATE TABLE users (
   notifications_count         int NOT NULL  DEFAULT 0,
   convo_notifications_count   int NOT NULL  DEFAULT 0,
   mention_notifications_count int NOT NULL  DEFAULT 0,
-  quote_notifications_count   int NOT NULL  DEFAULT 0
+  quote_notifications_count   int NOT NULL  DEFAULT 0,
+  sub_notifications_count     int NOT NULL  DEFAULT 0
 );
 
 -- Approved users cannot be auto-nuked.
@@ -185,8 +186,10 @@ ALTER TABLE topics ADD COLUMN latest_char_post_id
   int NULL REFERENCES posts(id)  ON DELETE SET NULL;
 
 CREATE TABLE topic_subscriptions (
-  user_id int NOT NULL  REFERENCES users(id)  ON DELETE CASCADE,
-  topic_id int NOT NULL  REFERENCES topics(id)  ON DELETE CASCADE,
+  id          serial  PRIMARY KEY,
+  user_id     int     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  topic_id    int     NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+  is_archived boolean NOT NULL DEFAULT false,
   UNIQUE (user_id, topic_id)
 );
 
@@ -271,7 +274,7 @@ CREATE TABLE notifications (
   pm_id    int NULL  REFERENCES pms(id) ON DELETE CASCADE,
   topic_id int NULL  REFERENCES topics(id) ON DELETE CASCADE,
   post_id  int NULL  REFERENCES posts(id) ON DELETE CASCADE,
-  meta     json NULL,
+  meta     jsonb NULL,
   UNIQUE (to_user_id, convo_id)
 );
 
@@ -1008,3 +1011,32 @@ CREATE TABLE forum_mods (
   created_at     timestamptz      NOT NULL DEFAULT NOW(),
   UNIQUE(forum_id, user_id)
 );
+
+
+------------------------------------------------------------
+------------------------------------------------------------
+-- sub_notifications
+
+ALTER TABLE users
+  ADD COLUMN sub_notifications_count int NOT NULL DEFAULT 0;
+
+ALTER TABLE topic_subscriptions
+  ADD COLUMN id serial PRIMARY KEY;
+ALTER TABLE topic_subscriptions
+  ADD COLUMN is_archived boolean NOT NULL DEFAULT false;
+
+ALTER TYPE notification_type ADD VALUE 'TOPIC_SUB';
+
+-- this constraints lets us upsert sub notifications
+-- but we want it on TOPIC_SUB since there may be other
+-- types of notifications for the topic
+CREATE UNIQUE INDEX notes_sub_touserid_topicid
+  ON notifications (type, to_user_id, topic_id)
+  WHERE type = 'TOPIC_SUB';
+
+-- need to transform to jsonb so that our sub notifications can
+-- upsert the notification meta json object.
+ALTER TABLE notifications
+  ALTER COLUMN meta
+  SET DATA TYPE jsonb
+  USING meta::jsonb;

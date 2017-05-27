@@ -109,8 +109,10 @@ CREATE OR REPLACE function update_user_notifications_count() RETURNS trigger AS
 $$
   var q, delta = 0, convoDelta = 0, mentionDelta = 0, quoteDelta = 0;
   var replyVmDelta = 0, toplevelVmDelta = 0;
+  var subDelta = 0;
   var notification = OLD || NEW;
   var toUserId = notification.to_user_id;
+
   if (TG_OP === 'INSERT') {
     delta++;
     if (notification.type === 'CONVO') convoDelta++;
@@ -118,6 +120,7 @@ $$
     if (notification.type === 'QUOTE') quoteDelta++;
     if (notification.type === 'REPLY_VM') replyVmDelta++;
     if (notification.type === 'TOPLEVEL_VM') toplevelVmDelta++;
+    if (notification.type === 'TOPIC_SUB') subDelta++;
   }
   if (TG_OP === 'DELETE') {
     delta--;
@@ -126,6 +129,7 @@ $$
     if (notification.type === 'QUOTE') quoteDelta--;
     if (notification.type === 'REPLY_VM') replyVmDelta--;
     if (notification.type === 'TOPLEVEL_VM') toplevelVmDelta--;
+    if (notification.type === 'TOPIC_SUB') subDelta--;
   }
   q = 'UPDATE users                                                              '+
       'SET notifications_count = notifications_count + $2,                       '+
@@ -133,8 +137,10 @@ $$
       '  mention_notifications_count = mention_notifications_count + $4,         '+
       '  quote_notifications_count = quote_notifications_count + $5,             '+
       '  reply_vm_notifications_count = reply_vm_notifications_count + $6,       '+
-      '  toplevel_vm_notifications_count = toplevel_vm_notifications_count + $7  '+
+      '  toplevel_vm_notifications_count = toplevel_vm_notifications_count + $7, '+
+      '  sub_notifications_count = sub_notifications_count + $8                  '+
       'WHERE id = $1                                                             ';
+
   plv8.execute(q, [
     toUserId,
     delta,
@@ -142,7 +148,8 @@ $$
     mentionDelta,
     quoteDelta,
     replyVmDelta,
-    toplevelVmDelta
+    toplevelVmDelta,
+    subDelta
   ]);
 $$ LANGUAGE 'plv8';
 

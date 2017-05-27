@@ -1,37 +1,53 @@
 'use strict';
 // 3rd
 const assert = require('better-assert');
+const debug = require('debug')('app:db:subscriptions')
 // 1st
 const {pool} = require('./util')
 const {sql} = require('pg-extra')
+const db = require('.')
+
+////////////////////////////////////////////////////////////
+
+// Gets non-archived subs
+exports.listActiveSubscribersForTopic = async function (topicId) {
+  assert(Number.isInteger(topicId))
+
+  return pool.many(sql`
+    SELECT
+      u.id
+    FROM users u
+    JOIN topic_subscriptions ts ON u.id = ts.user_id
+    WHERE ts.topic_id = ${topicId}
+      AND ts.is_archived = false
+  `)
+}
 
 ////////////////////////////////////////////////////////////
 
 // Sort them by latest_posts first
-exports.findSubscribedTopicsForUserId = async function (userId) {
+exports.findSubscribedTopicsForUserId = async function (userId, isArchived) {
+  assert(Number.isInteger(userId))
+  assert(typeof isArchived === 'boolean')
+
   return pool.many(sql`
 SELECT
   t.*,
-
-  -- to_json(u.*)                "user",
   json_build_object(
     'uname', u.uname,
     'slug', u.slug
   ) "user",
 
-  -- to_json(latest_post.*)      "latest_post",
   json_build_object(
     'id', latest_post.id,
     'created_at', latest_post.created_at
   ) "latest_post",
 
-  -- to_json(u2.*)               "latest_user",
   json_build_object(
     'uname', u2.uname,
     'slug', u2.slug
   ) "latest_user",
 
-  -- to_json(latest_ic_post.*)   "latest_ic_post",
   CASE
     WHEN latest_ic_post IS NULL THEN NULL
     ELSE
@@ -41,7 +57,6 @@ SELECT
       )
   END "latest_ic_post",
 
-  -- to_json(latest_ic_user.*)   "latest_ic_user",
   CASE
     WHEN latest_ic_user IS NULL THEN NULL
     ELSE
@@ -51,7 +66,6 @@ SELECT
       )
   END "latest_ic_user",
 
-  -- to_json(latest_ooc_post.*)  "latest_ooc_post",
   CASE
     WHEN latest_ooc_post IS NULL THEN NULL
     ELSE
@@ -61,7 +75,6 @@ SELECT
       )
   END "latest_ooc_post",
 
-  -- to_json(latest_ooc_user.*)  "latest_ooc_user",
   CASE
     WHEN latest_ooc_user IS NULL THEN NULL
     ELSE
@@ -71,7 +84,6 @@ SELECT
       )
   END "latest_ooc_user",
 
-  -- to_json(latest_char_post.*) "latest_char_post",
   CASE
     WHEN latest_char_post IS NULL THEN NULL
     ELSE
@@ -81,7 +93,6 @@ SELECT
       )
   END "latest_char_post",
 
-  -- to_json(latest_char_user.*) "latest_char_user",
   CASE
     WHEN latest_char_user IS NULL THEN NULL
     ELSE
@@ -91,7 +102,8 @@ SELECT
       )
   END "latest_char_user",
 
-  to_json(f.*) "forum"
+  to_json(f.*) "forum",
+  ts.is_archived
 FROM topic_subscriptions ts
 JOIN topics t ON ts.topic_id = t.id
 JOIN users u ON t.user_id = u.id
@@ -105,6 +117,7 @@ LEFT OUTER JOIN users latest_char_user ON latest_char_post.user_id = latest_char
 JOIN users u2 ON latest_post.user_id = u2.id
 JOIN forums f ON t.forum_id = f.id
 WHERE ts.user_id = ${userId}
+  AND is_archived = ${isArchived}
 ORDER BY t.latest_post_id DESC
   `)
 }
@@ -124,9 +137,56 @@ exports.subscribeToTopic = async function (userId, topicId) {
 
 ////////////////////////////////////////////////////////////
 
+// unsub/archive should delete any existing notifications
+exports.massUpdate = async function (userId, topicIds, action) {
+  assert(['unsub', 'archive', 'unarchive'].includes(action))
+
+  if (action === 'archive') {
+    return Promise.all([
+      pool.query(sql`
+        UPDATE topic_subscriptions
+        SET is_archived = true
+        WHERE topic_id = ANY (${topicIds})
+          AND user_id = ${userId}
+        RETURNING *
+      `),
+      db.deleteSubNotifications(userId, topicIds)
+    ])
+  }
+
+  if (action === 'unsub') {
+    return Promise.all([
+      pool.query(sql`
+        DELETE FROM topic_subscriptions
+        WHERE topic_id = ANY (${topicIds})
+          AND user_id = ${userId}
+      `),
+      db.deleteSubNotifications(userId, topicIds)
+    ])
+  }
+
+  if (action === 'unarchive') {
+    return pool.query(sql`
+      UPDATE topic_subscriptions
+      SET is_archived = false
+      WHERE topic_id = ANY (${topicIds})
+        AND user_id = ${userId}
+      RETURNING *
+    `)
+  }
+
+  assert(false)
+}
+
+////////////////////////////////////////////////////////////
+
+// Delete any existing notifications for topic
 exports.unsubscribeFromTopic = async function (userId, topicId) {
-  return pool.query(sql`
-DELETE FROM topic_subscriptions
-WHERE user_id = ${userId} AND topic_id = ${topicId}
-  `)
+  return Promise.all([
+    pool.query(sql`
+      DELETE FROM topic_subscriptions
+      WHERE user_id = ${userId} AND topic_id = ${topicId}
+    `),
+    db.deleteSubNotifications(userId, [topicId])
+  ])
 }

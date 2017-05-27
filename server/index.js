@@ -51,6 +51,7 @@ const util = require('util')
 const _ = require('lodash')
 const debug = require('debug')('app:index')
 const assert = require('better-assert')
+const promiseMap = require('promise.map')
 // 1st party
 const db = require('./db')
 const pre = require('./presenters')
@@ -1016,6 +1017,22 @@ router.post('/topics/:topicSlug/posts', middleware.ratelimit(), /* middleware.en
   var mentionNotificationsCount = results[0].length
   var quoteNotificationsCount = results[1].length
 
+  ;{
+    // Send subscription notifications
+
+    // Get all people who do not have this sub archived
+    const subscribers = (await db.subscriptions.listActiveSubscribersForTopic(post.topic_id))
+      // Ignore self
+      .filter((u) => u.id !== ctx.currUser.id)
+
+    // Create notifications in the background
+    promiseMap(subscribers, ({id}) => {
+      return db.createSubNotification(ctx.currUser.id, id, post.topic_id, postType)
+    }, 2)
+    .catch((err) => console.error('error creating sub notes on new post:', err))
+  }
+
+
   ctx.flash = {
     message: [
       'success',
@@ -1914,7 +1931,18 @@ router.get('/topics/:slug/:postType', async (ctx) => {
       user_id: ctx.currUser.id,
       post_type: ctx.params.postType,
       post_id: _.last(posts).id
-    })
+    }).catch((err) => console.error('error updating topic watermark', err))
+  }
+
+  // Clear sub notifications with this topic_id if they have sub_notes > 0
+  if (ctx.currUser && ctx.currUser.sub_notifications_count > 0) {
+    const notesDeleted = await db.deleteSubNotifications(ctx.currUser.id, [topic.id])
+    ctx.currUser.sub_notifications_count = Math.max(
+      0, ctx.currUser.sub_notifications_count - notesDeleted
+    )
+    ctx.currUser.notifications_count = Math.max(
+      0, ctx.currUser.notifications_count - notesDeleted
+    )
   }
 
   // If we're on the last page, remove the unread button

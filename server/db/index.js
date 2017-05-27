@@ -1394,6 +1394,30 @@ exports.findStaffUsers = async function () {
   `)
 }
 
+// sub notes have a meta that looks like {ic: true, ooc: true, char: true}
+// which indicates which postType the notification has accumulated new
+// posts for.
+exports.createSubNotification = async function (fromUserId, toUserId, topicId, postType) {
+  debug(`[createSubNotification]`, fromUserId, toUserId, topicId)
+
+  assert(['ic', 'ooc', 'char'].includes(postType))
+  assert(Number.isInteger(topicId))
+  assert(Number.isInteger(fromUserId))
+  assert(Number.isInteger(toUserId))
+
+  const meta = { [postType]: true }
+
+  return pool.query(sql`
+    INSERT INTO notifications
+    (type, from_user_id, to_user_id, topic_id, meta, count)
+    VALUES ('TOPIC_SUB', ${fromUserId}, ${toUserId}, ${topicId}, ${meta}, 1)
+    ON CONFLICT (type, to_user_id, topic_id) WHERE type = 'TOPIC_SUB'
+      DO UPDATE
+      SET count = COALESCE(notifications.count, 0) + 1,
+          meta = notifications.meta || ${meta}::jsonb
+  `)
+}
+
 // Users receive this when someone starts a convo with them
 exports.createConvoNotification = wrapOptionalClient(createConvoNotification);
 async function createConvoNotification (client, opts) {
@@ -1443,12 +1467,15 @@ exports.createVmNotification = async function (data) {
   `)
 }
 
-exports.findNotificationsForUserId = async function (toUserId) {
+// Pass in optional notification type to filter
+exports.findNotificationsForUserId = async function (toUserId, type) {
+  assert(Number.isInteger(toUserId))
+
   return pool.many(sql`
     SELECT *
     FROM notifications
     WHERE to_user_id = ${toUserId}
-  `)
+  `.append(type ? sql`AND type = ${type}` : sql``))
 }
 
 // Returns how many rows deleted
@@ -1458,6 +1485,18 @@ exports.deleteConvoNotification = async function (toUserId, convoId) {
     WHERE type = 'CONVO'
       AND to_user_id = ${toUserId}
       AND convo_id = ${convoId}
+  `).then((result) => result.rowCount)
+}
+
+// Returns how many rows deleted
+exports.deleteSubNotifications = async function (toUserId, topicIds) {
+  assert(Number.isInteger(toUserId))
+  assert(Array.isArray(topicIds))
+  return pool.query(sql`
+    DELETE FROM notifications
+    WHERE type = 'TOPIC_SUB'
+      AND to_user_id = ${toUserId}
+      AND topic_id = ANY (${topicIds})
   `).then((result) => result.rowCount)
 }
 
@@ -2760,6 +2799,10 @@ WHERE
 
 exports.deleteNotificationForUserIdAndId = async function (userId, id) {
   debug(`[deleteNotificationsForUserIdAndId] userId=${userId}, id=${id}`)
+
+  assert(Number.isInteger(userId))
+  assert(Number.isInteger(id))
+
   return pool.query(sql`
     DELETE FROM notifications
     WHERE to_user_id = ${userId}

@@ -23,6 +23,30 @@
     <h3>My Notifications</h3>
   </div>
 
+  {% if Date.now() - 1495847480721 < 1000 * 60 * 60 * 24 %}
+    <div class="alert alert-info">
+      <p class="small text-right">
+          This message expires in less than 24 hours
+      </p>
+      <p>
+        <strong>New Feature</strong>
+        You now receive notifications for topics/roleplays that you are subscribed
+        to.
+      </p>
+      <p>
+        If you don't want notifications for a topic, either
+        <i>Unsubscribe</i> or <i>Archive</i> it.
+      </p>
+
+      <p class="text-right">
+        <a href="/me/subscriptions" class="btn btn-primary">
+          Manage Subscriptions
+        </a>
+      </p>
+    </div>
+  {% endif %}
+
+
   {% if notifications.length == 0 %}
     <div class="well lead text-center">
       You have no notifications.
@@ -110,6 +134,23 @@
             <!-- started a new private convo with you: -->
             {{ n.count }} unread PM{% if n.count > 1 %}s{% endif %} in convo:
             <a href="/convos/{{ n.convo.id }}">{{ n.convo.title }}</a>
+          </p>
+        {% elif n.type == 'TOPIC_SUB' %}
+          <p>
+            {{ n.count }} new post{% if n.count > 1 %}s{% endif %} in subscribed topic:
+            {% if n.meta.ic %}
+              <a href="/topics/{{ n.topic.id }}/ic/first-unread">
+                {{ n.topic.title }}
+              </a>
+            {% elif n.meta.char %}
+              <a href="/topics/{{ n.topic.id }}/char/first-unread">
+                {{ n.topic.title }}
+              </a>
+            {% elif n.meta.ooc %}
+              <a href="/topics/{{ n.topic.id }}/ooc/first-unread">
+                {{ n.topic.title }}
+              </a>
+            {% endif %}
           </p>
         {% endif %}
       </li>

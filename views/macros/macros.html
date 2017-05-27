@@ -1111,6 +1111,11 @@
        class="btn btn-default navbar-btn">
       <span class="glyphicon glyphicon-list"></span>
       Subs
+      {% if ctx.currUser.sub_notifications_count > 0 %}
+        <div class="badge">
+          {{ ctx.currUser.sub_notifications_count | commafy }}
+        </div>
+      {% endif %}
     </a>
     {% if can(ctx.currUser, 'LEXUS_LOUNGE') %}
       <a href="/lexus-lounge"

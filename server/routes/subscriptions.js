@@ -2,6 +2,7 @@
 // 3rd
 const Router = require('koa-router');
 const _ = require('lodash');
+const debug = require('debug')('app:routes:subscriptions')
 // 1st
 const cancan = require('../cancan');
 const db = require('../db');
@@ -15,12 +16,43 @@ const router = new Router();
 ////////////////////////////////////////////////////////////
 
 //
-// Show subscriptions
+// Show subscriptions (unarchived)
 //
 router.get('/me/subscriptions', async (ctx) => {
   ctx.assert(ctx.currUser, 404);
+  const [topics, subNotes] = await Promise.all([
+    db.subscriptions.findSubscribedTopicsForUserId(ctx.currUser.id, false)
+      .then((xs) => xs.map(pre.presentTopic)),
+    db.findNotificationsForUserId(ctx.currUser.id, 'TOPIC_SUB')
+  ])
+
+  subNotes.forEach((note) => {
+    const topic = topics.find((t) => t.id === note.topic_id)
+    if (topic) {
+      // will have a flag for each postType that has unread posts
+      // { ooc: true, ic: true, char: true }
+      topic.sub_notes = note.meta
+    }
+  })
+
+  const grouped = _.groupBy(topics, (topic) => topic.forum.is_roleplay);
+  const roleplayTopics = grouped[true] || [];
+  const nonroleplayTopics = grouped[false] || [];
+  await ctx.render('subscriptions', {
+    ctx,
+    topics,
+    roleplayTopics,
+    nonroleplayTopics,
+    isArchive: false,
+    //
+    title: 'My Subscriptions'
+  });
+});
+
+router.get('/me/subscriptions/archive', async (ctx) => {
+  ctx.assert(ctx.currUser, 404);
   const topics = (await db.subscriptions.findSubscribedTopicsForUserId(
-    ctx.currUser.id
+    ctx.currUser.id, true
   )).map(pre.presentTopic)
   const grouped = _.groupBy(topics, (topic) => topic.forum.is_roleplay);
   const roleplayTopics = grouped[true] || [];
@@ -30,7 +62,9 @@ router.get('/me/subscriptions', async (ctx) => {
     topics,
     roleplayTopics,
     nonroleplayTopics,
-    title: 'My Subscriptions'
+    isArchive: true,
+    //
+    title: 'My Archived Subscriptions'
   });
 });
 
@@ -43,7 +77,7 @@ router.post('/me/subscriptions', async (ctx) => {
   ctx.assert(ctx.currUser, 404);
 
   // Ensure user doesn't have 200 subscriptions
-  const subs = await db.subscriptions.findSubscribedTopicsForUserId(ctx.currUser.id);
+  const subs = await db.subscriptions.findSubscribedTopicsForUserId(ctx.currUser.id, false);
   if (subs.length >= 200) {
     ctx.body = 'You cannot have more than 200 topic subscriptions';
     return;
@@ -83,6 +117,41 @@ router.delete('/me/subscriptions/:topicSlug', async (ctx) => {
   const redirectTo = ctx.query.redirectTo || '/me/subscriptions';
   ctx.response.redirect(redirectTo);
 });
+
+////////////////////////////////////////////////////////////
+
+//
+// Mass-update subs
+//
+// Body:
+// - ids: Array<Int>
+// - action: 'unsub' | 'archive' | 'unarchive'
+router.post('/me/subscriptions/mass-action', async (ctx) => {
+  ctx.assert(ctx.currUser, 404, 'Must be logged in')
+
+  const action = ctx.validateBody('action')
+    .isString()
+    .isIn(['unsub', 'archive', 'unarchive'])
+    .val()
+
+  const ids = ctx.validateBody('ids')
+    .toArray()
+    .toInts()
+    .val()
+
+  await db.subscriptions.massUpdate(ctx.currUser.id, ids, action)
+
+  if (action === 'archive') {
+    ctx.flash = {message: ['success', `${ids.length} subscriptions were archived`]}
+    ctx.redirect('/me/subscriptions/archive')
+  } else if (action === 'unarchive') {
+    ctx.flash = {message: ['success', `${ids.length} subscriptions were unarchived`]}
+    ctx.redirect('/me/subscriptions')
+  } else {
+    ctx.flash = {message: ['success', `${ids.length} subscriptions were deleted`]}
+    ctx.redirect('back')
+  }
+})
 
 ////////////////////////////////////////////////////////////
 

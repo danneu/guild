@@ -108,7 +108,7 @@
         <img src="/img/gender/{{ user.gender.toLowerCase() }}.png" alt="{{ user.gender.toLowerCase() }}" width="16" height="16">
       {% endif %}
 
-      {% if ctx.currUser and ctx.currUser.role == 'admin' %}
+      {% if config.NODE_ENV == 'development' or (ctx.currUser and ctx.currUser.role == 'admin') %}
         <span class="label label-default" style="font-size: 50%; display: inline-block;">
           ID: {{ user.id }}
         </span>
