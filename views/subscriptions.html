@@ -78,24 +78,29 @@
         <a href="/me/subscriptions" style="color: #fff">
           My Subscriptions
         </a>
+        <button type="button" class="show-help-box btn btn-default btn-xs">
+          Show Help
+        </button>
       </h2>
-      <p>
-        Subscribing to a topic gives you a convenient way to track only the topics you care about. You will receive notifications when subscribed topics receive new posts.
-      </p>
-      <p>
-        If you want to stop notifications for a topic, you have two options:
-        <ol>
-          <li>
-            <strong>Unsubscribe:</strong> Remove the subscription entirely.
-          </li>
-          <li>
-            <strong>Archive:</strong> Moving a subscription to the
-            <a href="/me/subscriptions/archive">Archive</a> tab will stop
-            notifications for the topic but still allow you to follow / bookmark
-            topics you care about.
-          </li>
-        </ol>
-      </p>
+      <div class="help-box" style="display: none;">
+        <p>
+          Subscribing to a topic gives you a convenient way to track only the topics you care about. You will receive notifications when subscribed topics receive new posts.
+        </p>
+        <p>
+          If you want to stop notifications for a topic, you have two options:
+          <ol>
+            <li>
+              <strong>Unsubscribe:</strong> Remove the subscription entirely.
+            </li>
+            <li>
+              <strong>Archive:</strong> Moving a subscription to the
+              <a href="/me/subscriptions/archive">Archive</a> tab will stop
+              notifications for the topic but still allow you to follow / bookmark
+              topics you care about.
+            </li>
+          </ol>
+        </p>
+      </div>
     {% endif %}
 
     <div class="text-center" style="margin-top: 25px;">
@@ -200,8 +205,8 @@
               </div><!--/.col-4-->
               <!-- Latest IC-->
               <div class="col-sm-3">
+                <span class="visible-xs-inline">Latest IC:</span>
                 {% if topic.latest_ic_user %}
-                  <span class="visible-xs-inline">Latest IC:</span>
                   <div class="latest-ic">
                     <a href="{{ topic.latest_ic_user.url }}"
                        style="color: #fff">{{ topic.latest_ic_user.uname }}</a>
@@ -218,13 +223,13 @@
                     <sup style="color: #51e0db">New!</sup>
                   {% endif %}
                 {% else %}
-                  --
+                  <span class="text-muted">None</span>
                 {% endif %}
               </div>
               <!-- Latest OOC-->
               <div class="col-sm-3">
+                <span class="visible-xs-inline">Latest OOC:</span>
                 {% if topic.latest_ooc_user %}
-                  <span class="visible-xs-inline">Latest OOC:</span>
                   <div class="latest-ooc">
                     <div style="display: inline-block;">
                       <a href="{{ topic.latest_ooc_user.url }}"
@@ -243,13 +248,13 @@
                     <sup style="color: #51e0db">New!</sup>
                   {% endif %}
                 {% else %}
-                  --
+                  <span class="text-muted">None</span>
                 {% endif %}
               </div><!--/.col-2-->
               <!-- Latest Char-->
               <div class="col-sm-3">
+                <span class="visible-xs-inline">Latest Char:</span>
                 {% if topic.latest_char_user %}
-                  <span class="visible-xs-inline">Latest Char:</span>
                   <div class="latest-char">
                     <a href="{{ topic.latest_char_user.url }}"
                        style="color: #fff">{{ topic.latest_char_user.uname }}</a>
@@ -266,7 +271,7 @@
                     <sup style="color: #51e0db">New!</sup>
                   {% endif %}
                 {% else %}
-                  --
+                  <span class="text-muted">None</span>
                 {% endif %}
               </div><!--/.col-2-->
             </div><!--/.row-->
@@ -433,5 +438,12 @@
      }
 
      updateMassControls()
+    </script>
+
+    <script>
+     $('.show-help-box').on('click', function () {
+       $('.help-box').show()
+       $(this).remove()
+     })
     </script>
 {% endblock %}
