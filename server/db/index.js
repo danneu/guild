@@ -2673,8 +2673,8 @@ ORDER BY s.created_at DESC
 }
 
 exports.likeStatus = async function ({user_id, status_id}) {
-  assert(user_id)
-  assert(status_id)
+  assert(Number.isInteger(user_id))
+  assert(Number.isInteger(status_id))
 
   return pool.withTransaction(async (client) => {
     // 1. Create status_likes row
@@ -2691,6 +2691,11 @@ exports.likeStatus = async function ({user_id, status_id}) {
       SET liked_user_ids = array_append(liked_user_ids, ${user_id})
       WHERE id = ${status_id}
     `)
+  }).catch((err) => {
+    if (err.code === '23505') {
+      return
+    }
+    throw err
   })
 }
 
