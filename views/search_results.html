@@ -93,9 +93,15 @@
         </div>
       </li>
       <li>
-        Keywords:
-        <input type="text" name="term" value="{{ searchParams.term }}"
-               class="form-control" style="width: 300px; display: inline-block;">
+        <div class="form-group">
+          <label for="term-input">
+            Search Text: (Temporarily ignored for performance reasons)
+          </label>
+          <input type="text" name="term" value="{{ searchParams.term }}"
+                id="term-input"
+                 class="form-control"
+          >
+        </div>
       </li>
       {#
       <li>

@@ -24,11 +24,6 @@ const router = new Router()
 // TODO: Remove the old CloudSearch cruft from search_results.html and anywhere
 // else in the codebase.
 router.get('/search', async (ctx) => {
-  // Temporarily disable search
-  ctx.flash = { message: ['warning', 'Search is temporarily disabled while I fix a problem where certain queries can choke the database. Ping me in my Dev Journal if you have questions.'] }
-  ctx.redirect('/')
-  return
-
   // Must be logged in to search
   if (!ctx.currUser) {
     ctx.flash = { message: ['danger', 'You must be logged in to search'] }
@@ -59,10 +54,13 @@ router.get('/search', async (ctx) => {
     return
   }
 
-  const term = ctx.validateQuery('term')
-    .optional()
-    .toString()
-    .val()
+  // Temporarily turn off term while I look into some perf issues
+  //
+  // const term = ctx.validateQuery('term')
+  //   .optional()
+  //   .toString()
+  //   .val()
+  const term = undefined
 
   const topicId = ctx.validateQuery('topic_id')
     .optional()
@@ -97,12 +95,6 @@ router.get('/search', async (ctx) => {
     .optional()
     .toArray()
     .val()
-
-  //return ctx.body = {term, topicId, userIds, postType}
-
-  console.log({
-    term, topicId, userIds, postTypes, forumIds
-  })
 
   // Now we build the query
 
@@ -157,11 +149,8 @@ router.get('/search', async (ctx) => {
     query.whereIn('posts.user_id', userIds)
   }
 
-  console.log(query.toString())
-
   const posts = await pool.many(_raw`${query.toString()}`)
     .then((xs) => xs.map((x) => pre.presentPost(x)))
-
 
   ctx.set('X-Robots-Tag', 'noindex')
 
