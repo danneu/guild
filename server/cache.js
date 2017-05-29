@@ -29,7 +29,6 @@ const cache = new IntervalCache()
   })
   // 5 min
   .every('uname-regex-trie', 1000 * 60 * 5, async () => {
-    console.log('[CACHE] Populating uname-regex-trie')
     const trie = new RegexTrie()
     const unames = await db.findAllUnames()
     trie.add(unames.map((uname) => uname.toLowerCase()))
