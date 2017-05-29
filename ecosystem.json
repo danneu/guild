@@ -1,0 +1,11 @@
+{
+  "apps": [
+    {
+      "name": "guild",
+      "script": "server/index.js",
+      "cwd": "/home/ec2-user/guild/current",
+      "exec_mode": "cluster",
+      "instances": 0
+    }
+  ]
+}
