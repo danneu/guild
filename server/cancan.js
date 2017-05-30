@@ -365,6 +365,10 @@ function can(user, action, target) {
       if (user.role === 'banned') return false;
       // Staff can always create posts anywhere
       if (isStaffRole(user.role)) return true;
+      // Can if they are forum mod
+      if ((target.mods || []).some((m) => m.id === user.id )) {
+        return true
+      }
       if (user.role === 'conmod') {
         return true
       }

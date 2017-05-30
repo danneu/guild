@@ -986,6 +986,7 @@ router.post('/topics/:topicSlug/posts', middleware.ratelimit(), /* middleware.en
   var postType = ctx.vals['post-type']
   var topic = await db.findTopic(topicId)
   ctx.assert(topic, 404)
+  topic.mods = cache2.get('forum-mods')[topic.forum_id] || []
   ctx.assertAuthorized(ctx.currUser, 'CREATE_POST', topic)
 
   // If non-rp forum, then the post must be 'ooc' type
