@@ -541,6 +541,10 @@ function can(user, action, target) {
       if (target.id === config.WELCOME_POST_ID && isStaffRole(user.role)) {
         return true
       }
+      // All staff can edit any post unless it's admin's post
+      if (isStaffRole(user.role) && target.user_id !== 1) {
+        return true
+      }
       return false;
     case 'DELETE_CONVO': // target is convo
     case 'READ_CONVO':  // target is convo
