@@ -3,12 +3,10 @@
     "node": "7.10.0"
   },
   "scripts": {
-    "start": "node --max_old_space_size=460 ./server",
-    "start-dev": "env $(cat .env | xargs) nodemon ./server",
-    "start-sandbox": "env $(cat .env | xargs) node ./server/sandbox",
-    "start-sandbox-nodemon": "env $(cat .env | xargs) nodemon ./server/sandbox",
-    "reset-db": "env $(cat .env | xargs) node ./server/reset_db",
-    "tasks:batch-upload-posts": "DEBUG=* node ./tasks/batch_upload_posts"
+    "start": "node ./server",
+    "start-dev": "nodemon ./server",
+    "reset-db": "env $(cat .env-dev | xargs) node ./server/reset_db",
+    "deploy": "shipit production deploy"
   },
   "main": "server/index.js",
   "repository": {
