@@ -4,7 +4,7 @@
   },
   "scripts": {
     "start": "node ./server",
-    "start-dev": "nodemon ./server",
+    "start-dev": "env $(cat .env-dev | xargs) nodemon ./server",
     "reset-db": "env $(cat .env-dev | xargs) node ./server/reset_db",
     "deploy": "shipit production deploy"
   },
