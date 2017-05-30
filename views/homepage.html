@@ -62,6 +62,17 @@
 
             {% for category in categories %}
               {% if can(ctx.currUser, 'READ_CATEGORY', category) %}
+
+                {# Put the "View All Roleplays" button before the RP category #}
+                {% if category.id == 2 %}
+                  <div class="text-center">
+                    <a href="/roleplays" class="btn btn-default">
+                      View All Roleplays
+                      <sup style="color: #51e0db">New!</sup>
+                    </a>
+                  </div>
+                {% endif %}
+
                 <div class="list-group category-group">
                   <div class="list-group-item category-group-heading">
                     <div class="row">
@@ -194,17 +205,6 @@
                 {% endfor %} <!-- endfor forums -->
                 </div> <!-- /.list-group -->
               {% endif %} <!-- if can READ_CATEGORY -->
-
-              {# Put the "View All Roleplays" button after first category #}
-              {% if loop.first %}
-                <div class="text-center">
-                  <a href="/roleplays" class="btn btn-default">
-                    View All Roleplays
-                    <sup style="color: #51e0db">New!</sup>
-                  </a>
-                </div>
-              {% endif %}
-
             {% endfor %} <!-- endfor categories -->
           </div> <!-- /.col-sm-12 -->
         </div> <!-- /.row -->
