@@ -81,6 +81,11 @@
                         </button>
                         <h4 class="category-title">
                           {{ category.title }}
+                          {% if category.id == 7 %}
+                            <a href="https://www.roleplayerguild.com/topics/163787" class="btn btn-default btn-xs">
+                              What is this?
+                            </a>
+                          {% endif %}
                         </h4>
                         {% if category.description %}
                           <p class="text-muted">
