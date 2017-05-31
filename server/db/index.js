@@ -2977,7 +2977,7 @@ SELECT
   EXISTS(
     SELECT 1
     FROM friendships
-    WHERE to_user_id = 1
+    WHERE to_user_id = ${user_id}
       AND from_user_id = u1.id
   ) "is_mutual"
 FROM friendships
