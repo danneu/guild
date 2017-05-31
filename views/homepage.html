@@ -221,16 +221,13 @@
       <div class="row" style="border-bottom: 1px solid #111; padding-bottom: 10px">
         <div class="col-xs-12">
           <h4>{{ stats.onlineUsers.length }} Members Online (within 15 min)</h4>
-          <div id="whos-online-list">
+          <div id="whos-online-list" class="text-muted">
             {% for user in stats.onlineUsers %}
-              {%- if user.is_ghost -%}
-                <img src="/img/ghost.png" width="14" height="11" title="Ghost mode">
-                <span style="color: black;">Ghost</span>
-              {%- else -%}
+              {% if not user.is_ghost %}
                 <a href="{{ user.url }}" style="color: #999">{{ user.uname }}</a>
-              {%- endif -%}
-              {%- if not loop.last -%}
-                <span style="color: #999">,</span>
+                {%- if not loop.last -%}
+                  ,
+                {% endif %}
               {% endif %}
             {% endfor %}
           </div>
