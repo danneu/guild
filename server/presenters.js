@@ -367,3 +367,13 @@ exports.presentTopicBan = function (x) {
 
   return x
 }
+
+exports.presentPostRev = function (x) {
+  if (!x) return null
+
+  x.url = `/posts/${x.post_id}/revisions/${x.id}`
+
+  exports.presentUser(x.user)
+
+  return x
+}

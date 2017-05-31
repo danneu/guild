@@ -21,4 +21,18 @@ function getClient () {
   return new pg.Client(parseUrl(config.DATABASE_URL))
 }
 
-module.exports = {pool, getClient}
+// TODO: Get rid of db/index.js' wrapOptionalClient and use this
+function wrapOptionalClient (fn) {
+  return async function () {
+    const args = Array.prototype.slice.call(arguments, 0)
+    if (belt.isDBClient(args[0])) {
+      return fn.apply(null, args)
+    } else {
+      return pool.withTransaction(async (client) => {
+        return fn.apply(null, [client, ...args])
+      })
+    }
+  }
+}
+
+module.exports = {pool, getClient, wrapOptionalClient}

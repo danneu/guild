@@ -319,6 +319,7 @@ app.use(require('./routes/sitemaps').routes())
 app.use(require('./routes/tags').routes())
 app.use(require('./routes/discord').routes())
 app.use(require('./routes/search').routes())
+app.use(require('./routes/topics').routes())
 
 // Useful to redirect users to their own profiles since canonical edit-user
 // url is /users/:slug/edit
@@ -863,9 +864,6 @@ router.post('/lexus-lounge/registration', async (ctx) => {
 // New topic form
 //
 router.get('/forums/:forumSlug/topics/new', async (ctx) => {
-  assert(config.RECAPTCHA_SITEKEY)
-  assert(config.RECAPTCHA_SITESECRET)
-
   // Load forum
   var forumId = belt.extractId(ctx.params.forumSlug)
   ctx.assert(forumId, 404)
@@ -890,7 +888,6 @@ router.get('/forums/:forumSlug/topics/new', async (ctx) => {
     is_ranked: (ctx.flash.params && ctx.flash.params.is_ranked) || false,
     postType: (ctx.flash.params && ctx.flash.params['post-type']) || 'ooc',
     initTitle: ctx.flash.params && ctx.flash.params.title,
-    recaptchaSitekey: config.RECAPTCHA_SITEKEY,
     selectedTagIds: (
       ctx.flash.params &&
         toArray(ctx.flash.params['tag-ids']).map(function (idStr) {
@@ -1310,17 +1307,34 @@ router.get('/pms/:id/edit', async (ctx) => {
 //
 // Params: markup
 router.put('/posts/:id', async (ctx) => {
-  ctx.validateBody('markup')
-     .isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH)
-
-  var post = await db.findPostById(ctx.params.id)
+  const post = await db.findPostById(ctx.params.id)
+    .then(pre.presentPost)
   ctx.assert(post, 404)
   ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
+
+  // Validation
+
+  ctx.validateBody('markup')
+    .isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH)
+
+  ctx.validateBody('reason')
+    .optional()
+    .isString()
+    .trim()
+    .isLength(0, 300)
+
+  // Succeeded
+
+  // Short-circuit if nothing changed
+  if (post.markup.trim() === ctx.vals.markup.trim()) {
+    ctx.redirect(post.url)
+    return
+  }
 
   // Render BBCode to html
   const html = bbcode(ctx.vals.markup)
 
-  const updatedPost = await db.updatePost(ctx.params.id, ctx.vals.markup, html)
+  const updatedPost = await db.updatePost(ctx.currUser.id, post.id, ctx.vals.markup, html, ctx.vals.reason)
     .then(pre.presentPost)
 
   ctx.response.redirect(updatedPost.url)
@@ -1389,20 +1403,39 @@ router.get('/pms/:id/raw', async (ctx) => {
 // Update post markup
 // Body params:
 // - markup
+// - reason (optional)
 //
 // Keep /api/posts/:postId and /api/pms/:pmId in sync
 router.put('/api/posts/:id', async (ctx) => {
-  ctx.validateBody('markup')
-     .isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH)
-
   var post = await db.findPost(ctx.params.id)
   ctx.assert(post, 404)
   ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
 
+  // Validation
+
+  ctx.validateBody('markup')
+    .isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH)
+
+  ctx.validateBody('reason')
+    .optional()
+    .isString()
+    .trim()
+    .isLength(0, 300)
+
+  // Succeeded
+
+  ctx.type = 'json'
+
+  // Short-circuit if nothing changed
+  if (post.markup.trim() === ctx.request.body.markup.trim()) {
+    ctx.body = JSON.stringify(post)
+    return
+  }
+
   // Render BBCode to html
   var html = bbcode(ctx.request.body.markup)
 
-  var updatedPost = await db.updatePost(ctx.params.id, ctx.vals.markup, html)
+  var updatedPost = await db.updatePost(ctx.currUser.id, post.id, ctx.vals.markup, html, ctx.vals.reason)
     .then(pre.presentPost)
 
   ctx.body = JSON.stringify(updatedPost)
@@ -1922,6 +1955,11 @@ router.get('/topics/:slug/:postType', async (ctx) => {
     db.findPostsByTopicId(topicId, ctx.params.postType, page)
   ])
 
+  let zeroth
+  if (posts[0] && posts[0].idx === -1) {
+    zeroth = pre.presentPost(posts.shift())
+  }
+
   topic.mods = cache2.get('forum-mods')[topic.forum_id] || []
 
   if (ctx.currUser) {
@@ -1975,13 +2013,13 @@ router.get('/topics/:slug/:postType', async (ctx) => {
                (page > 1 ? ' (Page ' + page + ')' : '')
              : topic.title,
     categories: cache.get('categories'),
+    zeroth,
     className: 'show-topic',
     // Pagination
     currPage: page,
     totalPages: totalPages,
     // Viewer tracker
-    viewers: viewers,
-    recaptchaSitekey: config.RECAPTCHA_SITEKEY
+    viewers: viewers
   })
 })
 

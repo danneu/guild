@@ -16,6 +16,7 @@ const belt = require('../belt')
 const pre = require('../presenters')
 const {pool} = require('./util')
 const {sql} = require('pg-extra')
+const revs = require('./revs')
 
 // If a client is not provided to fn as first argument,
 // we'll pass one into it.
@@ -685,15 +686,32 @@ exports.updateUserPassword = async function (userId, password) {
 ////////////////////////////////////////////////////////////
 
 // Keep updatePost and updatePm in sync
-exports.updatePost = async function (postId, markup, html) {
-  assert(_.isString(markup))
-  assert(_.isString(html))
+//
+// Updating a post saves the update as a revision.
+//
+// reason is optional
+exports.updatePost = async function (userId, postId, markup, html, reason) {
+  assert(Number.isInteger(userId))
+  assert(Number.isInteger(postId))
+  assert(typeof markup === 'string')
+  assert(typeof html === 'string')
+  assert(!reason || typeof reason === 'string')
 
   return pool.one(sql`
-UPDATE posts
-SET markup = ${markup}, html = ${html}, updated_at = NOW()
-WHERE id = ${postId}
-RETURNING *
+    WITH rev AS (
+      INSERT INTO post_revs (user_id, post_id, markup, html, length, reason)
+      VALUES (
+        ${userId}, ${postId}, ${markup}, ${html}, ${Buffer.byteLength(markup)}, ${reason}
+      )
+      RETURNING html, markup
+    )
+    UPDATE posts
+    SET markup = rev.markup
+      , html = rev.html
+      , updated_at = NOW()
+    FROM rev
+    WHERE posts.id = ${postId}
+    RETURNING *
   `)
 }
 
@@ -832,8 +850,14 @@ exports.findPostsByTopicId = async function (topicId, postType, page) {
         topicId, postType, page)
   assert(_.isNumber(page))
 
-  const fromIdx = (page - 1) * config.POSTS_PER_PAGE
+  let fromIdx = (page - 1) * config.POSTS_PER_PAGE
   const toIdx = fromIdx + config.POSTS_PER_PAGE
+
+  // If on page one, include -1 idx
+  if (page === 1) {
+    fromIdx = -1
+  }
+
   debug('%s <= post.idx < %s', fromIdx, toIdx)
 
   const rows = await pool.many(sql`
@@ -855,7 +879,7 @@ exports.findPostsByTopicId = async function (topicId, postType, page) {
       AND p.idx >= ${fromIdx}
       AND p.idx < ${toIdx}
     GROUP BY p.id, u.id, t.id, f.id, s.id
-    ORDER BY p.id
+    ORDER BY p.idx
   `)
 
   return rows.map((row) => {
@@ -953,6 +977,7 @@ exports.createPm = async function (props) {
 // - topicId     Required Number/String
 // - type        Required String, ic | ooc | char
 // - isRoleplay  Required Boolean
+// - idx         Undefined or -1 if it's the tab's wiki post
 exports.createPost = async function (args) {
   debug(`[createPost] args:`, args)
   assert(_.isNumber(args.userId))
@@ -962,15 +987,26 @@ exports.createPost = async function (args) {
   assert(args.topicId)
   assert(_.isBoolean(args.isRoleplay))
   assert(['ic', 'ooc', 'char'].includes(args.type))
+  assert(args.idx === -1 || typeof args.idx === 'undefined')
 
-  return pool.one(sql`
-    INSERT INTO posts
-      (user_id, ip_address, topic_id, markup, html, type, is_roleplay)
-    VALUES (${args.userId}, ${args.ipAddress}::inet,
-      ${args.topicId}, ${args.markup},
-      ${args.html}, ${args.type}, ${args.isRoleplay})
-    RETURNING *
-  `)
+  return pool.withTransaction(async (client) => {
+    const post = await client.one(sql`
+      INSERT INTO posts
+        (user_id, ip_address, topic_id, markup, html, type, is_roleplay, idx)
+      VALUES (
+        ${args.userId}, ${args.ipAddress}::inet,
+        ${args.topicId}, ${args.markup},
+        ${args.html}, ${args.type}, ${args.isRoleplay},
+        ${args.idx}
+      )
+      RETURNING *
+    `)
+
+    await revs.insertPostRev(client, args.userId, post.id, args.markup, args.html)
+
+    return post
+  })
+
 }
 
 ////////////////////////////////////////////////////////////
@@ -3429,6 +3465,8 @@ exports.allForumMods = async () => {
   `)
 }
 
+////////////////////////////////////////////////////////////
+
 // Re-exports
 
 exports.keyvals = require('./keyvals')
@@ -3442,3 +3480,4 @@ exports.subscriptions = require('./subscriptions')
 exports.vms = require('./vms')
 exports.convos = require('./convos')
 exports.tags = require('./tags')
+exports.revs = require('./revs')

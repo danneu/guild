@@ -23,30 +23,6 @@
     <h3>My Notifications</h3>
   </div>
 
-  {% if Date.now() - 1495847480721 < 1000 * 60 * 60 * 24 %}
-    <div class="alert alert-info">
-      <p class="small text-right">
-          This message expires in less than 24 hours
-      </p>
-      <p>
-        <strong>New Feature</strong>
-        You now receive notifications for topics/roleplays that you are subscribed
-        to.
-      </p>
-      <p>
-        If you don't want notifications for a topic, either
-        <i>Unsubscribe</i> or <i>Archive</i> it.
-      </p>
-
-      <p class="text-right">
-        <a href="/me/subscriptions" class="btn btn-primary">
-          Manage Subscriptions
-        </a>
-      </p>
-    </div>
-  {% endif %}
-
-
   {% if notifications.length == 0 %}
     <div class="well lead text-center">
       You have no notifications.

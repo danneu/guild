@@ -322,9 +322,119 @@
     {% endif %}
   </ul>
 
+  <!-- ZEROTH -->
+
+  {% if zeroth and can(ctx.currUser, 'READ_POST', zeroth) %}
+    {% set post = zeroth %}
+    <div style="border: 1px solid #111;"
+         id="post-{{ post.id }}"
+         class="panel panel-default post {% if post.is_hidden %} hidden-post {% endif %}"
+    >
+      <div class="panel-heading clearfix" style="background-color: #1D1D1D; border-color: #111; border-radius: 0">
+          <span class="pull-left">
+            <abbr class="timeago" title="{{ post.created_at.toISOString() }}">
+              {{ post.created_at | formatDate }}
+            </abbr>
+            {% if post.updated_at and post.updated_at.getTime() - post.created_at.getTime() > 1000 * 60 %}
+              &rarr;
+              <span class="glyphicon glyphicon-pencil"></span>
+              <abbr class="timeago" title="{{ post.updated_at.toISOString() }}">
+                {{ post.updated_at | formatDate }}
+              </abbr>
+            {% endif %}
+            {% if post.rev_count > 1 and can(ctx.currUser, 'UPDATE_TOPIC', topic) %}
+              <a href="{{ post.url }}/revisions">
+                Revs: {{ post.rev_count }}
+              </a>
+            {% endif %}
+          </span>
+          <div class="pull-right post-header">
+            <a href="{{ post.url }}/raw" rel="nofollow">View Raw</a> -
+            <a href="{{ post.url }}" rel="nofollow" class="post-permalink"
+               data-post-id="{{ post.id }}"
+            >
+              <span class="glyphicon glyphicon-link"></span>
+            </a>
+          </div>
+      </div><!-- /.panel-heading -->
+
+      <div class="panel-body"
+            style="background-color: #2E2C2C; position: relative; overflow: hidden;"
+      >
+        <div class="corner-ribbon top-right white">0th</div>
+        <div class="post-content-wrapper">
+          {{ macros.renderPost(ctx, post) }}
+        </div>
+      </div><!-- /.panel-body -->
+
+      <div class="panel-footer clearfix"
+           style="background-color: #2E2C2C; border-radius: 0; border: 0"
+      >
+        <!-- Hide button -->
+        {% if post.is_hidden %}
+          {% if can(ctx.currUser, 'UNHIDE_POST', post) %}
+            <form action="{{ post.url}}/unhide" method="post">
+              <input type="submit" value="Unhide"
+                      class="btn btn-default btn-xs hide-btn pull-left">
+            </form>
+          {% endif %}
+        {% else %}
+          {% if can(ctx.currUser, 'HIDE_POST', post) %}
+            <form action="{{ post.url}}/hide" method="post">
+              <input type="submit" value="Hide"
+                      class="btn btn-default btn-xs unhide-btn pull-left">
+            </form>
+          {% endif %}
+        {% endif %}
+        <!-- Edit button -->
+        {% if can(ctx.currUser, 'UPDATE_POST', post) %}
+          <a href="{{ post.url }}/edit"
+              class="btn btn-default btn-xs pull-right post-edit-btn zeroth"
+              style="margin-left: 5px;"
+              post-id={{ post.id }}
+            >Edit</a>
+        {% endif %}
+      </div><!-- ./panel-footer -->
+
+    </div><!-- /.panel -->
+  {% endif %}
+
+  {% if not zeroth and topic.is_roleplay and currPage == 1 and cancan.isTopicGm(ctx.currUser, topic) %}
+    <div class="panel panel-default 0th-panel"
+         style="background-color: #777777; border-top: 0;"
+    >
+        <div class="panel-body">
+          <p style="color: #111">
+            <button class="btn btn-default btn-xs" id="show-0th-form">
+              Create 0th Post
+            </button>
+            Each tab can have a 0th post that GMs and Co-GMs can edit.
+            It displays on page 1 before all other posts.
+          </p>
+
+          <form method="post"
+                action="{{ topic.url }}/{{ postType }}/0th"
+                id="0th-form"
+                style="display: none;"
+          >
+            <textarea placeholder="Click here and begin writing"
+                      name="markup"
+                      rows=10
+                      class="form-control"
+                      >{{ ctx.flash.params.markup }}</textarea>
+
+            <button type="submit" class="btn btn-primary">
+              Create 0th Post
+            </button>
+          </form>
+        </div>
+      </div>
+  {% endif %}
+
+
   <!-- Posts list -->
 
-  {% if topic[postType + '_posts_count'] == 0 %}
+  {% if not zeroth and topic[postType + '_posts_count'] == 0 %}
     <div class="well">
       There are no {{ postType.toUpperCase() }} posts, yet.
     </div>
@@ -349,6 +459,12 @@
               <abbr class="timeago" title="{{ post.updated_at.toISOString() }}">
                 {{ post.updated_at|formatDate }}
               </abbr>
+            {% endif %}
+            {% if ctx.currUser.id == 1 %}
+              <span class="glyphicon glyphicon-eye-open"></span>
+              <a href="{{ post.url }}/revisions">
+                Revs: {{ post.rev_count }}
+              </a>
             {% endif %}
           </span>
           <div class="pull-right post-header">
@@ -597,19 +713,7 @@
                 class="form-control"
                 >{{ ctx.flash.params.markup }}</textarea>
 
-      <!-- Recaptcha -->
-      {#
-      <label>
-        Human Test: (Sorry, I'll remove this soon for existing members)
-      </label>
-      <div class="g-recaptcha"
-           style="margin-bottom: 20px;"
-           data-sitekey="{{ recaptchaSitekey }}"
-           data-callback="recaptchaSuccessCallback">
-      </div>
-      #}
-
-      <input type="submit" id="recaptcha-protected-submit" class="btn btn-primary" value="Post Reply"></input>
+      <input type="submit" class="btn btn-primary" value="Post Reply"></input>
     </form>
     </div>
 
@@ -620,21 +724,6 @@
 {% endblock %}
 
 {% block scripts %}
-
-  {#
-<script src='https://www.google.com/recaptcha/api.js'></script>
-<script>
-  // Called when user submits successful recaptcha, so allow them
-  // to actually submit the form.
-  function recaptchaSuccessCallback() {
-    $('#recaptcha-protected-submit')
-      .removeClass('btn-danger')
-      .addClass('btn-primary')
-      .attr('disabled', false);
-  }
-</script>
-#}
-
 <script>
 
     // Prevent <input> submit buttons from being submitted more than once
@@ -808,7 +897,7 @@ $(function() {
 
         $post_body.append($post_editor);
 
-        $post_editor.bbcode({
+        var $M = $post_editor.bbcode({
           savable: true,
           charLimit: {{ ctx.config.MAX_POST_LENGTH }},
           onSave: function(e) {
@@ -819,12 +908,16 @@ $(function() {
             $post_body.find('.btn').attr('disabled', true);
 
             var text_to_save = e.getContent();
+            var reason = e.$editor.find('input[name="reason"]').val()
             $.ajax({
               url: '/api/posts/' + post_id,
               dataType: 'json',
               type: 'POST',
               headers: { 'X-HTTP-Method-Override': 'PUT' },
-              data: { markup: text_to_save },
+              data: {
+                markup: text_to_save,
+                reason: reason
+              },
               success: function(updated_post) {
                 $post_body.html(updated_post.html);
                 $post_edit_btn.removeClass('disabled');
@@ -853,6 +946,15 @@ $(function() {
           $post_body.html(prev_body);
           $post_edit_btn.removeClass('disabled');
         });
+
+        // Add reason field if it's zeroth post form
+        if ($post_edit_btn.hasClass('zeroth')) {
+          $M.$editor.find('.md-footer').prepend(
+            '<div class="form-group">'+
+            '<input type="text" class="form-control" name="reason" placeholder="Reason for edit (Optional)" maxlength="300">'+
+            '</div>'
+          )
+        }
       }
     });
 
@@ -1095,4 +1197,14 @@ $(function () {
     }
   </script>
 
+  <script>
+   $('#show-0th-form').on('click', function (e) {
+     $(this).remove()
+     var $form = $('#0th-form')
+     $form.show()
+     $form.find('textarea').bbcode({
+       charLimit: {{ ctx.config.MAX_POST_LENGTH }}
+     })
+   })
+  </script>
 {% endblock%}

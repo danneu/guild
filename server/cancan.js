@@ -43,6 +43,15 @@ function isStaffRole (role) {
   return ['mod', 'smod', 'admin'].includes(role)
 }
 
+exports.isTopicGm = (user, topic) => {
+  assert(topic)
+  assert(Array.isArray(topic.co_gm_ids))
+  if (!user) return false
+  if (user.id === topic.user_id) return true
+  if (topic.co_gm_ids.some((id) => id === user.id)) return true
+  return false
+}
+
 // TODO: Actually write tests for these
 // TODO: Implement rules for all rules, not just member and admin
 exports.can = function(user, action, target) {
@@ -152,9 +161,10 @@ function can(user, action, target) {
         return true
       // If non-staff, then cannot if topic is hidden/closed
       if (target.is_closed || target.is_hidden) return false;
-      // GM/OP can
-      if (user.id === target.user_id) return true;
-      // TODO: Let GM/co-GMs do it
+      // GMs can
+      if (exports.isTopicGm(user, target)) {
+        return true
+      }
       // FIXME: (Sloppy) Check if user is eligible for any of the types of edits
       return can(user, 'UPDATE_TOPIC_JOIN_STATUS', target) ||
              can(user, 'UPDATE_TOPIC_TAGS', target) ||
@@ -314,18 +324,26 @@ function can(user, action, target) {
       if (isStaffRole(user.role)) return true
       if (user.role === 'conmod') return true
       if (user.role === 'arenamod') return true
+      // GMs can unhide zeroth post
+      if (target.idx === -1 && exports.isTopicGm(user, target.topic)) {
+        return true
+      }
       return false
     case 'HIDE_POST':
       if (!user) return false;
       assert(target.topic)
       // Cannot hide a post if it is the last post in this topic/RP
-      if (target.topic && target.topic.posts_count === 1) {
-        return false
-      }
+      //if (target.topic && target.topic.posts_count === 1) {
+      //  return false
+      //}
       // Staff can hide
       if (isStaffRole(user.role)) return true;
       if (user.role === 'conmod') return true;
       if (user.role === 'arenamod') return true
+      // GMs can hide zeroth post
+      if (target.idx === -1 && exports.isTopicGm(user, target.topic)) {
+        return true
+      }
       // Users can hide their own post if the post within 1 hour
       // Caution: remember to handle the case where this is the last unhidden
       // post in a topic.
@@ -411,11 +429,18 @@ function can(user, action, target) {
         return can(user, 'LEXUS_LOUNGE')
       }
       // conmods can read all posts in contest forums
-      if (user && user.role === 'conmod' && CONTEST_FORUMS.includes(target.topic.forum_id))
+      if (user && user.role === 'conmod' && CONTEST_FORUMS.includes(target.topic.forum_id)) {
         return true;
+      }
       // arnamods can read all posts in arena forums
-      if (user && user.role === 'arenamod' && ARENA_FORUMS.includes(target.topic.forum_id))
+      if (user && user.role === 'arenamod' && ARENA_FORUMS.includes(target.topic.forum_id)) {
         return true
+      }
+      // GMs can always read the zeroth post even if hidden
+      if (exports.isTopicGm(user, target.topic)) {
+        return true
+      }
+
 
       // Everyone else can read a post as long as it's not hidden,
       // the topic is not hidden, and the topic is not in lexus lounge
@@ -526,12 +551,17 @@ function can(user, action, target) {
       if (target.user_id === user.id) return true;
       return false;
     case 'UPDATE_POST':  // target expected to be a post
+      // target should have target.topic
       // FIXME: target must have { banned_ids: null | [Int] } to prevent users
       // from sabotaging posts after getting banned from a topic.
       if (!user) return false;
       if (user.role === 'banned') return false;
       // Admin can update any post
       if (user.role === 'admin') return true;
+      // GM and Co-GM can edit the 0th post
+      if (target.idx === -1 && exports.isTopicGm(user, target.topic)) {
+        return true
+      }
       // Cannot update post if banned from topic
       if ((target.banned_ids || []).includes(user.id)) return false
       // TODO: Create rules for other staff roles

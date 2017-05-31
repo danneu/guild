@@ -94,10 +94,23 @@ $$
   plv8.execute(q, [userId, delta]);
 $$ LANGUAGE 'plv8';
 
+-- Clean up old trigger
 DROP TRIGGER IF EXISTS update_user_posts_count_trigger ON posts;
-CREATE TRIGGER update_user_posts_count_trigger
-    AFTER INSERT OR DELETE ON posts
+
+DROP TRIGGER IF EXISTS update_user_posts_count_insert_trigger ON posts;
+CREATE TRIGGER update_user_posts_count_insert_trigger
+    AFTER INSERT ON posts
     FOR EACH ROW
+    -- Ignore 0th posts
+    WHEN (NEW.idx > -1)
+    EXECUTE PROCEDURE update_user_posts_count();
+
+DROP TRIGGER IF EXISTS update_user_posts_count_delete_trigger ON posts;
+CREATE TRIGGER update_user_posts_count_delete_trigger
+    AFTER DELETE ON posts
+    FOR EACH ROW
+    -- Ignore 0th posts
+    WHEN (OLD.idx > -1)
     EXECUTE PROCEDURE update_user_posts_count();
 
 ------------------------------------------------------------
@@ -220,10 +233,23 @@ $$
   plv8.execute(q, [totalDelta, icDelta, oocDelta, charDelta, topicId]);
 $$ LANGUAGE 'plv8';
 
+-- drop old trigger
 DROP TRIGGER IF EXISTS post_inserted_or_deleted ON posts;
-CREATE TRIGGER post_inserted_or_deleted
-    AFTER INSERT OR DELETE ON posts
+
+DROP TRIGGER IF EXISTS post_inserted ON posts;
+CREATE TRIGGER post_inserted
+    AFTER INSERT ON posts
     FOR EACH ROW
+    -- Ignore 0th posts
+    WHEN (NEW.idx > -1)
+    EXECUTE PROCEDURE update_topic_post_counts();
+
+DROP TRIGGER IF EXISTS post_deleted ON posts;
+CREATE TRIGGER post_deleted
+    AFTER DELETE ON posts
+    FOR EACH ROW
+    -- Ignore 0th posts
+    WHEN (OLD.idx > -1)
     EXECUTE PROCEDURE update_topic_post_counts();
 
 ------------------------------------------------------------
@@ -238,7 +264,7 @@ $$
   q = ''+
     'WITH latest_post AS ( '+
     '  SELECT id, created_at FROM posts '+
-    '  WHERE is_hidden = false AND topic_id = $1 '+
+    '  WHERE idx > -1 AND is_hidden = false AND topic_id = $1 '+
     '  ORDER BY id DESC LIMIT 1 '+
     ') '+
     'UPDATE topics '+
@@ -246,17 +272,17 @@ $$
     '    latest_post_id = (SELECT id FROM latest_post), '+
     '    latest_ic_post_id = ( '+
     '      SELECT id FROM posts '+
-    '      WHERE is_hidden = false AND topic_id = $1 AND type = \'ic\' '+
+    '      WHERE idx > -1 AND is_hidden = false AND topic_id = $1 AND type = \'ic\' '+
     '      ORDER BY id DESC LIMIT 1 '+
     '    ), '+
     '    latest_ooc_post_id = ( '+
     '      SELECT id FROM posts '+
-    '      WHERE is_hidden = false AND topic_id = $1 AND type = \'ooc\' '+
+    '      WHERE idx > -1 AND is_hidden = false AND topic_id = $1 AND type = \'ooc\' '+
     '      ORDER BY id DESC LIMIT 1 '+
     '    ), '+
     '    latest_char_post_id = ( '+
     '      SELECT id FROM posts '+
-    '      WHERE is_hidden = false AND topic_id = $1 AND type = \'char\' '+
+    '      WHERE idx > -1 AND is_hidden = false AND topic_id = $1 AND type = \'char\' '+
     '      ORDER BY id DESC LIMIT 1 '+
     '    ) '+
     'WHERE id = $1 '+
@@ -288,7 +314,9 @@ DROP TRIGGER IF EXISTS post_hidden ON posts;
 CREATE TRIGGER post_hidden
     AFTER UPDATE ON posts
     FOR EACH ROW
-    WHEN (OLD.is_hidden != NEW.is_hidden)
+    -- Only execute when is_hidden is changed
+    -- Ignore 0th posts
+    WHEN (OLD.is_hidden != NEW.is_hidden AND NEW.idx > -1)
     EXECUTE PROCEDURE on_post_hidden();
 
 ------------------------------------------------------------
@@ -334,6 +362,8 @@ DROP TRIGGER IF EXISTS post_created5 ON posts;
 CREATE TRIGGER post_created5
     AFTER INSERT ON posts  -- Only on insert
     FOR EACH ROW
+    -- Ignore 0th posts
+    WHEN (NEW.idx > -1)
     EXECUTE PROCEDURE update_latest_post_id();
 
 ------------------------------------------------------------

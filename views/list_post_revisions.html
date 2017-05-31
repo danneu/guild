@@ -1,0 +1,90 @@
+{% extends 'layouts/master.html' %}
+{% import 'macros/macros.html' as macros %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li>
+      <a href="/">Home</a>
+    </li>
+    <li>
+      <a href="{{ post.url }}">Post #{{ post.id }}</a>
+    </li>
+  </ol>
+
+  <div class="row">
+    <div class="col-md-12">
+      <div class="panel panel-default no-select" style="border-color: #000">
+
+        <div class="panel-heading">
+          <a href="{{ post.url }}">
+            &larr; Back to Post
+          </a>
+          <h4 class="text-center">
+            Post Revisions
+            {% if revs.length < post.rev_count %}
+              <small>
+                Showing latest {{ revs.length }} of {{ post.rev_count }}
+              </small>
+            {% endif %}
+          </h4>
+        </div>
+
+        <div class="panel-body">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Revision</th>
+                <th>Length</th>
+                <th>Reason</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for rev in revs %}
+                <tr>
+                  <td>
+                    <a href="/posts/{{ post.id }}/revisions/{{ rev.id }}">
+                      Revision {{ rev.id }}
+                    </a>
+                    <abbr class="timeago" title="{{ rev.created_at.toISOString() }}">
+                      {{ rev.created_at | formatDate }}
+                    </abbr>
+                    by
+                    <a href="{{ rev.user.url }}">
+                      {{ rev.user.uname }}
+                    </a>
+                    {% if loop.first %}
+                      <span class="label label-primary">Current</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {{ rev.length }}
+                  </td>
+                  <td>
+                    {{ rev.reason }}
+                  </td>
+                  <td class="text-right">
+                    {% if not loop.first %}
+                      <form method="POST" action="{{ rev.url }}/revert">
+                        <button type="submit" class="btn btn-default btn-xs">
+                          Revert
+                        </button>
+                      </form>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+{% endblock %}
+
+
+
+{% block scripts %}
+{% endblock %}

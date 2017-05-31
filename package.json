@@ -1,7 +1,4 @@
 {
-  "engines": {
-    "node": "7.10.0"
-  },
   "scripts": {
     "start": "node ./server",
     "start-dev": "env $(cat .env-dev | xargs) nodemon ./server",

@@ -161,7 +161,7 @@ INSERT INTO tags_topics (topic_id, tag_id) VALUES
 ;
 
 ---- Posts
-INSERT INTO posts (id, topic_id, user_id, text, html, ip_address, type, is_roleplay)
+INSERT INTO posts (id, topic_id, user_id, text, markup, ip_address, type, is_roleplay)
 VALUES
 (1, 1, 1, 'First post', 'First post', '1.2.3.4', 'ooc', false)
 ,(2, 2, 1, 'First post', 'First post', '1.2.3.4', 'ooc', false)

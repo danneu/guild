@@ -181,20 +181,6 @@
           </div><!--/form-group-->
 
 
-      <!-- Recaptcha -->
-          {#
-      <div class="form-group">
-        <label>
-          Human Test: (Sorry, I'll remove this soon for existing members)
-        </label>
-        <div class="g-recaptcha"
-             style="margin-bottom: 20px;"
-             data-sitekey="{{ recaptchaSitekey }}"
-             data-callback="recaptchaSuccessCallback">
-        </div>
-      </div>
-      #}
-
       <div class="form-controls">
         <a href="{{ forum.url }}" class="btn btn-default">Cancel</a>
         <input type="submit" id="create-topic-btn" class="btn btn-primary" value="Create Topic">
@@ -208,20 +194,6 @@
 {% endblock %}
 
 {% block scripts %}
-  {#
-<script src='https://www.google.com/recaptcha/api.js'></script>
-<script>
-  // Called when user submits successful recaptcha, so allow them
-  // to actually submit the form.
-  function recaptchaSuccessCallback() {
-    $('#create-topic-btn')
-      .removeClass('btn-danger')
-      .addClass('btn-primary')
-      .attr('disabled', false);
-  }
-</script>
-#}
-
   <script type="text/javascript">
     $('[data-toggle="tooltip"]').tooltip()
   </script>

@@ -222,4 +222,90 @@ router.get('/roleplays', async (ctx) => {
 
 ////////////////////////////////////////////////////////////
 
+router.get('/posts/:id/revisions', async (ctx) => {
+  const post = await db.findPostWithTopicAndForum(ctx.params.id)
+    .then(pre.presentPost)
+  ctx.assert(post, 404)
+  ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
+
+  const revs = await db.revs.listPostRevs(post.id)
+    .then((xs) => xs.map(pre.presentPostRev))
+
+  await ctx.render('list_post_revisions', {
+    ctx,
+    revs,
+    post,
+    //
+    title: `Post #${post.id} History`
+  })
+})
+
+////////////////////////////////////////////////////////////
+
+router.get('/posts/:postId/revisions/:revId', async (ctx) => {
+  const revId = Number.parseInt(ctx.params.revId, 10)
+  ctx.assert(!Number.isNaN(revId), 404)
+
+  const post = await db.findPostWithTopicAndForum(ctx.params.postId)
+    .then(pre.presentPost)
+  ctx.assert(post, 404)
+  ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
+
+  const rev = await db.revs.getPostRev(post.id, revId)
+    .then(pre.presentPostRev)
+  ctx.assert(rev, 404)
+
+  ctx.type = 'html'
+  ctx.body = `
+    <head>
+      <link rel="stylesheet" href="/css/general.css">
+    </head>
+    <body style="background-color: #2D2C2C; color: white;">
+      <a href="/posts/${post.id}/revisions/${rev.id}/raw">View Raw</a>
+      <hr>
+      ${rev.html}
+    </body>
+  `
+})
+
+router.get('/posts/:postId/revisions/:revId/raw', async (ctx) => {
+  const revId = Number.parseInt(ctx.params.revId, 10)
+  ctx.assert(!Number.isNaN(revId), 404)
+
+  const post = await db.findPostWithTopicAndForum(ctx.params.postId)
+    .then(pre.presentPost)
+  ctx.assert(post, 404)
+  ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
+
+  const markup = await db.revs.getPostRevMarkup(post.id, revId)
+  ctx.assert(markup, 404)
+
+  ctx.type = 'html'
+  ctx.body = `
+    <pre>${markup}</pre>
+  `
+})
+
+router.post('/posts/:postId/revisions/:revId/revert', async (ctx) => {
+  const revId = Number.parseInt(ctx.params.revId, 10)
+  ctx.assert(!Number.isNaN(revId), 404)
+
+  const post = await db.findPostWithTopicAndForum(ctx.params.postId)
+    .then(pre.presentPost)
+  ctx.assert(post, 404)
+  ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
+
+  const rev = await db.revs.getPostRev(post.id, revId)
+    .then(pre.presentPostRev)
+  ctx.assert(rev, 404)
+
+  await db.revs.revertPostRev(ctx.currUser.id, post.id, rev.id)
+
+  ctx.flash = { message: ['success', `Reverted post to revision ${rev.id}`] }
+  ctx.redirect(post.url + '/revisions')
+})
+
+
+////////////////////////////////////////////////////////////
+
 module.exports = router

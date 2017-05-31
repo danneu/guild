@@ -166,6 +166,7 @@ CREATE TABLE posts (
   type       post_type NOT NULL,
   ip_address inet NULL,
   is_hidden  boolean NOT NULL  DEFAULT false,
+  rev_count   int NOT NULL DEFAULT 0,
   idx         int  NULL
 );
 
@@ -260,7 +261,13 @@ CREATE INDEX convos_participants__folder ON convos_participants(folder);
 -- Notifications
 --
 
-CREATE TYPE notification_type AS ENUM ('MENTION', 'QUOTE', 'CONVO', 'RATING');
+CREATE TYPE notification_type AS ENUM (
+  'MENTION'
+, 'QUOTE'
+, 'CONVO'
+, 'RATING'
+, 'TOPIC_SUB'
+);
 
 CREATE TABLE notifications (
   id           serial PRIMARY KEY,
@@ -443,6 +450,10 @@ CREATE INDEX trophies_users__awarded_at ON trophies_users (awarded_at);
 
 CREATE OR REPLACE FUNCTION set_post_idx() RETURNS trigger AS
 $$
+  if (NEW.idx === -1) {
+    return NEW
+  }
+
   q = 'SELECT COALESCE(MAX(p.idx) + 1, 0) "idx"  '+
       'FROM posts p                              '+
       'WHERE p.topic_id = $1 AND p.type = $2     ';
@@ -996,10 +1007,12 @@ $$ LANGUAGE SQL IMMUTABLE;
 
 -- Note, if immutable functions are updated, then indexes that use them
 -- not to be dropped and rebuilt concurrently
-CREATE INDEX CONCURRENTLY posts_vector ON posts
-USING gin(to_tsvector('english', strip_quotes(markup)))
-WHERE is_hidden = false
-  AND markup IS NOT NULL;
+--CREATE INDEX CONCURRENTLY posts_vector ON posts
+--USING gin(to_tsvector('english', strip_quotes(markup)))
+--WHERE is_hidden = false
+--  AND markup IS NOT NULL;
+
+DROP INDEX CONCURRENTLY posts_vector;
 
 ------------------------------------------------------------
 ------------------------------------------------------------
@@ -1017,16 +1030,6 @@ CREATE TABLE forum_mods (
 ------------------------------------------------------------
 -- sub_notifications
 
-ALTER TABLE users
-  ADD COLUMN sub_notifications_count int NOT NULL DEFAULT 0;
-
-ALTER TABLE topic_subscriptions
-  ADD COLUMN id serial PRIMARY KEY;
-ALTER TABLE topic_subscriptions
-  ADD COLUMN is_archived boolean NOT NULL DEFAULT false;
-
-ALTER TYPE notification_type ADD VALUE 'TOPIC_SUB';
-
 -- this constraints lets us upsert sub notifications
 -- but we want it on TOPIC_SUB since there may be other
 -- types of notifications for the topic
@@ -1034,9 +1037,52 @@ CREATE UNIQUE INDEX notes_sub_touserid_topicid
   ON notifications (type, to_user_id, topic_id)
   WHERE type = 'TOPIC_SUB';
 
--- need to transform to jsonb so that our sub notifications can
--- upsert the notification meta json object.
-ALTER TABLE notifications
-  ALTER COLUMN meta
-  SET DATA TYPE jsonb
-  USING meta::jsonb;
+------------------------------------------------------------
+-- Post revision history
+
+CREATE TABLE post_revs (
+  id             serial           PRIMARY KEY,
+  post_id        int              NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  user_id        int              NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  markup         text             NOT NULL,
+  html           text             NOT NULL,
+  length         int              NOT NULL,
+  reason         text             NULL,
+  created_at     timestamptz      NOT NULL DEFAULT NOW()
+);
+
+-- For finding all revisions for a post
+CREATE INDEX ON post_revs (post_id);
+
+ALTER TABLE posts ADD COLUMN rev_count int NOT NULL DEFAULT 0;
+
+-- Well, must do this in production
+ALTER TABLE posts ADD COLUMN rev_count int NULL;
+ALTER TABLE posts ALTER COLUMN rev_count SET DEFAULT 0;
+UPDATE posts SET rev_count = 0;
+ALTER TABLE posts ALTER COLUMN rev_count SET NOT NULL;
+
+CREATE OR REPLACE FUNCTION update_post_rev_count() RETURNS trigger AS
+$$
+  var delta = 0
+  var postId = (OLD && OLD.post_id) || (NEW && NEW.post_id)
+  if (TG_OP === 'DELETE') delta--
+  if (TG_OP === 'INSERT') delta++
+  q = 'UPDATE posts SET rev_count = rev_count + $2 WHERE id = $1'
+  plv8.execute(q, [postId, delta])
+$$ LANGUAGE 'plv8';
+DROP TRIGGER IF EXISTS update_post_rev_count_trigger ON post_revs;
+CREATE TRIGGER update_post_rev_count_trigger
+    AFTER INSERT OR DELETE ON post_revs
+    FOR EACH ROW
+    EXECUTE PROCEDURE update_post_rev_count();
+
+-- Right before deploy
+
+-- Create the first revision for all posts
+INSERT INTO post_revs (post_id, user_id, markup, html, length)
+SELECT id, user_id, markup, html, bit_length(markup) / 8
+FROM posts
+WHERE markup IS NOT NULL
+  AND rev_count = 0
+;
