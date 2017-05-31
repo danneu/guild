@@ -1061,6 +1061,9 @@ exports.createTopic = async function (props) {
       RETURNING *
     `)
 
+    // Create post revision
+    await revs.insertPostRev(client, props.userId, post.id, props.markup, props.html)
+
     // Attach post to topic so that it can be passed into antispam process()
     topic.post = post
 
