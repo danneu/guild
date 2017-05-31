@@ -52,7 +52,7 @@ module.exports = { async connect () {
 
       const rollValues = [].concat.apply([], output.rolls.map((r) => r.values))
 
-      if (rollValues.length > 1) {
+      if (rollValues.length > 1 && rollValues.length <= 10) {
         msg.reply(`:game_die: ${syntax} → ${JSON.stringify(rollValues)} → \`${output.total}\``)
       } else {
         msg.reply(`:game_die: ${syntax} → \`${output.total}\``)
