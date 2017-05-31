@@ -37,7 +37,16 @@ router.post('/me/friendships', async (ctx) => {
 
   // update db
   if (ctx.vals.commit === 'add') {
-    await db.createFriendship(ctx.currUser.id, ctx.vals.to_user_id)
+    try {
+      await db.createFriendship(ctx.currUser.id, ctx.vals.to_user_id)
+    } catch (err) {
+      if (err === 'TOO_MANY_FRIENDS') {
+        ctx.flash = { message: ['danger', 'Cannot have more than 100 friends'] }
+        ctx.redirect(redirectTo || '/users/' + ctx.vals.to_user_id)
+        return
+      }
+      throw err
+    }
     ctx.flash = { message: ['success', 'Friendship added'] }
   } else {
     await db.deleteFriendship(ctx.currUser.id, ctx.vals.to_user_id)
@@ -63,7 +72,7 @@ router.get('/me/friendships', async (ctx) => {
 
   rows.forEach((row) => {
     friendships.count += 1
-    if (row.to_user.is_ghost && belt.withinGhostRange(row.to_user.last_online_at)) {
+    if (row.to_user.is_ghost && !row.is_mutual && belt.withinGhostRange(row.to_user.last_online_at)) {
       friendships.ghosts.push(row)
     } else {
       friendships.nonghosts.push(row)

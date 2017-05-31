@@ -2973,7 +2973,13 @@ SELECT
     'avatar_url', u1.avatar_url,
     'slug', u1.slug,
     'is_ghost', u1.is_ghost
-  ) "to_user"
+  ) "to_user",
+  EXISTS(
+    SELECT 1
+    FROM friendships
+    WHERE to_user_id = 1
+      AND from_user_id = u1.id
+  ) "is_mutual"
 FROM friendships
 JOIN users u1 ON friendships.to_user_id = u1.id
 WHERE from_user_id = ${user_id}
@@ -2983,6 +2989,8 @@ LIMIT ${limit}
 }
 
 // @fast
+//
+// TODO: add is_mutual
 exports.findFriendshipBetween = async function (from_id, to_id) {
   return pool.one(sql`
     SELECT friendships
@@ -2996,6 +3004,17 @@ exports.findFriendshipBetween = async function (from_id, to_id) {
 exports.createFriendship = async function (from_id, to_id) {
   assert(_.isNumber(from_id))
   assert(_.isNumber(to_id))
+
+  // Note: race condition
+  const count = pool.one(sql`
+    SELECT COUNT(*) "count"
+    FROM friendships
+    WHERE from_user_id = ${from_id}
+  `).then((row) => row.count)
+
+  if (count <= 100) {
+    throw 'TOO_MANY_FRIENDS'
+  }
 
   return pool.query(sql`
     INSERT INTO friendships (from_user_id, to_user_id)

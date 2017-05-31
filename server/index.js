@@ -585,7 +585,7 @@ router.get('/', async (ctx) => {
 
     rows.forEach((row) => {
       friendships.count += 1
-      if (row.to_user.is_ghost && belt.withinGhostRange(row.to_user.last_online_at)) {
+      if (row.to_user.is_ghost && !row.is_mutual && belt.withinGhostRange(row.to_user.last_online_at)) {
         friendships.ghosts.push(row)
       } else {
         friendships.nonghosts.push(row)

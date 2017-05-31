@@ -16,10 +16,15 @@
       <div class="panel panel-default no-select"
             style="border-color: #000">
 
-        <div class="panel-heading">
-          <h4 class="text-center">
+        <div class="panel-heading text-center">
+          <h4>
             Your Friends
           </h4>
+          <p>
+            Mutual friendships do not appear as
+            <img src="/img/ghost.png" width="14" height="11">
+            ghosts.
+          </p>
         </div>
 
         <div class="panel-body">
@@ -76,7 +81,7 @@
                   </a>
                 </td>
                 <td class="text-right">
-                  <small>{{ macros.onlineStatus(ctx, friend, true) }}</small>
+                  <small>{{ macros.onlineStatus(ctx, friend, true, friendship.is_mutual) }}</small>
                 </td>
               </tr>
             {% endfor %}
