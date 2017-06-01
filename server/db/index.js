@@ -906,10 +906,15 @@ exports.findPostsByTopicId = async function (topicId, postType, page) {
       ) "user",
       to_json(t.*) "topic",
       to_json(f.*) "forum",
-      json_build_object(
-        'html', s.html,
-        'created_at', s.created_at
-      ) "current_status",
+
+      CASE
+        WHEN u.current_status_id IS NOT NULL THEN
+          json_build_object(
+            'html', s.html,
+            'created_at', s.created_at
+          )
+      END "current_status",
+
       to_json(array_remove(array_agg(r.*), null)) ratings
     FROM posts p
     JOIN users u ON p.user_id = u.id
