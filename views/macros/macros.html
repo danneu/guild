@@ -254,12 +254,12 @@
 
   <!-- User gylphs -->
 
-  {% if user.bio_markup or user.current_status or user.show_arena_stats %}
+  {% if user.has_bio or user.bio_markup or user.current_status or user.show_arena_stats %}
     <div class="user-glyphs">
 
       <!-- Bio -->
 
-      {% if user.bio_markup %}
+      {% if user.has_bio or user.bio_markup %}
         <a href="{{ user.url }}#bio" class="btn btn-default btn-xs">
           Bio
         </a>

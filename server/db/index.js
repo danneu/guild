@@ -860,13 +860,56 @@ exports.findPostsByTopicId = async function (topicId, postType, page) {
 
   debug('%s <= post.idx < %s', fromIdx, toIdx)
 
+  // Don't fetch markup if we don't need it, or any unnecessary
+  // html/markup field in general since they can be huge.
+  //
+  // Trying to be frugal with the projection
   const rows = await pool.many(sql`
     SELECT
-      p.*,
-      to_json(u.*) "user",
+      p.id,
+      p.text,
+      p.html,
+      p.legacy_html,
+      p.topic_id,
+      p.user_id,
+      p.created_at,
+      p.updated_at,
+      p.is_roleplay,
+      p.type,
+      p.ip_address,
+      p.is_hidden,
+      p.rev_count,
+      p.idx,
+      json_build_object(
+        'id', u.id,
+        'uname', u.uname,
+        'created_at', u.created_at,
+        'last_online_at', u.last_online_at,
+        'is_ghost', u.is_ghost,
+        'role', u.role,
+        'posts_count', u.posts_count,
+        'sig_html', u.sig_html,
+        'avatar_url', u.avatar_url,
+        'slug', u.slug,
+        'custom_title', u.custom_title,
+        'show_arena_stats', u.show_arena_stats,
+        'arena_points' , u.arena_points,
+        'arena_wins' , u.arena_wins,
+        'arena_losses' , u.arena_losses,
+        'arena_draws' , u.arena_draws,
+
+        'has_bio', CASE
+            WHEN u.bio_markup IS NULL THEN false
+            WHEN char_length(u.bio_markup) > 3 THEN true
+            ELSE false
+          END
+      ) "user",
       to_json(t.*) "topic",
       to_json(f.*) "forum",
-      to_json(s.*) "current_status",
+      json_build_object(
+        'html', s.html,
+        'created_at', s.created_at
+      ) "current_status",
       to_json(array_remove(array_agg(r.*), null)) ratings
     FROM posts p
     JOIN users u ON p.user_id = u.id
@@ -2185,6 +2228,8 @@ exports.updateTopicTags = async function (topicId, tagIds) {
       WHERE topic_id = ${topicId}
     `)
     // Now create the new bridge links in parallel
+    // FIXME: Can't make parallel requests on a single connection, so
+    // make it explicitly serial.
     return Promise.all(tagIds.map((tagId) => {
       return client.query(sql`
         INSERT INTO tags_topics (topic_id, tag_id)
