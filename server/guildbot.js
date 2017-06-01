@@ -7,11 +7,19 @@ const config = require('./config')
 const dice = require('./dice')
 const {getClient} = require('./db/util')
 
+function timeout (ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 module.exports = { async connect () {
   if (!config.IS_DISCORD_CONFIGURED) {
     console.log('Cannot start GuildBot because Discord is not configured')
     return
   }
+
+  // Give previous guildbot a chance to shut down and release lock
+  console.log('guildbot waiting a moment before connecting...')
+  await timeout(1000 * 10)
 
   // Ensure only one bot is running
 
