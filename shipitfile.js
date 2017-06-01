@@ -24,7 +24,7 @@ module.exports = function (shipit) {
   })
 
   shipit.blTask('start', () => {
-    return shipit.remote(`cd ${deployTo} && nvm use $(cat current/.nvmrc) && pm2 startOrReload current/ecosystem.json`)
+    return shipit.remote(`cd ${deployTo} && pm2 startOrRestart current/ecosystem.json`)
   })
 
   shipit.blTask('stop', () => {
