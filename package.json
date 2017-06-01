@@ -60,6 +60,8 @@
     "gulp-cssnano": "^2.1.0",
     "gulp-rev": "^7.1.2",
     "gulp-uglify": "^2.1.2",
+    "shipit-cli": "^3.0.0",
+    "shipit-deploy": "^2.4.0",
     "vinyl-paths": "^2.1.0"
   }
 }
