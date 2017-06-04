@@ -24,6 +24,9 @@ const router = new Router()
 // TODO: Remove the old CloudSearch cruft from search_results.html and anywhere
 // else in the codebase.
 router.get('/search', async (ctx) => {
+  ctx.body = 'Search is temporarily disabled.'
+  return
+
   // Must be logged in to search
   if (!ctx.currUser) {
     ctx.flash = { message: ['danger', 'You must be logged in to search'] }
