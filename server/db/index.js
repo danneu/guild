@@ -2693,6 +2693,7 @@ exports.findLatestStatuses = async function () {
       to_json(u.*) "user"
     FROM statuses us
     JOIN users u ON us.user_id = u.id
+    WHERE us.user_id NOT IN (26345)
     ORDER BY created_at DESC
     LIMIT 8
   `)
@@ -2731,6 +2732,7 @@ exports.findAllStatuses = async function () {
 WITH sids AS (
   SELECT id
   FROM statuses
+  WHERE user_id NOT IN (26345)
   ORDER BY created_at DESC
   LIMIT 100
 )
