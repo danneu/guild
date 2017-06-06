@@ -8,6 +8,13 @@
     <li>
       <a href="/">Home</a>
     </li>
+    {% if forum.parent_forum %}
+      <li>
+        <a href="{{ forum.parent_forum.url }}">
+          {{ forum.parent_forum.title }}
+        </a>
+      </li>
+    {% endif %}
   </ol>
 
   <!-- Viewers -->
@@ -116,41 +123,15 @@
 
   <!-- Tabs -->
 
-  {% if forum.parent_forum  %}
-    <ul class="nav nav-tabs forum-tabs">
-      <li>
-        <a href="{{ forum.parent_forum.url }}">
-          {{ forum.parent_forum.tab_title or 'Roleplays' }}
+  <ul class="nav nav-tabs forum-tabs">
+  {% for tabbedForum in tabbedForums %}
+      <li class="{% if forum.id == tabbedForum.id %}active{% endif %}">
+        <a href="{{ tabbedForum.url }}">
+          {{ tabbedForum.tab_title or tabbedForum.title  }}
         </a>
       </li>
-      <li class="active">
-        <a href="{{ forum.url }}">
-          {{ forum.tab_title or 'Interest Checks' }}
-        </a>
-      </li>
-    </ul>
-  {% endif %}
-
-  {% if forum.child_forum  %}
-    <ul class="nav nav-tabs forum-tabs">
-      <li class="active">
-        <a href="{{ forum.url }}">
-          {{ forum.tab_title or 'Roleplays' }}
-        </a>
-      </li>
-      <li>
-        <a href="{{ forum.child_forum.url }}">
-          {{ forum.child_forum.tab_title or 'Interest Checks' }}
-        </a>
-      </li>
-    </ul>
-  {% endif %}
-
-  {% if (not forum.child_forum and not forum.parent_forum and not forum.is_roleplay) %}
-    <ul class="nav nav-tabs forum-tabs">
-      <li class="active"><a href="{{ forum.url }}">Topics</a></li>
-    </ul>
-  {% endif %}
+  {% endfor %}
+  </ul>
 
   <!-- Topic list -->
 

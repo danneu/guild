@@ -1190,6 +1190,37 @@ exports.findForumById = exports.findForum = async function (forumId) {
   `)
 }
 
+exports.findForum2 = async function (forumId) {
+  assert(Number.isInteger(forumId))
+
+  // - child_forums are a list of forums that point to this one
+  // - sibling_forums are all children at this level including curr forum
+
+  return pool.one(sql`
+    SELECT
+      f.*,
+      (
+        SELECT COALESCE(json_agg(forums.*), '[]')
+        FROM forums
+        WHERE parent_forum_id = ${forumId}
+      ) "child_forums",
+      (
+        SELECT COALESCE(json_agg(forums.*), '[]')
+        FROM forums
+        WHERE parent_forum_id = f.parent_forum_id
+           OR id = f.id
+      ) "sibling_forums",
+      (
+        SELECT to_json(forums.*)
+        FROM forums
+        WHERE id = f.parent_forum_id
+      ) "parent_forum"
+    FROM forums f
+    WHERE f.id = ${forumId}
+    GROUP BY f.id
+  `)
+}
+
 ////////////////////////////////////////////////////////////
 
 // TODO: This should be moved to some admin namespace since

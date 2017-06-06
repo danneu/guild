@@ -63,6 +63,15 @@ exports.presentForum = function (forum) {
   if (forum.forums) {
     forum.forums.forEach(exports.presentForum)
   }
+
+  // For findForum2
+  if (Array.isArray(forum.child_forums)) {
+    forum.child_forums.forEach(exports.presentForum)
+  }
+  if (Array.isArray(forum.sibling_forums)) {
+    forum.sibling_forums.forEach(exports.presentForum)
+  }
+
   exports.presentPost(forum.latest_post)
   exports.presentUser(forum.latest_user)
 

@@ -907,7 +907,7 @@ router.get('/forums/:forumSlug', async (ctx) => {
 
   ctx.validateQuery('page').optional().toInt()
 
-  var forum = await db.findForum(forumId).then(pre.presentForum)
+  var forum = await db.findForum2(forumId).then(pre.presentForum)
   ctx.assert(forum, 404)
 
   forum.mods = cache2.get('forum-mods')[forum.id] || []
@@ -944,6 +944,12 @@ router.get('/forums/:forumSlug', async (ctx) => {
   forum.topics = topics
   pre.presentForum(forum)
 
+  const tabbedForums = [
+    forum.parent_forum,
+    ...forum.sibling_forums,
+    ...forum.child_forums
+  ].filter(Boolean)
+
   // update viewers in background
   db.upsertViewer(ctx, forum.id)
     .catch((err) => console.error(err, err.stack))
@@ -951,6 +957,7 @@ router.get('/forums/:forumSlug', async (ctx) => {
   await ctx.render('show_forum', {
     ctx,
     forum,
+    tabbedForums,
     currPage: pager.currPage,
     totalPages: pager.totalPages,
     title: forum.title,
