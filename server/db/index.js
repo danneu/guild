@@ -291,7 +291,6 @@ exports.findUserBySlug = exports.getUserBySlug = async function (slug) {
          WHERE slug = ${slug}
            AND recycle = false
        )
-    GROUP BY u.id
   `)
 }
 
@@ -301,6 +300,8 @@ exports.findUserBySlug = exports.getUserBySlug = async function (slug) {
 exports.findUserWithRatingsBySlug = async function (slug) {
   debug(`[findUserWithRatingsBySlug] slug=%j`, slug)
   assert(typeof slug === 'string')
+
+  slug = slug.toLowerCase()
 
   return pool.one(sql`
     WITH u1 AS (
@@ -313,7 +314,6 @@ exports.findUserWithRatingsBySlug = async function (slug) {
            WHERE slug = ${slug}
              AND recycle = false
          )
-      GROUP BY id
     ),
     q1 AS (
       SELECT
@@ -322,7 +322,6 @@ exports.findUserWithRatingsBySlug = async function (slug) {
         COUNT(r) FILTER (WHERE r.type = 'thank') thank_count
       FROM ratings r
       JOIN u1 ON r.to_user_id = u1.id
-      GROUP BY r.to_user_id
     ),
     q2 AS (
       SELECT
@@ -331,7 +330,6 @@ exports.findUserWithRatingsBySlug = async function (slug) {
         COUNT(r) FILTER (WHERE r.type = 'thank') thank_count
       FROM ratings r
       JOIN u1 ON r.from_user_id = u1.id
-      GROUP BY r.from_user_id
     )
 
     SELECT
@@ -348,7 +346,6 @@ exports.findUserWithRatingsBySlug = async function (slug) {
       ) ratings_given
     FROM users
     WHERE id = (SELECT id FROM u1)
-    GROUP BY id
   `)
 }
 
