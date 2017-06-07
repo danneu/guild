@@ -21,6 +21,13 @@ CREATE INDEX ON ratings (to_user_id);
 CREATE INDEX ON ratings (post_id);
 
 ------------------------------------------------------------
+-- matches belt.slugifyUname
+
+CREATE OR REPLACE FUNCTION slugify_uname (text) RETURNS text AS $$
+  SELECT lower(regexp_replace(regexp_replace(trim($1), ' {2,}', ' ', 'g'), ' ', '-', 'g'));
+$$ LANGUAGE SQL IMMUTABLE;
+
+------------------------------------------------------------
 ------------------------------------------------------------
 -- Update forum.topics_count when a topic is inserted/deleted
 

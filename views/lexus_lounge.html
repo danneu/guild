@@ -284,6 +284,70 @@
     <div class="col-sm-6"></div>
   </div>
 
+  <div class="row">
+    <div class="col-sm-12">
+      <div class="well">
+        <h4 class="text-center">
+          Latest 10 Username Changes
+        </h4>
+
+        <table class="table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>User</th>
+              <th>Change</th>
+              <th>Changed By</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for change in unameChanges %}
+              <tr>
+                <td>
+                  {{ loop.index }}.
+                </td>
+                <td>
+                  <a href="{{ change.user.url }}">
+                    {% if change.user.avatar_url_sm %}
+                      <img src="{{ change.user.avatar_url_sm }}" width="32">
+                    {% endif %}
+                    {{ change.user.uname }}
+                  </a>
+                </td>
+                <td>
+                  <code>{{ change.prev_uname.uname }}</code>
+                  {% if change.prev_uname.recycle -%}
+                    <span class="label label-primary">Recyclable</span>
+                  {% endif %}
+                  &rarr;
+                  <code>{{ change.uname }}</code>
+                </td>
+                <td>
+                  {% if change.changed_by %}
+                    <a href="{{ change.changed_by.url }}">
+                      {% if change.changed_by.avatar_url_sm %}
+                        <img src="{{ change.changed_by.avatar_url_sm }}" width="32">
+                      {% endif %}
+                      {{ change.changed_by.uname }}
+                    </a>
+                    <abbr class="timeago" title="{{ change.created_at.toISOString() }}">
+                      {{ change.created_at | formatDate }}
+                    </abbr>
+                  {% else %}
+                    <span class="text-muted">
+                      Initial Username
+                    </span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
 {% endblock %}
 
 

@@ -195,6 +195,7 @@ const nunjucksOptions = {
     ordinalize: belt.ordinalize,
     getOrdinalSuffix: belt.getOrdinalSuffix,
     isNewerThan: belt.isNewerThan,
+    isOlderThan: belt.isOlderThan,
     expandJoinStatus: belt.expandJoinStatus,
     // {% if user.id|isIn([1, 2, 3]) %}
     isIn: (v, coll) => (coll || []).includes(v),
@@ -769,14 +770,16 @@ router.get('/lexus-lounge', async (ctx) => {
 
   const latestUserLimit = 50
 
-  const [latestUsers, registration, category, globalAlert] = await Promise.all([
+  const [latestUsers, registration, category, globalAlert, unameChanges] = await Promise.all([
     db.findLatestUsers(latestUserLimit).then((xs) => xs.map(pre.presentUser)),
     db.keyvals.getRowByKey('REGISTRATION_ENABLED'),
     db.findModCategory(),
     // only load for admins/smods
     ['smod', 'admin'].includes(ctx.currUser.role)
       ? db.keyvals.getRowByKey('GLOBAL_ALERT')
-      : null
+      : null,
+    db.unames.latestUnameChanges()
+      .then((xs) => xs.map(pre.presentUnameChange))
   ])
 
   const forums = await db.findForums([category.id])
@@ -792,6 +795,7 @@ router.get('/lexus-lounge', async (ctx) => {
     staffRep,
     registration,
     globalAlert,
+    unameChanges,
     title: 'Lexus Lounge — Mod Forum'
   })
 })

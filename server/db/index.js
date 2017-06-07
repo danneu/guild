@@ -276,12 +276,21 @@ exports.findUserById = exports.findUser = async function (id) {
 ////////////////////////////////////////////////////////////
 
 exports.findUserBySlug = exports.getUserBySlug = async function (slug) {
+  debug(`[findUserBySlug] slug=%j`, slug)
   assert(_.isString(slug))
+
+  slug = slug.toLowerCase()
 
   return pool.one(sql`
     SELECT u.*
     FROM users u
-    WHERE u.slug = lower(${slug})
+    WHERE u.slug = ${slug}
+       OR id = (
+         SELECT user_id
+         FROM unames
+         WHERE slug = ${slug}
+           AND recycle = false
+       )
     GROUP BY u.id
   `)
 }
@@ -290,17 +299,29 @@ exports.findUserBySlug = exports.getUserBySlug = async function (slug) {
 
 // Only use this if you need ratings table, else use just findUserBySlug
 exports.findUserWithRatingsBySlug = async function (slug) {
-  assert(_.isString(slug))
+  debug(`[findUserWithRatingsBySlug] slug=%j`, slug)
+  assert(typeof slug === 'string')
 
   return pool.one(sql`
-    WITH q1 AS (
+    WITH u1 AS (
+      SELECT *
+      FROM users
+      WHERE slug = ${slug}
+         OR id = (
+           SELECT user_id
+           FROM unames
+           WHERE slug = ${slug}
+             AND recycle = false
+         )
+      GROUP BY id
+    ),
+    q1 AS (
       SELECT
         COUNT(r) FILTER (WHERE r.type = 'like') like_count,
         COUNT(r) FILTER (WHERE r.type = 'laugh') laugh_count,
         COUNT(r) FILTER (WHERE r.type = 'thank') thank_count
       FROM ratings r
-      JOIN users u ON r.to_user_id = u.id
-      WHERE u.slug = lower(${slug})
+      JOIN u1 ON r.to_user_id = u1.id
       GROUP BY r.to_user_id
     ),
     q2 AS (
@@ -309,13 +330,12 @@ exports.findUserWithRatingsBySlug = async function (slug) {
         COUNT(r) FILTER (WHERE r.type = 'laugh') laugh_count,
         COUNT(r) FILTER (WHERE r.type = 'thank') thank_count
       FROM ratings r
-      JOIN users u ON r.from_user_id = u.id
-      WHERE u.slug = lower(${slug})
+      JOIN u1 ON r.from_user_id = u1.id
       GROUP BY r.from_user_id
     )
 
     SELECT
-      u.*,
+      *,
       json_build_object(
         'like', COALESCE((SELECT like_count FROM q1), 0),
         'laugh', COALESCE((SELECT laugh_count FROM q1), 0),
@@ -326,22 +346,31 @@ exports.findUserWithRatingsBySlug = async function (slug) {
         'laugh', COALESCE((SELECT laugh_count FROM q2), 0),
         'thank', COALESCE((SELECT thank_count FROM q2), 0)
       ) ratings_given
-    FROM users u
-    WHERE u.slug = lower(${slug})
-    GROUP BY u.id
+    FROM users
+    WHERE id = (SELECT id FROM u1)
+    GROUP BY id
   `)
 }
 
 ////////////////////////////////////////////////////////////
 
+// Also tries historical unames
 exports.findUserByUnameOrEmail = async function (unameOrEmail) {
   assert(_.isString(unameOrEmail))
+
+  const slug = belt.slugifyUname(unameOrEmail)
 
   return pool.one(sql`
     SELECT *
     FROM users u
-    WHERE lower(u.uname) = lower(${unameOrEmail})
+    WHERE u.slug = ${slug}
        OR lower(u.email) = lower(${unameOrEmail})
+       OR id = (
+         SELECT user_id
+         FROM unames
+         WHERE slug = ${slug}
+           AND recycle = false
+       )
   `)
 }
 
@@ -364,12 +393,14 @@ exports.findUserByEmail = async function (email) {
 exports.findUserByUname = async function (uname) {
   debug('[findUserByUname] uname: ' + uname)
 
+  const slug = belt.slugifyUname(uname)
+
   return pool.one(sql`
     SELECT *
-    FROM users u
-    WHERE lower(u.uname) = lower(${uname});
+    FROM users
+    WHERE slug = ${slug}
   `)
-};
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -1355,6 +1386,18 @@ exports.createUserWithSession = async function (props) {
   const slug = belt.slugifyUname(props.uname)
 
   return pool.withTransaction(async (client) => {
+    // Ensure uname doesn't exist in history
+    const history = await client.one(sql`
+      SELECT 1
+      FROM unames
+      WHERE slug = ${slug}
+        AND recycle = false
+    `)
+
+    if (history) {
+      throw 'UNAME_TAKEN'
+    }
+
     let user
 
     try {
@@ -1365,10 +1408,25 @@ exports.createUserWithSession = async function (props) {
       `)
     } catch (err) {
       if (err.code === '23505') {
-        if (/unique_username/.test(ex.toString()))
+        if (/unique_username/.test(err.toString()))
           throw 'UNAME_TAKEN'
-        else if (/unique_email/.test(ex.toString()))
+        else if (/unique_slug/.test(err.toString()))
+          throw 'UNAME_TAKEN'
+        else if (/unique_email/.test(err.toString()))
           throw 'EMAIL_TAKEN'
+      }
+      throw err
+    }
+
+    try {
+      await client.query(sql`
+        INSERT INTO unames (user_id, uname, slug)
+        VALUES (${user.id}, ${user.uname}, ${user.slug})
+      `)
+    } catch (err) {
+      if (err.code === '23505') {
+        if (/unique_unrecyclable_slug/.test(err.toString()))
+          throw 'UNAME_TAKEN'
       }
       throw err
     }
@@ -3567,3 +3625,4 @@ exports.vms = require('./vms')
 exports.convos = require('./convos')
 exports.tags = require('./tags')
 exports.revs = require('./revs')
+exports.unames = require('./unames')

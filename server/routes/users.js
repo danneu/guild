@@ -5,6 +5,7 @@ const util = require('util');
 const Router = require('koa-router');
 const _ = require('lodash');
 const debug = require('debug')('app:routes:users');
+const assert = require('better-assert')
 // 1st party
 const db = require('../db');
 const belt = require('../belt');
@@ -27,12 +28,33 @@ const router = new Router();
 ////////////////////////////////////////////////////////////
 // Middleware helpers
 
-const loadUserFromSlug = async (ctx, next) => {
-  const user = await db.findUserBySlug(ctx.params.slug);
-  ctx.assert(user, 404);
-  pre.presentUser(user);
-  ctx.state.user = user;
-  return next()
+// redirectTemplate looks like /users/<>/edit
+// if redirectTemplate is not given, we will not redirect
+// on slug mismatch
+function loadUserFromSlug (key, redirectTemplate) {
+  assert(typeof key === 'string')
+  if (redirectTemplate) {
+    assert(typeof redirectTemplate === 'string')
+    assert(redirectTemplate.includes('<>'))
+  }
+
+  return async (ctx, next) => {
+    const slug = ctx.params[key]
+    ctx.assert(slug, 404)
+
+    const user = await db.findUserBySlug(slug).then(pre.presentUser)
+    ctx.assert(user, 404)
+
+    // If url slug does not match user.slug, then this is
+    // a historic slug and we should redirect
+    if (redirectTemplate && slug !== user.slug) {
+      ctx.redirect(redirectTemplate.replace('<>', user.slug))
+      return
+    }
+
+    ctx.state.user = user
+    return next()
+  }
 }
 
 ////////////////////////////////////////////////////////////
@@ -41,18 +63,79 @@ const loadUserFromSlug = async (ctx, next) => {
 // Edit user
 //
 // @koa2
-router.get('/users/:slug/edit', async (ctx) => {
-  ctx.assert(ctx.currUser, 404);
-  const user = await db.findUserBySlug(ctx.params.slug);
-  ctx.assert(user, 404)
-  ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER', user);
-  pre.presentUser(user);
+router.get('/users/:slug/edit', loadUserFromSlug('slug', '/users/<>/edit'), async (ctx) => {
+  const {user} = ctx.state
+  ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER', user)
+
+  const lastUnameChange = await db.unames.lastUnameChange(user.id)
+  const eligibleForUnameChange = cancan.isStaffRole(ctx.currUser.role)
+    || !lastUnameChange.changed_by_id
+    || belt.isNewerThan(lastUnameChange.created_at, { months: 3 })
+
   await ctx.render('edit_user', {
     ctx,
     user,
+    lastUnameChange,
+    eligibleForUnameChange,
     title: 'Edit ' + user.uname
   })
 })
+
+////////////////////////////////////////////////////////////
+
+// Update uname
+//
+// Body:
+// - uname
+router.post('/users/:slug/unames', async (ctx) => {
+  ctx.assert(ctx.currUser, 404)
+  let user = await db.findUserBySlug(ctx.params.slug).then(pre.presentUser)
+  ctx.assert(user, 404)
+  ctx.assertAuthorized(ctx.currUser, 'CHANGE_UNAME', user)
+
+  // Sync with create-user endpoint
+  ctx.validateBody('uname')
+    .isString('Username required')
+    .tap((s) => s.trim())
+    .isLength(config.MIN_UNAME_LENGTH,
+              config.MAX_UNAME_LENGTH,
+              'Username must be ' + config.MIN_UNAME_LENGTH +
+              '-' + config.MAX_UNAME_LENGTH + ' characters')
+    .match(/^[a-z0-9 ]+$/i, 'Username must only contain a-z, 0-9, and spaces')
+    .match(/[a-z]/i, 'Username must contain at least one letter (a-z)')
+    .notMatch(/^[-]/, 'Username must not start with hyphens')
+    .notMatch(/[-]$/, 'Username must not end with hyphens')
+    .notMatch(/[ ]{2,}/, 'Username contains consecutive spaces')
+    .checkNot(await db.findUserByUname(ctx.vals.uname), 'Username taken')
+
+  // Only admins can set recycle
+  if (ctx.currUser.role === 'admin') {
+    ctx.validateBody('recycle')
+      .toBoolean()
+  }
+
+  try {
+    user = await db.unames.changeUname({
+      userId: user.id,
+      changedById: ctx.currUser.id,
+      oldUname: user.uname,
+      newUname: ctx.vals.uname,
+      recycle: ctx.vals.recycle
+    }).then(pre.presentUser)
+  } catch (err) {
+    if (err === 'UNAME_TAKEN') {
+      ctx.flash = { message: ['danger', 'Username taken'] }
+      ctx.redirect(user.url + '/edit')
+      return
+    }
+    throw err
+  }
+
+  ctx.flash = { message: ['success', 'Username updated'] }
+  ctx.redirect(user.url)
+})
+
+////////////////////////////////////////////////////////////
 
 //
 // Create new user
@@ -456,14 +539,19 @@ router.get('/users/:userIdOrSlug', async (ctx) => {
   if (/^\d+$/.test(ctx.params.userIdOrSlug)) {
 
     // First, see if it's one of the users with all-digit usernames (legacy)
-    user = await db.findUserByUname(ctx.params.userIdOrSlug);
+    user = await db.findUserBySlug(ctx.params.userIdOrSlug);
 
+    if (user && user.slug !== ctx.params.userIdOrSlug) {
+      ctx.redirect('/users/' + user.slug)
+      return
+    }
+
+    // Then we see if it's an ID
     if (!user) {
-      user = await db.findUser(ctx.params.userIdOrSlug);
-      ctx.assert(user, 404);
-      ctx.status = 301;
-      ctx.response.redirect('/users/' + user.slug);
-      return;
+      user = await db.findUser(ctx.params.userIdOrSlug)
+      ctx.assert(user, 404)
+      ctx.redirect('/users/' + user.slug)
+      return
     }
   }
 
@@ -480,6 +568,11 @@ router.get('/users/:userIdOrSlug', async (ctx) => {
   // Ensure user exists
   ctx.assert(user, 404);
   user = pre.presentUser(user);
+
+  if (user.slug !== ctx.params.userIdOrSlug) {
+    ctx.redirect('/users/' + user.slug)
+    return
+  }
 
   // OPTIMIZE: Merge into single query?
   var recentPosts = await db.findRecentPostsForUserId(
@@ -834,7 +927,7 @@ router.post('/users/:slug/avatar', async (ctx) => {
 // - gender: '' | 'MALE' | 'FEMALE'
 //
 // @koa2
-router.post('/users/:slug/gender', loadUserFromSlug, async (ctx) => {
+router.post('/users/:slug/gender', loadUserFromSlug('slug'), async (ctx) => {
   ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER', ctx.state.user);
   ctx.validateBody('gender')
     .tap(x => ['MALE', 'FEMALE'].indexOf(x) > -1 ? x : null);

@@ -1012,7 +1012,7 @@ $$ LANGUAGE SQL IMMUTABLE;
 --WHERE is_hidden = false
 --  AND markup IS NOT NULL;
 
-DROP INDEX CONCURRENTLY posts_vector;
+--DROP INDEX CONCURRENTLY posts_vector;
 
 ------------------------------------------------------------
 ------------------------------------------------------------
@@ -1054,14 +1054,6 @@ CREATE TABLE post_revs (
 -- For finding all revisions for a post
 CREATE INDEX ON post_revs (post_id);
 
-ALTER TABLE posts ADD COLUMN rev_count int NOT NULL DEFAULT 0;
-
--- Well, must do this in production
-ALTER TABLE posts ADD COLUMN rev_count int NULL;
-ALTER TABLE posts ALTER COLUMN rev_count SET DEFAULT 0;
-UPDATE posts SET rev_count = 0;
-ALTER TABLE posts ALTER COLUMN rev_count SET NOT NULL;
-
 CREATE OR REPLACE FUNCTION update_post_rev_count() RETURNS trigger AS
 $$
   var delta = 0
@@ -1086,3 +1078,39 @@ FROM posts
 WHERE markup IS NOT NULL
   AND rev_count = 0
 ;
+
+------------------------------------------------------------
+------------------------------------------------------------
+
+CREATE TABLE unames (
+  id             serial           PRIMARY KEY,
+  user_id        int              NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  -- If changed_by_id is null, then it's the first history item
+  changed_by_id  int              NULL REFERENCES users(id) ON DELETE CASCADE,
+  -- Just for UI. Lookups are done by slug.
+  uname          text             NOT NULL,
+  -- contains slug as well so that we can lookup /users/:slug
+  -- from history to see if we should redirect
+  slug           text             NOT NULL,
+  recycle        boolean          NOT NULL DEFAULT false,
+  created_at     timestamptz      NOT NULL DEFAULT NOW()
+);
+
+-- quickly list all changes for a user
+CREATE INDEX ON unames (user_id);
+
+-- quickly list latest non-init changes
+CREATE INDEX ON unames (changed_by_id);
+
+-- ensure old usernames cannot be recycled
+CREATE UNIQUE INDEX unique_unrecyclable_slug
+  ON unames (slug)
+  WHERE recycle = false;
+
+
+
+
+-- initialize table with existing users
+INSERT INTO unames (user_id, uname, slug, created_at)
+SELECT id, uname, slug, created_at
+FROM users

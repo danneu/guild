@@ -539,6 +539,67 @@
         </div> <!-- /.panel -->
       </form>
 
+      <!-- CHANGE UNAME -->
+
+      {% if can(ctx.currUser, 'CHANGE_UNAME', user) %}
+      <a name="change-uname"></a>
+      <form action="{{ user.url }}/unames" method="post">
+        <div class="panel panel-default no-select" style="border-color: #000">
+          <div class="panel-heading">Change Username</div>
+
+          <!-- PANEL BODY -->
+          <div class="panel-body">
+            <p>
+              You can only change your username once every three months.
+            </p>
+
+            {% if lastUnameChange and lastUnameChange.changed_by_id and lastUnameChange.created_at | isOlderThan({ months: 3 }) %}
+              <div class="alert alert-warning text-center">
+                Last username change:
+                <abbr class="timeago" title="{{ lastUnameChange.created_at.toISOString() }}">
+                  {{ lastUnameChange.created_at | formatDate }}
+                </abbr>
+              </div>
+            {% endif %}
+
+            {% if eligibleForUnameChange %}
+              <div class="form-group">
+                <input name="uname" class="form-control" placeholder="New Username" value="{{ user.uname }}">
+              </div>
+
+              {% if cancan.isStaffRole(ctx.currUser.role) %}
+                <p style="color: #3498db">
+                  <strong style="text-decoration: underline">Staff:</strong>
+                  Remember to update their username on Discord
+                </p>
+              {% endif %}
+
+              {% if ctx.currUser.role == 'admin' %}
+                <div class="checkbox">
+                  <label>
+                    <input name="recycle" type="checkbox" >
+                    Let other people reuse the old name
+                    <code>{{ user.uname }}</code>
+                  </label>
+                </div>
+              {% endif %}
+            {% else %}
+            {% endif %}
+
+          </div>
+
+          <!-- PANEL FOOTER -->
+          {% if eligibleForUnameChange %}
+            <div class="panel-footer" style="border-color: #000">
+              <div class="text-right">
+                <input type="submit" value="Save" class="btn btn-primary">
+              </div>
+            </div> <!-- /.panel-footer -->
+          {% endif %}
+        </div> <!-- /.panel -->
+      </form>
+      {% endif %}
+
     </div> <!-- /col -->
   </div> <!-- /.row -->
 

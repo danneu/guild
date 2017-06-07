@@ -632,6 +632,27 @@ function can(user, action, target) {
       if (user.role === 'banned') return false;
       if (user.id === target.id) return true;
       return false;
+    case 'CHANGE_UNAME': // target is user to have their uname changed
+      assert(target)
+      assert(Number.isInteger(target.id))
+      assert(typeof target.role === 'string')
+      // Guests cannot
+      if (!user) return false
+      // Banned cannot
+      if (user.role === 'banned') return false
+      // Admin can change anyone's uname
+      if (user.role === 'admin') return true
+      // Staff can change their own name and the name of any non-staff
+      if (isStaffRole(user.role)) {
+        if (user.id === target.id) {
+          return true
+        } else {
+          return !isStaffRole(target.role)
+        }
+      }
+      // Everyone else can only change their own username
+      // if (user.id === target.id) return true
+      return false
     //
     // DICE
     //

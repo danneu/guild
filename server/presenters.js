@@ -386,3 +386,13 @@ exports.presentPostRev = function (x) {
 
   return x
 }
+
+
+exports.presentUnameChange = function (x) {
+  if (!x) return null
+
+  exports.presentUser(x.user)
+  exports.presentUser(x.changed_by)
+
+  return x
+}
