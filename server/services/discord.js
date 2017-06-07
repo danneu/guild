@@ -84,7 +84,7 @@ exports.broadcastAutoNuke = async (user, postId, info) => {
   const channel = await client.listGuildChannels(config.DISCORD_GUILD_ID)
     .then((cs) => cs.find((c) => c.name === 'forum-activity'))
 
-  const content = `@here :robot: User ${config.HOST}${user.url} was auto-nuked for this post: ${config.HOST}/posts/${postId} :radioactive:
+  const content = `@here :robot: User ${config.HOST}${user.url} was auto-nuked for this post: ${config.HOST}/posts/${postId}/raw :radioactive:
 
 \`\`\`
 ${JSON.stringify(info, null, 2)}
