@@ -22,8 +22,9 @@ const {discord: {
   broadcastBioUpdate
 }} = require('../services')
 const cache2 = require('../cache2')
+const ipintel = require('../services/ipintel')
 
-const router = new Router();
+const router = new Router()
 
 ////////////////////////////////////////////////////////////
 // Middleware helpers
@@ -273,10 +274,17 @@ router.post('/users', async (ctx) => {
     })
   }
 
-
   // Broadcast user join to Discord #staff-only
   services.discord.broadcastUserJoin(user)
     .catch((err) => console.error('broadcastUserJoin failed', err))
+
+  // In background, see if user is using a bad IP address
+  const ipAddress = config.NODE_ENV === 'development' && ctx.cookies.get('ip-override')
+    ? ctx.cookies.get('ip-override')
+    : ctx.ip
+
+  ipintel.process(ipAddress, user)
+    .catch((err) => console.error('ipintel.process failed', err))
 
   ctx.flash = { message: ['success', 'Registered successfully'] };
   return ctx.response.redirect('/');

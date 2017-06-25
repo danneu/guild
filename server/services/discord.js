@@ -62,6 +62,27 @@ exports.broadcastManualUnnuke = async ({nuker, spambot}) => {
 
 ////////////////////////////////////////////////////////////
 
+// When a user is auto-nuked because of their IP address
+exports.broadcastIpAddressAutoNuke = async (user, ipAddress) => {
+  assert(user)
+  assert(typeof ipAddress === 'string')
+
+  // Need url
+  pre.presentUser(user)
+
+  const client = makeClient()
+
+  const channel = await client.listGuildChannels(config.DISCORD_GUILD_ID)
+    .then((cs) => cs.find((c) => c.name === 'forum-activity'))
+
+  const content = `@here :spy: User ${config.HOST}${user.url} was auto-nuked (vpn/proxy/bad: https://ipinfo.io/${ipAddress}) :radioactive:`
+
+  // Broadcast
+  await client.createMessage(channel.id, { content })
+}
+
+////////////////////////////////////////////////////////////
+
 // Info is an object of arbitrary data about the analysis
 // to be sent along with the broadcast for debugging purposes.
 exports.broadcastAutoNuke = async (user, postId, info) => {
