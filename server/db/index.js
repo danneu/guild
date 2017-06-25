@@ -1993,7 +1993,7 @@ exports.upsertViewer = async function (ctx, forumId, topicId) {
   assert(ctx)
   assert(forumId)
 
-  if (ctx.currUser && (ctx.currUser.is_ghost || ctx.currUser.role === 'banned')) {
+  if (!ctx.currUser || (ctx.currUser.is_ghost || ctx.currUser.role === 'banned')) {
     // banned and ghosts have their unames hidden
     return pool.query(sql`
       INSERT INTO viewers (ip, forum_id, topic_id, viewed_at)
