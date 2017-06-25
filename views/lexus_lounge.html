@@ -85,64 +85,6 @@
     {% endif %}
   </div>
 
-  {% if ctx.currUser.role | isIn(['smod', 'admin']) %}
-    <a name="global-alert"></a>
-    <div class="well">
-      {% if globalAlert %}
-        <form method="POST" action="/lexus-lounge/global-alert" class="pull-right">
-          <input type="hidden" name="_method" value="DELETE">
-          <button type="submit" class="btn btn-danger">
-            Clear Alert
-          </button>
-        </form>
-      {% endif %}
-      <span class="glyphicon glyphicon-bullhorn"></span>
-      <strong>Global Alert</strong>
-      (Admins only)
-      <p class="text-muted">
-        Use this sparingly to create a global alert that shows up on every page.
-        Takes ~30 seconds to update.
-      </p>
-      {% if globalAlert %}
-        <form method="POST" action="/lexus-lounge/global-alert" id="new-global-alert"
-        >
-          <textarea id="markup-input"
-                    placeholder="Click here and begin writing"
-                    name="markup"
-                    rows="3"
-                    class="form-control"
-                    maxlength="300"
-                    required
-                    >{{ globalAlert.value.markup }}</textarea>
-
-          <button type="submit" class="btn btn-primary">
-            Update Alert
-          </button>
-        </form>
-      {% else %}
-        <button id="show-global-alert" class="btn btn-success">
-          New Global Alert
-        </button>
-        <form method="POST" action="/lexus-lounge/global-alert" id="new-global-alert"
-              style="display: none;"
-        >
-          <textarea id="markup-input"
-                    placeholder="Click here and begin writing"
-                    name="markup"
-                    rows="3"
-                    class="form-control"
-                    maxlength="300"
-                    required
-                    >{{ ctx.flash.params.markup }}</textarea>
-
-          <button type="submit" class="btn btn-primary">
-            Create Alert
-          </button>
-        </form>
-      {% endif %}
-    </div>
-  {% endif %}
-
   <div class="well">
     Miscellaneous Navigation:
     <ul>
@@ -348,19 +290,4 @@
     </div>
   </div>
 
-{% endblock %}
-
-
-{% block scripts %}
-  <script>
-   $('#show-global-alert').on('click', function (e) {
-     $('#new-global-alert').show()
-     $('#show-global-alert').hide()
-   })
-
-    $('#markup-input').bbcode({
-      charLimit: 300,
-      height: 200
-    })
-  </script>
 {% endblock %}
