@@ -611,7 +611,8 @@ router.get('/users/:userIdOrSlug', async (ctx) => {
 
   // FIXME: Way too many queries in this route.
 
-  if (ctx.currUser && ctx.currUser.id !== user.id) {
+  // Only show members in the profile viewers list, esp. not staff or banned.
+  if (ctx.currUser && ctx.currUser.id !== user.id && ctx.currUser.role === 'member') {
     // insert in the background
     db.profileViews.insertView(ctx.currUser.id, user.id)
       .catch((err) => console.error('insertView error', err, err.stack))
