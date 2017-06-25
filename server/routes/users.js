@@ -66,7 +66,7 @@ router.get('/users/:slug/alts', loadUserFromSlug('slug'), async (ctx) => {
 
   const {user} = ctx.state
 
-  const alts = await db.hits.findUsers(ctx.ip, ctx.state.track)
+  const alts = await db.hits.findAltsFromUserId(ctx.currUser.id)
 
   // TODO: Make presenter
   alts.forEach((alt) => {
