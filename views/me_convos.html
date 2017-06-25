@@ -147,7 +147,7 @@
 
       <div class="convo-list-actions" style="height: 50px;">
 
-        <a href="/convos/new" class="pull-right btn btn-success">
+        <a href="/convos/new" class="pull-right btn btn-success {% if cannot(ctx.currUser, 'CREATE_CONVO') %}disabled{% endif %}">
           <span class="glyphicon glyphicon-plus"></span>
           Create Convo
         </a>
@@ -209,9 +209,11 @@
           </button>
         </form>
 
-        <button type="button" id="select-all" class="btn btn-default" style="display: inline-block;">
-          Select All
-        </button>
+        {% if convos.length > 0 %}
+          <button type="button" id="select-all" class="btn btn-default" style="display: inline-block;">
+            Select All
+          </button>
+        {% endif %}
       </div>
 
       {% for convo in convos %}

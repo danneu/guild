@@ -181,6 +181,7 @@ const nunjucksOptions = {
     cancan: cancan,
     // let us use `can(USER, ACTION, TARGET)` authorization-checks in templates
     can: cancan.can,
+    cannot: cancan.cannot,
     config,
     Math,
     Date,

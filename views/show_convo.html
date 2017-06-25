@@ -83,7 +83,10 @@
         </span>
         <div class="pull-right post-header">
           <a href="{{ post.url }}/raw">View Raw</a> -
-          <a href="{{ post.url }}">
+
+          <a href="{{ post.url }}" rel="nofollow" class="post-permalink"
+              data-post-id="{{ post.id }}"
+          >
             <span class="glyphicon glyphicon-link"></span>
           </a>
         </div>
@@ -180,25 +183,27 @@
 
   <!-- New post forum -->
 
-  <h2>New Reply</h2>
+  {% if can(ctx.currUser, 'CREATE_PM', convo) %}
+    <h2>New Reply</h2>
 
-  <ul>
-    <li>Before submitting your post, it's wise to copy it somewhere so that you don't lose it in the event of server error.</li>
-    <li>Check out the BBCode Cheatsheet below the editor. It's pretty basic for now, but I will add more BBCode over time. Check the cheatsheet every once in a while for updates.</li>
-    <li>Post limit: {{ ctx.config.MAX_POST_LENGTH|commafy }} chars</li>
-  </ul>
-  <form id="reply-form" role="form" method="post" action="{{ convo.url }}/pms">
-    <div class="form-group">
-      <textarea rows=10
-                id="reply-input"
-                name="markup"
-                class="form-control"
-                placeholder="Click here and begin writing"></textarea>
-    </div>
-    <input type="submit" class="btn btn-primary" value="Post Reply"></input>
-  </form>
+    <ul>
+      <li>Before submitting your post, it's wise to copy it somewhere so that you don't lose it in the event of server error.</li>
+      <li>Check out the BBCode Cheatsheet below the editor. It's pretty basic for now, but I will add more BBCode over time. Check the cheatsheet every once in a while for updates.</li>
+      <li>Post limit: {{ ctx.config.MAX_POST_LENGTH|commafy }} chars</li>
+    </ul>
+    <form id="reply-form" role="form" method="post" action="{{ convo.url }}/pms">
+      <div class="form-group">
+        <textarea rows=10
+                  id="reply-input"
+                  name="markup"
+                  class="form-control"
+                  placeholder="Click here and begin writing"></textarea>
+      </div>
+      <input type="submit" class="btn btn-primary" value="Post Reply"></input>
+    </form>
 
-  {% include 'partials/bbcode_cheatsheet.html' %}
+    {% include 'partials/bbcode_cheatsheet.html' %}
+  {% endif %}
 
 {% endblock %}
 
@@ -222,13 +227,16 @@
       }
     });
   </script>
-  <script>
-    $(function() {
-      $('#reply-input').bbcode({
-        charLimit: {{ ctx.config.MAX_POST_LENGTH }}
+
+  {% if can(ctx.currUser, 'CREATE_PM', convo) %}
+    <script>
+      $(function() {
+        $('#reply-input').bbcode({
+          charLimit: {{ ctx.config.MAX_POST_LENGTH }}
+        });
       });
-    });
-  </script>
+    </script>
+  {% endif %}
 
   {#
           REPLY BUTTON
@@ -390,5 +398,39 @@ $(function() {
             document.body.scrollLeft = scrollH;
         }
     }
+  </script>
+
+  {# Sync with show_topic #}
+  <script>
+    var buildPopoverContent = function() {
+      var post_id = $(this).attr('data-post-id');
+      var html = '<input class="form-control permalink-input" type="text" value="{{ config.HOST }}/pms/' + post_id + '" readonly><br><div class="text-center"><button type="button" class="permalink-close btn btn-default btn-xs">Close</button></div>';
+      return html;
+    }
+
+    $(document).on('click', '.permalink-input', function(e) {
+        $(e.target).focus().select();
+    });
+
+    $('.post-permalink').popover({
+      html: true,
+      content: buildPopoverContent,
+      trigger: 'click',
+      placement: 'bottom',
+      title: 'Permalink to this PM'
+    });
+
+    $('.post-permalink').on('shown.bs.popover', function(e) {
+      var popover_id = $(this).attr('aria-describedby');
+      $('#' + popover_id + ' .permalink-input').focus().select();
+    });
+
+    $(document).on('click', '.permalink-close', function() {
+      $('.post-permalink').popover('hide');
+    });
+
+    $('.post-permalink').on('click', function(e) {
+      e.preventDefault();
+    });
   </script>
 {% endblock%}
