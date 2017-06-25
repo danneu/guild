@@ -1992,20 +1992,22 @@ exports.deleteNotificationsForPostId = async function (toUserId, postId) {
 exports.upsertViewer = async function (ctx, forumId, topicId) {
   assert(ctx)
   assert(forumId)
-  if (ctx.currUser && !ctx.currUser.is_ghost) {
+
+  if (ctx.currUser && (ctx.currUser.is_ghost || ctx.currUser.role === 'banned')) {
+    // banned and ghosts have their unames hidden
     return pool.query(sql`
-      INSERT INTO viewers (uname, forum_id, topic_id, viewed_at)
-      VALUES (${ctx.currUser.uname}, ${forumId}, ${topicId}, NOW())
-      ON CONFLICT (uname) DO UPDATE
+      INSERT INTO viewers (ip, forum_id, topic_id, viewed_at)
+      VALUES (${ctx.ip}, ${forumId}, ${topicId}, NOW())
+      ON CONFLICT (ip) DO UPDATE
         SET forum_id = ${forumId}
           , topic_id = ${topicId}
           , viewed_at = NOW()
     `)
   } else {
     return pool.query(sql`
-      INSERT INTO viewers (ip, forum_id, topic_id, viewed_at)
-      VALUES (${ctx.ip}, ${forumId}, ${topicId}, NOW())
-      ON CONFLICT (ip) DO UPDATE
+      INSERT INTO viewers (uname, forum_id, topic_id, viewed_at)
+      VALUES (${ctx.currUser.uname}, ${forumId}, ${topicId}, NOW())
+      ON CONFLICT (uname) DO UPDATE
         SET forum_id = ${forumId}
           , topic_id = ${topicId}
           , viewed_at = NOW()
