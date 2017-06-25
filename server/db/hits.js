@@ -139,6 +139,7 @@ exports.findAltsFromUserId = async (userId) => {
       MAX(sub1.created_at) "latest_match_at",
       (SELECT to_json(users.*) FROM users WHERE id = sub1.user_id) "user"
     FROM sub1
+    WHERE user_id != ${userId}
     GROUP BY sub1.user_id, sub1.match
   `)
 
