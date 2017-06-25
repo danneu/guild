@@ -166,8 +166,7 @@
             on them and nuke them if they are a spammer.
           {% endif %}
         </li>
-        {# TEMPORARY: For now, just admin can see button for testing #}
-        {% if ctx.currUser.role == 'admin' and can(ctx.currUser, 'READ_USER_IP', user) %}
+        {% if can(ctx.currUser, 'READ_USER_IP', user) %}
           <li><a href="{{ user.url }}/alts">Find Alt Accounts</a></li>
         {% endif %}
       </ul>
