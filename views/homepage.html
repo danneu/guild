@@ -270,6 +270,28 @@
     $('[data-toggle="tooltip"]').tooltip()
   </script>
 
+  <script>
+   $('.toggle-statuses').on('click', function () {
+     var $this = $(this)
+     var isCollapsed = !!$this.attr('data-is-collapsed')
+
+     var cookieString
+     if (isCollapsed) {
+       $('.statuses-box .collapsible').show(100)
+       $this.removeAttr('data-is-collapsed')
+       cookieString = 'collapse-statuses=;max-age=1'
+       $this.html('<span class="glyphicon glyphicon-minus"></span>')
+     } else {
+       $('.statuses-box .collapsible').hide(100)
+       $this.attr('data-is-collapsed', true)
+       cookieString = 'collapse-statuses=true;max-age=31536e3'
+       $this.html('<span class="glyphicon glyphicon-plus"></span>')
+     }
+
+     document.cookie = cookieString
+   })
+  </script>
+
   <script type="text/javascript">
     $('.category-toggle').on('click', function() {
       var $this = $(this);

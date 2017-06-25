@@ -588,12 +588,28 @@
 
   <!-- Recent user statuses -->
 
-  <div class="panel panel-default" style="background: transparent;">
+  <div class="panel panel-default statuses-box" style="background: transparent; position: relative;">
     <div class="panel-body">
+      <button type="button"
+              class="btn btn-default btn-xs pull-right toggle-statuses"
+              title="Hide/Show Statuses"
+              style="position: absolute; top: 0; right: 0;"
+              {% if ctx.cookies.get('collapse-statuses') %}
+                data-is-collapsed="true"
+              {% endif %}
+      >
+        {% if ctx.cookies.get('collapse-statuses') %}
+          <span class="glyphicon glyphicon-plus"></span>
+        {% else %}
+          <span class="glyphicon glyphicon-minus"></span>
+        {% endif %}
+      </button>
       <h4 style="margin-bottom: 20px;" class="text-center">
         <span class="glyphicon glyphicon-comment"></span>
-        Latest Status Updates
+        Latest Statuses
       </h4>
+
+      <div class="collapsible" style="{% if ctx.cookies.get('collapse-statuses') %}display: none;{% endif %}">
 
       {% if latestStatuses.length == 0 %}
         <div class="text-center">-- None --</div>
@@ -660,6 +676,8 @@
           {% endif %}
         </div><!-- /.status-item -->
       {% endfor %}
+
+      </div><!-- /.collapsible -->
     </div><!-- /panel-body -->
   </div><!-- /panel-default -->
 
