@@ -290,4 +290,61 @@
     </div>
   </div>
 
+  {# Merge users (ADMIN ONLY) #}
+
+  {% if ctx.currUser.role === 'admin' %}
+    <form method="POST" action="/admin/users/merge" class="merge-form">
+      <input
+          type="text"
+          name="husk-slug"
+          placeholder="Husk Slug"
+          class="form-control slug-input"
+          required
+      >
+      <input
+          type="text"
+          name="main-slug"
+          placeholder="Main Slug"
+          class="form-control slug-input"
+          required
+      >
+      <input
+          type="text"
+          name="confirm"
+          placeholder="Which slug is the MAIN account?"
+          class="form-control"
+          required
+      >
+      <button type="submit" class="btn btn-primary" disabled>
+        Merge
+        <span class="husk-slug" style="text-decoration: underline">Husk</span>
+        into
+        <span class="main-slug" style="text-decoration: underline">Main</span>
+      </button>
+    </form>
+  {% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+    <script>
+     $('.merge-form .slug-input').on('keyup change', function (e) {
+       var $this = $(this)
+       var inputKey = $this.attr('name')
+       console.assert(inputKey === 'main-slug' || inputKey === 'husk-slug')
+       var slug = e.currentTarget.value
+       $('.merge-form [type="submit"] ' + '.' + inputKey).text(slug)
+     })
+
+     $('.merge-form input[name="confirm"]').on('keyup', function (e) {
+       var $this = $(this)
+       var $submit = $('.merge-form button[type="submit"]')
+       var slug = e.currentTarget.value.trim()
+       if (slug.length > 0 && slug === $('.merge-form .main-slug').text()) {
+         $submit.prop('disabled', false)
+       } else {
+         $submit.prop('disabled', true)
+       }
+     })
+    </script>
 {% endblock %}
