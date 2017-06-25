@@ -35,6 +35,9 @@ exports.findUsers = async (ipAddress, track) => {
   assert(typeof ipAddress === 'string')
   assert(isValidUuid(track))
 
+  // NOTE: The CASE expressions try to match TRACK first since it's
+  // the best alt-account indicator.
+
   const rows = await pool.many(sql`
     WITH RECURSIVE sub1 (user_id, ip_address, track, created_at, match) AS (
       SELECT
