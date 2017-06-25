@@ -125,8 +125,8 @@
               <a href="/discord">
                 <span class="glyphicon glyphicon-comment"></span>
                 Discord
-                {% if ctx.cache.get('discord-stats').online > 0 %}
-                  <span class="label label-primary" style="color: #fff;">{{ ctx.cache.get('discord-stats').online }} Online</span>
+                {% if cache2.get('discord-stats').online > 0 %}
+                  <span class="label label-primary" style="color: #fff;">{{ cache2.get('discord-stats').online }} Online</span>
                 {% endif %}
               </a>
             </li>

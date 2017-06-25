@@ -4,15 +4,19 @@ const debug = require('debug')('app:cache2')
 // 1st
 const config = require('./config')
 const db = require('./db')
+const DiscordClient = require('./discord/client')
 
 ////////////////////////////////////////////////////////////
 
+// Public API: start, stop, once, every
 class Cache {
   constructor (clock = global) {
     // Let us inject a clock for testing
     this.clock = clock
-    // Set of keys that are currently running their step() function
-    this.locks = new Set()
+    this.intervalId = null
+    // Map of the keys that are currently running their step() function
+    // Maps key to milliseconds since epoch of lock start
+    this.locks = new Map()
     // Mapping of key to {ms, step, lastRun, value}
     this.tasks = Object.create(null)
     // Avoids multiple start() calls from starting multiple loops
@@ -21,11 +25,20 @@ class Cache {
 
   // Starts the update loop and return the cache instance
   start (frequency = 1000) {
+    debug('cache starting...')
     if (this.started) {
       return this
     }
     this.started = true
-    this.clock.setInterval(() => this.tick(), frequency)
+    this.intervalId = this.clock.setInterval(() => this.tick(), frequency)
+    return this
+  }
+
+  stop () {
+    debug('cache stopping...')
+    this.started = false
+    this.clock.clearInterval(this.intervalId)
+    this.intervalId = null
     return this
   }
 
@@ -41,11 +54,11 @@ class Cache {
 
       promises.push(this.refresh(key))
     })
+
     return Promise.all(promises)
   }
 
   get (key) {
-    debug(`[get] ${key} = ${this.tasks[key] ? this.tasks[key].value : undefined}`)
     // Handle nonexistent key
     if (!this.tasks[key]) {
       return
@@ -58,7 +71,7 @@ class Cache {
   // These update a task's value and reset the interval.
 
   set (key, value) {
-    debug(`[set] ${key} = ${value}`)
+    debug(`[set] ${key} = %j`, value)
     this.tasks[key].value = value
     this.tasks[key].lastRun = this.clock.Date.now()
     return this
@@ -77,15 +90,15 @@ class Cache {
   // - If .set()/.update() update task's value while step() is running,
   //   the step() result is discarded.
   async refresh (key) {
-    debug('[refresh] refreshing', key)
+    debug(`[refresh] refreshing ${key}...`)
     // Refresh is already in flight, so do nothing
     if (this.locks.has(key)) {
-      debug(`[refresh] --bail-- lock taken for ${key}`)
+      debug(`[refresh] --bail-- lock taken for ${key}. lock age = ${Date.now() - this.locks.get(key)}ms`)
       return
     }
 
     // Grab lock
-    this.locks.add(key)
+    this.locks.set(key, Date.now())
 
     const {step, lastRun: prevRun, value: prevValue} = this.tasks[key]
 
@@ -95,7 +108,7 @@ class Cache {
       nextValue = await step(prevValue)
     } catch (err) {
       // On error, we do nothing but hope the next interval is more successful
-      console.error(`[IntervalCache] Error updating cache key "${key}"`, err)
+      console.error(`[IntervalCache2] Error updating cache key "${key}"`, err)
     } finally {
       // Release lock
       this.locks.delete(key)
@@ -109,7 +122,7 @@ class Cache {
     }
 
     // step() was successful and uninterrupted, so now we can update our state.
-    debug(`[refresh] --OK-- setting ${key} = ${nextValue}`)
+    debug(`[refresh] --ok-- setting ${key} = %j`, nextValue)
     this.set(key, nextValue)
 
     return nextValue
@@ -157,6 +170,22 @@ if (config.WELCOME_POST_ID) {
   cache.once('welcome-post', () => {
     return db.findPostById(config.WELCOME_POST_ID)
   })
+}
+
+// DISCORD
+
+if (config.IS_DISCORD_CONFIGURED) {
+  const client = new DiscordClient({
+    botToken: config.DISCORD_BOT_TOKEN
+  })
+
+  // 18 seconds
+  cache.every('discord-stats', 1000 * 18, async () => {
+    const result = await client.getGuildEmbed(config.DISCORD_GUILD_ID)
+    return { online: result.members.length }
+  }, { online: 0 })
+} else {
+  cache.once('discord-stats', async (x) => x, { online: 0 })
 }
 
 ////////////////////////////////////////////////////////////

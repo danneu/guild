@@ -59,6 +59,29 @@ function loadUserFromSlug (key, redirectTemplate) {
 
 ////////////////////////////////////////////////////////////
 
+// Show user alternate accounts
+//
+router.get('/users/:slug/alts', loadUserFromSlug('slug'), async (ctx) => {
+  ctx.assert(ctx.currUser && cancan.isStaffRole(ctx.currUser.role), 403)
+
+  const {user} = ctx.state
+
+  const alts = await db.hits.findUsers(ctx.ip, ctx.state.track)
+
+  // TODO: Make presenter
+  alts.forEach((alt) => {
+    pre.presentUser(alt.user)
+  })
+
+  await ctx.render('list_user_alts', {
+    ctx,
+    alts,
+    user
+  })
+})
+
+////////////////////////////////////////////////////////////
+
 //
 // Edit user
 //

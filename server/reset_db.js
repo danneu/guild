@@ -87,6 +87,12 @@ async function resetDb () {
       });
     }, 1)
   })()
+
+  await (async () => {
+    const str = slurpSqlSync('after_seed.sql');
+    await pool.query(_raw`${str}`);
+    console.log('Ran after_seed.sql');
+  })()
 }
 
 if (!module.parent) {

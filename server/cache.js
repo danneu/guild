@@ -14,7 +14,6 @@ var db = require('./db');
 var pre = require('./presenters');
 var config = require('./config');
 const {pool} = require('./db/util')
-const DiscordClient = require('./discord/client')
 
 const cache = new IntervalCache()
   // 5 minutes
@@ -87,23 +86,6 @@ const cache = new IntervalCache()
 
     return chunks
   }, [])
-
-// DISCORD
-
-if (config.IS_DISCORD_CONFIGURED) {
-  const client = new DiscordClient({
-    botToken: config.DISCORD_BOT_TOKEN
-  })
-
-  // 18 seconds
-  cache.every('discord-stats', 1000 * 18, async () => {
-    const result = await client.getGuildEmbed(config.DISCORD_GUILD_ID)
-    return { online: result.members.length }
-  }, { online: 0 })
-} else {
-  // TODO: Change to cache.set(...) when i upgrade interval-cache
-  cache.once('discord-stats', async () => { online: 0 }, { online: 0 })
-}
 
 if (config.LATEST_RPGN_TOPIC_ID) {
   cache.every('latest-rpgn-topic', 1000 * 60, () => {

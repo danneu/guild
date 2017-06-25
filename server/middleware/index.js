@@ -6,12 +6,12 @@ const debug = require('debug')('app:middleware')
 const recaptcha = require('recaptcha-validator')
 const _ = require('lodash')
 const assert = require('better-assert')
-// 1st party
-const db = require('./db')
-const pre = require('./presenters')
-const belt = require('./belt')
-const config = require('./config')
 const bouncer = require('koa-bouncer')
+// 1st party
+const db = require('../db')
+const pre = require('../presenters')
+const belt = require('../belt')
+const config = require('../config')
 
 // Assoc ctx.currUser if the sessionId cookie (UUIDv4 String)
 // is an active session.

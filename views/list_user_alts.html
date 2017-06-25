@@ -1,0 +1,79 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <ol class="breadcrumb">
+    <li>
+      <a href="/">Home</a>
+    </li>
+    <li>
+      <a href="{{ user.url }}">{{ user.uname }}</a>
+    </li>
+    <li class="active">
+      Alts
+    </li>
+  </ol>
+
+  <div class="page-header" style="border-color: #000">
+    <h3>
+      Possible Alt Accounts for
+      <a href="{{ user.url }}">
+        {{ user.uname }}
+      </a>
+    </h3>
+  </div>
+
+  <p>
+    <ul>
+      <li>
+        IP_ADDRESS matches are likely to be false positives, especially
+        the older the latest match timestamp is.
+      </li>
+      <li>
+        TRACK matches are <strong>extremely</strong> likely matches.
+      </li>
+    </ul>
+  </p>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th>User</th>
+        <th>Matches</th>
+        <th>Joined</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for alt in alts %}
+        <tr>
+          <td>
+            <a href="{{ alt.user.url }}">
+              {{ alt.user.uname }}
+            </a>
+            {% if alt.user.role == 'banned' %}
+              <span style="color: #d9534f; text-shadow: 0px 0px 1px #d9534f;">
+                Banned
+              </span>
+            {% endif %}
+            {% if alt.user.is_nuked %}
+              <img src="/img/nuked.gif" height="33" width="33" title="Nuked">
+            {% endif %}
+          </td>
+          <td>
+            {% for key in Object.keys(alt.matches) %}
+              {{ key }}:
+              <abbr class="timeago" title="{{ alt.matches[key].toISOString() }}">
+                {{ alt.matches[key] | formatDate }}
+              </abbr>
+            {% endfor %}
+          </td>
+          <td>
+            <abbr class="timeago" title="{{ alt.user.created_at.toISOString() }}">
+              {{ alt.user.created_at | formatDate }}
+            </abbr>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+    </table>
+
+{% endblock %}

@@ -866,11 +866,9 @@ INSERT INTO keyvals (key, value) VALUES
 
 ------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION ip_root(ip_address inet) RETURNS inet AS $$
-  BEGIN
-    RETURN host(network(set_masklen(ip_address, (CASE family(ip_address) WHEN 4 THEN 24 ELSE 48 END))));
-  END;
-$$ LANGUAGE plpgsql IMMUTABLE;
+CREATE OR REPLACE FUNCTION ip_root (ip_address inet) RETURNS inet AS $$
+  SELECT host(network(set_masklen(ip_address, (CASE family(ip_address) WHEN 4 THEN 24 ELSE 48 END))))::inet;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE TABLE ratelimits (
   id             bigserial        PRIMARY KEY,
@@ -1069,16 +1067,6 @@ CREATE TRIGGER update_post_rev_count_trigger
     FOR EACH ROW
     EXECUTE PROCEDURE update_post_rev_count();
 
--- Right before deploy
-
--- Create the first revision for all posts
-INSERT INTO post_revs (post_id, user_id, markup, html, length)
-SELECT id, user_id, markup, html, bit_length(markup) / 8
-FROM posts
-WHERE markup IS NOT NULL
-  AND rev_count = 0
-;
-
 ------------------------------------------------------------
 ------------------------------------------------------------
 
@@ -1107,10 +1095,21 @@ CREATE UNIQUE INDEX unique_unrecyclable_slug
   ON unames (slug)
   WHERE recycle = false;
 
+------------------------------------------------------------
+------------------------------------------------------------
 
+CREATE TABLE hits (
+  id             bigserial           PRIMARY KEY,
+  user_id        int                 NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  ip_address     inet                NOT NULL,
+  track          uuid                NOT NULL,
+  created_at     timestamptz         NOT NULL DEFAULT NOW()
+);
 
-
--- initialize table with existing users
-INSERT INTO unames (user_id, uname, slug, created_at)
-SELECT id, uname, slug, created_at
-FROM users
+CREATE INDEX ON hits (user_id);
+-- Find all users by ip address
+CREATE INDEX ON hits (ip_root(ip_address));
+-- Find all users by track
+CREATE INDEX ON hits (track);
+-- Find latest matches
+CREATE INDEX ON hits (created_at);
