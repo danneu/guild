@@ -28,25 +28,20 @@
     </p>
     <p>
       The "matches" column displays the most recent match for the two different
-      match conditions. The more recent the match, the more likely that it
-      really is one of their alt accounts (rather than a false positive).
+      match conditions.
     </p>
-  </div>
-
-
-  {#
-  <p>
     <ul>
       <li>
-        IP_ADDRESS matches are likely to be false positives, especially
-        the older the latest match timestamp is.
+        IP_ADDRESS matches are likely to be false positives unless the match
+        is very recent.
       </li>
       <li>
-        TRACK matches are <em>extremely</em> matches.
+        TRACK matches are <em>extremely</em> likely to be their alt accounts
+        because it means they logged into these accounts within the same
+        browser session.
       </li>
     </ul>
-  </p>
-  #}
+  </div>
 
   <table class="table">
     <thead>
