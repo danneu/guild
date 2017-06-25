@@ -9,7 +9,7 @@ A forum running in production.
 
 The Guild is a Node.js app that talks to a Postgres database.
 
-- Install the latest stable version of Node (v7.x).
+- Install the latest stable version of Node.
 
 - The Guild depends on the `plv8` Postgres extension.
 
