@@ -21,8 +21,6 @@ class Client {
     assert(['GET', 'POST', 'DELETE', 'PUT', 'PATCH'].includes(method))
     assert(typeof url === 'string')
 
-    debug('[Client#request] body=%j', body)
-
     const headers = Object.assign({
       'Content-Type': 'application/json',
       'Accept': 'application/json',

@@ -95,7 +95,7 @@
       <li>
         <div class="form-group">
           <label for="term-input">
-            Search Text: (Temporarily ignored for performance reasons)
+            Search Text:
           </label>
           <input type="text" name="term" value="{{ searchParams.term }}"
                 id="term-input"
@@ -169,6 +169,8 @@
             <a href="{{ post.url }}" style="color: #ffc300">
               {{ post.topic.title }}
             </a>
+
+            {{ post.rank }}
 
             <!-- Right side of heading -->
             <div class="pull-right">

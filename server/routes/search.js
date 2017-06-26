@@ -24,8 +24,14 @@ const router = new Router()
 // TODO: Remove the old CloudSearch cruft from search_results.html and anywhere
 // else in the codebase.
 router.get('/search', async (ctx) => {
-  ctx.body = 'Search is temporarily disabled.'
-  return
+  // Limit to admin for now til I fix perf issues
+  if (!ctx.currUser || ctx.currUser.role !== 'admin') {
+    ctx.body = 'Search is temporarily disabled.'
+    return
+  }
+
+  //ctx.body = 'Search is temporarily disabled.'
+  //return
 
   // Must be logged in to search
   if (!ctx.currUser) {
@@ -57,13 +63,10 @@ router.get('/search', async (ctx) => {
     return
   }
 
-  // Temporarily turn off term while I look into some perf issues
-  //
-  // const term = ctx.validateQuery('term')
-  //   .optional()
-  //   .toString()
-  //   .val()
-  const term = undefined
+  const term = ctx.validateQuery('term')
+    .optional()
+    .toString()
+    .val()
 
   const topicId = ctx.validateQuery('topic_id')
     .optional()
@@ -119,9 +122,9 @@ router.get('/search', async (ctx) => {
   // If term is truthy, we're doing a fulltext search
 
   if (term) {
-    query.whereRaw(`to_tsvector('english', strip_quotes(posts.markup)) @@ plainto_tsquery('english', ?)`, [term])
-    query.select(knex.raw(`ts_rank(to_tsvector('english', strip_quotes(posts.markup)), plainto_tsquery('english', ?)) "rank"`, [term]))
-    query.select(knex.raw(`ts_headline('english', strip_quotes(posts.markup), plainto_tsquery('english', ?)) "highlight"`, [term]))
+    query.whereRaw(`to_tsvector('english', posts.markup) @@ plainto_tsquery('english', ?)`, [term])
+    query.select(knex.raw(`ts_rank(to_tsvector('english', posts.markup), plainto_tsquery('english', ?)) "rank"`, [term]))
+    query.select(knex.raw(`ts_headline('english', posts.markup, plainto_tsquery('english', ?)) "highlight"`, [term]))
     // Sort by relevance
     query.orderBy('rank', 'desc')
   } else {
