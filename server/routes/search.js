@@ -120,6 +120,8 @@ router.get('/search', async (ctx) => {
 
   if (term) {
     subquery.whereRaw(`to_tsvector('english', posts.markup) @@ plainto_tsquery('english', ?)`, [term])
+  } else {
+    subquery.orderBy('posts.id', 'desc')
   }
 
   // Extra filters
@@ -156,7 +158,7 @@ router.get('/search', async (ctx) => {
       .select(knex.raw(`ts_headline('english', x.markup, plainto_tsquery('english', ?)) "highlight"`, [term]))
       .orderBy('rank', 'desc')
   } else {
-    query.orderBy('x.created_at', 'desc')
+    // query.orderBy('x.id', 'desc')
   }
 
   debug(query.toString())
