@@ -560,29 +560,37 @@ textarea {
     margin-left: 10px;
 }
 
-.hidden-post .post-content-wrapper {
-    max-height: 200px;
-    overflow-y: auto;
+/* ======================================= */
+
+.hidden-post .zeroth-banner {
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  display: inline-block;
 }
-.hidden-post {
-    opacity: 0.50;
-    position: relative;
+.hidden-post.expanded-post .zeroth-banner {
+  display: none;
 }
-.hidden-post::before {
-    content: 'HIDDEN';
-    position: absolute;
-    text-align: center;
-    font-size: 6em;
-    top: 0;
-    left: 0;
-    color: white;
-    opacity: 0.25;
-    padding-top: 20px;
-    display: block;
-    height: 0;
-    width: 100%;
-    z-index: 1;
+
+
+.expanded-post .when-expanded-block {display: block;}
+
+.hidden-post.expanded-post .when-expanded-block {display:block;}
+
+.hidden-post .when-expanded-block {display:none;}
+
+.hidden-post .when-hidden-inline {display: inline;}
+.hidden-post .when-hidden-block {display: block;}
+.hidden-post .when-hidden-inline-block {display: inline-block;}
+
+.hidden-post .when-visible-block {display:none;}
+
+.visible-post .when-hidden-inline,
+.visible-post .when-hidden-block,
+.visible-post .when-hidden-inline-block {
+  display: none;
 }
+
+/* ======================================= */
 
 #tagline {
     color: #666;

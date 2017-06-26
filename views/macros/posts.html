@@ -1,0 +1,263 @@
+{% import './macros.html' as macros %}
+
+{% macro showPost (ctx, post, topic) %}
+  {% set isZeroth = post.idx == -1 %}
+  <div class="panel panel-default post {% if post.is_hidden %}hidden-post{% else %}visible-post expanded-post{% endif %} {% if isZeroth %}zeroth-post{% endif %}"
+        id="post-{{ post.id }}"
+        style="border: 1px solid #111;">
+    <div class="panel-heading clearfix"
+          style="background-color: #1D1D1D; border-color: #111; border-radius: 0">
+      <span class="pull-left">
+        <span class="when-hidden-inline">
+          <span class="label label-default">Hidden</span>
+        </span>
+        <abbr class="timeago" title="{{ post.created_at.toISOString() }}">
+          {{ post.created_at|formatDate }}
+        </abbr>
+        {% if post.updated_at and post.updated_at.getTime() - post.created_at.getTime() > 1000 * 60 %}
+          &rarr;
+          <span class="glyphicon glyphicon-pencil"></span>
+          <abbr class="timeago" title="{{ post.updated_at.toISOString() }}">
+            {{ post.updated_at|formatDate }}
+          </abbr>
+        {% endif %}
+
+        {% if (isZeroth and post.rev_count > 1 and can(ctx.currUser, 'UPDATE_TOPIC', topic)) or ctx.currUser.id == 1 %}
+          <a href="{{ post.url }}/revisions">Revs: {{ post.rev_count }}</a>
+        {% endif %}
+
+        <span class="when-hidden-inline">
+          {# Zeroth post has no uname #}
+          {% if not isZeroth %}
+            Post by
+            <a href="{{ post.user.url }}">
+              {{ post.user.uname }}
+            </a>
+          {% endif %}
+        </span>
+      </span>
+      <div class="pull-right when-hidden-block" style="margin-left: 10px;">
+        {% if isZeroth %}
+          <span class="zeroth-banner when-hidden-inline-block">
+            Zeroth Post
+          </span>
+        {% endif %}
+        <button class="btn btn-default btn-xs collapser">
+          <span class="glyphicon glyphicon-plus"></span>
+        </button>
+      </div>
+      <div class="pull-right post-header when-expanded-block">
+        <a href="{{ post.url }}/raw" rel="nofollow">Raw</a> &mdash;
+        <a href="{{ post.url }}" rel="nofollow" class="post-permalink"
+            data-post-id="{{ post.id }}"
+        >
+          <span class="glyphicon glyphicon-link"></span>
+        </a>
+      </div>
+    </div> <!-- /.panel-heading -->
+
+    <!-- Panel body -->
+    <div class="panel-body when-expanded-block"
+         style="background-color: #2E2C2C; position: relative; overflow: hidden;"
+    >
+
+      <!-- Ribbon -->
+      {% if isZeroth %}
+        <div class="corner-ribbon top-right white">Zeroth</div>
+      {% elif post.user_id == topic.user_id %}
+        {% if topic.is_roleplay %}
+          <div class="corner-ribbon top-right">GM</div>
+        {% else %}
+          <div class="corner-ribbon top-right">OP</div>
+        {% endif %}
+      {% elif topic.co_gm_ids.includes(post.user_id) %}
+        <div class="corner-ribbon top-right orange">coGM</div>
+      {% endif %}
+
+      {% if not isZeroth %}
+        <!-- Author metadata -->
+        <div class="col-sm-2 clearfix text-center post-user-meta">
+
+          <!-- For small devices -->
+          <div class="visible-xs-block">
+            {{ macros.renderUserbitSmall(ctx, post.user) }}
+            <hr class="small-userbit-divider">
+          </div>
+
+          <!-- For larger-than-smartphone devices -->
+          <div class="hidden-xs">
+            {{ macros.renderUserbitLarge(ctx, post.user) }}
+          </div> <!-- /.hidden-xs -->
+
+        </div>
+      {% endif %}
+
+      <div class="{% if not isZeroth %}col-sm-10{% endif %} post-content-wrapper">
+
+        {% if post.id == config.FAQ_POST_ID %}
+          <div class="alert alert-info">
+            This post controls the contents of
+            <a href="/faq" style="color: #2980b9; text-decoration: underline">/faq</a>. All staff can edit this special post.
+          </div>
+        {% endif %}
+
+        {% if post.id == config.WELCOME_POST_ID %}
+          <div class="alert alert-info">
+            This post controls the contents of the welcome PM sent
+            to all new users. All staff can edit this special post.
+          </div>
+        {% endif %}
+
+        <!-- Post text -->
+        {{ macros.renderPost(ctx, post) }}
+        <!-- Ratings -->
+        {% if post.ratings.length > 0 %}
+          <div class="post-rating-list well well-sm">
+            <button class="rater-list-toggle btn btn-default btn-xs pull-right">
+              View All
+            </button>
+            {% set freq = belt.frequencies(post.ratings, 'type') %}
+            {% for type in ['like', 'laugh', 'thank'] %}
+              {% if freq[type] %}
+                {{ freq[type] }}x {{ type|capitalize }}
+                <img src="{{ type|ratingTypeToImageSrc }}"
+                      alt="{{ type|capitalize }}"
+                      title="{{ type|capitalize }}">
+              {% endif %}
+            {% endfor %}
+            <div style="margin-top: 10px; display: none;" class="rater-list">
+            {% for type in ['like', 'laugh', 'thank'] %}
+              {% if freq[type] %}
+                <div>
+                  <img src="{{ type|ratingTypeToImageSrc }}"
+                        alt="{{ type|capitalize }}"
+                        title="{{ type|capitalize }}">
+                  <ul class="list-inline" style="display: inline-block;">
+                  {% for rating in _.sortBy(_.filter(post.ratings, { type: type }), 'from_user_uname') %}
+                    <li>
+                      <a href="/users/{{ rating.from_user_uname|slugifyUname }}">{{ rating.from_user_uname }}</a>{% if not loop.last %},{% endif %}
+                    </li>
+                  {% endfor %}
+                  </ul>
+                </div>
+              {% endif %}
+            {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+        <!-- Signature -->
+        {% if not post.is_hidden -%}
+          {{ macros.renderSig(ctx, post.user) }}
+        {%- endif %}
+      </div>
+
+    </div> <!-- /.panel-body -->
+
+    <!-- Panel footer -->
+    <div class="panel-footer clearfix when-expanded-block"
+         style="background-color: #2E2C2C; border-radius: 0; border: 0;"
+    >
+      <!-- Hide button -->
+      {% if post.is_hidden %}
+        {% if can(ctx.currUser, 'UNHIDE_POST', post) %}
+          <form action="{{ post.url}}/unhide" method="post">
+            <input type="submit" value="Unhide"
+                    class="btn btn-default btn-xs hide-btn pull-left">
+          </form>
+        {% endif %}
+      {% else %}
+        {% if can(ctx.currUser, 'HIDE_POST', post) %}
+          <form action="{{ post.url}}/hide" method="post">
+            <input type="submit" value="Hide"
+                    class="btn btn-default btn-xs unhide-btn pull-left">
+          </form>
+        {% endif %}
+      {% endif %}
+      <!-- IP address -->
+      {% if can(ctx.currUser, 'READ_USER_IP', post.user) %}
+        <div class="pull-left" style="margin-left: 5px; color: #6E6B6B">
+          <a href="/ips/{{ post.ip_address }}" class="text-muted">
+            {{ post.ip_address }}
+          </a>
+        </div>
+      {% endif %}
+      <!-- @Mention -->
+      {% if can(ctx.currUser, 'CREATE_POST', topic) %}
+        <a href=""
+            class="btn btn-default btn-xs pull-right post-mention-btn when-visible-block"
+            data-post-id="{{ post.id }}"
+            data-post-uname="{{ post.user.uname }}"
+            style="margin-left: 5px"
+            >@Mention</a>
+      {% endif %}
+      <!-- Quote button -->
+      {% if can(ctx.currUser, 'CREATE_POST', topic) %}
+        <a href=""
+            class="btn btn-default btn-xs pull-right post-reply-btn when-visible-block"
+            post-id="{{ post.id }}"
+            post-uname="{{ post.user.uname }}"
+            style="margin-left: 5px"
+            >Quote</a>
+      {% endif %}
+      <!-- Edit button -->
+      {% if can(ctx.currUser, 'UPDATE_POST', Object.assign(post, { banned_ids: topic.banned_ids})) %}
+        <a href="{{ post.url }}/edit"
+            class="btn btn-default btn-xs pull-right post-edit-btn"
+            style="margin-left: 5px;"
+            post-id={{ post.id }}
+          >Edit</a>
+      {% endif %}
+
+      {% if can(ctx.currUser, 'RATE_POST', post) %}
+        {% if post.has_rated %}
+          <span class="pull-right text-muted" style="margin-right: 10px;">
+            You <img src="{{ post.has_rated.type|ratingTypeToImageSrc }}"
+                      alt="{{ post.has_rated.type|capitalize }}"
+                      title="{{ post.has_rated.type|capitalize }}">'ed this
+          </span>
+        {% else %}
+          <ul class="post-rating-actions list-inline pull-right when-visible-block">
+            <li data-rating-type="like" data-toggle="tooltip" title="Like"
+                data-placement="top" data-post-id="{{ post.id }}">
+              <img src="/ratings/like-grey.png" alt="Like" title="Like">
+            </li>
+            <li data-rating-type="laugh" data-toggle="tooltip" title="Laugh"
+                data-placement="top" data-post-id="{{ post.id }}">
+              <img src="/ratings/laugh-static-grey.png" alt="Laugh" title="Like">
+            </li>
+            <li data-rating-type="thank" data-toggle="tooltip" title="Thank"
+                data-placement="top" data-post-id="{{ post.id }}">
+              <img src="/ratings/thank-grey.png" alt="Thank" title="Thank">
+            </li>
+          </ul>
+        {% endif %}
+      {% endif %}
+
+    </div> <!-- /.panel-footer -->
+  </div> <!-- /.panel -->
+{% endmacro %}
+
+
+{% macro toggleScript () %}
+  <script>
+   $('.hidden-post button.collapser').on('click', function (e) {
+     var $this = $(this)
+     var $post = $this.closest('.hidden-post')
+
+     if ($post.hasClass('expanded-post')) {
+       // collapse
+       $post.removeClass('expanded-post')
+       $this.find('.glyphicon-minus')
+         .removeClass('glyphicon-minus')
+         .addClass('glyphicon-plus')
+     } else {
+       // expand
+       $post.addClass('expanded-post')
+       $this.find('.glyphicon-plus')
+         .removeClass('glyphicon-plus')
+         .addClass('glyphicon-minus')
+     }
+
+   })
+  </script>
+{% endmacro %}

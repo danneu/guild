@@ -2,6 +2,7 @@
 {% import './macros/paginate.html' as paginate %}
 {% import './macros/macros.html' as macros %}
 {% import './macros/ads.html' as ads %}
+{% import './macros/posts.html' as posts %}
 
 {% block embed %}
 
@@ -325,78 +326,7 @@
   <!-- ZEROTH -->
 
   {% if zeroth and can(ctx.currUser, 'READ_POST', zeroth) %}
-    {% set post = zeroth %}
-    <div style="border: 1px solid #111;"
-         id="post-{{ post.id }}"
-         class="panel panel-default post {% if post.is_hidden %} hidden-post {% endif %}"
-    >
-      <div class="panel-heading clearfix" style="background-color: #1D1D1D; border-color: #111; border-radius: 0">
-          <span class="pull-left">
-            <abbr class="timeago" title="{{ post.created_at.toISOString() }}">
-              {{ post.created_at | formatDate }}
-            </abbr>
-            {% if post.updated_at and post.updated_at.getTime() - post.created_at.getTime() > 1000 * 60 %}
-              &rarr;
-              <span class="glyphicon glyphicon-pencil"></span>
-              <abbr class="timeago" title="{{ post.updated_at.toISOString() }}">
-                {{ post.updated_at | formatDate }}
-              </abbr>
-            {% endif %}
-            {% if post.rev_count > 1 and can(ctx.currUser, 'UPDATE_TOPIC', topic) %}
-              <a href="{{ post.url }}/revisions">
-                Revs: {{ post.rev_count }}
-              </a>
-            {% endif %}
-          </span>
-          <div class="pull-right post-header">
-            <a href="{{ post.url }}/raw" rel="nofollow">View Raw</a> -
-            <a href="{{ post.url }}" rel="nofollow" class="post-permalink"
-               data-post-id="{{ post.id }}"
-            >
-              <span class="glyphicon glyphicon-link"></span>
-            </a>
-          </div>
-      </div><!-- /.panel-heading -->
-
-      <div class="panel-body"
-            style="background-color: #2E2C2C; position: relative; overflow: hidden;"
-      >
-        <div class="corner-ribbon top-right white">0th</div>
-        <div class="post-content-wrapper">
-          {{ macros.renderPost(ctx, post) }}
-        </div>
-      </div><!-- /.panel-body -->
-
-      <div class="panel-footer clearfix"
-           style="background-color: #2E2C2C; border-radius: 0; border: 0"
-      >
-        <!-- Hide button -->
-        {% if post.is_hidden %}
-          {% if can(ctx.currUser, 'UNHIDE_POST', post) %}
-            <form action="{{ post.url}}/unhide" method="post">
-              <input type="submit" value="Unhide"
-                      class="btn btn-default btn-xs hide-btn pull-left">
-            </form>
-          {% endif %}
-        {% else %}
-          {% if can(ctx.currUser, 'HIDE_POST', post) %}
-            <form action="{{ post.url}}/hide" method="post">
-              <input type="submit" value="Hide"
-                      class="btn btn-default btn-xs unhide-btn pull-left">
-            </form>
-          {% endif %}
-        {% endif %}
-        <!-- Edit button -->
-        {% if can(ctx.currUser, 'UPDATE_POST', post) %}
-          <a href="{{ post.url }}/edit"
-              class="btn btn-default btn-xs pull-right post-edit-btn zeroth"
-              style="margin-left: 5px;"
-              post-id={{ post.id }}
-            >Edit</a>
-        {% endif %}
-      </div><!-- ./panel-footer -->
-
-    </div><!-- /.panel -->
+    {{ posts.showPost(ctx, zeroth, topic) }}
   {% endif %}
 
   {% if not zeroth and topic.is_roleplay and currPage == 1 and cancan.isTopicGm(ctx.currUser, topic) %}
@@ -443,213 +373,7 @@
   {% for post in topic.posts %}
     {% if can(ctx.currUser, 'READ_POST', post) %}
       <a name="post-{{ post.id }}"></a>
-      <div class="panel panel-default post
-                  {% if post.is_hidden %} hidden-post {% endif %}"
-           id="post-{{ post.id }}"
-           style="border: 1px solid #111;">
-        <div class="panel-heading clearfix"
-             style="background-color: #1D1D1D; border-color: #111; border-radius: 0">
-          <span class="pull-left">
-            <abbr class="timeago" title="{{ post.created_at.toISOString() }}">
-              {{ post.created_at|formatDate }}
-            </abbr>
-            {% if post.updated_at and post.updated_at.getTime() - post.created_at.getTime() > 1000 * 60 %}
-              &rarr;
-              <span class="glyphicon glyphicon-pencil"></span>
-              <abbr class="timeago" title="{{ post.updated_at.toISOString() }}">
-                {{ post.updated_at|formatDate }}
-              </abbr>
-            {% endif %}
-            {% if ctx.currUser.id == 1 %}
-              <span class="glyphicon glyphicon-eye-open"></span>
-              <a href="{{ post.url }}/revisions">
-                Revs: {{ post.rev_count }}
-              </a>
-            {% endif %}
-          </span>
-          <div class="pull-right post-header">
-            <a href="{{ post.url }}/raw" rel="nofollow">View Raw</a> -
-            <a href="{{ post.url }}" rel="nofollow" class="post-permalink"
-               data-post-id="{{ post.id }}"
-            >
-              <span class="glyphicon glyphicon-link"></span>
-            </a>
-          </div>
-        </div> <!-- /.panel-heading -->
-
-        <!-- Panel body -->
-        <div class="panel-body"
-             style="background-color: #2E2C2C; position: relative; overflow: hidden;">
-
-          <!-- Ribbon -->
-          {% if post.user_id == topic.user_id %}
-            {% if topic.is_roleplay %}
-              <div class="corner-ribbon top-right">GM</div>
-            {% else %}
-              <div class="corner-ribbon top-right">OP</div>
-            {% endif %}
-          {% elif topic.co_gm_ids.includes(post.user_id) %}
-            <div class="corner-ribbon top-right orange">coGM</div>
-          {% endif %}
-
-          <!-- Author metadata -->
-          <div class="col-sm-2 clearfix text-center post-user-meta">
-
-            <!-- For small devices -->
-            <div class="visible-xs-block">
-              {{ macros.renderUserbitSmall(ctx, post.user) }}
-              <hr class="small-userbit-divider">
-            </div>
-
-            <!-- For larger-than-smartphone devices -->
-            <div class="hidden-xs">
-              {{ macros.renderUserbitLarge(ctx, post.user) }}
-            </div> <!-- /.hidden-xs -->
-
-          </div> <!-- /.col-sm-2 post-meta -->
-
-          <div class="col-sm-10 post-content-wrapper">
-
-            {% if post.id == config.FAQ_POST_ID %}
-              <div class="alert alert-info">
-                This post controls the contents of
-                <a href="/faq" style="color: #2980b9; text-decoration: underline">/faq</a>. All staff can edit this special post.
-              </div>
-            {% endif %}
-
-            {% if post.id == config.WELCOME_POST_ID %}
-              <div class="alert alert-info">
-                This post controls the contents of the welcome PM sent
-                to all new users. All staff can edit this special post.
-              </div>
-            {% endif %}
-
-            <!-- Post text -->
-            {{ macros.renderPost(ctx, post) }}
-            <!-- Ratings -->
-            {% if post.ratings.length > 0 %}
-              <div class="post-rating-list well well-sm">
-                <button class="rater-list-toggle btn btn-default btn-xs pull-right">
-                  View All
-                </button>
-                {% set freq = belt.frequencies(post.ratings, 'type') %}
-                {% for type in ['like', 'laugh', 'thank'] %}
-                  {% if freq[type] %}
-                    {{ freq[type] }}x {{ type|capitalize }}
-                    <img src="{{ type|ratingTypeToImageSrc }}"
-                         alt="{{ type|capitalize }}"
-                         title="{{ type|capitalize }}">
-                  {% endif %}
-                {% endfor %}
-                <div style="margin-top: 10px; display: none;" class="rater-list">
-                {% for type in ['like', 'laugh', 'thank'] %}
-                  {% if freq[type] %}
-                    <div>
-                      <img src="{{ type|ratingTypeToImageSrc }}"
-                           alt="{{ type|capitalize }}"
-                           title="{{ type|capitalize }}">
-                      <ul class="list-inline" style="display: inline-block;">
-                      {% for rating in _.sortBy(_.filter(post.ratings, { type: type }), 'from_user_uname') %}
-                        <li>
-                          <a href="/users/{{ rating.from_user_uname|slugifyUname }}">{{ rating.from_user_uname }}</a>{% if not loop.last %},{% endif %}
-                        </li>
-                      {% endfor %}
-                      </ul>
-                    </div>
-                  {% endif %}
-                {% endfor %}
-                </div>
-              </div>
-            {% endif %}
-            <!-- Signature -->
-            {% if not post.is_hidden -%}
-              {{ macros.renderSig(ctx, post.user) }}
-            {%- endif %}
-          </div>
-
-        </div> <!-- /.panel-body -->
-
-        <!-- Panel footer -->
-        <div class="panel-footer clearfix"
-             style="background-color: #2E2C2C; border-radius: 0; border: 0">
-          <!-- Hide button -->
-          {% if post.is_hidden %}
-            {% if can(ctx.currUser, 'UNHIDE_POST', post) %}
-              <form action="{{ post.url}}/unhide" method="post">
-                <input type="submit" value="Unhide"
-                       class="btn btn-default btn-xs hide-btn pull-left">
-              </form>
-            {% endif %}
-          {% else %}
-            {% if can(ctx.currUser, 'HIDE_POST', post) %}
-              <form action="{{ post.url}}/hide" method="post">
-                <input type="submit" value="Hide"
-                       class="btn btn-default btn-xs unhide-btn pull-left">
-              </form>
-            {% endif %}
-          {% endif %}
-          <!-- IP address -->
-          {% if can(ctx.currUser, 'READ_USER_IP', post.user) %}
-            <div class="pull-left" style="margin-left: 5px; color: #6E6B6B">
-              <a href="/ips/{{ post.ip_address }}" class="text-muted">
-                {{ post.ip_address }}
-              </a>
-            </div>
-          {% endif %}
-          <!-- @Mention -->
-          {% if can(ctx.currUser, 'CREATE_POST', topic) %}
-            <a href=""
-               class="btn btn-default btn-xs pull-right post-mention-btn"
-               data-post-id="{{ post.id }}"
-               data-post-uname="{{ post.user.uname }}"
-               style="margin-left: 5px"
-               >@Mention</a>
-          {% endif %}
-          <!-- Quote button -->
-          {% if can(ctx.currUser, 'CREATE_POST', topic) %}
-            <a href=""
-               class="btn btn-default btn-xs pull-right post-reply-btn"
-               post-id="{{ post.id }}"
-               post-uname="{{ post.user.uname }}"
-               style="margin-left: 5px"
-               >Quote</a>
-          {% endif %}
-          <!-- Edit button -->
-          {% if can(ctx.currUser, 'UPDATE_POST', Object.assign(post, { banned_ids: topic.banned_ids})) %}
-            <a href="{{ post.url }}/edit"
-               class="btn btn-default btn-xs pull-right post-edit-btn"
-               style="margin-left: 5px;"
-               post-id={{ post.id }}
-              >Edit</a>
-          {% endif %}
-
-          {% if can(ctx.currUser, 'RATE_POST', post) %}
-            {% if post.has_rated %}
-              <span class="pull-right text-muted" style="margin-right: 10px;">
-                You <img src="{{ post.has_rated.type|ratingTypeToImageSrc }}"
-                         alt="{{ post.has_rated.type|capitalize }}"
-                         title="{{ post.has_rated.type|capitalize }}">'ed this
-              </span>
-            {% else %}
-              <ul class="post-rating-actions list-inline pull-right">
-                <li data-rating-type="like" data-toggle="tooltip" title="Like"
-                    data-placement="top" data-post-id="{{ post.id }}">
-                  <img src="/ratings/like-grey.png" alt="Like" title="Like">
-                </li>
-                <li data-rating-type="laugh" data-toggle="tooltip" title="Laugh"
-                    data-placement="top" data-post-id="{{ post.id }}">
-                  <img src="/ratings/laugh-static-grey.png" alt="Laugh" title="Like">
-                </li>
-                <li data-rating-type="thank" data-toggle="tooltip" title="Thank"
-                    data-placement="top" data-post-id="{{ post.id }}">
-                  <img src="/ratings/thank-grey.png" alt="Thank" title="Thank">
-                </li>
-              </ul>
-            {% endif %}
-          {% endif %}
-
-        </div> <!-- /.panel-footer -->
-      </div> <!-- /.panel -->
+      {{ posts.showPost(ctx, post, topic) }}
     {% endif %} <!-- can READ_POST check -->
   {% endfor %}
 
@@ -948,7 +672,7 @@ $(function() {
         });
 
         // Add reason field if it's zeroth post form
-        if ($post_edit_btn.hasClass('zeroth')) {
+        if ($post_edit_btn.closest('.post').hasClass('zeroth-post')) {
           $M.$editor.find('.md-footer').prepend(
             '<div class="form-group">'+
             '<input type="text" class="form-control" name="reason" placeholder="Reason for edit (Optional)" maxlength="300">'+
@@ -1208,4 +932,6 @@ $(function () {
      })
    })
   </script>
+
+  {{ posts.toggleScript() }}
 {% endblock%}
