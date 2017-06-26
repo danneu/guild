@@ -63,10 +63,9 @@
       {% if user.avatar_url and not ctx.currUser.hide_avatars %}
         <a class="media-left" href="{{ user.url }}">
           <img class="avatar-img {% if ctx.currUser.is_grayscale %}desaturate{% endif %}"
-               src="{{ user.avatar_url }}"
+               src="{{ user.avatar_url_sm }}"
                alt="Avatar of {{ user.uname }}"
                title="Avatar of {{ user.uname }}"
-               style="max-width: 40px; max-height: 40px;"
                >
         </a>
       {% endif %}
