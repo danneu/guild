@@ -67,6 +67,7 @@ router.get('/search', async (ctx) => {
   const term = ctx.validateQuery('term')
     .optional()
     .toString()
+    .trim()
     .val()
 
   const topicId = ctx.validateQuery('topic_id')
@@ -105,7 +106,7 @@ router.get('/search', async (ctx) => {
 
   // Now we build the query
 
-  const query = knex('posts')
+  const subquery = knex('posts')
     .select('posts.*')
     .select(knex.raw('to_json(users.*) "user"'))
     .select(knex.raw('to_json(topics.*) "topic"'))
@@ -113,50 +114,52 @@ router.get('/search', async (ctx) => {
     .innerJoin('users', 'users.id', 'posts.user_id')
     .innerJoin('topics', 'topics.id', 'posts.topic_id')
     .innerJoin('forums', 'forums.id', 'topics.forum_id')
-    // Ignore test forum and lexus-lounge
-    .whereNotIn('forums.category_id', [5, 4])
-    // Hit full-text index
     .where('posts.is_hidden', false)
     .whereNotNull('posts.markup')
-    .limit(50)
-
-  // If term is truthy, we're doing a fulltext search
+    .limit(1000)
 
   if (term) {
-    query.whereRaw(`to_tsvector('english', posts.markup) @@ plainto_tsquery('english', ?)`, [term])
-    query.select(knex.raw(`ts_rank(to_tsvector('english', posts.markup), plainto_tsquery('english', ?)) "rank"`, [term]))
-    query.select(knex.raw(`ts_headline('english', posts.markup, plainto_tsquery('english', ?)) "highlight"`, [term]))
-    // Sort by relevance
-    // query.orderBy('rank', 'desc')
-  } else {
-    // If no term, then we show markup
-    query.orderBy('posts.created_at', 'desc')
+    subquery.whereRaw(`to_tsvector('english', posts.markup) @@ plainto_tsquery('english', ?)`, [term])
   }
 
-  // If topic_id is given, we want to search a single topic
+  // Extra filters
 
   if (topicId) {
     console.log({topicId})
-    query.where('posts.topic_id', topicId)
+    subquery.where('posts.topic_id', topicId)
   }
 
   // If post_type (array) is given
   if (postTypes) {
     console.log({postTypes})
-    query.whereIn('posts.type', postTypes)
+    subquery.whereIn('posts.type', postTypes)
   }
 
   if (forumIds) {
     console.log({forumIds})
-    query.whereIn('topics.forum_id', forumIds)
+    subquery.whereIn('topics.forum_id', forumIds)
   }
 
   if (userIds) {
     console.log({userIds})
-    query.whereIn('posts.user_id', userIds)
+    subquery.whereIn('posts.user_id', userIds)
   }
 
-  debug('search sql:', query.toString())
+  const query = knex
+    .select('x.*')
+    .from(subquery.as('x'))
+    .limit(50)
+
+  if (term) {
+    query
+      .select(knex.raw(`ts_rank(to_tsvector('english', x.markup), plainto_tsquery('english', ?)) "rank"`, [term]))
+      .select(knex.raw(`ts_headline('english', x.markup, plainto_tsquery('english', ?)) "highlight"`, [term]))
+      .orderBy('rank', 'desc')
+  } else {
+    query.orderBy('x.created_at', 'desc')
+  }
+
+  debug(query.toString())
 
   const posts = await pool.many(_raw`${query.toString()}`)
     .then((xs) => xs.map((x) => pre.presentPost(x)))
