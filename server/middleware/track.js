@@ -5,6 +5,7 @@ const debug = require('debug')('app:middleware:track')
 // 1st
 const db = require('../db')
 const {isValidUuid, futureDate} = require('../belt')
+const config = require('../config')
 
 module.exports = ({cookieKey = 't', interval = 5000} = {}) => {
   debug('initializing track middleware')
@@ -34,6 +35,11 @@ module.exports = ({cookieKey = 't', interval = 5000} = {}) => {
   return async (ctx, next) => {
     // Skip guests
     if (!ctx.currUser) {
+      return next()
+    }
+
+    // Skip cloaked users
+    if (config.CLOAKED_SLUGS.includes(ctx.currUser.slug)) {
       return next()
     }
 
