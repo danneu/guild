@@ -6,17 +6,29 @@
   <meta name="robots" content="noindex,nofollow">
 {% endblock %}
 
+{% macro pagers (posts, currPage, perPage) %}
+  <nav>
+    <ul class="pager">
+      <li>
+        <a href="{{ belt.mergeQuery(ctx.href, { page: null }) }}">
+          First Page
+        </a>
+      </li>
+      {% if posts.length == perPage %}
+        <li>
+          <a href="{{ belt.mergeQuery(ctx.href, { page: currPage + 1 }) }}">
+            Next Page
+          </a>
+        </li>
+      {% endif %}
+    </ul>
+  </nav>
+{% endmacro %}
+
+
 {% block embed %}
 
   {{ ads.topResponsive() }}
-
-  <!-- WIP reminder -->
-
-  <div class="alert alert-info" role="alert">
-    <b>Notice:</b>
-    The search system is under construction.
-    This is an early/ugly/buggy prototype. &mdash; Mahz
-  </div>
 
   <!-- Breadcrumbs -->
 
@@ -138,13 +150,22 @@
     <div class="page-header">
       <h1>
         Search Results
-        <small>{{ posts.length }} results ({{ searchResultsPerPage }} max)</small>
+        <small>
+          {{ posts.length }} results
+          (page {{page}})
+        </small>
       </h1>
     </div>
   {% endif %}
 
+  {{ pagers(posts, page, perPage) }}
+
   {% if not _.isEmpty(searchParams) and posts.length == 0 %}
-    No results
+    <div class="well text-center">
+      <p class="lead">
+        No results
+      </p>
+    </div>
   {% endif %}
 
   {% if posts.length > 0 %}
@@ -174,6 +195,10 @@
 
             <!-- Right side of heading -->
             <div class="pull-right">
+              <a href="{{ post.forum.url }}">
+                {{ post.forum.title }}
+              </a>
+              &mdash;
               {{ post.type.toUpperCase() }}
               {% if post.headline %}
                 &mdash; {{ post.rank }}
@@ -202,6 +227,12 @@
     {% endfor %}
   </ul>
   {% endif %}
+
+  {# only show top pager on empty page #}
+  {% if posts.length > 0 %}
+    {{ pagers(posts, page, perPage) }}
+  {% endif %}
+
 {% endblock %}
 
 {% block scripts %}

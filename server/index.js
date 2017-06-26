@@ -177,8 +177,8 @@ const nunjucksOptions = {
   // globals are bindings we want to expose to all templates
   globals: {
     '_': _,
-    belt: belt,
-    cancan: cancan,
+    belt,
+    cancan,
     // let us use `can(USER, ACTION, TARGET)` authorization-checks in templates
     can: cancan.can,
     cannot: cancan.cannot,

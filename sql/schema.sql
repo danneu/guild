@@ -990,29 +990,6 @@ ALTER TABLE ratelimits SET UNLOGGED;
 ALTER TABLE profile_views SET UNLOGGED;
 
 ------------------------------------------------------------
--- FULL-TEXT SEARCH
-------------------------------------------------------------
-
-CREATE OR REPLACE FUNCTION trim_whitespace(string text) RETURNS text
-AS $$
-  SELECT regexp_replace(string, '^\s+|\s+$', '', 'g');
-$$ LANGUAGE SQL IMMUTABLE;
-
-CREATE OR REPLACE FUNCTION strip_quotes(markup text) RETURNS text
-AS $$
-  SELECT trim_whitespace(regexp_replace(regexp_replace(regexp_replace(markup, '\[quote[^\]]*\]((?!\[[[\/]*quote).)*\[\/quote\]', '', 'gi'), '\[quote[^\]]*\]((?!\[[[\/]*quote).)*\[\/quote\]', '', 'gi'), '\[quote[^\]]*\]((?!\[[[\/]*quote).)*\[\/quote\]', '', 'gi'));
-$$ LANGUAGE SQL IMMUTABLE;
-
--- Note, if immutable functions are updated, then indexes that use them
--- not to be dropped and rebuilt concurrently
---CREATE INDEX CONCURRENTLY posts_vector ON posts
---USING gin(to_tsvector('english', strip_quotes(markup)))
---WHERE is_hidden = false
---  AND markup IS NOT NULL;
-
---DROP INDEX CONCURRENTLY posts_vector;
-
-------------------------------------------------------------
 ------------------------------------------------------------
 
 CREATE TABLE forum_mods (
@@ -1113,3 +1090,26 @@ CREATE INDEX ON hits (ip_root(ip_address));
 CREATE INDEX ON hits (track);
 -- Find latest matches
 CREATE INDEX ON hits (created_at);
+
+------------------------------------------------------------
+-- FULL-TEXT SEARCH
+------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION trim_whitespace(string text) RETURNS text
+AS $$
+  SELECT regexp_replace(string, '^\s+|\s+$', '', 'g');
+$$ LANGUAGE SQL IMMUTABLE;
+
+-- CREATE OR REPLACE FUNCTION strip_quotes(markup text) RETURNS text
+-- AS $$
+--   SELECT trim_whitespace(regexp_replace(regexp_replace(regexp_replace(markup, '\[quote[^\]]*\]((?!\[[[\/]*quote).)*\[\/quote\]', '', 'gi'), '\[quote[^\]]*\]((?!\[[[\/]*quote).)*\[\/quote\]', '', 'gi'), '\[quote[^\]]*\]((?!\[[[\/]*quote).)*\[\/quote\]', '', 'gi'));
+-- $$ LANGUAGE SQL IMMUTABLE;
+
+-- Note, if immutable functions are updated, then indexes that use them
+-- not to be dropped and rebuilt concurrently
+CREATE INDEX CONCURRENTLY posts_vector ON posts
+USING gin(to_tsvector('english', markup))
+WHERE is_hidden = false
+  AND markup IS NOT NULL;
+
+--DROP INDEX CONCURRENTLY posts_vector;

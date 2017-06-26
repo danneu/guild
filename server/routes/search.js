@@ -21,19 +21,12 @@ const router = new Router()
 // - post_types (optional)
 // - forum_ids (optional)
 // - user_ids (optional)
+// ----
+// - page
 //
 // TODO: Remove the old CloudSearch cruft from search_results.html and anywhere
 // else in the codebase.
 router.get('/search', async (ctx) => {
-  // Limit to admin for now til I fix perf issues
-  if (!ctx.currUser || ctx.currUser.role !== 'admin') {
-    ctx.body = 'Search is temporarily disabled.'
-    return
-  }
-
-  //ctx.body = 'Search is temporarily disabled.'
-  //return
-
   // Must be logged in to search
   if (!ctx.currUser) {
     ctx.flash = { message: ['danger', 'You must be logged in to search'] }
@@ -48,6 +41,15 @@ router.get('/search', async (ctx) => {
   const publicCategories = cache.get('categories').filter((c) => {
     return c.id !== 4 && c.id !== 5
   })
+
+  const perPage = 50
+
+  const page = ctx.validateQuery('page')
+    .defaultTo(1)
+    .toInt()
+    .tap((n) => Math.max(n, 0))
+    .tap((n) => Math.min(n, 1000 / perPage))
+    .val()
 
   // If no search query, then short-circuit the DB hit
   if (Object.keys(ctx.query).length === 0) {
@@ -150,7 +152,9 @@ router.get('/search', async (ctx) => {
   const query = knex
     .select('x.*')
     .from(subquery.as('x'))
-    .limit(50)
+    .limit(perPage)
+    .offset((page - 1) * perPage)
+
 
   if (term) {
     query
@@ -179,9 +183,10 @@ router.get('/search', async (ctx) => {
   await ctx.render('search_results', {
     ctx,
     posts,
+    page,
+    perPage,
     className: 'search',
     searchParams: params,
-    searchResultsPerPage: 50,
     reactData: {
       searchParams: params,
       categories: publicCategories

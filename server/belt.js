@@ -1,6 +1,6 @@
 // Node
 const util = require('util');
-const url = require('url');
+const {URL} = require('url');
 const crypto = require('crypto');
 // 3rd party
 const debug = require('debug')('app:belt');
@@ -528,6 +528,24 @@ exports.timeout = function (ms) {
 
 exports.daysAgo = function (date) {
   return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+////////////////////////////////////////////////////////////
+
+// mergeQuery('google.com?foo=bar', { page: 2 }) -> google.com?foo=bar&page=2
+// mergeQuery('google.com?foo=bar', { foo: null }) -> google.com
+//
+// null or undefined values are deleted from query map
+exports.mergeQuery = function (href, obj) {
+  const url = new URL(href)
+  Object.keys(obj).forEach((k) => {
+    if (typeof obj[k] === 'undefined' || obj[k] === null) {
+      url.searchParams.delete(k)
+    } else {
+      url.searchParams.set(k, obj[k])
+    }
+  })
+  return url.href
 }
 
 ////////////////////////////////////////////////////////////
