@@ -214,10 +214,13 @@
   {% if user.avatar_url and not ctx.currUser.hide_avatars %}
     <div class="post-avatar"
          style="margin-top: 10px;">
-      <img class="avatar-img {% if ctx.currUser.is_grayscale %}desaturate{% endif %}"
-           src="{{ user.avatar_url}}"
-           alt="Avatar of {{ user.uname }}"
-           title="Avatar of {{ user.uname }}">
+      <a href="{{ user.url }}">
+        <img class="avatar-img {% if ctx.currUser.is_grayscale %}desaturate{% endif %}"
+            src="{{ user.avatar_url}}"
+            alt="Avatar of {{ user.uname }}"
+            title="Avatar of {{ user.uname }}"
+        >
+      </a>
     </div>
   {% endif %}
 
