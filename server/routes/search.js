@@ -3,6 +3,7 @@
 const Router = require('koa-router')
 const knex = require('knex')({ client: 'pg' })
 const {_raw} = require('pg-extra')
+const debug = require('debug')('app:search')
 // 1st
 const {pool} = require('../db/util')
 const cache = require('../cache')
@@ -126,7 +127,7 @@ router.get('/search', async (ctx) => {
     query.select(knex.raw(`ts_rank(to_tsvector('english', posts.markup), plainto_tsquery('english', ?)) "rank"`, [term]))
     query.select(knex.raw(`ts_headline('english', posts.markup, plainto_tsquery('english', ?)) "highlight"`, [term]))
     // Sort by relevance
-    query.orderBy('rank', 'desc')
+    // query.orderBy('rank', 'desc')
   } else {
     // If no term, then we show markup
     query.orderBy('posts.created_at', 'desc')
@@ -154,6 +155,8 @@ router.get('/search', async (ctx) => {
     console.log({userIds})
     query.whereIn('posts.user_id', userIds)
   }
+
+  debug('search sql:', query.toString())
 
   const posts = await pool.many(_raw`${query.toString()}`)
     .then((xs) => xs.map((x) => pre.presentPost(x)))
