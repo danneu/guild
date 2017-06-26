@@ -74,11 +74,11 @@ exports.handleAvatar = async (userId, fullInPath) => {
     assert(typeof mime === 'string')
   }
 
-  const hash = await calcStreamHash(nodeFs.createReadStream(fullInPath))
+  const uuid = uuidGen.v4()
   const folderName = config.NODE_ENV === 'production' ? 'production' : 'development'
 
   const promise1 = new Promise((resolve, reject) => {
-    const objectName = `${folderName}/${hash}.${format}`
+    const objectName = `${folderName}/${uuid}.${format}`
 
     gm(nodeFs.createReadStream(fullInPath))
       // width, height, modifier
@@ -108,9 +108,9 @@ exports.handleAvatar = async (userId, fullInPath) => {
   })
 
   const promise2 = new Promise((resolve, reject) => {
-    const objectName = `${folderName}/32/${hash}.${format}`
+    const objectName = `${folderName}/32/${uuid}.${format}`
 
-    gm(nodeFs.createReadStream(fullInPath))
+    gm(fullInPath + '[0]')
       // width, height, modifier
       // '>' = only resize if image exceeds dimensions
       // http://www.imagemagick.org/script/command-line-processing.php#geometry
@@ -140,21 +140,6 @@ exports.handleAvatar = async (userId, fullInPath) => {
   // Return the large avatar url
   return Promise.all([promise1, promise2])
     .then(([avatarUrl]) => avatarUrl)
-}
-
-function readProcessWrite (inPath, outPath) {
-  return new Promise((resolve, reject) => {
-    var fullInPath = path.resolve(inPath)
-    var fullOutPath = path.resolve(outPath)
-    gm(fullInPath)
-      .autoOrient() // http://aheckmann.github.io/gm/docs.html#autoOrient
-      .resize(150, 150)
-      .strip() // http://aheckmann.github.io/gm/docs.html#strip
-      .write(fullOutPath, (err) => {
-        if (err) return reject(err)
-        return resolve()
-      })
-  })
 }
 
 // function* run() {
