@@ -173,14 +173,6 @@
           </form>
         {% endif %}
       {% endif %}
-      <!-- IP address -->
-      {% if can(ctx.currUser, 'READ_USER_IP', post.user) %}
-        <div class="pull-left" style="margin-left: 5px; color: #6E6B6B">
-          <a href="/ips/{{ post.ip_address }}" class="text-muted">
-            {{ post.ip_address }}
-          </a>
-        </div>
-      {% endif %}
       <!-- @Mention -->
       {% if can(ctx.currUser, 'CREATE_POST', topic) %}
         <a href=""

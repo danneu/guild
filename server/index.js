@@ -2134,55 +2134,6 @@ router.delete('/me/ratings/:postId', async (ctx) => {
   ctx.response.redirect('/posts/' + ctx.params.postId)
 })
 
-router.get('/ips/:ip_address', async (ctx) => {
-  // Ensure authorization
-  ctx.assertAuthorized(ctx.currUser, 'LOOKUP_IP_ADDRESS')
-
-  const [postsTable, pmsTable] = await Promise.all([
-    db.findUsersWithPostsWithIpAddress(ctx.params.ip_address)
-      .then((xs) => xs.filter((x) => !config.CLOAKED_SLUGS.includes(x.slug))),
-    db.findUsersWithPmsWithIpAddress(ctx.params.ip_address)
-      .then((xs) => xs.filter((x) => !config.CLOAKED_SLUGS.includes(x.slug)))
-  ])
-
-  await ctx.render('show_users_with_ip_address', {
-    ctx,
-    ip_address: ctx.params.ip_address,
-    postsTable,
-    pmsTable
-  })
-})
-
-//
-// Show user ip addresses
-//
-router.get('/users/:slug/ips', async (ctx) => {
-  // Load user
-  var user = await db.findUserBySlug(ctx.params.slug)
-  ctx.assert(user, 404)
-
-  // Authorize currUser
-  ctx.assertAuthorized(ctx.currUser, 'READ_USER_IP', user)
-
-  ctx.type = 'html'
-
-  // If user is cloaked, render nothing
-  if (config.CLOAKED_SLUGS.includes(user.slug)) {
-    ctx.body = 'None on file'
-    return
-  }
-
-  // Load ip addresses
-  var ip_addresses = await db.findAllIpAddressesForUserId(user.id)
-
-  ctx.set('Content-Type', 'text/html')
-  ctx.body = _.isEmpty(ip_addresses)
-    ? 'None on file'
-    : ip_addresses.map(function (ip_address) {
-      return '<a href="/ips/' + ip_address + '">' + ip_address + '</a>'
-    }).join('<br>')
-})
-
 /// /////////////////////////////////////////////////////////
 
 router.get('/trophies', async (ctx) => {

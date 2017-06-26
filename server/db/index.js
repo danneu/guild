@@ -2332,63 +2332,6 @@ exports.updateTopicTags = async function (topicId, tagIds) {
   })
 }
 
-// Example return:
-//
-//   uname   count   latest_at
-//   foo     33      2015-02-27 06:50:18.943-06
-//   Mahz    125     2015-03-01 03:32:49.539-06
-//
-// `latest_post_at` is the timestamp of the latest post by that
-// user that has this ip address.
-exports.findUsersWithPostsWithIpAddress = async function (ip_address) {
-  assert(ip_address)
-
-  return pool.many(sql`
-    SELECT
-      u.uname           uname,
-      u.slug            slug,
-      COUNT(p.id)       count,
-      MAX(p.created_at) latest_at
-    FROM posts p
-    JOIN users u ON p.user_id = u.id
-    WHERE p.ip_address = ${ip_address}
-    GROUP BY u.uname, u.slug
-  `)
-}
-
-exports.findUsersWithPmsWithIpAddress = async function (ip_address) {
-  assert(ip_address)
-
-  return pool.many(sql`
-    SELECT
-      u.uname           uname,
-      u.slug            slug,
-      COUNT(p.id)       count,
-      MAX(p.created_at) latest_at
-    FROM pms p
-    JOIN users u ON p.user_id = u.id
-    WHERE p.ip_address = ${ip_address}
-    GROUP BY u.uname, u.slug
-  `)
-}
-
-// Returns [String]
-exports.findAllIpAddressesForUserId = async function (user_id) {
-  assert(user_id)
-
-  return pool.many(sql`
-    SELECT DISTINCT ip_address
-    FROM posts
-    WHERE user_id = ${user_id} AND ip_address IS NOT NULL
-
-    UNION
-
-    SELECT DISTINCT ip_address
-    FROM pms
-    WHERE user_id = ${user_id} AND ip_address IS NOT NULL
-  `).then((rows) => rows.map((row) => row.ip_address))
-}
-
 // Returns latest 5 unhidden checks
 exports.findLatestChecks = async function () {
   const forumIds = [12, 38, 13, 14, 15, 16, 40, 43]
