@@ -59,7 +59,7 @@ function make (overrides) {
     return make(Object.assign({}, overrides, newOverrides))
   }
 
-  return Object.assign(render, { fork })
+  return Object.assign(render, { fork: fork })
 }
 
 if (typeof module !== 'undefined') {
