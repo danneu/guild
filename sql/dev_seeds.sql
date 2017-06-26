@@ -130,14 +130,44 @@ SELECT setval('forums_id_seq'::regclass, (SELECT MAX(id) FROM forums));
 ---- Tags
 
 INSERT INTO tag_groups (id, title) VALUES
-  (1, 'TestTags')
+(1,	'Writing Style'),
+(2,	'Party Size'),
+(3,	'Genre'),
+(4,	'Time Period'),
+(5,	'Adult')
 ;
 SELECT setval('tag_groups_id_seq'::regclass, (SELECT MAX(id) FROM tag_groups));
 
-INSERT INTO tags (id, tag_group_id, title, description) VALUES
-  (1, 1, 'TestTag 1', 'Just a test')
-, (2, 1, 'TestTag 2', 'Just a test')
-, (3, 1, 'TestTag 3', 'Just a test')
+INSERT INTO tags (id, tag_group_id, title, description, slug) VALUES
+(17,	3,	'Romance',	'Emphasis on love (whether it comes around or not)',	'romance')
+,(6 , 2 ,  'Large Group',	'5+ players',	'large-group')
+,(21,	4,	'Apocalyptic',	'Involves the end of times, perhaps due to catastrophe',	'apoc')
+,(22,	4,	'Post-Apocalyptic',	'Takes place after the distaster that ruined the world',	'post-apoc')
+,(29,	3,	'Superhero',	'Supernatural, superheroic, superhuman abilities',	'superhero')
+,(18,	3,	'Fandom',	'Inspired by existing art (TV shows, books, movies)',	'fandom')
+,(7 , 4 ,  'Modern',	'Based in our present world or what'',s trending in it',	'modern')
+,(27,	3,	'Horror',	'Seeks to elicit fear, shock, terror',	'horror')
+,(12,	4,	'Historical',	'Events of the past or an alternate one',	'historical')
+,(28,	4,	'Western',	'Later-half 19th century, frontiers, saloons, desolation',	'western')
+,(4 , 2 ,  '1x1',	'Two players',	'onexone')
+,(13,	3,	'Tabletop',	'Narrative driven by game mechanics, character stats, games like DnD',	'tabletop')
+,(25,	4,	'Future',	'In a time that is still yet to come',	'future')
+,(9 , 3 ,  'Fantasy',	'Wizards, hobbits, ...and my axe',	'fantasy')
+,(15,	3,	'Arena',	'PvP, players fighting/competiting against each other',	'arena')
+,(2 , 1 ,  'Casual',	'A few paragraphs; medium depth.',	'casual')
+,(26,	5,	'18+',	'Involves adult themes',	'mature')
+,(14,	3,	'Nation',	'Players control nations, tribes, factions, ...',	'nation')
+,(3 , 1 ,  'Advanced',	'Many paragraphs; full depth, lore, development',	'advanced')
+,(20,	3,	'Steampunk',	'Futuristic technology existing in the past',	'steampunk')
+,(19,	3,	'Anime/Manga',	'Inspired by an anime or manga',	'anime')
+,(23,	4,	'Ancient',	'The distant past, extending back to the beginning of time',	'ancient')
+,(10,	3,	'Slice of Life',	'Some focus on elements of real life',	'slice-of-life')
+,(24,	4,	'Medieval',	'We have a castle, a dragon... and winter is coming',	'medieval')
+,(16,	3,	'Military',	'Involving military activity or war',	'military')
+,(5,	  2,	'Small Group',	'3-4 players',	'small-group')
+,(11,	3,	'School',	'Involves a school, academy, high-school, university, Hogwarts, ...',	'school')
+,(8,	  3,	'Sci-Fi',	'Exploring innovations and possibly their impact on the future',	'scifi')
+,(1,	  1,	'Free',	'One-liners, few-liners, or speed-posting; shallow depth',	'free')
 ;
 SELECT setval('tags_id_seq'::regclass, (SELECT MAX(id) FROM tags));
 

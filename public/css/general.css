@@ -1450,3 +1450,17 @@ fieldset.cyberpunk {
 .ago.fresh {
   color: #51e0db;
 }
+
+/* Tags */
+
+/* tags are usually displayed in bootstrap labels when
+   not rendered as buttons
+ */
+.tag.label {
+  display: inline-block;
+}
+
+/* .tag-mature { */
+/*   color: #ff6b5c; */
+/*   text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; */
+/* } */

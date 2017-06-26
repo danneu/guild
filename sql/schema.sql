@@ -352,10 +352,13 @@ CREATE TABLE tags (
   id serial PRIMARY KEY,
   tag_group_id int NOT NULL REFERENCES tag_groups(id),
   title text NOT NULL,
+  -- slug should only have letters, hyphens, nums
+  slug text NOT NULL,
   description text NULL,
   created_at timestamp with time zone NOT NULL DEFAULT NOW(),
   -- Constraints
-  UNIQUE(title)
+  UNIQUE(title),
+  UNIQUE(slug)
 );
 
 ALTER TABLE forums

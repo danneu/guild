@@ -691,16 +691,12 @@
           </div>
           <div>
             {% for tag in topic.tags %}
-              <span class="label label-default" style="display: inline-block;"
-                    data-toggle="tooltip" title="{{ tag.description }}">
-                {{ tag.title }}
-              </span>
+              {{ tagLabel(tag) }}
             {% endfor %}
           </div>
         </div>
         {% if not loop.last %}<hr>{% endif %}
       {% endfor %}
-
     </div><!-- /panel-body -->
   </div><!-- /panel-default -->
 
@@ -731,10 +727,7 @@
               {{ renderJoinStatus(topic.join_status) }}
             {% endif %}
             {% for tag in topic.tags %}
-              <span class="label label-default" style="display: inline-block;"
-                    data-toggle="tooltip" title="{{ tag.description }}">
-                {{ tag.title }}
-              </span>
+              {{ tagLabel(tag) }}
             {% endfor %}
           </div>
         </div>
@@ -1219,4 +1212,12 @@
   <abbr class="ago{% if fresh %} fresh{% endif %}" title="{{ date | formatDate }}">
     {{ ago(date) }}
   </abbr>
+{% endmacro %}
+
+
+{% macro tagLabel (tag) %}
+  <span class="label label-default tag tag-{{ tag.slug }}"
+        data-toggle="tooltip" title="{{ tag.description }}">
+    {{ tag.title }}
+  </span>
 {% endmacro %}
