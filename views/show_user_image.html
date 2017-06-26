@@ -1,4 +1,5 @@
 {% extends 'layouts/master.html' %}
+{% import './macros/macros.html' as macros %}
 
 {% block embed %}
   <div class="page-header">
@@ -21,9 +22,7 @@
         <li><strong>Description:</strong> {{ image.description }}</li>
       {% endif %}
       <li><strong>Uploaded:</strong>
-        <abbr class="timeago" title="{{ image.created_at.toISOString() }}">
-          {{ image.created_at | formatDate }}
-        </abbr>
+        {{ macros.timeago(image.created_at) }}
       </li>
     </ul>
     <div class="text-center">

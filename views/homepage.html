@@ -143,10 +143,7 @@
                               <div class="by-line">
                                 by
                                 <a href="{{ forum.latest_user.url }}" style="color: #fff;">{{ forum.latest_user.uname }}</a>,
-                                <abbr class="timeago" style="display: inline-block;"
-                                      title="{{ forum.latest_post.created_at.toISOString() }}">
-                                  {{ forum.latest_post.created_at|formatDate }}
-                                </abbr>
+                                {{ macros.timeago(forum.latest_post.created_at) }}
                               </div>
                             </div>
                           {% else %}
@@ -187,10 +184,7 @@
                                 <div class="by-line">
                                   by
                                   <a href="{{ subforum.latest_user.url }}" style="color: #fff;">{{ subforum.latest_user.uname }}</a>,
-                                  <abbr class="timeago" style="display: inline-block;"
-                                        title="{{ subforum.latest_post.created_at.toISOString() }}">
-                                    {{ subforum.latest_post.created_at|formatDate }}
-                                  </abbr>
+                                  {{ macros.timeago(subforum.latest_post.created_at) }}
                                 </div><!--/by-line-->
                               </div>
                             {% else %}
@@ -250,10 +244,8 @@
           <h4>Newest User</h4>
           <div>
             {% if stats.latestUser %}
-            <a href="{{ stats.latestUser.url }}">{{ stats.latestUser.uname }}</a>
-            <abbr class="timeago" title="{{ stats.latestUser.created_at.toISOString() }}">
-              {{ stats.latestUser.formattedCreatedAt }}
-            </abbr>
+              <a href="{{ stats.latestUser.url }}">{{ stats.latestUser.uname }}</a>
+              {{ macros.timeago(stats.latestUser.created_at) }}
             {% else %}
               --
             {% endif %}

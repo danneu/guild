@@ -1,4 +1,5 @@
 {% extends 'layouts/master.html' %}
+{% import '../macros/macros.html' as macros %}
 
 {% block embed %}
   {{ newCampaignModal(ctx) }}
@@ -164,16 +165,12 @@
       {{ campaign.roll_count }} rolls
     </td>
     <td>
-      <abbr class="timeago" title="{{ campaign.created_at.toISOString() }}">
-        {{ campaign.created_at | formatDate }}
-      </abbr>
+      {{ macros.timeago(campaign.created_at) }}
     </td>
     <td>
       {% if campaign.last_roll %}
         <a href="{{ campaign.last_roll.url }}">Roll {{ campaign.last_roll.id }}</a>
-        <abbr class="timeago" title="{{ campaign.last_roll_at.toISOString() }}">
-          {{ campaign.last_roll_at | formatDate }}
-        </abbr>
+        {{ macros.timeago(campaign.last_roll_at) }}
       {% endif %}
     </td>
   </tr>

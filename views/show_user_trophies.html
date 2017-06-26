@@ -1,4 +1,5 @@
 {% extends 'show_user.html' %}
+{% import './macros/macros.html' as macros %}
 
 {% block child %}
   <!-- Trophy Box -->
@@ -89,9 +90,7 @@
                 {% endif %}
 
                 Awarded
-                <abbr class="timeago" title="{{ trophy.awarded_at.toISOString() }}">
-                  {{ trophy.awarded_at|formatDate }}
-                </abbr>
+                {{ macros.timeago(trophy.awarded_at) }}
                 {% if trophy.awarded_by %}
                   by
                   <a href="{{ trophy.awarded_by.url }}">

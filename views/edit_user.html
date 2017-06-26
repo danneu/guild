@@ -1,4 +1,5 @@
 {% extends 'layouts/master.html' %}
+{% import './macros/macros.html' as macros %}
 
 {% block embed %}
   <ol class="breadcrumb">
@@ -557,9 +558,7 @@
             {% if lastUnameChange and lastUnameChange.changed_by_id and lastUnameChange.created_at | isOlderThan({ months: 3 }) %}
               <div class="alert alert-warning text-center">
                 Last username change:
-                <abbr class="timeago" title="{{ lastUnameChange.created_at.toISOString() }}">
-                  {{ lastUnameChange.created_at | formatDate }}
-                </abbr>
+                {{ macros.timeago(lastUnameChange.created_at) }}
               </div>
             {% endif %}
 

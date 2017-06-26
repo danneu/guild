@@ -118,11 +118,6 @@ var MuteList = React.createClass({
 
     return false;
   },
-  componentDidUpdate: function() {
-    $("abbr.timeago").timeago();
-
-    console.log('[MuteList] updated');
-  },
   render: function() {
     return el.div(
       null,
@@ -148,10 +143,10 @@ var MuteList = React.createClass({
               el.span({className: 'text-muted'}, 'Forever') :
               el.abbr(
                 {
-                  className: 'timeago',
+                  className: 'ago',
                   title: duration.toISOString()
                 },
-                duration.toISOString()
+                window.ago(duration)
               )
           );
         })

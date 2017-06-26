@@ -1,4 +1,5 @@
 {% extends 'layouts/master.html' %}
+{% import './macros/macros.html' as macros %}
 
 {% block embed %}
   <ol class="breadcrumb">
@@ -44,9 +45,7 @@
         <li>
           <a href="/trophies/{{ trophy.id }}">{{ trophy.title }}</a>
           Created
-          <abbr class="timeago" title="{{ trophy.created_at.toISOString() }}">
-            {{ trophy.created_at|formatDate }}
-          </abbr>
+          {{ macros.timeago(trophy.created_at) }}
         </li>
       {% endfor %}
     </ul>

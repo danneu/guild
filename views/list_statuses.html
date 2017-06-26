@@ -1,4 +1,5 @@
 {% extends 'layouts/master.html' %}
+{% import 'macros/macros.html' as macros %}
 
 {% block embed %}
   <div class="panel panel-default" style="background: transparent;">
@@ -24,9 +25,8 @@
           <div class="media-body" style="vertical-align: middle; font-size: 90%;">
             <a href="{{ status.user.url }}" style="color: #999;">{{ status.user.uname }}</a>
             <span class="text-muted" style="display: inline-block;">
-              <abbr class="timeago" title="{{ status.created_at.toISOString() }}">
-                {{ status.created_at|formatDate }}
-              </abbr>
+
+              {{ macros.timeago(status.created_at) }}
             </span>
           </div>
         </div>

@@ -66,6 +66,7 @@ const bouncer = require('koa-bouncer')
 require('./validation')  // Load after koa-bouncer
 const services = require('./services')
 const cache2 = require('./cache2')
+const makeAgo = require('./ago')
 
 app.use(middleware.methodOverride())
 
@@ -187,7 +188,8 @@ const nunjucksOptions = {
     Date,
     Object,
     cache,
-    cache2
+    cache2,
+    ago: makeAgo()
   },
   // filters are functions that we can pipe values to from nunjucks templates.
   // e.g. {{ user.uname | md5 | toAvatarUrl }}

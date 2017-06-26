@@ -1,5 +1,6 @@
 {% extends 'layouts/master.html' %}
 {% import './macros/ads.html' as ads %}
+{% import './macros/macros.html' as macros %}
 
 {% block head %}
   <link rel="canonical" href="{{ ctx.config.HOST + user.url }}">
@@ -136,9 +137,7 @@
         <span class="text-muted" style="font-size: 70%; font-weight: 900;">STATUS: </span>
         {{ currStatus.html|safe }}
       </span>
-      <abbr class="timeago" title="{{ currStatus.created_at.toISOString() }}">
-        {{ currStatus.created_at|formatDate }}
-      </abbr>
+      {{ macros.timeago(currStatus.created_at) }}
     {% endif %}
 
   </div>
@@ -157,9 +156,7 @@
               <a href="{{ approver.url }}">
                 {{ approver.uname }}
               </a>
-              <abbr class="timeago" title="{{ user.approved_at.toISOString() }}">
-                {{ user.approved_at | formatDate }}
-              </abbr>
+              {{ macros.timeago(user.approved_at) }}
             </span>
           {% else %}
             This user was never approved. If they are a new user, keep an eye
@@ -195,9 +192,7 @@
               {% endif %}
               <li>
                 Joined:
-                <abbr class="timeago" title="{{ user.created_at.toISOString() }}">
-                  {{ user.created_at|formatDate }}
-                </abbr>
+                {{ macros.timeago(user.created_at) }}
               </li>
               <li>
                 Posts:
@@ -374,9 +369,7 @@
           {% for status in statuses %}
               <div class="status-item row">
                 <div class="col-lg-2 col-md-2 col-sm-3">
-                  <abbr class="timeago" title="{{ status.created_at.toISOString() }}">
-                    {{ status.created_at|formatDate }}
-                  </abbr>
+                  {{ macros.timeago(status.created_at) }}
                   <!-- Delete button -->
                   <form action="/statuses/{{ status.id }}" method="post"
                         class="delete-status-form"
@@ -558,9 +551,7 @@
             <a href="{{ post.url }}" class="btn btn-default btn-xs latest-post-btn" style="margin-left: 5px; color: #ffc300;">
               &rarr;
             </a>
-            <abbr class="timeago" title="{{ post.created_at.toISOString() }}">
-              {{ post.created_at|formatDate }}
-            </abbr>
+            {{ macros.timeago(post.created_at) }}
 
           <span class="pull-right">
               Forum: <a href="{{ post.forum.url }}" style="color: #ffc300">{{ post.forum.title }}</a>

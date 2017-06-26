@@ -846,14 +846,13 @@ $(function () {
         var iso_string = $this.attr('data-iso-string');
         var text = $this.attr('data-text');
         return text + '<br>' +
-          '<div class="text-right"><abbr class="timeago" title="'+iso_string+'">'+iso_string+'</abbr></div>'
+          '<div class="text-right"><abbr class="ago" title="'+iso_string+'">'+ago(new Date(iso_string))+'</abbr></div>'
           ;
       }
     }).on('show.bs.popover', function() {
       var $this = $(this);
       setTimeout(function() {
          var popover_id = $this.attr('aria-describedby');
-         $('#' + popover_id).find('abbr').timeago();
       },0);
     });
   </script>

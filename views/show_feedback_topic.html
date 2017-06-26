@@ -1,4 +1,5 @@
 {% extends 'layouts/master.html' %}
+{% import './macros/macros.html' as macros %}
 
 {% block embed %}
 
@@ -12,9 +13,7 @@
   {% for reply in replies %}
     <li>
       <a href="/users/{{ reply.uname|slugifyUname }}">{{ reply.uname }}</a>
-      <abbr class="timeago" title="{{ reply.created_at.toISOString() }}">
-        {{ reply.created_at|formatDate }}
-      </abbr>
+      {{ macros.timeago(reply.created_at) }}
       {% if reply.ignored %}
         <span class="label label-default">Ignored</span>
       {% endif %}

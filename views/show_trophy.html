@@ -1,4 +1,5 @@
 {% extends 'layouts/master.html' %}
+{% import './macros/macros.html' as macros %}
 
 {% block embed %}
   <ol class="breadcrumb">
@@ -56,9 +57,7 @@
             <a href="/users/{{ winner.slug }}">{{ winner.uname }}</a>,
           {% endif %}
           Awarded
-          <abbr class="timeago" title="{{ winner.awarded_at.toISOString() }}">
-            {{ winner.awarded_at|formatDate }}
-          </abbr>
+          {{ macros.timeago(winner.awarded_at) }}
           {% if winner.awarded_by %}
             by
             <a href="/users/{{ winner.awarded_by.slug }}">

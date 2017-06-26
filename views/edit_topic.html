@@ -268,9 +268,7 @@
               </a>
               <span class="text-muted">
                 Banned
-                <abbr class="timeago" title="{{ ban.created_at.toISOString() }}">
-                  {{ ban.created_at | formatDate }}
-                </abbr>
+                {{ macros.timeago(ban.created_at) }}
                 by
                 <a href="{{ ban.banned_by.url }}">
                   {{ ban.banned_by.uname }}

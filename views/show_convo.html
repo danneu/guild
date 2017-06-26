@@ -77,9 +77,7 @@
       <div class="panel-heading clearfix"
            style="background-color: #1D1D1D; border-color: #111; border-radius: 0">
         <span class="pull-left">
-          <abbr class="timeago" title="{{ post.created_at.toISOString() }}">
-            {{ post.formattedCreatedAt }}
-          </abbr>
+          {{ macros.timeago(post.created_at) }}
         </span>
         <div class="pull-right post-header">
           <a href="{{ post.url }}/raw">View Raw</a> -

@@ -1,5 +1,6 @@
 {% extends 'layouts/master.html' %}
 {% import './macros/ads.html' as ads %}
+{% import './macros/macros.html' as macros %}
 
 {% block embed %}
 
@@ -78,9 +79,7 @@
         <span class="glyphicon glyphicon-pencil"></span>
         Updated by
         <a href="{{ registration.updated_by.url }}">{{ registration.updated_by.uname }}</a>
-        (<abbr class="timeago" title="{{ registration.updated_at.toISOString() }}">
-          {{ registration.updated_at | formatDate }}
-        </abbr>)
+        {{ macros.timeago(registration.updated_at) }}
       </p>
     {% endif %}
   </div>
@@ -144,10 +143,7 @@
                     by
                     <a href="{{ forum.latest_user.url }}" style="color: #fff;">{{ forum.latest_user.uname }}</a>
                   </div>
-                  <abbr class="timeago"
-                        title="{{ forum.latest_post.created_at.toISOString() }}">
-                    {{ forum.latest_post.formattedCreatedAt }}
-                  </abbr>
+                  {{ macros.timeago(forum.latest_post.created_at) }}
                 {% else %}
                   --
                 {% endif %}
@@ -175,9 +171,7 @@
           {% for user in latestUsers %}
             <li>
               <span style="display: inline-block; width: 150px;" class="text-muted">
-                Joined <abbr class="timeago" title="{{ user.created_at.toISOString() }}">
-                  {{ user.formattedCreatedAt }}
-              </abbr>
+                Joined {{ macros.timeago(user.created_at) }}
               </span>
               <span style="display: inline-block; width: 70px;">
                 {% if user.role == 'banned' %}
@@ -213,9 +207,7 @@
                     <a href="{{ user.approved_by.url }}">
                       {{ user.approved_by.uname }}
                     </a>
-                    <abbr class="timeago" title="{{ user.approved_at.toISOString() }}">
-                      {{ user.approved_at | formatDate }}
-                    </abbr>
+                    {{ macros.timeago(user.approved_at) }}
                   </span>
                 {% endif %}
             </li>
@@ -272,9 +264,7 @@
                       {% endif %}
                       {{ change.changed_by.uname }}
                     </a>
-                    <abbr class="timeago" title="{{ change.created_at.toISOString() }}">
-                      {{ change.created_at | formatDate }}
-                    </abbr>
+                    {{ macros.timeago(change.created_at) }}
                   {% else %}
                     <span class="text-muted">
                       Initial Username

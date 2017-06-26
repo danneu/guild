@@ -24,11 +24,7 @@
     {% else %}
       <span class="text-muted">
         {% if not minimal %}Seen{% endif %}
-        <abbr class="timeago"
-              style="display: inline-block;"
-              title="{{ user.last_online_at.toISOString() }}">
-          {{ user.last_online_at | formatDate }}
-        </abbr>
+        {{ timeago(user.last_online_at) }}
       </span>
     {% endif %}
   {% else %}
@@ -135,11 +131,9 @@
         {% if user.last_online_at %}
           <span class="negate-bg" style="color: white;">
             LAST SEEN
-            <abbr class="timeago"
-                  style="display: inline-block; text-transform: uppercase; border: none; color: white;"
-                  title="{{ user.last_online_at.toISOString() }}">
-              {{ user.last_online_at | formatDate }}
-            </abbr>
+            <span style="text-transform: uppercase; border: none; color: white;">
+              {{ timeago(user.last_online_at) }}
+            </span>
           </span>
         {% else %}
           <span class="negate-bg" style="color: #555">
@@ -285,10 +279,7 @@
           {# Show timeago only if created within 3 days #}
 
           {% if user.current_status.created_at|isNewerThan({ days: 3 }) %}
-            <abbr class="timeago"
-                  title="{{ user.current_status.created_at.toISOString() }}">
-              {{ user.current_status.created_at }}
-            </abbr>
+            {{ timeago(user.current_status.created_at) }}
           {% endif %}
         </a>
       {% endif %}
@@ -458,9 +449,7 @@
 
         <div class="text-center text-muted">
           Posted
-          <abbr class="timeago" title="{{ latest_rpgn_topic.created_at.toISOString() }}">
-            {{ latest_rpgn_topic.created_at|formatDate }}
-          </abbr>
+          {{ timeago(latest_rpgn_topic.created_at) }}
           {% if latest_rpgn_topic.created_at|isNewerThan({ days: 4 }) %}
             <span style="color: #00a9a9; font-size: 75%;"><span style="border: 1px solid #51e0db; padding: 0px 3px;">FRESH</span></span>
           {% endif %}
@@ -473,10 +462,7 @@
                       <a href="/topics/{{ latest_rpgn_topic.latest_post.topic_id }}/ooc/first-unread" class="btn btn-default btn-xs">Go &rarr;</a>
 
             <br>
-            <abbr class="timeago" title="{{ latest_rpgn_topic.latest_post.created_at.toISOString() }}">
-              {{ latest_rpgn_topic.latest_post.created_at|formatDate }}
-            </abbr>
-
+            {{ timeago(latest_rpgn_topic.lastest_post.created_at) }}
       </div>
     </div>
   </div>
@@ -630,9 +616,7 @@
             <div class="media-body" style="vertical-align: middle;">
               <a href="{{ status.user.url }}" style="color: #999;">{{ status.user.uname }}</a>
               <span class="text-muted" style="display: inline-block;">
-                <abbr class="timeago" title="{{ status.created_at.toISOString() }}">
-                  {{ status.created_at|formatDate }}
-                </abbr>
+                {{ timeago(status.created_at) }}
               </span>
             </div>
           </div>
@@ -702,9 +686,7 @@
             by <a href="{{ topic.user.url }}" style="color: white;">{{ topic.user.uname }}</a>
             <span class="text-muted" style="display: inline-block;">
               &mdash;
-              <abbr class="timeago" title="{{ topic.created_at.toISOString() }}">
-                {{ topic.created_at|formatDate }}
-              </abbr>
+              {{ timeago(topic.created_at) }}
             </span>
           </div>
           <div>
@@ -741,9 +723,7 @@
             by <a href="{{ topic.user.url }}" style="color: white;">{{ topic.user.uname }}</a>
             <span class="text-muted" style="display: inline-block;">
               &mdash;
-              <abbr class="timeago" title="{{ topic.created_at.toISOString() }}">
-                {{ topic.created_at|formatDate }}
-              </abbr>
+              {{ timeago(topic.created_at) }}
             </span>
           </div>
           <div>
@@ -813,10 +793,7 @@
                 <div class="list-group-item-text">
                   <div style="margin-top: 6px;">
                     by <a href="{{ topic.user.url }}" style="color: #fff">{{ topic.user.uname }}</a>,
-                    <abbr class="timeago created-at"
-                          title="{{ topic.created_at.toISOString() }}">
-                      {{ topic.created_at|formatDate }}
-                    </abbr>
+                    {{ timeago(topic.created_at) }}
                   </div>
                   <!-- List topic tags -->
                   {% if topic.tags %}
@@ -839,9 +816,9 @@
                   Moved to
                   <a href="/forums/{{ topic.forum_id }}">{{ topic.forum.title }}</a>
                   <div>
-                    <abbr class="timeago moved-at" title="{{ topic.moved_at.toISOString() }}">
-                      {{ topic.moved_at|formatDate }}
-                    </abbr>
+                    <span class="moved-at">
+                      {{ timeago(topic.moved_at) }}
+                    </span>
                   </div>
                 </div> <!-- /col-6 -->
               {% else %}
@@ -858,10 +835,7 @@
                       &rarr;
                     </a>
                     <br>
-                    <abbr class="timeago created-at"
-                          title="{{ topic.latest_post.created_at.toISOString() }}">
-                      {{ topic.latest_post.created_at|formatDate }}
-                    </abbr>
+                    {{ timeago(topic.latest_post.created_at) }}
                   </div>
                   {% else %}
                   <div class="text-right text-muted">
@@ -942,10 +916,7 @@
                 <div class="list-group-item-text">
                   <div style="margin-top: 6px;">
                     by <a href="{{ topic.user.url }}" style="color: #fff">{{ topic.user.uname }}</a>,
-                    <abbr class="timeago created-at"
-                          title="{{ topic.created_at.toISOString() }}">
-                      {{ topic.created_at|formatDate }}
-                    </abbr>
+                    {{ timeago(topic.latest_post.created_at) }}
                     {% if topic.created_at|isNewerThan({ days: 1 }) %}
                       <span style="color: #00a9a9; font-size: 75%;">&#x27F5; <span style="border: 1px solid #51e0db; padding: 0px 3px;" data-toggle="tooltip" title="Started less than 24 hours ago">FRESH</span></span>
                     {% endif %}
@@ -978,9 +949,7 @@
                   Moved to
                   <a href="/forums/{{ topic.forum_id }}">{{ topic.forum.title }}</a>
                   <div>
-                    <abbr class="timeago moved-at" title="{{ topic.moved_at.toISOString() }}">
-                      {{ topic.moved_at|formatDate }}
-                    </abbr>
+                    {{ timeago(topic.moved_at) }}
                   </div>
                 </div> <!-- /col-6 -->
               {% else %}
@@ -1004,10 +973,7 @@
                       &rarr;
                     </a>
                     <br>
-                    <abbr class="timeago created-at"
-                          title="{{ topic.latest_post.created_at.toISOString() }}">
-                      {{ topic.latest_post.created_at|formatDate }}
-                    </abbr>
+                    {{ timeago(topic.latest_post.created_at) }}
                   </div>
                   {% else %}
                   <div class="text-right text-muted">
@@ -1057,10 +1023,7 @@
                 <div class="list-group-item-text">
                   <div style="margin-top: 6px;">
                     by <a href="{{ topic.user.url }}" style="color: #fff">{{ topic.user.uname }}</a>,
-                    <abbr class="timeago created-at"
-                          title="{{ topic.created_at.toISOString() }}">
-                      {{ topic.created_at|formatDate }}
-                    </abbr>
+                    {{ timeago(topic.created_at) }}
                   </div>
                 </div>
               </div> <!-- /col6 -->
@@ -1069,9 +1032,7 @@
                   Moved to
                   <a href="/forums/{{ topic.forum_id }}">{{ topic.forum.title }}</a>
                   <div>
-                    <abbr class="timeago moved-at" title="{{ topic.moved_at.toISOString() }}">
-                      {{ topic.moved_at|formatDate }}
-                    </abbr>
+                    {{ timeago(topic.moved_at) }}
                   </div>
                 </div> <!-- /col-6 -->
               {% else %}
@@ -1093,10 +1054,7 @@
                       &rarr;
                     </a>
                     <br>
-                    <abbr class="timeago created-at"
-                          title="{{ topic.latest_post.created_at.toISOString() }}">
-                      {{ topic.latest_post.created_at|formatDate }}
-                    </abbr>
+                    {{ timeago(topic.latest_post.created_at) }}
                   </div>
                   {% else %}
                   <div class="text-right text-muted">
@@ -1187,9 +1145,7 @@
         <!-- meta row -->
         <div>
           <a href="{{ vm.from_user.url }}">{{ vm.from_user.uname }}</a>
-          <abbr class="timeago" title="{{ vm.created_at.toISOString() }}">
-            {{ vm.created_at|formatDate }}
-          </abbr>
+          {{ timeago(vm.created_at) }}
         </div>
 
         <!-- content row -->
@@ -1253,4 +1209,14 @@
       </div>
     </div>
   {% endfor %}
+{% endmacro %}
+
+
+{#
+  a static replacement for timeago
+#}
+{% macro timeago (date, fresh = false) %}
+  <abbr class="ago{% if fresh %} fresh{% endif %}" title="{{ date | formatDate }}">
+    {{ ago(date) }}
+  </abbr>
 {% endmacro %}

@@ -1,4 +1,5 @@
 {% extends 'layouts/master.html' %}
+{% import '../macros/macros.html' as macros %}
 
 {% block embed %}
   {{ updateCampaignModal(ctx) }}
@@ -144,9 +145,7 @@
               </button>
             </td>
             <td>
-              <abbr class="timeago" title="{{ roll.created_at.toISOString() }}">
-                {{ roll.created_at | formatDate }}
-              </abbr>
+              {{ macros.timeago(roll.created_at) }}
             </td>
             <td>
               <code>{{ roll.syntax }}</code>

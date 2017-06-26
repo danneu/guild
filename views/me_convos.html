@@ -1,6 +1,7 @@
 {% extends 'layouts/master.html' %}
 {% import './macros/ads.html' as ads %}
 {% import './macros/paginate.html' as paginate %}
+{% import './macros/macros.html' as macros %}
 
 
 
@@ -225,9 +226,7 @@
                 <div>
                   by
                   <a href="{{ convo.user.url }}" style="color: white">{{ convo.user.uname }}</a>,
-                  <abbr class="timeago" title="{{ convo.created_at.toISOString() }}">
-                    {{ convo.created_at|formatDate }}
-                  </abbr>
+                  {{ macros.timeago(convo.created_at) }}
                 </div>
                 <div>
                   Participants:
@@ -254,10 +253,7 @@
                   &rarr;
                 </a>
                 <div>
-                  <abbr class="timeago"
-                        title="{{ convo.latest_pm.created_at.toISOString() }}">
-                    {{ convo.latest_pm.created_at|formatDate }}
-                  </abbr>
+                  {{ macros.timeago(convo.latest_pm.created_at) }}
                 </div>
 
                 <input type="checkbox" data-convo-id="{{ convo.id }}">

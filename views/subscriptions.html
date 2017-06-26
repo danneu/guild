@@ -197,10 +197,7 @@
                 <p class="list-group-item-text topic-panel-desc">
                   by
                   <a href="{{ topic.user.url }}" style="color: #fff">{{ topic.user.uname }}</a>,
-                  <abbr class="timeago" title="{{ topic.created_at.toISOString() }}"
-                        style="display: inline-block;">
-                    {{ topic.formattedCreatedAt }}
-                  </abbr>
+                  {{ macros.timeago(topic.created_at) }}
                 </p>
               </div><!--/.col-4-->
               <!-- Latest IC-->
@@ -215,10 +212,7 @@
                       &rarr;
                     </a>
                   </div>
-                  <abbr class="timeago" title="{{ topic.latest_ic_post.created_at.toISOString() }}"
-                        style="display: inline-block;">
-                    {{ topic.latest_ic_post.formattedCreatedAt }}
-                  </abbr>
+                  {{ macros.timeago(topic.latest_ic_post.created_at) }}
                   {% if not isArchived and topic.sub_notes.ic  %}
                     <sup style="color: #51e0db">New!</sup>
                   {% endif %}
@@ -240,10 +234,7 @@
                       </a>
                     </div>
                   </div>
-                  <abbr class="timeago" title="{{ topic.latest_ooc_post.created_at.toISOString() }}"
-                        style="display: inline-block;">
-                    {{ topic.latest_ooc_post.formattedCreatedAt }}
-                  </abbr>
+                  {{ macros.timeago(topic.latest_ooc_post.created_at) }}
                   {% if not isArchived and topic.sub_notes.ooc  %}
                     <sup style="color: #51e0db">New!</sup>
                   {% endif %}
@@ -263,10 +254,7 @@
                       &rarr;
                     </a>
                   </div>
-                  <abbr class="timeago" title="{{ topic.latest_char_post.created_at.toISOString() }}"
-                        style="display: inline-block;">
-                    {{ topic.latest_char_post.formattedCreatedAt }}
-                  </abbr>
+                  {{ macros.timeago(topic.latest_char_post.created_at) }}
                   {% if not isArchived and topic.sub_notes.char  %}
                     <sup style="color: #51e0db">New!</sup>
                   {% endif %}
@@ -351,9 +339,7 @@
               <p class="list-group-item-text topic-panel-desc">
                 by
                 <a href="{{ topic.user.url }}" style="color: #fff">{{ topic.user.uname }}</a>,
-                <abbr class="timeago" title="{{ topic.created_at.toISOString() }}">
-                  {{ topic.created_at|formatDate }}
-                </abbr>
+                {{ macros.timeago(topic.created_at) }}
               </p>
             </div><!--/.col-7-->
             <div class="col-sm-2">
@@ -372,9 +358,7 @@
                       &rarr;
                     </a>
                   </div>
-                  <abbr class="timeago" title="{{ topic.latest_post.created_at.toISOString() }}">
-                    {{ topic.latest_post.formattedCreatedAt }}
-                  </abbr>
+                  {{ macros.timeago(topic.latest_post.created_at) }}
                   {% if not isArchived and topic.sub_notes.ooc  %}
                     <sup style="color: #51e0db">New!</sup>
                   {% endif %}

@@ -47,7 +47,6 @@ gulp.task('build-js', () => {
     'public/vendor/lodash-4.17.4.min.js',
     'public/vendor/jquery/jquery-2.1.3.min.js',
     'public/vendor/jquery-hotkeys/jquery.hotkeys.js',
-    'public/vendor/timeago/jquery.timeago.js',
     'public/vendor/markdown/markdown.js',
     'public/vendor/bootstrap-markdown/js/bootstrap-markdown.js',
     'public/vendor/jquery-appear/jquery.appear.js',
@@ -60,7 +59,9 @@ gulp.task('build-js', () => {
     // 'public/vendor/typeahead/typeahead.bundle.js',
     'public/js/bbcode_editor.js',
     // Draft Auto-save
-    'public/js/store/index.js'
+    'public/js/store/index.js',
+    // ago.js is symlinked
+    'public/symlinks/ago.js'
   ]
   return gulp.src(jsPaths)
     .pipe(concat('all.js'))
@@ -78,10 +79,6 @@ gulp.task('build-chat-js', () => {
     .pipe(gulp.dest('dist'))
 })
 
-//
-// Note: I usually have to run `gulp build-assets` twice for it
-// to work. Need to look into why.
-//
 gulp.task('build-assets', [
   'reset-dist',
   'build-css', 'build-js', 'build-chat-js'

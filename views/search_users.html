@@ -1,5 +1,6 @@
 {% extends 'layouts/master.html' %}
 {% import './macros/ads.html' as ads %}
+{% import './macros/macros.html' as macros %}
 
 {% block embed %}
   <ol class="breadcrumb">
@@ -94,25 +95,19 @@
               <td>
                 {% if user.is_ghost and user.last_online_at %}
                   {% if can(ctx.currUser, 'READ_USER_ONLINE_STATUS', user) %}
-                    <abbr class="timeago" title="{{ user.last_online_at.toISOString() }}">
-                      {{ user.last_online_at|formatDate }}
-                    </abbr>
+                    {{ macros.timeago(user.last_online_at) }}
                   {% else %}
                     Invisible
                   {% endif %}
                 {% elif user.last_online_at %}
-                  <abbr class="timeago" title="{{ user.last_online_at.toISOString() }}">
-                    {{ user.last_online_at|formatDate }}
-                  </abbr>
+                  {{ macros.timeago(user.last_online_at) }}
                 {% else %}
                   --
                 {% endif %}
               </td>
               <!-- Joined -->
               <td>
-                <abbr class="timeago" title="{{ user.created_at.toISOString() }}">
-                  {{ user.created_at|formatDate }}
-                </abbr>
+                {{ macros.timeago(user.created_at) }}
               </td>
             </tr>
           {% endfor %}

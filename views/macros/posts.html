@@ -1,5 +1,10 @@
 {% import './macros.html' as macros %}
 
+{#
+
+  showPost handles posts, hidden posts, and zeroth posts.
+
+#}
 {% macro showPost (ctx, post, topic) %}
   {% set isZeroth = post.idx == -1 %}
   <div class="panel panel-default post {% if post.is_hidden %}hidden-post{% else %}visible-post expanded-post{% endif %} {% if isZeroth %}zeroth-post{% endif %}"
@@ -11,15 +16,11 @@
         <span class="when-hidden-inline">
           <span class="label label-default">Hidden</span>
         </span>
-        <abbr class="timeago" title="{{ post.created_at.toISOString() }}">
-          {{ post.created_at|formatDate }}
-        </abbr>
+        {{ macros.timeago(post.created_at) }}
         {% if post.updated_at and post.updated_at.getTime() - post.created_at.getTime() > 1000 * 60 %}
           &rarr;
           <span class="glyphicon glyphicon-pencil"></span>
-          <abbr class="timeago" title="{{ post.updated_at.toISOString() }}">
-            {{ post.updated_at|formatDate }}
-          </abbr>
+          {{ macros.timeago(post.updated_at) }}
         {% endif %}
 
         {% if (isZeroth and post.rev_count > 1 and can(ctx.currUser, 'UPDATE_TOPIC', topic)) or ctx.currUser.id == 1 %}

@@ -1,5 +1,6 @@
 {% extends 'layouts/master.html' %}
 {% import './macros/ads.html' as ads %}
+{% import './macros/macros.html' as macros %}
 
 {% block head %}
   {# Prevent this page from being indexed, prevent links from being followed #}
@@ -183,9 +184,7 @@
             <a href="{{ post.url }}" style="color: #ffc300">Go to post</a>
             by
             <a href="{{ post.user.url }}">{{ post.user.uname }}</a>
-            <abbr class="timeago" title="{{ post.created_at.toISOString() }}">
-              {{ post.created_at|formatDate }}
-            </abbr>
+            {{ macros.timeago(post.created_at) }}
             &mdash; in
             <a href="{{ post.url }}" style="color: #ffc300">
               {{ post.topic.title }}

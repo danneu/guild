@@ -1,5 +1,6 @@
 {% extends 'layouts/master.html' %}
 {% import './macros/ads.html' as ads %}
+{% import './macros/macros.html' as macros %}
 
 {% block embed %}
   <ol class="breadcrumb">
@@ -37,9 +38,7 @@
         >
           X
         </button>
-        <abbr class="timeago" title="{{ n.created_at.toISOString() }}">
-          {{ n.created_at|formatDate }}
-        </abbr>
+        {{ macros.timeago(n.created_at) }}
         {% if n.type == 'MENTION' %}
           <p>
             <a href="/users/{{ n.from_user.slug }}">{{ n.from_user.uname }}</a>

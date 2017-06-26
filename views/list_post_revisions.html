@@ -46,9 +46,7 @@
                     <a href="/posts/{{ post.id }}/revisions/{{ rev.id }}">
                       Revision {{ rev.id }}
                     </a>
-                    <abbr class="timeago" title="{{ rev.created_at.toISOString() }}">
-                      {{ rev.created_at | formatDate }}
-                    </abbr>
+                    {{ macros.timeago(rev.created_at) }}
                     by
                     <a href="{{ rev.user.url }}">
                       {{ rev.user.uname }}

@@ -198,10 +198,7 @@
                 <p class="list-group-item-text topic-panel-desc">
                   by
                   <a href="{{ topic.user.url }}" style="color: #fff">{{ topic.user.uname }}</a>,
-                  <abbr class="timeago" title="{{ topic.created_at.toISOString() }}"
-                        style="display: inline-block;">
-                    {{ topic.formattedCreatedAt }}
-                  </abbr>
+                  {{ macros.timeago(topic.created_at) }}
                 </p>
               </div>
               <!-- Latest IC-->
@@ -216,10 +213,11 @@
                       &rarr;
                     </a>
                   </div>
-                  <abbr class="timeago {% if topic.latest_post_id == topic.latest_ic_post_id %}fresh{% endif %}" title="{{ topic.latest_ic_post.created_at.toISOString() }}"
-                        style="display: inline-block;">
-                    {{ topic.latest_ic_post.formattedCreatedAt }}
-                  </abbr>
+                  {{ macros.timeago(
+                       topic.latest_ic_post.created_at
+                       topic.latest_post_id == topic.latest_ic_post_id
+                     )
+                  }}
                 {% else %}
                   <span class="text-muted">None</span>
                 {% endif %}
@@ -238,10 +236,11 @@
                       </a>
                     </div>
                   </div>
-                  <abbr class="timeago {% if topic.latest_post_id == topic.latest_ooc_post_id %}fresh{% endif %}" title="{{ topic.latest_ooc_post.created_at.toISOString() }}"
-                        style="display: inline-block;">
-                    {{ topic.latest_ooc_post.formattedCreatedAt }}
-                  </abbr>
+                  {{ macros.timeago(
+                       topic.latest_ooc_post.created_at
+                       topic.latest_post_id == topic.latest_ooc_post_id
+                     )
+                  }}
                 {% else %}
                   <span class="text-muted">None</span>
                 {% endif %}
@@ -258,10 +257,11 @@
                       &rarr;
                     </a>
                   </div>
-                  <abbr class="timeago {% if topic.latest_post_id == topic.latest_char_post_id %}fresh{% endif %}" title="{{ topic.latest_char_post.created_at.toISOString() }}"
-                        style="display: inline-block;">
-                    {{ topic.latest_char_post.formattedCreatedAt }}
-                  </abbr>
+                  {{ macros.timeago(
+                       topic.latest_char_post.created_at
+                       topic.latest_post_id == topic.latest_char_post_id
+                     )
+                  }}
                 {% else %}
                   <span class="text-muted">None</span>
                 {% endif %}

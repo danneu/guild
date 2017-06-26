@@ -1,4 +1,5 @@
 {% extends 'layouts/master.html' %}
+{% import 'macros/macros.html' as macros %}
 
 {% block embed %}
   <ol class="breadcrumb">
@@ -69,16 +70,11 @@
           </td>
           <td>
             {% for key in Object.keys(alt.matches) %}
-              {{ key }}:
-              <abbr class="timeago" title="{{ alt.matches[key].toISOString() }}">
-                {{ alt.matches[key] | formatDate }}
-              </abbr>
+              {{ key }}: {{ macros.timeago(alt.matches[key]) }}
             {% endfor %}
           </td>
           <td>
-            <abbr class="timeago" title="{{ alt.user.created_at.toISOString() }}">
-              {{ alt.user.created_at | formatDate }}
-            </abbr>
+            {{ macros.timeago(alt.user.created_at) }}
           </td>
         </tr>
       {% endfor %}

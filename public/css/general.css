@@ -498,14 +498,6 @@ textarea {
     color: #a86;
 }
 
-/* .topic-item is each list-group-item on show_forum */
-/* Darken their timeagos */
-.topic-item .moved-at,
-.topic-item .created-at,
-.forum-item abbr {
-    color: #999;
-}
-
 .top-link {
     color: #999;
 }
@@ -1172,9 +1164,6 @@ hr {
         display: inline-block;
     }
 }
-.timeago {
-    color: #999;
-}
 
 .unsub-form button,
 .unsub-form {
@@ -1346,7 +1335,7 @@ hr {
 .popover-user-status {
     font-size: 90%;
 }
-.popover-user-status .timeago {
+.popover-user-status .ago {
     color: #111;
 }
 
@@ -1449,4 +1438,15 @@ fieldset.cyberpunk {
 }
 .arena-leaderboard table thead {
     color: #999;
+}
+
+/* Ago */
+
+.ago {
+  color: #999;
+  display: inline-block;
+}
+
+.ago.fresh {
+  color: #51e0db;
 }
