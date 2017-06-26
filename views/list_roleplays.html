@@ -5,9 +5,6 @@
 
 {% block embed %}
   <style>
-   .timeago.fresh {
-     color: #51e0db;
-   }
    .first-page-links a {
      text-decoration: underline;
      color: #999;
@@ -214,7 +211,7 @@
                     </a>
                   </div>
                   {{ macros.timeago(
-                       topic.latest_ic_post.created_at
+                       topic.latest_ic_post.created_at,
                        topic.latest_post_id == topic.latest_ic_post_id
                      )
                   }}
@@ -237,7 +234,7 @@
                     </div>
                   </div>
                   {{ macros.timeago(
-                       topic.latest_ooc_post.created_at
+                       topic.latest_ooc_post.created_at,
                        topic.latest_post_id == topic.latest_ooc_post_id
                      )
                   }}
@@ -258,7 +255,7 @@
                     </a>
                   </div>
                   {{ macros.timeago(
-                       topic.latest_char_post.created_at
+                       topic.latest_char_post.created_at,
                        topic.latest_post_id == topic.latest_char_post_id
                      )
                   }}
