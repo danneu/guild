@@ -579,7 +579,7 @@ router.get('/', async (ctx) => {
     ftopic = await db.findUnackedFeedbackTopic(config.CURRENT_FEEDBACK_TOPIC_ID, ctx.currUser.id)
       .then((ftopic) => {
         // Discard ftopic if currUser has registered after it.
-        if (ftopic && ctx.currUser.created_at < ftopic.created_at) {
+        if (ftopic && ctx.currUser.created_at > ftopic.created_at) {
           return ftopic
         }
       })
