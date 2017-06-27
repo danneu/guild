@@ -909,7 +909,7 @@
                 <div class="list-group-item-text">
                   <div style="margin-top: 6px;">
                     by <a href="{{ topic.user.url }}" style="color: #fff">{{ topic.user.uname }}</a>,
-                    {{ timeago(topic.latest_post.created_at) }}
+                    {{ timeago(topic.created_at) }}
                     {% if topic.created_at|isNewerThan({ days: 1 }) %}
                       <span style="color: #00a9a9; font-size: 75%;">&#x27F5; <span style="border: 1px solid #51e0db; padding: 0px 3px;" data-toggle="tooltip" title="Started less than 24 hours ago">FRESH</span></span>
                     {% endif %}
