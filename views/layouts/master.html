@@ -92,9 +92,10 @@
           <ul class="nav navbar-nav">
             {% if ctx.currUser %}
               <li>
-                <a href="/search">
+                <a href="/search" style="position: relative">
                   <span class="glyphicon glyphicon-search"></span>
                   Search
+                  <sup style="position: absolute; left: 15px; top: 40px; color: #51e0db;">Back Online!</sup>
                 </a>
               </li>
             {% endif %}
