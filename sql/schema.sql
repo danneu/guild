@@ -1110,9 +1110,12 @@ $$ LANGUAGE SQL IMMUTABLE;
 
 -- Note, if immutable functions are updated, then indexes that use them
 -- not to be dropped and rebuilt concurrently
-CREATE INDEX CONCURRENTLY posts_vector ON posts
-USING gin(to_tsvector('english', markup))
-WHERE is_hidden = false
-  AND markup IS NOT NULL;
+
+-- FIXME: Commented out so that db-reset task works.
+--
+-- CREATE INDEX CONCURRENTLY posts_vector ON posts
+-- USING gin(to_tsvector('english', markup))
+-- WHERE is_hidden = false
+--   AND markup IS NOT NULL;
 
 --DROP INDEX CONCURRENTLY posts_vector;
