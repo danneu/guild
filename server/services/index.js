@@ -1,4 +1,3 @@
-
 //
 // Services are higher-level modules that glue together components
 // so that routes don't have to.
@@ -12,6 +11,6 @@
 //
 
 module.exports = {
-  discord: require('./discord'),
-  antispam: require('./antispam')
+    discord: require('./discord'),
+    antispam: require('./antispam'),
 }

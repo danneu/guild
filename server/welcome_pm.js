@@ -1,4 +1,4 @@
-'use strict';
+'use strict'
 // 3rd party
 // ...
 // 1st party
@@ -20,11 +20,11 @@ We hope you enjoy your stay at the Roleplayer Guild. :sun
 
 Yours sincerely,
 The Roleplayer Guild Staff
-`;
+`
 
 const html = bbcode(markup)
 
 module.exports = {
-  markup,
-  html
+    markup,
+    html,
 }

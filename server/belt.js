@@ -1,16 +1,16 @@
 // Node
-const util = require('util');
-const {URL} = require('url');
-const crypto = require('crypto');
+const util = require('util')
+const { URL } = require('url')
+const crypto = require('crypto')
 // 3rd party
-const debug = require('debug')('app:belt');
-const assert = require('better-assert');
+const debug = require('debug')('app:belt')
+const assert = require('better-assert')
 const bcrypt = require('bcryptjs')
-const _ = require('lodash');
-const Autolinker = require('autolinker');
-const recaptchaValidator = require('recaptcha-validator');
+const _ = require('lodash')
+const Autolinker = require('autolinker')
+const recaptchaValidator = require('recaptcha-validator')
 // 1st party
-const config = require('./config');
+const config = require('./config')
 
 ////
 //// This module is a general utility-belt of functions.
@@ -18,94 +18,106 @@ const config = require('./config');
 ////
 
 exports.dateToSeconds = function(date) {
-  return Math.floor(date.getTime() / 1000);
-};
+    return Math.floor(date.getTime() / 1000)
+}
 
 function dateToUTC(date) {
-  return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds());
+    return new Date(
+        date.getUTCFullYear(),
+        date.getUTCMonth(),
+        date.getUTCDate(),
+        date.getUTCHours(),
+        date.getUTCMinutes(),
+        date.getUTCSeconds()
+    )
 }
 
 Date.prototype.toUTCDate = function() {
-  return dateToUTC(this);
-};
+    return dateToUTC(this)
+}
 
 exports.isNewerThan = function(nowDate, opts) {
-  assert(nowDate instanceof Date)
-  var result = nowDate.toUTCDate() > exports.pastDate(new Date(), opts).toUTCDate();
-  return result;
-};
+    assert(nowDate instanceof Date)
+    var result =
+        nowDate.toUTCDate() > exports.pastDate(new Date(), opts).toUTCDate()
+    return result
+}
 
 exports.isOlderThan = function(nowDate, opts) {
-  assert(nowDate instanceof Date)
-  var result = nowDate.toUTCDate() < exports.pastDate(new Date(), opts).toUTCDate()
-  return result
+    assert(nowDate instanceof Date)
+    var result =
+        nowDate.toUTCDate() < exports.pastDate(new Date(), opts).toUTCDate()
+    return result
 }
 
 exports.pastDate = function(nowDate, opts) {
-  if (!opts) {
-    opts = nowDate;
-    nowDate = new Date();
-  }
+    if (!opts) {
+        opts = nowDate
+        nowDate = new Date()
+    }
 
-  return new Date(nowDate.getTime() - (
-                    (opts.years   || 0) * 1000 * 60 * 60 * 24 * 365 +
-                    (opts.days    || 0) * 1000 * 60 * 60 * 24 +
-                    (opts.hours   || 0) * 1000 * 60 * 60 +
-                    (opts.minutes || 0) * 1000 * 60 +
-                    (opts.seconds || 0) * 1000 +
-                    (opts.milliseconds || 0)
-                 ));
-};
+    return new Date(
+        nowDate.getTime() -
+            ((opts.years || 0) * 1000 * 60 * 60 * 24 * 365 +
+                (opts.days || 0) * 1000 * 60 * 60 * 24 +
+                (opts.hours || 0) * 1000 * 60 * 60 +
+                (opts.minutes || 0) * 1000 * 60 +
+                (opts.seconds || 0) * 1000 +
+                (opts.milliseconds || 0))
+    )
+}
 
 exports.futureDate = function(nowDate, opts) {
-  if (!opts) {
-    opts = nowDate;
-    nowDate = new Date();
-  }
+    if (!opts) {
+        opts = nowDate
+        nowDate = new Date()
+    }
 
-  return new Date(nowDate.getTime() +
-                  (opts.years   || 0) * 1000 * 60 * 60 * 24 * 365 +
-                  (opts.days    || 0) * 1000 * 60 * 60 * 24 +
-                  (opts.hours   || 0) * 1000 * 60 * 60 +
-                  (opts.minutes || 0) * 1000 * 60 +
-                  (opts.seconds || 0) * 1000 +
-                  (opts.milliseconds || 0));
-};
+    return new Date(
+        nowDate.getTime() +
+            (opts.years || 0) * 1000 * 60 * 60 * 24 * 365 +
+            (opts.days || 0) * 1000 * 60 * 60 * 24 +
+            (opts.hours || 0) * 1000 * 60 * 60 +
+            (opts.minutes || 0) * 1000 * 60 +
+            (opts.seconds || 0) * 1000 +
+            (opts.milliseconds || 0)
+    )
+}
 
 exports.md5 = function(s) {
-  return crypto.createHash('md5').update(s).digest('hex');
-};
+    return crypto
+        .createHash('md5')
+        .update(s)
+        .digest('hex')
+}
 
 // {{ 'firetruck'|truncate(5) }}  -> 'firet...'
 // {{ 'firetruck'|truncate(6) }}  -> 'firetruck'
 exports.makeTruncate = function(suffix) {
-  return function(str, n) {
-    if (!str) return str;
-    suffix = suffix || '';
-    var sliced = str.slice(0, n).trim();
-    var totalLength = sliced.length + suffix.length;
-    if (totalLength >= str.length)
-      return str;
-    return sliced + suffix;
-  };
-};
+    return function(str, n) {
+        if (!str) return str
+        suffix = suffix || ''
+        var sliced = str.slice(0, n).trim()
+        var totalLength = sliced.length + suffix.length
+        if (totalLength >= str.length) return str
+        return sliced + suffix
+    }
+}
 
-exports.truncate = exports.makeTruncate('...');
+exports.truncate = exports.makeTruncate('...')
 
 // Logging helper
 exports.truncateStringVals = function(obj) {
-  var out = {};
-  for (var k in obj) {
-    if (obj.hasOwnProperty(k)) {
-      var v = obj[k];
-      if (_.isString(v))
-        out[k] = exports.truncate(v, 100);
-      else
-        out[k] = v;
+    var out = {}
+    for (var k in obj) {
+        if (obj.hasOwnProperty(k)) {
+            var v = obj[k]
+            if (_.isString(v)) out[k] = exports.truncate(v, 100)
+            else out[k] = v
+        }
     }
-  }
-  return out;
-};
+    return out
+}
 
 /// Convenience functions for working with the this.errors
 /// object provided by koa-validate
@@ -113,56 +125,63 @@ exports.truncateStringVals = function(obj) {
 // errObj is the this.errors object from koa-validate
 // Maybe Object -> Maybe [String]
 exports.extractErrors = function(errObj) {
-  return errObj &&  _.chain(errObj).map(_.values)
-                                   .map(function(s) { return s.join(', '); })
-                                   .value();
-};
+    return (
+        errObj &&
+        _.chain(errObj)
+            .map(_.values)
+            .map(function(s) {
+                return s.join(', ')
+            })
+            .value()
+    )
+}
 
 // Maybe Object -> Maybe String
 exports.joinErrors = function(errObj) {
-  return errObj && exports.extractErrors(errObj).join(', ');
-};
+    return errObj && exports.extractErrors(errObj).join(', ')
+}
 
 ////////////////////////////////////////////////////////////
 // Authentication
 ////////////////////////////////////////////////////////////
 
-exports.hashPassword = (password) => {
-  return bcrypt.hash(password, 10)
+exports.hashPassword = password => {
+    return bcrypt.hash(password, 10)
 }
 
 // String -> String -> Bool
 exports.checkPassword = (password, digest) => {
-  return bcrypt.compare(password, digest)
-};
+    return bcrypt.compare(password, digest)
+}
 
 ////////////////////////////////////////////////////////////
 
 // String -> Bool
 exports.isValidUuid = (() => {
-  const re = /^[a-f0-9]{8}\-[a-f0-9]{4}\-[a-f0-9]{4}\-[a-f0-9]{4}\-[a-f0-9]{12}$/i
-  return (uuid) => {
-    if (typeof uuid !== 'string') return false
-    return re.test(uuid)
-  }
+    const re = /^[a-f0-9]{8}\-[a-f0-9]{4}\-[a-f0-9]{4}\-[a-f0-9]{4}\-[a-f0-9]{12}$/i
+    return uuid => {
+        if (typeof uuid !== 'string') return false
+        return re.test(uuid)
+    }
 })()
 
 // reCaptcha ///////////////////////////////////////////////
 
 // Returns Bool
-exports.makeRecaptchaRequest = async function (userResponse, remoteIp) {
-  assert(config.RECAPTCHA_SITESECRET)
-  assert(_.isString(userResponse))
-  assert(_.isString(remoteIp))
+exports.makeRecaptchaRequest = async function(userResponse, remoteIp) {
+    assert(config.RECAPTCHA_SITESECRET)
+    assert(_.isString(userResponse))
+    assert(_.isString(remoteIp))
 
-  return recaptchaValidator.promise(
-    config.RECAPTCHA_SITESECRET, userResponse, remoteIp
-  ).then(() => {
-    return true
-  }).catch((err) => {
-    if (typeof err === 'string') return false
-    throw err
-  })
+    return recaptchaValidator
+        .promise(config.RECAPTCHA_SITESECRET, userResponse, remoteIp)
+        .then(() => {
+            return true
+        })
+        .catch(err => {
+            if (typeof err === 'string') return false
+            throw err
+        })
 }
 
 ////////////////////////////////////////////////////////////
@@ -175,213 +194,232 @@ exports.makeRecaptchaRequest = async function (userResponse, remoteIp) {
 // totalPages (Int) for use in the view-layer's paginate.render macro
 // to generate prev/next button for arbitrary collections.
 exports.calcPager = function(pageParam, perPage, totalItems) {
-  assert(_.isNumber(totalItems));
-  assert(_.isNumber(perPage));
-  pageParam = pageParam || 1;
-  debug('[calcPager] pageParam: ', pageParam);
-  assert(_.isNumber(pageParam));
-  var currPage, totalPages;
+    assert(_.isNumber(totalItems))
+    assert(_.isNumber(perPage))
+    pageParam = pageParam || 1
+    debug('[calcPager] pageParam: ', pageParam)
+    assert(_.isNumber(pageParam))
+    var currPage, totalPages
 
-  totalPages = Math.ceil(totalItems / perPage);
+    totalPages = Math.ceil(totalItems / perPage)
 
-  currPage = Math.max(pageParam, 1);
-  currPage = Math.min(pageParam, totalPages);
+    currPage = Math.max(pageParam, 1)
+    currPage = Math.min(pageParam, totalPages)
 
-  var result = {
-    currPage: currPage,
-    totalPages: totalPages,
-    offset: Math.max(0, perPage * (currPage - 1)),
-    limit: perPage
-  };
-  debug('[calcPager] result: ', result);
-  return result;
-};
+    var result = {
+        currPage: currPage,
+        totalPages: totalPages,
+        offset: Math.max(0, perPage * (currPage - 1)),
+        limit: perPage,
+    }
+    debug('[calcPager] result: ', result)
+    return result
+}
 
 // Returns a number >= 1
 exports.calcTotalPostPages = function(totalItems) {
-  return Math.max(1, Math.ceil(totalItems / config.POSTS_PER_PAGE));
-};
+    return Math.max(1, Math.ceil(totalItems / config.POSTS_PER_PAGE))
+}
 
 // FIXME: This is a sloppy was to see if an object is a pg client
 exports.isDBClient = function(obj) {
-  var keys = Object.keys(obj);
+    var keys = Object.keys(obj)
 
-  return keys.includes('database') &&
-         keys.includes('connection') &&
-         keys.includes('readyForQuery') &&
-         keys.includes('hasExecuted') &&
-         keys.includes('queryQueue')
-};
+    return (
+        keys.includes('database') &&
+        keys.includes('connection') &&
+        keys.includes('readyForQuery') &&
+        keys.includes('hasExecuted') &&
+        keys.includes('queryQueue')
+    )
+}
 
 exports.slugifyUname = function(uname) {
-  var slug = uname
-    .trim()
-    .toLowerCase()
-    .replace(/ /g, '-');
+    var slug = uname
+        .trim()
+        .toLowerCase()
+        .replace(/ /g, '-')
 
-  return slug;
-};
+    return slug
+}
 
-var MAX_SLUG_LENGTH = 80;
-var slugify = exports.slugify = function() {
-  // Slugifies one string
-  function slugifyString(x) {
-    return x.toString()
-      .trim()
-      // Remove apostrophes
-      .replace(/'/g, '')
-      // Hyphenize anything that's not alphanumeric, hyphens, or spaces
-      .replace(/[^a-z0-9- ]/ig, '-')
-      // Replace spaces with hyphens
-      .replace(/ /g, '-')
-      // Consolidate consecutive hyphens
-      .replace(/-{2,}/g, '-')
-      // Remove prefix and suffix hyphens
-      .replace(/^[-]+|[-]+$/, '')
-      .toLowerCase();
-  }
+var MAX_SLUG_LENGTH = 80
+var slugify = (exports.slugify = function() {
+    // Slugifies one string
+    function slugifyString(x) {
+        return (
+            x
+                .toString()
+                .trim()
+                // Remove apostrophes
+                .replace(/'/g, '')
+                // Hyphenize anything that's not alphanumeric, hyphens, or spaces
+                .replace(/[^a-z0-9- ]/gi, '-')
+                // Replace spaces with hyphens
+                .replace(/ /g, '-')
+                // Consolidate consecutive hyphens
+                .replace(/-{2,}/g, '-')
+                // Remove prefix and suffix hyphens
+                .replace(/^[-]+|[-]+$/, '')
+                .toLowerCase()
+        )
+    }
 
-  var args = Array.prototype.slice.call(arguments, 0);
+    var args = Array.prototype.slice.call(arguments, 0)
 
-  return slugifyString(
-    args.map(function(x) { return x.toString(); })
-      .join('-')
-      .slice(0, MAX_SLUG_LENGTH)
-  );
-};
+    return slugifyString(
+        args
+            .map(function(x) {
+                return x.toString()
+            })
+            .join('-')
+            .slice(0, MAX_SLUG_LENGTH)
+    )
+})
 
 // Returns Int | null
-var extractId = exports.extractId = function(slug) {
-  var n = parseInt(slug, 10);
-  return _.isNaN(n) ? null : n;
-};
+var extractId = (exports.extractId = function(slug) {
+    var n = parseInt(slug, 10)
+    return _.isNaN(n) ? null : n
+})
 
 ////////////////////////////////////////////////////////////
 
 // Returns Array of uniq lowecase unames that were quote-mentioned in the string
 // A [@Mention] is only extracted if it's not nested inside a quote.
 exports.extractMentions = function(str, unameToReject) {
-  var start = Date.now();
-  debug('[extractMentions]');
-  var unames = {};
-  var re = /\[(quote)[^\]]*\]|\[(\/quote)\]|\[@([a-z0-9_\- ]+)\]/gi;
-  var quoteStack = [];
+    var start = Date.now()
+    debug('[extractMentions]')
+    var unames = {}
+    var re = /\[(quote)[^\]]*\]|\[(\/quote)\]|\[@([a-z0-9_\- ]+)\]/gi
+    var quoteStack = []
 
-  // Stop matching if we've hit notification limit for the post
-  var limitRemaining = config.MENTIONS_PER_POST;
-  assert(_.isNumber(limitRemaining));
+    // Stop matching if we've hit notification limit for the post
+    var limitRemaining = config.MENTIONS_PER_POST
+    assert(_.isNumber(limitRemaining))
 
-  while(true) {
-    var match = re.exec(str);
-    if (limitRemaining > 0 && match) {
-      // match[1] is undefined or 'quote'
-      // match[2] is undefined or '/quote'
-      // match[3] is undefined or uname
-      if (match[1]) {  // Open quote
-        quoteStack.push('quote');
-      } else if (match[2]) {  // Close quote
-        quoteStack.pop();
-      } else if (match[3]) {  // uname
-        var uname = match[3].toLowerCase();
-        if (quoteStack.length === 0 && uname !== unameToReject.toLowerCase()) {
-          unames[uname] = true;
-          limitRemaining--;
-          debug('limitRemaining: %s', limitRemaining);
+    while (true) {
+        var match = re.exec(str)
+        if (limitRemaining > 0 && match) {
+            // match[1] is undefined or 'quote'
+            // match[2] is undefined or '/quote'
+            // match[3] is undefined or uname
+            if (match[1]) {
+                // Open quote
+                quoteStack.push('quote')
+            } else if (match[2]) {
+                // Close quote
+                quoteStack.pop()
+            } else if (match[3]) {
+                // uname
+                var uname = match[3].toLowerCase()
+                if (
+                    quoteStack.length === 0 &&
+                    uname !== unameToReject.toLowerCase()
+                ) {
+                    unames[uname] = true
+                    limitRemaining--
+                    debug('limitRemaining: %s', limitRemaining)
+                }
+            }
+        } else {
+            break
         }
-      }
-    } else {
-      break;
     }
-  }
 
-  var ret = Object.keys(unames);
+    var ret = Object.keys(unames)
 
-  var diff = Date.now() - start;
-  debug('[PERF] extractMentions executed in %s ms', diff);
+    var diff = Date.now() - start
+    debug('[PERF] extractMentions executed in %s ms', diff)
 
-  return ret;
-};
+    return ret
+}
 
 // Returns array of uniq lowercase unames that were quote-mentioned
 // i.e. [quote=@some user]
 // Only top-level quote-mentions considered
 exports.extractQuoteMentions = function(str, unameToReject) {
-  var start = Date.now();
-  debug('[extractQuoteMentions]');
-  var unames = {};
-  var re = /\[(quote)=?@?([a-z0-9_\- ]+)\]|\[(\/quote)\]/gi;
-  var quoteStack = [];
+    var start = Date.now()
+    debug('[extractQuoteMentions]')
+    var unames = {}
+    var re = /\[(quote)=?@?([a-z0-9_\- ]+)\]|\[(\/quote)\]/gi
+    var quoteStack = []
 
-  // Stop matching if we've hit notification limit for the post
-  var limitRemaining = config.MENTIONS_PER_POST;
-  assert(_.isNumber(limitRemaining));
+    // Stop matching if we've hit notification limit for the post
+    var limitRemaining = config.MENTIONS_PER_POST
+    assert(_.isNumber(limitRemaining))
 
-  while(true) {
-    var match = re.exec(str);
-    if (limitRemaining > 0 && match) {
-      // match[1] is undefined or 'quote'
-      // match[2] is undefined or uname
-      // match[3] is undefined or /uname
-      if (match[2]) {  // Uname
-        var uname = match[2].toLowerCase();
-        if (quoteStack.length === 0 && uname !== unameToReject.toLowerCase()) {
-          unames[uname] = true;
-          limitRemaining--;
-          debug('limitRemaining: %s', limitRemaining);
+    while (true) {
+        var match = re.exec(str)
+        if (limitRemaining > 0 && match) {
+            // match[1] is undefined or 'quote'
+            // match[2] is undefined or uname
+            // match[3] is undefined or /uname
+            if (match[2]) {
+                // Uname
+                var uname = match[2].toLowerCase()
+                if (
+                    quoteStack.length === 0 &&
+                    uname !== unameToReject.toLowerCase()
+                ) {
+                    unames[uname] = true
+                    limitRemaining--
+                    debug('limitRemaining: %s', limitRemaining)
+                }
+            }
+            if (match[1]) {
+                // Open quote
+                quoteStack.push('quote')
+            }
+            if (match[3]) {
+                // Close quote
+                quoteStack.pop()
+            }
+        } else {
+            break
         }
-      }
-      if (match[1]) {  // Open quote
-        quoteStack.push('quote');
-      }
-      if (match[3]) {  // Close quote
-        quoteStack.pop();
-      }
-    } else {
-      break;
     }
-  }
 
-  var ret = Object.keys(unames);
+    var ret = Object.keys(unames)
 
-  var diff = Date.now() - start;
-  debug('[PERF] extractMentions executed in %s ms', diff);
+    var diff = Date.now() - start
+    debug('[PERF] extractMentions executed in %s ms', diff)
 
-  return ret;
-};
-
+    return ret
+}
 
 exports.frequencies = function(objs, prop) {
-  return _.chain(objs)
-   .groupBy(prop)
-   .toPairs()
-   .reduce(function(memo, pair) {
-     var key = pair[0];
-     var vals = pair[1];
-     memo[key] = vals.length;
-     return memo;
-   }, {})
-   .value();
-};
+    return _.chain(objs)
+        .groupBy(prop)
+        .toPairs()
+        .reduce(function(memo, pair) {
+            var key = pair[0]
+            var vals = pair[1]
+            memo[key] = vals.length
+            return memo
+        }, {})
+        .value()
+}
 
 // expandJoinStatus('full') => 'Roleplay is not accepting new players'
 exports.expandJoinStatus = function(status) {
-  switch(status) {
-  case 'jump-in':
-    return 'Players can join and begin posting IC without GM approval';
-  case 'apply':
-    return 'Players should apply and get GM approval before posting IC';
-  case 'full':
-    return 'Roleplay is not accepting new players';
-  default:
-    return '';
-  }
-};
+    switch (status) {
+        case 'jump-in':
+            return 'Players can join and begin posting IC without GM approval'
+        case 'apply':
+            return 'Players should apply and get GM approval before posting IC'
+        case 'full':
+            return 'Roleplay is not accepting new players'
+        default:
+            return ''
+    }
+}
 
 exports.mapMethod = function mapMethod(items, method) {
-  return items.map(function(item) {
-    return item[method]();
-  });
-};
+    return items.map(function(item) {
+        return item[method]()
+    })
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -392,22 +430,16 @@ exports.mapMethod = function mapMethod(items, method) {
 //    ordinalize(1) -> '1st'
 //    ordinalize(12) -> '12th'
 exports.ordinalize = function(n) {
-  assert(Number.isInteger(n));
-  return n.toString() + exports.getOrdinalSuffix(n);
-};
+    assert(Number.isInteger(n))
+    return n.toString() + exports.getOrdinalSuffix(n)
+}
 
-exports.getOrdinalSuffix = function (n) {
-  assert(Number.isInteger(n));
-  return Math.floor(n / 10) === 1
-      ? 'th'
-      : (n % 10 === 1
-        ? 'st'
-        : (n % 10 === 2
-          ? 'nd'
-          : (n % 10 === 3
-            ? 'rd'
-            : 'th')));
-};
+exports.getOrdinalSuffix = function(n) {
+    assert(Number.isInteger(n))
+    return Math.floor(n / 10) === 1
+        ? 'th'
+        : n % 10 === 1 ? 'st' : n % 10 === 2 ? 'nd' : n % 10 === 3 ? 'rd' : 'th'
+}
 
 // TODO: Didn't realize I had this function
 // just now when I added Autolinker to BBCode parser output.
@@ -418,26 +450,26 @@ exports.getOrdinalSuffix = function (n) {
 // TODO: Allow me to pass in `opts` obj that's merge with
 // my default opts.
 exports.autolink = function(text) {
-  return Autolinker.link(text, {
-    stripPrefix: true,
-    newWindow: true,
-    truncate: 30,
-    twitter: false,
-    email: false,
-    phone: false,
-    hashtag: false
-  });
-};
+    return Autolinker.link(text, {
+        stripPrefix: true,
+        newWindow: true,
+        truncate: 30,
+        twitter: false,
+        email: false,
+        phone: false,
+        hashtag: false,
+    })
+}
 
 // String -> String
 exports.escapeHtml = function(unsafe) {
-  return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-};
+    return unsafe
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;')
+}
 
 // Apparently the Expires date string needs to have hyphens between the dd-mmm-yyyy.
 // Koa's underlying cookie library just uses .toUTCString() which does not
@@ -457,27 +489,49 @@ exports.escapeHtml = function(unsafe) {
 // using cookieDate. Will get feedback from user having problems.
 //
 exports.cookieDate = function(date) {
-  var padNum = function(n) {
-    return n < 10 ? '0' + n : n;
-  };
+    var padNum = function(n) {
+        return n < 10 ? '0' + n : n
+    }
 
-  var days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    var days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    var months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+    ]
 
-  var outString = '' +
-    ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][date.getUTCDay()] + ', ' +
-    padNum(date.getUTCDate()) + '-' +
-    months[date.getUTCMonth()] + '-' +
-    date.getUTCFullYear() + ' ' +
-    padNum(date.getUTCHours()) + ':' +
-    padNum(date.getUTCMinutes()) + ':' +
-    padNum(date.getUTCSeconds()) + ' GMT';
+    var outString =
+        '' +
+        ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][date.getUTCDay()] +
+        ', ' +
+        padNum(date.getUTCDate()) +
+        '-' +
+        months[date.getUTCMonth()] +
+        '-' +
+        date.getUTCFullYear() +
+        ' ' +
+        padNum(date.getUTCHours()) +
+        ':' +
+        padNum(date.getUTCMinutes()) +
+        ':' +
+        padNum(date.getUTCSeconds()) +
+        ' GMT'
 
-  return {
-    toUTCString: function() { return outString; }
-  };
-};
+    return {
+        toUTCString: function() {
+            return outString
+        },
+    }
+}
 
 // Pretty-/human- version of each role.
 //
@@ -485,49 +539,66 @@ exports.cookieDate = function(date) {
 //
 //     presentUserRole('conmod') => 'Contest Mod'
 //
-exports.presentUserRole = function (role) {
-  assert(_.isString(role))
+exports.presentUserRole = function(role) {
+    assert(_.isString(role))
 
-  switch(role) {
-    case 'conmod':
-      return 'Contest Mod'
-    case 'mod':
-      return 'Moderator'
-    case 'smod':
-      return 'Co-Admin'
-    case 'arenamod':
-      return 'Arena Mod'
-    default:
-      return _.capitalize(role)
-  }
+    switch (role) {
+        case 'conmod':
+            return 'Contest Mod'
+        case 'mod':
+            return 'Moderator'
+        case 'smod':
+            return 'Co-Admin'
+        case 'arenamod':
+            return 'Arena Mod'
+        default:
+            return _.capitalize(role)
+    }
 }
 
 // Helper function for formatting chat messages for the log.txt
 exports.formatChatDate = (() => {
-  const monthNames = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-  ]
+    const monthNames = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+    ]
 
-  return (date) => {
-    return date.getDate() +
-           '/' + monthNames[date.getMonth()] +
-           '/' + date.getFullYear().toString().slice(2, 4) +
-           ' ' +
-           _.padStart(date.getHours().toString(), 2, '0') +
-           ':' +
-           _.padStart(date.getMinutes().toString(), 2, '0')
-  }
+    return date => {
+        return (
+            date.getDate() +
+            '/' +
+            monthNames[date.getMonth()] +
+            '/' +
+            date
+                .getFullYear()
+                .toString()
+                .slice(2, 4) +
+            ' ' +
+            _.padStart(date.getHours().toString(), 2, '0') +
+            ':' +
+            _.padStart(date.getMinutes().toString(), 2, '0')
+        )
+    }
 })()
 
 ////////////////////////////////////////////////////////////
 
-exports.timeout = function (ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
+exports.timeout = function(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-exports.daysAgo = function (date) {
-  return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24))
+exports.daysAgo = function(date) {
+    return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24))
 }
 
 ////////////////////////////////////////////////////////////
@@ -536,28 +607,28 @@ exports.daysAgo = function (date) {
 // mergeQuery('google.com?foo=bar', { foo: null }) -> google.com
 //
 // null or undefined values are deleted from query map
-exports.mergeQuery = function (href, obj) {
-  const url = new URL(href)
-  Object.keys(obj).forEach((k) => {
-    if (typeof obj[k] === 'undefined' || obj[k] === null) {
-      url.searchParams.delete(k)
-    } else {
-      url.searchParams.set(k, obj[k])
-    }
-  })
-  return url.href
+exports.mergeQuery = function(href, obj) {
+    const url = new URL(href)
+    Object.keys(obj).forEach(k => {
+        if (typeof obj[k] === 'undefined' || obj[k] === null) {
+            url.searchParams.delete(k)
+        } else {
+            url.searchParams.set(k, obj[k])
+        }
+    })
+    return url.href
 }
 
 ////////////////////////////////////////////////////////////
 
 // Returns true if user has logged in 0-12 hrs ago
 exports.withinGhostRange = (() => {
-  const hours12 = 1000 * 60 * 60 * 12
+    const hours12 = 1000 * 60 * 60 * 12
 
-  return function (lastOnlineAt) {
-    // User hasn't loggin in since relaunch
-    if (!lastOnlineAt) return false
-    assert(lastOnlineAt instanceof Date)
-    return Date.now() - lastOnlineAt.getTime() < hours12
-  }
+    return function(lastOnlineAt) {
+        // User hasn't loggin in since relaunch
+        if (!lastOnlineAt) return false
+        assert(lastOnlineAt instanceof Date)
+        return Date.now() - lastOnlineAt.getTime() < hours12
+    }
 })()

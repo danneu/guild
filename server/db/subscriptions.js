@@ -1,19 +1,19 @@
-'use strict';
+'use strict'
 // 3rd
-const assert = require('better-assert');
+const assert = require('better-assert')
 const debug = require('debug')('app:db:subscriptions')
 // 1st
-const {pool} = require('./util')
-const {sql} = require('pg-extra')
+const { pool } = require('./util')
+const { sql } = require('pg-extra')
 const db = require('.')
 
 ////////////////////////////////////////////////////////////
 
 // Gets non-archived subs
-exports.listActiveSubscribersForTopic = async function (topicId) {
-  assert(Number.isInteger(topicId))
+exports.listActiveSubscribersForTopic = async function(topicId) {
+    assert(Number.isInteger(topicId))
 
-  return pool.many(sql`
+    return pool.many(sql`
     SELECT
       u.id
     FROM users u
@@ -26,11 +26,11 @@ exports.listActiveSubscribersForTopic = async function (topicId) {
 ////////////////////////////////////////////////////////////
 
 // Sort them by latest_posts first
-exports.findSubscribedTopicsForUserId = async function (userId, isArchived) {
-  assert(Number.isInteger(userId))
-  assert(typeof isArchived === 'boolean')
+exports.findSubscribedTopicsForUserId = async function(userId, isArchived) {
+    assert(Number.isInteger(userId))
+    assert(typeof isArchived === 'boolean')
 
-  return pool.many(sql`
+    return pool.many(sql`
 SELECT
   t.*,
   json_build_object(
@@ -125,10 +125,10 @@ ORDER BY t.latest_post_id DESC
 ////////////////////////////////////////////////////////////
 
 // Do nothing if subscription already exists
-exports.subscribeToTopic = async function (userId, topicId) {
-  assert(userId)
-  assert(topicId)
-  return pool.query(sql`
+exports.subscribeToTopic = async function(userId, topicId) {
+    assert(userId)
+    assert(topicId)
+    return pool.query(sql`
     INSERT INTO topic_subscriptions (user_id, topic_id)
     VALUES (${userId}, ${topicId})
     ON CONFLICT (user_id, topic_id) DO NOTHING
@@ -138,55 +138,55 @@ exports.subscribeToTopic = async function (userId, topicId) {
 ////////////////////////////////////////////////////////////
 
 // unsub/archive should delete any existing notifications
-exports.massUpdate = async function (userId, topicIds, action) {
-  assert(['unsub', 'archive', 'unarchive'].includes(action))
+exports.massUpdate = async function(userId, topicIds, action) {
+    assert(['unsub', 'archive', 'unarchive'].includes(action))
 
-  if (action === 'archive') {
-    return Promise.all([
-      pool.query(sql`
+    if (action === 'archive') {
+        return Promise.all([
+            pool.query(sql`
         UPDATE topic_subscriptions
         SET is_archived = true
         WHERE topic_id = ANY (${topicIds})
           AND user_id = ${userId}
         RETURNING *
       `),
-      db.deleteSubNotifications(userId, topicIds)
-    ])
-  }
+            db.deleteSubNotifications(userId, topicIds),
+        ])
+    }
 
-  if (action === 'unsub') {
-    return Promise.all([
-      pool.query(sql`
+    if (action === 'unsub') {
+        return Promise.all([
+            pool.query(sql`
         DELETE FROM topic_subscriptions
         WHERE topic_id = ANY (${topicIds})
           AND user_id = ${userId}
       `),
-      db.deleteSubNotifications(userId, topicIds)
-    ])
-  }
+            db.deleteSubNotifications(userId, topicIds),
+        ])
+    }
 
-  if (action === 'unarchive') {
-    return pool.query(sql`
+    if (action === 'unarchive') {
+        return pool.query(sql`
       UPDATE topic_subscriptions
       SET is_archived = false
       WHERE topic_id = ANY (${topicIds})
         AND user_id = ${userId}
       RETURNING *
     `)
-  }
+    }
 
-  assert(false)
+    assert(false)
 }
 
 ////////////////////////////////////////////////////////////
 
 // Delete any existing notifications for topic
-exports.unsubscribeFromTopic = async function (userId, topicId) {
-  return Promise.all([
-    pool.query(sql`
+exports.unsubscribeFromTopic = async function(userId, topicId) {
+    return Promise.all([
+        pool.query(sql`
       DELETE FROM topic_subscriptions
       WHERE user_id = ${userId} AND topic_id = ${topicId}
     `),
-    db.deleteSubNotifications(userId, [topicId])
-  ])
+        db.deleteSubNotifications(userId, [topicId]),
+    ])
 }

@@ -1,16 +1,16 @@
 'use strict'
 // 3rd
 const assert = require('better-assert')
-const {sql} = require('pg-extra')
+const { sql } = require('pg-extra')
 const debug = require('debug')('app:db:unames')
 // 1st
-const {pool} = require('./util')
+const { pool } = require('./util')
 const belt = require('../belt')
 
 ////////////////////////////////////////////////////////////
 
-exports.lastUnameChange = async function (userId) {
-  return pool.one(sql`
+exports.lastUnameChange = async function(userId) {
+    return pool.one(sql`
     SELECT *
     FROM unames
     WHERE user_id = ${userId}
@@ -20,8 +20,8 @@ exports.lastUnameChange = async function (userId) {
 
 ////////////////////////////////////////////////////////////
 
-exports.latestUnameChanges = async function (limit = 10) {
-  return pool.many(sql`
+exports.latestUnameChanges = async function(limit = 10) {
+    return pool.many(sql`
     SELECT
       h.*,
       json_build_object(
@@ -61,19 +61,25 @@ exports.latestUnameChanges = async function (limit = 10) {
 
 ////////////////////////////////////////////////////////////
 
-exports.changeUname = async function (
-  {userId, changedById, oldUname, newUname, recycle = false}
-) {
-  debug(`[changeUname] oldUname=%j, newUname=%j`, oldUname, newUname)
-  assert(Number.isInteger(userId))
-  assert(Number.isInteger(changedById))
-  assert(typeof oldUname === 'string')
-  assert(typeof newUname === 'string')
-  assert(oldUname !== newUname)
-  assert(typeof recycle === 'boolean')
+exports.changeUname = async function({
+    userId,
+    changedById,
+    oldUname,
+    newUname,
+    recycle = false,
+}) {
+    debug(`[changeUname] oldUname=%j, newUname=%j`, oldUname, newUname)
+    assert(Number.isInteger(userId))
+    assert(Number.isInteger(changedById))
+    assert(typeof oldUname === 'string')
+    assert(typeof newUname === 'string')
+    assert(oldUname !== newUname)
+    assert(typeof recycle === 'boolean')
 
-  return pool.withTransaction(async (client) => {
-    await client.query(sql`
+    return pool.withTransaction(async client => {
+        await client
+            .query(
+                sql`
       INSERT INTO unames (user_id, changed_by_id, uname, slug)
       VALUES (
         ${userId},
@@ -81,32 +87,34 @@ exports.changeUname = async function (
         ${newUname},
         ${belt.slugifyUname(newUname)}
       )
-    `).catch((err) => {
-      if (err.code === '23505') {
-        if (/unique_unrecyclable_slug/.test(err.toString()))
-          throw 'UNAME_TAKEN'
-      }
-      throw err
-    })
+    `
+            )
+            .catch(err => {
+                if (err.code === '23505') {
+                    if (/unique_unrecyclable_slug/.test(err.toString()))
+                        throw 'UNAME_TAKEN'
+                }
+                throw err
+            })
 
-    // Update previous uname change
-    if (recycle) {
-      await client.query(sql`
+        // Update previous uname change
+        if (recycle) {
+            await client.query(sql`
         UPDATE unames
         SET recycle = true
         WHERE user_id = ${userId}
           AND slug = ${belt.slugifyUname(oldUname)}
       `)
-    }
+        }
 
-    return client.one(sql`
+        return client.one(sql`
       UPDATE users
       SET uname = ${newUname},
           slug = ${belt.slugifyUname(newUname)}
       WHERE id = ${userId}
       RETURNING *
     `)
-  })
+    })
 }
 
 ////////////////////////////////////////////////////////////

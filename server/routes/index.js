@@ -3,7 +3,7 @@
 const assert = require('better-assert')
 const Router = require('koa-router')
 const debug = require('debug')('app:routes:index')
-const {sql,_raw} = require('pg-extra')
+const { sql, _raw } = require('pg-extra')
 const _ = require('lodash')
 // 1st
 const config = require('../config')
@@ -11,7 +11,7 @@ const cancan = require('../cancan')
 const db = require('../db')
 const cache2 = require('../cache2')
 const pre = require('../presenters')
-const {pool} = require('../db/util')
+const { pool } = require('../db/util')
 
 ////////////////////////////////////////////////////////////
 
@@ -20,27 +20,28 @@ const router = new Router()
 ////////////////////////////////////////////////////////////
 
 // Depends on FAQ_POST_ID
-router.get('/faq', async (ctx) => {
-  const post = pre.presentPost(cache2.get('faq-post'))
+router.get('/faq', async ctx => {
+    const post = pre.presentPost(cache2.get('faq-post'))
 
-  await ctx.render('faq', {
-    ctx,
-    post,
-    title: 'FAQ'
-  })
+    await ctx.render('faq', {
+        ctx,
+        post,
+        title: 'FAQ',
+    })
 })
 
 ////////////////////////////////////////////////////////////
 
-async function listRoleplays (logic, sort, selectedTagIds = [], beforeId) {
-  assert(['any', 'all'].includes(logic))
-  assert(['bumped', 'created'].includes(sort))
-  assert(Array.isArray(selectedTagIds))
-  assert(typeof beforeId === 'undefined' || Number.isInteger(beforeId))
+async function listRoleplays(logic, sort, selectedTagIds = [], beforeId) {
+    assert(['any', 'all'].includes(logic))
+    assert(['bumped', 'created'].includes(sort))
+    assert(Array.isArray(selectedTagIds))
+    assert(typeof beforeId === 'undefined' || Number.isInteger(beforeId))
 
-  const perPage = 20
+    const perPage = 20
 
-  return pool.many(sql`
+    return pool.many(
+        sql`
     SELECT
       t.*,
       to_json(f.*) "forum",
@@ -110,27 +111,28 @@ async function listRoleplays (logic, sort, selectedTagIds = [], beforeId) {
       WHERE topics.forum_id IN (3, 4, 5, 6, 7, 42, 39)
         AND topics.is_hidden = false
     `
-    .append(
-      beforeId
-      ? sort === 'created'
-        ? sql`AND topics.id < ${beforeId}`
-        : sql`AND topics.latest_post_id < ${beforeId}`
-      : _raw``
-    )
-    .append(
-      selectedTagIds.length > 0
-      ? logic === 'any'
-        ? sql`AND tags.id = ANY (${selectedTagIds})`
-        : sql`AND ${selectedTagIds} <@ s.tag_ids`
-      : _raw``
-    )
-    .append(sql`GROUP BY topics.id`)
-    .append(
-      sort === 'created'
-      ? sql`ORDER BY topics.created_at DESC`
-      : sql`ORDER BY topics.latest_post_id DESC`
-    )
-    .append(sql`
+            .append(
+                beforeId
+                    ? sort === 'created'
+                      ? sql`AND topics.id < ${beforeId}`
+                      : sql`AND topics.latest_post_id < ${beforeId}`
+                    : _raw``
+            )
+            .append(
+                selectedTagIds.length > 0
+                    ? logic === 'any'
+                      ? sql`AND tags.id = ANY (${selectedTagIds})`
+                      : sql`AND ${selectedTagIds} <@ s.tag_ids`
+                    : _raw``
+            )
+            .append(sql`GROUP BY topics.id`)
+            .append(
+                sort === 'created'
+                    ? sql`ORDER BY topics.created_at DESC`
+                    : sql`ORDER BY topics.latest_post_id DESC`
+            )
+            .append(
+                sql`
         LIMIT ${perPage}
       ) t
       JOIN users u ON t.user_id = u.id
@@ -143,120 +145,136 @@ async function listRoleplays (logic, sort, selectedTagIds = [], beforeId) {
       LEFT OUTER JOIN users ooc_users ON ooc_posts.user_id = ooc_users.id
       LEFT OUTER JOIN posts char_posts ON t.latest_char_post_id = char_posts.id
       LEFT OUTER JOIN users char_users ON char_posts.user_id = char_users.id
-    `)
-    .append(
-      sort === 'created'
-      ? sql`ORDER BY t.created_at DESC`
-      : sql`ORDER BY t.latest_post_id DESC`
+    `
+            )
+            .append(
+                sort === 'created'
+                    ? sql`ORDER BY t.created_at DESC`
+                    : sql`ORDER BY t.latest_post_id DESC`
+            )
+            .append(sql`LIMIT ${perPage}`)
     )
-    .append(sql`LIMIT ${perPage}`)
-  )
 }
 
-router.get('/roleplays', async (ctx) => {
-  // TODO: MOve to cache2.once() and update on tag list edit
-  const tagGroups = await db.findAllTagGroups()
+router.get('/roleplays', async ctx => {
+    // TODO: MOve to cache2.once() and update on tag list edit
+    const tagGroups = await db.findAllTagGroups()
 
-  // Should always be array. Empty array means all tags (no tag filter).
-  const selectedTagIds = ctx.validateQuery('tags')
-    .defaultTo([])
-    .toArray()
-    .toInts()
-    .val()
+    // Should always be array. Empty array means all tags (no tag filter).
+    const selectedTagIds = ctx
+        .validateQuery('tags')
+        .defaultTo([])
+        .toArray()
+        .toInts()
+        .val()
 
-  const sort = ctx.validateQuery('sort')
-    .tap((v) => ['bumped', 'created'].includes(v) ? v : 'created')
-    .val()
+    const sort = ctx
+        .validateQuery('sort')
+        .tap(v => (['bumped', 'created'].includes(v) ? v : 'created'))
+        .val()
 
-  const beforeId = ctx.validateQuery('beforeId')
-    .optional()
-    .toInt()
-    .val()
+    const beforeId = ctx
+        .validateQuery('beforeId')
+        .optional()
+        .toInt()
+        .val()
 
-  const logic = ctx.validateQuery('logic')
-    .tap((v) => ['any', 'all'].includes(v) ? v : 'any')
-    .val()
+    const logic = ctx
+        .validateQuery('logic')
+        .tap(v => (['any', 'all'].includes(v) ? v : 'any'))
+        .val()
 
-  const roleplays = await listRoleplays(logic, sort, selectedTagIds, beforeId)
-    .then((xs) => xs.map((x) => pre.presentTopic(x)))
+    const roleplays = await listRoleplays(
+        logic,
+        sort,
+        selectedTagIds,
+        beforeId
+    ).then(xs => xs.map(x => pre.presentTopic(x)))
 
-  const nextBeforeId = _.last(roleplays)
-    ? sort === 'created'
-      ? _.last(roleplays).id
-      : _.last(roleplays).latest_post_id
-    : null
+    const nextBeforeId = _.last(roleplays)
+        ? sort === 'created'
+          ? _.last(roleplays).id
+          : _.last(roleplays).latest_post_id
+        : null
 
-  const nextPageUrl = nextBeforeId
-    ? require('url').format({
+    const nextPageUrl = nextBeforeId
+        ? require('url').format({
+              host: config.HOST,
+              pathname: ctx.path,
+              query: Object.assign({}, _.pickBy(ctx.query, Boolean), {
+                  beforeId: nextBeforeId,
+              }),
+          })
+        : null
+
+    const firstPageUrl = require('url').format({
         host: config.HOST,
         pathname: ctx.path,
-        query: Object.assign({}, _.pickBy(ctx.query, Boolean), {
-          beforeId: nextBeforeId
-        })
-      })
-    : null
+        query: _.pickBy(
+            Object.assign({}, ctx.query, { beforeId: null }),
+            Boolean
+        ),
+    })
 
-  const firstPageUrl = require('url').format({
-    host: config.HOST,
-    pathname: ctx.path,
-    query: _.pickBy(Object.assign({}, ctx.query, {beforeId: null}), Boolean)
-  })
-
-  await ctx.render('list_roleplays', {
-    ctx,
-    roleplays,
-    // pagination
-    beforeId,
-    nextBeforeId,
-    firstPageUrl,
-    nextPageUrl,
-    // tag filter
-    logic,
-    sort,
-    tagGroups,
-    selectedTagIds,
-    //
-    title: 'Roleplays'
-  })
+    await ctx.render('list_roleplays', {
+        ctx,
+        roleplays,
+        // pagination
+        beforeId,
+        nextBeforeId,
+        firstPageUrl,
+        nextPageUrl,
+        // tag filter
+        logic,
+        sort,
+        tagGroups,
+        selectedTagIds,
+        //
+        title: 'Roleplays',
+    })
 })
 
 ////////////////////////////////////////////////////////////
 
-router.get('/posts/:id/revisions', async (ctx) => {
-  const post = await db.findPostWithTopicAndForum(ctx.params.id)
-    .then(pre.presentPost)
-  ctx.assert(post, 404)
-  ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
+router.get('/posts/:id/revisions', async ctx => {
+    const post = await db
+        .findPostWithTopicAndForum(ctx.params.id)
+        .then(pre.presentPost)
+    ctx.assert(post, 404)
+    ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
 
-  const revs = await db.revs.listPostRevs(post.id)
-    .then((xs) => xs.map(pre.presentPostRev))
+    const revs = await db.revs
+        .listPostRevs(post.id)
+        .then(xs => xs.map(pre.presentPostRev))
 
-  await ctx.render('list_post_revisions', {
-    ctx,
-    revs,
-    post,
-    //
-    title: `Post #${post.id} History`
-  })
+    await ctx.render('list_post_revisions', {
+        ctx,
+        revs,
+        post,
+        //
+        title: `Post #${post.id} History`,
+    })
 })
 
 ////////////////////////////////////////////////////////////
 
-router.get('/posts/:postId/revisions/:revId', async (ctx) => {
-  const revId = Number.parseInt(ctx.params.revId, 10)
-  ctx.assert(!Number.isNaN(revId), 404)
+router.get('/posts/:postId/revisions/:revId', async ctx => {
+    const revId = Number.parseInt(ctx.params.revId, 10)
+    ctx.assert(!Number.isNaN(revId), 404)
 
-  const post = await db.findPostWithTopicAndForum(ctx.params.postId)
-    .then(pre.presentPost)
-  ctx.assert(post, 404)
-  ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
+    const post = await db
+        .findPostWithTopicAndForum(ctx.params.postId)
+        .then(pre.presentPost)
+    ctx.assert(post, 404)
+    ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
 
-  const rev = await db.revs.getPostRev(post.id, revId)
-    .then(pre.presentPostRev)
-  ctx.assert(rev, 404)
+    const rev = await db.revs
+        .getPostRev(post.id, revId)
+        .then(pre.presentPostRev)
+    ctx.assert(rev, 404)
 
-  ctx.type = 'html'
-  ctx.body = `
+    ctx.type = 'html'
+    ctx.body = `
     <head>
       <link rel="stylesheet" href="/css/general.css">
     </head>
@@ -268,43 +286,45 @@ router.get('/posts/:postId/revisions/:revId', async (ctx) => {
   `
 })
 
-router.get('/posts/:postId/revisions/:revId/raw', async (ctx) => {
-  const revId = Number.parseInt(ctx.params.revId, 10)
-  ctx.assert(!Number.isNaN(revId), 404)
+router.get('/posts/:postId/revisions/:revId/raw', async ctx => {
+    const revId = Number.parseInt(ctx.params.revId, 10)
+    ctx.assert(!Number.isNaN(revId), 404)
 
-  const post = await db.findPostWithTopicAndForum(ctx.params.postId)
-    .then(pre.presentPost)
-  ctx.assert(post, 404)
-  ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
+    const post = await db
+        .findPostWithTopicAndForum(ctx.params.postId)
+        .then(pre.presentPost)
+    ctx.assert(post, 404)
+    ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
 
-  const markup = await db.revs.getPostRevMarkup(post.id, revId)
-  ctx.assert(markup, 404)
+    const markup = await db.revs.getPostRevMarkup(post.id, revId)
+    ctx.assert(markup, 404)
 
-  ctx.type = 'html'
-  ctx.body = `
+    ctx.type = 'html'
+    ctx.body = `
     <pre>${markup}</pre>
   `
 })
 
-router.post('/posts/:postId/revisions/:revId/revert', async (ctx) => {
-  const revId = Number.parseInt(ctx.params.revId, 10)
-  ctx.assert(!Number.isNaN(revId), 404)
+router.post('/posts/:postId/revisions/:revId/revert', async ctx => {
+    const revId = Number.parseInt(ctx.params.revId, 10)
+    ctx.assert(!Number.isNaN(revId), 404)
 
-  const post = await db.findPostWithTopicAndForum(ctx.params.postId)
-    .then(pre.presentPost)
-  ctx.assert(post, 404)
-  ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
+    const post = await db
+        .findPostWithTopicAndForum(ctx.params.postId)
+        .then(pre.presentPost)
+    ctx.assert(post, 404)
+    ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
 
-  const rev = await db.revs.getPostRev(post.id, revId)
-    .then(pre.presentPostRev)
-  ctx.assert(rev, 404)
+    const rev = await db.revs
+        .getPostRev(post.id, revId)
+        .then(pre.presentPostRev)
+    ctx.assert(rev, 404)
 
-  await db.revs.revertPostRev(ctx.currUser.id, post.id, rev.id)
+    await db.revs.revertPostRev(ctx.currUser.id, post.id, rev.id)
 
-  ctx.flash = { message: ['success', `Reverted post to revision ${rev.id}`] }
-  ctx.redirect(post.url + '/revisions')
+    ctx.flash = { message: ['success', `Reverted post to revision ${rev.id}`] }
+    ctx.redirect(post.url + '/revisions')
 })
-
 
 ////////////////////////////////////////////////////////////
 

@@ -1,15 +1,15 @@
-'use strict';
+'use strict'
 // 3rd
-const debug = require('debug')('app:db:dice');
-const assert = require('better-assert');
+const debug = require('debug')('app:db:dice')
+const assert = require('better-assert')
 // 1st
-const bbcode = require('../bbcode');
-const dice = require('../dice');
-const {pool} = require('./util')
-const {sql} = require('pg-extra')
+const bbcode = require('../bbcode')
+const dice = require('../dice')
+const { pool } = require('./util')
+const { sql } = require('pg-extra')
 
-exports.getCampaign = async function (campaignId) {
-  return pool.one(sql`
+exports.getCampaign = async function(campaignId) {
+    return pool.one(sql`
     SELECT
       c.*,
       to_json(u.*) "user"
@@ -19,8 +19,8 @@ exports.getCampaign = async function (campaignId) {
   `)
 }
 
-exports.listCampaignsByActivity = async function () {
-  return pool.many(sql`
+exports.listCampaignsByActivity = async function() {
+    return pool.many(sql`
     SELECT
       c.*,
       to_json(users.*) "user",
@@ -34,9 +34,9 @@ exports.listCampaignsByActivity = async function () {
 }
 
 // Ordered by newest first
-exports.getCampaignsForUser = async function (userId) {
-  assert(userId)
-  return pool.many(sql`
+exports.getCampaignsForUser = async function(userId) {
+    assert(userId)
+    return pool.many(sql`
     SELECT
       c.*,
       to_json(users.*) "user",
@@ -50,9 +50,9 @@ exports.getCampaignsForUser = async function (userId) {
   `)
 }
 
-exports.getCampaignRolls = async function (campaignId) {
-  assert(campaignId)
-  return pool.many(sql`
+exports.getCampaignRolls = async function(campaignId) {
+    assert(campaignId)
+    return pool.many(sql`
     SELECT
       r.*,
       to_json(users.*) "user"
@@ -65,14 +65,14 @@ exports.getCampaignRolls = async function (campaignId) {
 }
 
 // markup is optional
-exports.updateCampaign = async function (campaignId, title, markup) {
-  assert(Number.isInteger(campaignId))
-  assert(typeof title === 'string')
-  let html
-  if (typeof markup === 'string') {
-    html = bbcode(markup)
-  }
-  return pool.one(sql`
+exports.updateCampaign = async function(campaignId, title, markup) {
+    assert(Number.isInteger(campaignId))
+    assert(typeof title === 'string')
+    let html
+    if (typeof markup === 'string') {
+        html = bbcode(markup)
+    }
+    return pool.one(sql`
     UPDATE campaigns
     SET title = ${title}
       , markup = ${markup}
@@ -82,14 +82,14 @@ exports.updateCampaign = async function (campaignId, title, markup) {
 }
 
 // markup is optional
-exports.insertCampaign = async function (userId, title, markup) {
-  assert(Number.isInteger(userId))
-  assert(typeof title === 'string')
-  let html
-  if (typeof markup === 'string') {
-    html = bbcode(markup)
-  }
-  return pool.one(sql`
+exports.insertCampaign = async function(userId, title, markup) {
+    assert(Number.isInteger(userId))
+    assert(typeof title === 'string')
+    let html
+    if (typeof markup === 'string') {
+        html = bbcode(markup)
+    }
+    return pool.one(sql`
     INSERT INTO campaigns (user_id, title, markup, html)
     VALUES (${userId}, ${title}, ${markup}, ${html})
     RETURNING *
@@ -97,21 +97,21 @@ exports.insertCampaign = async function (userId, title, markup) {
 }
 
 // note is optional
-exports.insertRoll = async function (userId, campaignId, syntax, note) {
-  assert(Number.isInteger(userId))
-  assert(Number.isInteger(campaignId))
-  assert(typeof syntax === 'string')
-  // throws if syntax is invalid. err.message for parser error message.
-  const output = dice.roll(syntax)
-  return pool.withTransaction(async (client) => {
-    const roll = await client.one(sql`
+exports.insertRoll = async function(userId, campaignId, syntax, note) {
+    assert(Number.isInteger(userId))
+    assert(Number.isInteger(campaignId))
+    assert(typeof syntax === 'string')
+    // throws if syntax is invalid. err.message for parser error message.
+    const output = dice.roll(syntax)
+    return pool.withTransaction(async client => {
+        const roll = await client.one(sql`
       INSERT INTO rolls (user_id, campaign_id, syntax, rolls, total, note)
       VALUES (${userId}, ${campaignId}, ${syntax},
         ${JSON.stringify(output.rolls)}, ${output.total}, ${note})
       RETURNING *
     `)
 
-    await client.query(sql`
+        await client.query(sql`
       UPDATE campaigns
       SET last_roll_at = NOW()
         , roll_count = roll_count + 1
@@ -119,13 +119,13 @@ exports.insertRoll = async function (userId, campaignId, syntax, note) {
       WHERE id = ${campaignId}
     `)
 
-    return roll
-  })
+        return roll
+    })
 }
 
-exports.getRoll = async function (rollId) {
-  assert(rollId)
-  return pool.one(sql`
+exports.getRoll = async function(rollId) {
+    assert(rollId)
+    return pool.one(sql`
     SELECT
       r.*,
       to_json(u.*) "user",

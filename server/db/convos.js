@@ -1,24 +1,24 @@
 // 3rd
-const assert = require('better-assert');
-const _ = require('lodash');
+const assert = require('better-assert')
+const _ = require('lodash')
 const debug = require('debug')('app:db:convos')
 // 1st
 const config = require('../config')
-const {pool} = require('./util')
-const {sql} = require('pg-extra')
+const { pool } = require('./util')
+const { sql } = require('pg-extra')
 
 ////////////////////////////////////////////////////////////
 
-exports.getConvo = async (id) => {
-  assert(id)
-  return exports.getConvos([id]).then(([x]) => x)
+exports.getConvo = async id => {
+    assert(id)
+    return exports.getConvos([id]).then(([x]) => x)
 }
 
-exports.getConvos = async (ids) => {
-  debug('[getConvos] ids=%j', ids)
-  assert(Array.isArray(ids))
+exports.getConvos = async ids => {
+    debug('[getConvos] ids=%j', ids)
+    assert(Array.isArray(ids))
 
-  return pool.many(sql`
+    return pool.many(sql`
     SELECT
       c.*,
       to_json(u1.*) "user",
@@ -36,34 +36,38 @@ exports.getConvos = async (ids) => {
 ////////////////////////////////////////////////////////////
 
 // Also clears notifications associated with those convos
-exports.deleteTrash = async function (userId) {
-  return pool.withTransaction(async (client) => {
-    const convoIds = await client.many(sql`
+exports.deleteTrash = async function(userId) {
+    return pool.withTransaction(async client => {
+        const convoIds = await client
+            .many(
+                sql`
       UPDATE convos_participants
       SET deleted_at = NOW()
       WHERE user_id = ${userId}
         AND folder = 'TRASH'
       RETURNING convo_id
-    `).then((rows) => rows.map((row) => row.convo_id))
+    `
+            )
+            .then(rows => rows.map(row => row.convo_id))
 
-    if (convoIds.length > 0) {
-      await client.query(sql`
+        if (convoIds.length > 0) {
+            await client.query(sql`
         DELETE FROM notifications
         WHERE to_user_id = ${userId}
           AND convo_id = ANY (${convoIds})
       `)
-    }
-  })
+        }
+    })
 }
 
 ////////////////////////////////////////////////////////////
 
 exports.deleteConvos = async (userId, convoIds) => {
-  debug(`[deleteConvos] userId=%j, convoIds=%j`, userId, convoIds)
-  assert(Number.isInteger(userId))
-  assert(Array.isArray(convoIds))
+    debug(`[deleteConvos] userId=%j, convoIds=%j`, userId, convoIds)
+    assert(Number.isInteger(userId))
+    assert(Array.isArray(convoIds))
 
-  return pool.query(sql`
+    return pool.query(sql`
     UPDATE convos_participants
     SET deleted_at = NOW()
     WHERE user_id = ${userId}
@@ -73,9 +77,9 @@ exports.deleteConvos = async (userId, convoIds) => {
 
 ////////////////////////////////////////////////////////////
 
-exports.getConvoParticipantsWithNotifications = async function (userId) {
-  assert(Number.isInteger(userId))
-  return pool.many(sql`
+exports.getConvoParticipantsWithNotifications = async function(userId) {
+    assert(Number.isInteger(userId))
+    return pool.many(sql`
     select cp.*
     from convos_participants cp
     join notifications n ON cp.convo_id = n.convo_id AND cp.user_id = ${userId}
@@ -86,10 +90,10 @@ exports.getConvoParticipantsWithNotifications = async function (userId) {
 
 ////////////////////////////////////////////////////////////
 
-exports.getConvoFolderCounts = async function (userId) {
-  assert(Number.isInteger(userId))
+exports.getConvoFolderCounts = async function(userId) {
+    assert(Number.isInteger(userId))
 
-  return pool.one(sql`
+    return pool.one(sql`
     SELECT
       COUNT(*) FILTER (WHERE folder = 'INBOX') "inbox_count",
       COUNT(*) FILTER (WHERE folder = 'STAR') "star_count",
@@ -103,14 +107,14 @@ exports.getConvoFolderCounts = async function (userId) {
 
 ////////////////////////////////////////////////////////////
 
-exports.findConvosInvolvingUserId = async function (userId, folder, page) {
-  assert(_.isNumber(page))
-  assert(['INBOX', 'STAR', 'ARCHIVE', 'TRASH'].includes(folder))
+exports.findConvosInvolvingUserId = async function(userId, folder, page) {
+    assert(_.isNumber(page))
+    assert(['INBOX', 'STAR', 'ARCHIVE', 'TRASH'].includes(folder))
 
-  const offset = config.CONVOS_PER_PAGE * (page-1)
-  const limit = config.CONVOS_PER_PAGE
+    const offset = config.CONVOS_PER_PAGE * (page - 1)
+    const limit = config.CONVOS_PER_PAGE
 
-  const rows = await pool.many(sql`
+    const rows = await pool.many(sql`
 SELECT
   c.id,
   c.title,
@@ -144,58 +148,62 @@ OFFSET ${offset}
 LIMIT ${limit}
   `)
 
-  return rows.map((row) => {
-    row.user = {
-      uname: row['user.uname'],
-      slug: row['user.slug']
-    }
-    delete row['user.uname']
-    delete row['user.slug']
+    return rows.map(row => {
+        row.user = {
+            uname: row['user.uname'],
+            slug: row['user.slug'],
+        }
+        delete row['user.uname']
+        delete row['user.slug']
 
-    row.participants = row['participant_unames'].map((uname, idx) => {
-      return {
-        uname: uname,
-        slug: row['participant_slugs'][idx]
-      }
+        row.participants = row['participant_unames'].map((uname, idx) => {
+            return {
+                uname: uname,
+                slug: row['participant_slugs'][idx],
+            }
+        })
+        delete row['participant_unames']
+        delete row['participant_slugs']
+
+        row.latest_pm = {
+            id: row['latest_pm.id'],
+            created_at: row['latest_pm.created_at'],
+        }
+        delete row['latest_pm.id']
+        delete row['latest_pm.created_at']
+
+        row.latest_user = {
+            uname: row['latest_user.uname'],
+            slug: row['latest_user.slug'],
+        }
+        delete row['latest_user.uname']
+        delete row['latest_user.slug']
+
+        return row
     })
-    delete row['participant_unames']
-    delete row['participant_slugs']
-
-    row.latest_pm = {
-      id: row['latest_pm.id'],
-      created_at: row['latest_pm.created_at']
-    }
-    delete row['latest_pm.id']
-    delete row['latest_pm.created_at']
-
-    row.latest_user = {
-      uname: row['latest_user.uname'],
-      slug: row['latest_user.slug']
-    }
-    delete row['latest_user.uname']
-    delete row['latest_user.slug']
-
-    return row
-  })
 }
 
 ////////////////////////////////////////////////////////////
 
-exports.findParticipantIds = async function (convoId) {
-  return pool.many(sql`
+exports.findParticipantIds = async function(convoId) {
+    return pool
+        .many(
+            sql`
     SELECT user_id
     FROM convos_participants
     WHERE convo_id = ${convoId}
       AND deleted_at IS NULL
-  `).then((xs) => xs.map((x) => x.user_id))
+  `
+        )
+        .then(xs => xs.map(x => x.user_id))
 }
 
 ////////////////////////////////////////////////////////////
 
-exports.undeleteAllConvos = async (userId) => {
-  assert(Number.isInteger(userId))
+exports.undeleteAllConvos = async userId => {
+    assert(Number.isInteger(userId))
 
-  return pool.query(sql`
+    return pool.query(sql`
     UPDATE convos_participants
     SET deleted_at = NULL
     WHERE user_id = ${userId}
@@ -205,12 +213,17 @@ exports.undeleteAllConvos = async (userId) => {
 ////////////////////////////////////////////////////////////
 
 exports.moveConvos = async (userId, convoIds, folder) => {
-  debug(`[moveConvos] userId=%j, folder=%j, convoIds=%j`, userId, folder, convoIds)
-  assert(Number.isInteger(userId))
-  assert(typeof folder === 'string')
-  assert(Array.isArray(convoIds))
+    debug(
+        `[moveConvos] userId=%j, folder=%j, convoIds=%j`,
+        userId,
+        folder,
+        convoIds
+    )
+    assert(Number.isInteger(userId))
+    assert(typeof folder === 'string')
+    assert(Array.isArray(convoIds))
 
-  return pool.query(sql`
+    return pool.query(sql`
     UPDATE convos_participants
     SET folder = ${folder}
     WHERE user_id = ${userId}

@@ -1,129 +1,127 @@
-'use strict';
+'use strict'
 // Node
 // 3rd party
-var Router = require('koa-router');
-var _ = require('lodash');
-var koaSend = require('koa-send');
-var debug = require('debug')('app:legacy_router.js');
+var Router = require('koa-router')
+var _ = require('lodash')
+var koaSend = require('koa-send')
+var debug = require('debug')('app:legacy_router.js')
 // 1st party
 
-var router = new Router();
+var router = new Router()
 
 ////////////////////////////////////////////////////////////
 
 var uidTable = {
-  '2485': '/users/izaka-sazaka'
-};
+    '2485': '/users/izaka-sazaka',
+}
 
-router.get('/member.php', async (ctx) => {
-  const redirectTo = uidTable[ctx.query.u]
-  ctx.assert(redirectTo, 404)
+router.get('/member.php', async ctx => {
+    const redirectTo = uidTable[ctx.query.u]
+    ctx.assert(redirectTo, 404)
 
-  ctx.status = 301
-  ctx.redirect(redirectTo)
+    ctx.status = 301
+    ctx.redirect(redirectTo)
 })
 
 ////////////////////////////////////////////////////////////
 
 // For forumdisplay.php?f=xx URLs
 const fidTable = {
-  // No more "Free OOC" forum
-  '18': '/forums/3-free-roleplay',
-  '5': '/forums/33-off-topic-discussion'
+    // No more "Free OOC" forum
+    '18': '/forums/3-free-roleplay',
+    '5': '/forums/33-off-topic-discussion',
 }
 
-router.get('/forumdisplay.php', async (ctx) => {
-  if (_.keys(ctx.query).includes('15-Casual-OOC')) {
+router.get('/forumdisplay.php', async ctx => {
+    if (_.keys(ctx.query).includes('15-Casual-OOC')) {
+        ctx.status = 301
+        ctx.redirect('/forums/4-casual-roleplay')
+        return
+    }
+
+    if (_.keys(ctx.query).includes('42-Forum-Games-Spam')) {
+        ctx.status = 301
+        ctx.redirect('/forums/30-spam-forum')
+        return
+    }
+
+    ctx.validateQuery('f')
+
+    const redirectTo = fidTable[ctx.vals.f]
+    ctx.assert(redirectTo, 404)
+
     ctx.status = 301
-    ctx.redirect('/forums/4-casual-roleplay')
-    return
-  }
-
-  if (_.keys(ctx.query).includes('42-Forum-Games-Spam')) {
-    ctx.status = 301
-    ctx.redirect('/forums/30-spam-forum')
-    return
-  }
-
-  ctx.validateQuery('f')
-
-  const redirectTo = fidTable[ctx.vals.f]
-  ctx.assert(redirectTo, 404)
-
-  ctx.status = 301
-  ctx.redirect(redirectTo)
+    ctx.redirect(redirectTo)
 })
 
 ////////////////////////////////////////////////////////////
 
 // legacy_html/showthread/:id
 const tids = {
-  '106673': true
+    '106673': true,
 }
 
 const tidQueries = {
-  // showthread.php?139029-Sobetsu-Cloaked-Rancor-OOC
-  '139029-Sobetsu-Cloaked-Rancor-OOC': true,
-  '130932-Shadows-of-Edin-OOC-always-open': true,
-  '34778-The-Burning-Void-(Scifi-Nations-OOC)': true,
-  '75300-Flames-on-the-Horizon-A-Traveller-Roleplay': true,  // busted assets
-  '36262-The-secret-academy-of-Felours(Sci-fi-Action)': true, // busted assets
-  '146204-Tumblr-Vs-Photobucket-Vs-imgur': true,
-  '11824-Sandcastle-IC': true, // busted assets
-  '132676-The-Bandits-of-Skyrim-(OOC)': true, // busted assets
-  '133437-Using-Google-Docs-for-RPs': true,
-  '186461-Vampire-The-Masquerade-The-Final-Nights-Guide': true // busted assets
-};
+    // showthread.php?139029-Sobetsu-Cloaked-Rancor-OOC
+    '139029-Sobetsu-Cloaked-Rancor-OOC': true,
+    '130932-Shadows-of-Edin-OOC-always-open': true,
+    '34778-The-Burning-Void-(Scifi-Nations-OOC)': true,
+    '75300-Flames-on-the-Horizon-A-Traveller-Roleplay': true, // busted assets
+    '36262-The-secret-academy-of-Felours(Sci-fi-Action)': true, // busted assets
+    '146204-Tumblr-Vs-Photobucket-Vs-imgur': true,
+    '11824-Sandcastle-IC': true, // busted assets
+    '132676-The-Bandits-of-Skyrim-(OOC)': true, // busted assets
+    '133437-Using-Google-Docs-for-RPs': true,
+    '186461-Vampire-The-Masquerade-The-Final-Nights-Guide': true, // busted assets
+}
 
-router.get('/showthread.php', async (ctx) => {
-  ctx.validateQuery('t')
+router.get('/showthread.php', async ctx => {
+    ctx.validateQuery('t')
 
-  let staticPath;
-  if (tids[ctx.vals.t])
-    staticPath = ctx.vals.t
-  else if (tidQueries[Object.keys(ctx.query)[0]])
-    staticPath = Object.keys(ctx.query)[0]
+    let staticPath
+    if (tids[ctx.vals.t]) staticPath = ctx.vals.t
+    else if (tidQueries[Object.keys(ctx.query)[0]])
+        staticPath = Object.keys(ctx.query)[0]
 
-  ctx.assert(staticPath, 404)
+    ctx.assert(staticPath, 404)
 
-  await koaSend(ctx, staticPath + '.html', {
-    root: 'legacy_html/showthread',
-    maxage: 1000 * 60 * 60 * 24 * 365
-  })
+    await koaSend(ctx, staticPath + '.html', {
+        root: 'legacy_html/showthread',
+        maxage: 1000 * 60 * 60 * 24 * 365,
+    })
 })
 
 ////////////////////////////////////////////////////////////
 
 // 301 Redirects
-
 ;[
-  ['/index.php', '/'],
-  ['/members/drakell', '/users/drakel'],
-  ['/memberlist.php', '/users'],
-  // No more member lounge
-  ['/forums/32', '/forums/33-off-topic-discussion'],
-  ['/forums/32-member-lounge', '/forums/33-off-topic-discussion'],
-  // "Need Help" forum merged
-  ['/forums/36', '/forums/9-suggestions-problems'],
-  ['/forums/36-need-help', '/forums/9-suggestions-problems'],
-  ['/members/gamerdude369', '/users/gamerdude369'],
-  ['/f9', '/forums/5-advanced-roleplay'],
-  ['/f8/the-morlat-death-march-8', '/f9/the-morlat-death-march-8']
+    ['/index.php', '/'],
+    ['/members/drakell', '/users/drakel'],
+    ['/memberlist.php', '/users'],
+    // No more member lounge
+    ['/forums/32', '/forums/33-off-topic-discussion'],
+    ['/forums/32-member-lounge', '/forums/33-off-topic-discussion'],
+    // "Need Help" forum merged
+    ['/forums/36', '/forums/9-suggestions-problems'],
+    ['/forums/36-need-help', '/forums/9-suggestions-problems'],
+    ['/members/gamerdude369', '/users/gamerdude369'],
+    ['/f9', '/forums/5-advanced-roleplay'],
+    ['/f8/the-morlat-death-march-8', '/f9/the-morlat-death-march-8'],
 ].forEach(([oldUrl, newUrl]) => {
-  router.get(oldUrl, async (ctx) => {
-    ctx.status = 301
-    ctx.redirect(newUrl)
-  })
+    router.get(oldUrl, async ctx => {
+        ctx.status = 301
+        ctx.redirect(newUrl)
+    })
 })
 
 router.get('member.php', async () => {
-  if (_.keys(ctx.query).includes('34089-Komamisa')) {
-    ctx.status = 301
-    ctx.redirect('/users/komamisa')
-    return
-  }
+    if (_.keys(ctx.query).includes('34089-Komamisa')) {
+        ctx.status = 301
+        ctx.redirect('/users/komamisa')
+        return
+    }
 
-  ctx.status = 404
+    ctx.status = 404
 })
 
 // 410 scraper output (also checked the t=_ version of most of these
@@ -172,25 +170,25 @@ router.get('member.php', async () => {
 ////////////////////////////////////////////////////////////
 
 const rehosted = [
-  '/f9/mechanical-possession-78',
-  '/f7/the-night-wars-3137',
-  '/f13/an-indepth-look-of-firearms-2801',
-  '/f3/rpguild-re-launched-1',
-  '/f15/rift-walkers-ooc-2015',
-  '/f9/the-morlat-death-march-8',
-  '/f10/fistfight-open-1v1-no-magic-powers-no-weapons-22',
-  '/f27/arena-basics-4119',
-  '/f13/a-basic-guide-of-weapons-and-fighting-97',
-  '/f8/the-wolves-of-the-eternal-mountain-21224'
+    '/f9/mechanical-possession-78',
+    '/f7/the-night-wars-3137',
+    '/f13/an-indepth-look-of-firearms-2801',
+    '/f3/rpguild-re-launched-1',
+    '/f15/rift-walkers-ooc-2015',
+    '/f9/the-morlat-death-march-8',
+    '/f10/fistfight-open-1v1-no-magic-powers-no-weapons-22',
+    '/f27/arena-basics-4119',
+    '/f13/a-basic-guide-of-weapons-and-fighting-97',
+    '/f8/the-wolves-of-the-eternal-mountain-21224',
 ]
 
-rehosted.forEach((url) => {
-  router.get(url, async (ctx) => {
-    await koaSend(ctx, ctx.path + '.html', {
-      root: 'legacy_html',
-      maxage: 1000 * 60 * 60 * 24 * 365
+rehosted.forEach(url => {
+    router.get(url, async ctx => {
+        await koaSend(ctx, ctx.path + '.html', {
+            root: 'legacy_html',
+            maxage: 1000 * 60 * 60 * 24 * 365,
+        })
     })
-  })
 })
 
 ////////////////////////////////////////////////////////////

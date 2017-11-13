@@ -1,26 +1,26 @@
-'use strict';
+'use strict'
 // 3rd
-const debug = require('debug')('app:db:profile-views');
-const assert = require('better-assert');
+const debug = require('debug')('app:db:profile-views')
+const assert = require('better-assert')
 // 1st
-const {pool} = require('./util')
-const {sql} = require('pg-extra')
+const { pool } = require('./util')
+const { sql } = require('pg-extra')
 
 ////////////////////////////////////////////////////////////
 
-exports.insertView = async function (viewerId, viewedId) {
-  assert(Number.isInteger(viewerId))
-  assert(Number.isInteger(viewedId))
-  return pool.query(sql`
+exports.insertView = async function(viewerId, viewedId) {
+    assert(Number.isInteger(viewerId))
+    assert(Number.isInteger(viewedId))
+    return pool.query(sql`
     INSERT INTO profile_views (viewer_id, viewed_id)
     VALUES (${viewerId}, ${viewedId})
   `)
 }
 
-exports.getLatestViews = async function (viewedId) {
-  assert(Number.isInteger(viewedId))
+exports.getLatestViews = async function(viewedId) {
+    assert(Number.isInteger(viewedId))
 
-  return pool.many(sql`
+    return pool.many(sql`
     SELECT viewers.uname
           , viewers.slug
           , viewers.avatar_url

@@ -1,15 +1,15 @@
-'use strict';
+'use strict'
 // 3rd
-const assert = require('better-assert');
+const assert = require('better-assert')
 // 1st
-const {pool} = require('./util')
-const {sql} = require('pg-extra')
+const { pool } = require('./util')
+const { sql } = require('pg-extra')
 
 ////////////////////////////////////////////////////////////
 
 // Returns [{when: '2015-7-25', count: 64}, ...]
-exports.getChatLogDays = async function () {
-  return pool.many(sql`
+exports.getChatLogDays = async function() {
+    return pool.many(sql`
     SELECT to_char(sub.day, 'YYYY-MM-DD') "when", sub.count "count"
     FROM (
       SELECT date_trunc('day', cm.created_at) "day", COUNT(cm.*) "count"
@@ -23,9 +23,9 @@ exports.getChatLogDays = async function () {
 ////////////////////////////////////////////////////////////
 
 // `when` is string 'YYYY-MM-DD'
-exports.findLogByDateTrunc = async function (when) {
-  assert(typeof when === 'string')
-  return pool.many(sql`
+exports.findLogByDateTrunc = async function(when) {
+    assert(typeof when === 'string')
+    return pool.many(sql`
     SELECT sub.*
     FROM (
       SELECT

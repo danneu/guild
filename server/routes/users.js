@@ -1,26 +1,24 @@
-'use strict';
+'use strict'
 // Node
-const util = require('util');
+const util = require('util')
 // 3rd party
-const Router = require('koa-router');
-const _ = require('lodash');
-const debug = require('debug')('app:routes:users');
+const Router = require('koa-router')
+const _ = require('lodash')
+const debug = require('debug')('app:routes:users')
 const assert = require('better-assert')
 // 1st party
-const db = require('../db');
-const belt = require('../belt');
-const pre = require('../presenters');
-const config = require('../config');
-const welcomePm = require('../welcome_pm');
-const cancan = require('../cancan');
-const avatar = require('../avatar');
-const bbcode = require('../bbcode');
+const db = require('../db')
+const belt = require('../belt')
+const pre = require('../presenters')
+const config = require('../config')
+const welcomePm = require('../welcome_pm')
+const cancan = require('../cancan')
+const avatar = require('../avatar')
+const bbcode = require('../bbcode')
 const services = require('../services')
-const {discord: {
-  broadcastManualNuke,
-  broadcastManualUnnuke,
-  broadcastBioUpdate
-}} = require('../services')
+const {
+    discord: { broadcastManualNuke, broadcastManualUnnuke, broadcastBioUpdate },
+} = require('../services')
 const cache2 = require('../cache2')
 const ipintel = require('../services/ipintel')
 
@@ -32,53 +30,53 @@ const router = new Router()
 // redirectTemplate looks like /users/<>/edit
 // if redirectTemplate is not given, we will not redirect
 // on slug mismatch
-function loadUserFromSlug (key, redirectTemplate) {
-  assert(typeof key === 'string')
-  if (redirectTemplate) {
-    assert(typeof redirectTemplate === 'string')
-    assert(redirectTemplate.includes('<>'))
-  }
-
-  return async (ctx, next) => {
-    const slug = ctx.params[key]
-    ctx.assert(slug, 404)
-
-    const user = await db.findUserBySlug(slug).then(pre.presentUser)
-    ctx.assert(user, 404)
-
-    // If url slug does not match user.slug, then this is
-    // a historic slug and we should redirect
-    if (redirectTemplate && slug !== user.slug) {
-      ctx.redirect(redirectTemplate.replace('<>', user.slug))
-      return
+function loadUserFromSlug(key, redirectTemplate) {
+    assert(typeof key === 'string')
+    if (redirectTemplate) {
+        assert(typeof redirectTemplate === 'string')
+        assert(redirectTemplate.includes('<>'))
     }
 
-    ctx.state.user = user
-    return next()
-  }
+    return async (ctx, next) => {
+        const slug = ctx.params[key]
+        ctx.assert(slug, 404)
+
+        const user = await db.findUserBySlug(slug).then(pre.presentUser)
+        ctx.assert(user, 404)
+
+        // If url slug does not match user.slug, then this is
+        // a historic slug and we should redirect
+        if (redirectTemplate && slug !== user.slug) {
+            ctx.redirect(redirectTemplate.replace('<>', user.slug))
+            return
+        }
+
+        ctx.state.user = user
+        return next()
+    }
 }
 
 ////////////////////////////////////////////////////////////
 
 // Show user alternate accounts
 //
-router.get('/users/:slug/alts', loadUserFromSlug('slug'), async (ctx) => {
-  ctx.assert(ctx.currUser && cancan.isStaffRole(ctx.currUser.role), 403)
+router.get('/users/:slug/alts', loadUserFromSlug('slug'), async ctx => {
+    ctx.assert(ctx.currUser && cancan.isStaffRole(ctx.currUser.role), 403)
 
-  const {user} = ctx.state
+    const { user } = ctx.state
 
-  const alts = await db.hits.findAltsFromUserId(user.id)
+    const alts = await db.hits.findAltsFromUserId(user.id)
 
-  // TODO: Make presenter
-  alts.forEach((alt) => {
-    pre.presentUser(alt.user)
-  })
+    // TODO: Make presenter
+    alts.forEach(alt => {
+        pre.presentUser(alt.user)
+    })
 
-  await ctx.render('list_user_alts', {
-    ctx,
-    alts,
-    user
-  })
+    await ctx.render('list_user_alts', {
+        ctx,
+        alts,
+        user,
+    })
 })
 
 ////////////////////////////////////////////////////////////
@@ -87,23 +85,28 @@ router.get('/users/:slug/alts', loadUserFromSlug('slug'), async (ctx) => {
 // Edit user
 //
 // @koa2
-router.get('/users/:slug/edit', loadUserFromSlug('slug', '/users/<>/edit'), async (ctx) => {
-  const {user} = ctx.state
-  ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER', user)
+router.get(
+    '/users/:slug/edit',
+    loadUserFromSlug('slug', '/users/<>/edit'),
+    async ctx => {
+        const { user } = ctx.state
+        ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER', user)
 
-  const lastUnameChange = await db.unames.lastUnameChange(user.id)
-  const eligibleForUnameChange = cancan.isStaffRole(ctx.currUser.role)
-    || !lastUnameChange.changed_by_id
-    || belt.isNewerThan(lastUnameChange.created_at, { months: 3 })
+        const lastUnameChange = await db.unames.lastUnameChange(user.id)
+        const eligibleForUnameChange =
+            cancan.isStaffRole(ctx.currUser.role) ||
+            !lastUnameChange.changed_by_id ||
+            belt.isNewerThan(lastUnameChange.created_at, { months: 3 })
 
-  await ctx.render('edit_user', {
-    ctx,
-    user,
-    lastUnameChange,
-    eligibleForUnameChange,
-    title: 'Edit ' + user.uname
-  })
-})
+        await ctx.render('edit_user', {
+            ctx,
+            user,
+            lastUnameChange,
+            eligibleForUnameChange,
+            title: 'Edit ' + user.uname,
+        })
+    }
+)
 
 ////////////////////////////////////////////////////////////
 
@@ -111,52 +114,62 @@ router.get('/users/:slug/edit', loadUserFromSlug('slug', '/users/<>/edit'), asyn
 //
 // Body:
 // - uname
-router.post('/users/:slug/unames', async (ctx) => {
-  ctx.assert(ctx.currUser, 404)
-  let user = await db.findUserBySlug(ctx.params.slug).then(pre.presentUser)
-  ctx.assert(user, 404)
-  ctx.assertAuthorized(ctx.currUser, 'CHANGE_UNAME', user)
+router.post('/users/:slug/unames', async ctx => {
+    ctx.assert(ctx.currUser, 404)
+    let user = await db.findUserBySlug(ctx.params.slug).then(pre.presentUser)
+    ctx.assert(user, 404)
+    ctx.assertAuthorized(ctx.currUser, 'CHANGE_UNAME', user)
 
-  // Sync with create-user endpoint
-  ctx.validateBody('uname')
-    .isString('Username required')
-    .tap((s) => s.trim())
-    .isLength(config.MIN_UNAME_LENGTH,
-              config.MAX_UNAME_LENGTH,
-              'Username must be ' + config.MIN_UNAME_LENGTH +
-              '-' + config.MAX_UNAME_LENGTH + ' characters')
-    .match(/^[a-z0-9 ]+$/i, 'Username must only contain a-z, 0-9, and spaces')
-    .match(/[a-z]/i, 'Username must contain at least one letter (a-z)')
-    .notMatch(/^[-]/, 'Username must not start with hyphens')
-    .notMatch(/[-]$/, 'Username must not end with hyphens')
-    .notMatch(/[ ]{2,}/, 'Username contains consecutive spaces')
-    .checkNot(await db.findUserByUname(ctx.vals.uname), 'Username taken')
+    // Sync with create-user endpoint
+    ctx
+        .validateBody('uname')
+        .isString('Username required')
+        .tap(s => s.trim())
+        .isLength(
+            config.MIN_UNAME_LENGTH,
+            config.MAX_UNAME_LENGTH,
+            'Username must be ' +
+                config.MIN_UNAME_LENGTH +
+                '-' +
+                config.MAX_UNAME_LENGTH +
+                ' characters'
+        )
+        .match(
+            /^[a-z0-9 ]+$/i,
+            'Username must only contain a-z, 0-9, and spaces'
+        )
+        .match(/[a-z]/i, 'Username must contain at least one letter (a-z)')
+        .notMatch(/^[-]/, 'Username must not start with hyphens')
+        .notMatch(/[-]$/, 'Username must not end with hyphens')
+        .notMatch(/[ ]{2,}/, 'Username contains consecutive spaces')
+        .checkNot(await db.findUserByUname(ctx.vals.uname), 'Username taken')
 
-  // Only admins can set recycle
-  if (ctx.currUser.role === 'admin') {
-    ctx.validateBody('recycle')
-      .toBoolean()
-  }
-
-  try {
-    user = await db.unames.changeUname({
-      userId: user.id,
-      changedById: ctx.currUser.id,
-      oldUname: user.uname,
-      newUname: ctx.vals.uname,
-      recycle: ctx.vals.recycle
-    }).then(pre.presentUser)
-  } catch (err) {
-    if (err === 'UNAME_TAKEN') {
-      ctx.flash = { message: ['danger', 'Username taken'] }
-      ctx.redirect(user.url + '/edit')
-      return
+    // Only admins can set recycle
+    if (ctx.currUser.role === 'admin') {
+        ctx.validateBody('recycle').toBoolean()
     }
-    throw err
-  }
 
-  ctx.flash = { message: ['success', 'Username updated'] }
-  ctx.redirect(user.url)
+    try {
+        user = await db.unames
+            .changeUname({
+                userId: user.id,
+                changedById: ctx.currUser.id,
+                oldUname: user.uname,
+                newUname: ctx.vals.uname,
+                recycle: ctx.vals.recycle,
+            })
+            .then(pre.presentUser)
+    } catch (err) {
+        if (err === 'UNAME_TAKEN') {
+            ctx.flash = { message: ['danger', 'Username taken'] }
+            ctx.redirect(user.url + '/edit')
+            return
+        }
+        throw err
+    }
+
+    ctx.flash = { message: ['success', 'Username updated'] }
+    ctx.redirect(user.url)
 })
 
 ////////////////////////////////////////////////////////////
@@ -170,125 +183,142 @@ router.post('/users/:slug/unames', async (ctx) => {
 // - g-recaptcha-response
 //
 // @koa2
-router.post('/users', async (ctx) => {
-  if (!(await db.keyvals.getValueByKey('REGISTRATION_ENABLED'))) {
-    return ctx.redirect('/register');
-  }
-
-  // Validation
-
-  ctx.validateBody('uname')
-    .isString('Username required')
-    .tap((s) => s.trim())
-    .isLength(config.MIN_UNAME_LENGTH,
-              config.MAX_UNAME_LENGTH,
-              'Username must be ' + config.MIN_UNAME_LENGTH +
-              '-' + config.MAX_UNAME_LENGTH + ' characters')
-    .match(/^[a-z0-9 ]+$/i, 'Username must only contain a-z, 0-9, and spaces')
-    .match(/[a-z]/i, 'Username must contain at least one letter (a-z)')
-    .notMatch(/^[-]/, 'Username must not start with hyphens')
-    .notMatch(/[-]$/, 'Username must not end with hyphens')
-    .notMatch(/[ ]{2,}/, 'Username contains consecutive spaces')
-    .checkNot(await db.findUserByUname(ctx.vals.uname), 'Username taken');
-  ctx.validateBody('email')
-    .isEmail('Email must be valid')
-    .checkNot(await db.findUserByEmail(ctx.vals.email), 'Email taken');
-  ctx.validateBody('password2')
-    .isString('Password confirmation required');
-  ctx.validateBody('password1')
-    .isString('Password required')
-    .isLength(6, 100, 'Password must be at least 6 chars long')
-    .eq(ctx.vals.password2, 'Password confirmation must match');
-
-  // In production, check recaptcha against google
-  if (config.NODE_ENV === 'production') {
-    ctx.validateBody('g-recaptcha-response')
-      .isString('You must attempt the human test')
-
-    const passedRecaptcha = await belt.makeRecaptchaRequest(ctx.vals['g-recaptcha-response'], ctx.request.ip)
-
-    if (!passedRecaptcha) {
-      ctx.flash = {
-        message: ['danger', 'You failed the recaptcha challenge'],
-        params: ctx.request.body
-      }
-      return ctx.response.redirect('/register')
+router.post('/users', async ctx => {
+    if (!await db.keyvals.getValueByKey('REGISTRATION_ENABLED')) {
+        return ctx.redirect('/register')
     }
-  }
 
-  // User params validated, so create a user and log them in
-  let user
-  let session
-  let errMessage
-  try {
-    ({user, session} = await db.createUserWithSession({
-      uname: ctx.vals.uname,
-      email: ctx.vals.email,
-      password: ctx.vals.password1,
-      ipAddress: ctx.request.ip
-    }))
-  } catch (ex) {
-    switch (ex) {
-      case 'UNAME_TAKEN':
-        errMessage = 'Username is taken'
-        break
-      case 'EMAIL_TAKEN':
-        errMessage = 'Email is taken'
-        break
-      default:
-        throw ex
+    // Validation
+
+    ctx
+        .validateBody('uname')
+        .isString('Username required')
+        .tap(s => s.trim())
+        .isLength(
+            config.MIN_UNAME_LENGTH,
+            config.MAX_UNAME_LENGTH,
+            'Username must be ' +
+                config.MIN_UNAME_LENGTH +
+                '-' +
+                config.MAX_UNAME_LENGTH +
+                ' characters'
+        )
+        .match(
+            /^[a-z0-9 ]+$/i,
+            'Username must only contain a-z, 0-9, and spaces'
+        )
+        .match(/[a-z]/i, 'Username must contain at least one letter (a-z)')
+        .notMatch(/^[-]/, 'Username must not start with hyphens')
+        .notMatch(/[-]$/, 'Username must not end with hyphens')
+        .notMatch(/[ ]{2,}/, 'Username contains consecutive spaces')
+        .checkNot(await db.findUserByUname(ctx.vals.uname), 'Username taken')
+    ctx
+        .validateBody('email')
+        .isEmail('Email must be valid')
+        .checkNot(await db.findUserByEmail(ctx.vals.email), 'Email taken')
+    ctx.validateBody('password2').isString('Password confirmation required')
+    ctx
+        .validateBody('password1')
+        .isString('Password required')
+        .isLength(6, 100, 'Password must be at least 6 chars long')
+        .eq(ctx.vals.password2, 'Password confirmation must match')
+
+    // In production, check recaptcha against google
+    if (config.NODE_ENV === 'production') {
+        ctx
+            .validateBody('g-recaptcha-response')
+            .isString('You must attempt the human test')
+
+        const passedRecaptcha = await belt.makeRecaptchaRequest(
+            ctx.vals['g-recaptcha-response'],
+            ctx.request.ip
+        )
+
+        if (!passedRecaptcha) {
+            ctx.flash = {
+                message: ['danger', 'You failed the recaptcha challenge'],
+                params: ctx.request.body,
+            }
+            return ctx.response.redirect('/register')
+        }
     }
-  }
 
-  pre.presentUser(user)
+    // User params validated, so create a user and log them in
+    let user
+    let session
+    let errMessage
+    try {
+        ;({ user, session } = await db.createUserWithSession({
+            uname: ctx.vals.uname,
+            email: ctx.vals.email,
+            password: ctx.vals.password1,
+            ipAddress: ctx.request.ip,
+        }))
+    } catch (ex) {
+        switch (ex) {
+            case 'UNAME_TAKEN':
+                errMessage = 'Username is taken'
+                break
+            case 'EMAIL_TAKEN':
+                errMessage = 'Email is taken'
+                break
+            default:
+                throw ex
+        }
+    }
 
-  if (errMessage) {
-    ctx.flash = {
-      message: ['danger', errMessage],
-      params: ctx.request.body
-    };
-    return ctx.response.redirect('/register');
-  }
+    pre.presentUser(user)
 
-  // Log in the user
-  ctx.cookies.set('sessionId', session.id, {
-    expires: belt.futureDate({ years: 1 })
-  });
+    if (errMessage) {
+        ctx.flash = {
+            message: ['danger', errMessage],
+            params: ctx.request.body,
+        }
+        return ctx.response.redirect('/register')
+    }
 
-  // Send user the introductory PM
-  if (config.STAFF_REPRESENTATIVE_ID && cache2.get('welcome-post')) {
-    const {markup, html} = cache2.get('welcome-post')
-    const convo = await db.createConvo({
-      userId: config.STAFF_REPRESENTATIVE_ID,
-      toUserIds: [user.id],
-      title: 'RPGuild Welcome Package',
-      markup,
-      html
+    // Log in the user
+    ctx.cookies.set('sessionId', session.id, {
+        expires: belt.futureDate({ years: 1 }),
     })
 
-    // Create CONVO notification
-    await db.createConvoNotification({
-      from_user_id: config.STAFF_REPRESENTATIVE_ID,
-      to_user_id: user.id,
-      convo_id: convo.id
-    })
-  }
+    // Send user the introductory PM
+    if (config.STAFF_REPRESENTATIVE_ID && cache2.get('welcome-post')) {
+        const { markup, html } = cache2.get('welcome-post')
+        const convo = await db.createConvo({
+            userId: config.STAFF_REPRESENTATIVE_ID,
+            toUserIds: [user.id],
+            title: 'RPGuild Welcome Package',
+            markup,
+            html,
+        })
 
-  // Broadcast user join to Discord #staff-only
-  services.discord.broadcastUserJoin(user)
-    .catch((err) => console.error('broadcastUserJoin failed', err))
+        // Create CONVO notification
+        await db.createConvoNotification({
+            from_user_id: config.STAFF_REPRESENTATIVE_ID,
+            to_user_id: user.id,
+            convo_id: convo.id,
+        })
+    }
 
-  // In background, see if user is using a bad IP address
-  const ipAddress = config.NODE_ENV === 'development' && ctx.cookies.get('ip-override')
-    ? ctx.cookies.get('ip-override')
-    : ctx.ip
+    // Broadcast user join to Discord #staff-only
+    services.discord
+        .broadcastUserJoin(user)
+        .catch(err => console.error('broadcastUserJoin failed', err))
 
-  ipintel.process(ipAddress, user)
-    .catch((err) => console.error('ipintel.process failed', err))
+    // In background, see if user is using a bad IP address
+    const ipAddress =
+        config.NODE_ENV === 'development' && ctx.cookies.get('ip-override')
+            ? ctx.cookies.get('ip-override')
+            : ctx.ip
 
-  ctx.flash = { message: ['success', 'Registered successfully'] };
-  return ctx.response.redirect('/');
-});
+    ipintel
+        .process(ipAddress, user)
+        .catch(err => console.error('ipintel.process failed', err))
+
+    ctx.flash = { message: ['success', 'Registered successfully'] }
+    return ctx.response.redirect('/')
+})
 
 //// TODO: DRY up all of these individual PUT routes
 //// While I like the simplicity of individual logic per route,
@@ -298,41 +328,45 @@ router.post('/users', async (ctx) => {
 // Update user role
 //
 // @koa2
-router.put('/users/:slug/role', async (ctx) => {
-  ctx.validateBody('role')
-    .isIn(['banned', 'member', 'mod', 'conmod', 'arenamod', 'smod', 'admin'], 'Invalid role');
-  // TODO: Authorize role param against role of both parties
-  const user = await db.findUserBySlug(ctx.params.slug);
-  ctx.assert(user, 404);
-  ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER_ROLE', user);
+router.put('/users/:slug/role', async ctx => {
+    ctx
+        .validateBody('role')
+        .isIn(
+            ['banned', 'member', 'mod', 'conmod', 'arenamod', 'smod', 'admin'],
+            'Invalid role'
+        )
+    // TODO: Authorize role param against role of both parties
+    const user = await db.findUserBySlug(ctx.params.slug)
+    ctx.assert(user, 404)
+    ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER_ROLE', user)
 
-  // smod can set any roles except admin/smod
-  if (ctx.currUser.role === 'smod') {
-    ctx.validateBody('role')
-      .isIn(['banned', 'member', 'conmod', 'mod'], 'Invalid role');
-  } else if (ctx.currUser.role === 'mod') {
-    // mod can only set roles to member and below
-    ctx.validateBody('role')
-      .isIn(['banned', 'member'], 'Invalid role');
-  }
+    // smod can set any roles except admin/smod
+    if (ctx.currUser.role === 'smod') {
+        ctx
+            .validateBody('role')
+            .isIn(['banned', 'member', 'conmod', 'mod'], 'Invalid role')
+    } else if (ctx.currUser.role === 'mod') {
+        // mod can only set roles to member and below
+        ctx.validateBody('role').isIn(['banned', 'member'], 'Invalid role')
+    }
 
-  await db.updateUserRole(user.id, ctx.request.body.role);
-  pre.presentUser(user);
-  ctx.flash = { message: ['success', 'User role updated'] };
-  ctx.response.redirect(user.url + '/edit');
-});
+    await db.updateUserRole(user.id, ctx.request.body.role)
+    pre.presentUser(user)
+    ctx.flash = { message: ['success', 'User role updated'] }
+    ctx.response.redirect(user.url + '/edit')
+})
 
 ////////////////////////////////////////////////////////////
 
 // Delete legacy sig
-router.delete('/users/:slug/legacy-sig', async (ctx) => {
-  const user = await db.findUserBySlug(ctx.params.slug);
-  ctx.assert(user, 404);
-  ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER', user);
-  await db.deleteLegacySig(user.id);
-  ctx.flash = { message: ['success', 'Legacy sig deleted'] };
-  ctx.response.redirect('/users/' + ctx.params.slug + '/edit');
-});
+router.delete('/users/:slug/legacy-sig', async ctx => {
+    const user = await db.findUserBySlug(ctx.params.slug)
+    ctx.assert(user, 404)
+    ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER', user)
+    await db.deleteLegacySig(user.id)
+    ctx.flash = { message: ['success', 'Legacy sig deleted'] }
+    ctx.response.redirect('/users/' + ctx.params.slug + '/edit')
+})
 
 ////////////////////////////////////////////////////////////
 
@@ -341,46 +375,53 @@ router.delete('/users/:slug/legacy-sig', async (ctx) => {
 // - markup: String
 //
 // @koa2
-router.put('/api/users/:id/bio', async (ctx) => {
-  // Validation markup
-  ctx.validateBody('markup')
-    .trim()
-    .isLength(0, config.MAX_BIO_LENGTH,
-              `Bio must be 0-${config.MAX_BIO_LENGTH} chars`);
+router.put('/api/users/:id/bio', async ctx => {
+    // Validation markup
+    ctx
+        .validateBody('markup')
+        .trim()
+        .isLength(
+            0,
+            config.MAX_BIO_LENGTH,
+            `Bio must be 0-${config.MAX_BIO_LENGTH} chars`
+        )
 
-  const user = await db.findUserById(ctx.params.id);
-  ctx.assert(user, 404);
+    const user = await db.findUserById(ctx.params.id)
+    ctx.assert(user, 404)
 
-  // Ensure currUser has permission to update user
-  ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER', user);
+    // Ensure currUser has permission to update user
+    ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER', user)
 
-  // Ensure they have at least one post and an avatar_url
-  if (ctx.currUser.role === 'member') {
-    ctx.assert(ctx.currUser.posts_count > 0 && ctx.currUser.avatar_url, 403)
-  }
+    // Ensure they have at least one post and an avatar_url
+    if (ctx.currUser.role === 'member') {
+        ctx.assert(ctx.currUser.posts_count > 0 && ctx.currUser.avatar_url, 403)
+    }
 
-  // Validation succeeded
-  // Render markup to html
-  var html = '';
-  if (ctx.request.body.markup.length > 0) {
-    html = bbcode(ctx.request.body.markup);
-  }
+    // Validation succeeded
+    // Render markup to html
+    var html = ''
+    if (ctx.request.body.markup.length > 0) {
+        html = bbcode(ctx.request.body.markup)
+    }
 
-  // Save markup and html
-  const updatedUser = await db.updateUserBio(
-    user.id, ctx.request.body.markup, html
-  );
+    // Save markup and html
+    const updatedUser = await db.updateUserBio(
+        user.id,
+        ctx.request.body.markup,
+        html
+    )
 
-  ctx.body = JSON.stringify(updatedUser);
+    ctx.body = JSON.stringify(updatedUser)
 
-  // Broadcast to Discord if they are setting their bio (not just making an edit)
-  // and they only have a couple posts
-  const bioSet = !user.bio_markup && updatedUser.bio_markup
-  if (user.posts_count <= 2 && bioSet) {
-    broadcastBioUpdate(user, updatedUser.bio_markup)
-      .catch((err) => console.error('broadcastBioUpdate error', err))
-  }
-});
+    // Broadcast to Discord if they are setting their bio (not just making an edit)
+    // and they only have a couple posts
+    const bioSet = !user.bio_markup && updatedUser.bio_markup
+    if (user.posts_count <= 2 && bioSet) {
+        broadcastBioUpdate(user, updatedUser.bio_markup).catch(err =>
+            console.error('broadcastBioUpdate error', err)
+        )
+    }
+})
 
 //
 // Update user
@@ -403,119 +444,134 @@ router.put('/api/users/:id/bio', async (ctx) => {
 // - show_arena_stats
 //
 // @koa2
-router.put('/users/:slug', async (ctx) => {
-  debug('BEFORE', ctx.request.body);
+router.put('/users/:slug', async ctx => {
+    debug('BEFORE', ctx.request.body)
 
-  ctx.validateBody('email')
-    .optional()
-    .isEmail('Invalid email address');
-  ctx.validateBody('sig')
-    .optional();
-  ctx.validateBody('avatar-url')
-    .optional();
+    ctx
+        .validateBody('email')
+        .optional()
+        .isEmail('Invalid email address')
+    ctx.validateBody('sig').optional()
+    ctx.validateBody('avatar-url').optional()
 
-  if (typeof ctx.request.body['custom-title'] === 'string') {
-    ctx.validateBody('custom-title')
-      .tap((s) => s.trim())
-      .isLength(0, 50, 'custom-title can be up to 50 chars. Yours was ' + ctx.request.body['custom-title'].length + '.')
-  }
-  if (ctx.request.body['avatar-url'] && ctx.request.body['avatar-url'].length > 0)
-    ctx.validateBody('avatar-url')
-      .tap((s) => s.trim())
-      .isUrl('Must specify a URL for the avatar');
-  // Coerce checkboxes to bool only if they are defined
-  if (!_.isUndefined(ctx.request.body['hide-sigs']))
-    ctx.validateBody('hide-sigs')
-       .tap((x) => x !== 'off')
-  if (!_.isUndefined(ctx.request.body['hide-avatars']))
-    ctx.validateBody('hide-avatars')
-       .tap((x) => x !== 'off')
-  if (!_.isUndefined(ctx.request.body['is-ghost']))
-    ctx.validateBody('is-ghost')
-       .tap((x) => x !== 'off')
-  if (!_.isUndefined(ctx.request.body['is-grayscale']))
-    ctx.validateBody('is-grayscale')
-       .tap((x) => x !== 'off')
-  if (!_.isUndefined(ctx.request.body['force-device-width']))
-    ctx.validateBody('force-device-width')
-       .tap((x) => x !== 'off')
-  if (!_.isUndefined(ctx.request.body.show_arena_stats))
-    ctx.validateBody('show_arena_stats')
-       .tap((x) => x !== 'off')
-
-  debug('AFTER', ctx.request.body);
-  debug(ctx.vals)
-
-  var user = await db.findUserBySlug(ctx.params.slug);
-  ctx.assert(user, 404);
-  ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER', user);
-
-  var sig_html, sig_markup;
-  // User is only updating their sig if `sig` is a string.
-  // If it's a blank string, then user is trying to clear their sig
-  if (_.isString(ctx.request.body.sig))
-    if (ctx.request.body.sig.trim().length > 0) {
-      sig_html = bbcode(ctx.request.body.sig)
-      sig_markup = ctx.request.body.sig.trim()
-    } else {
-      sig_html = ''
-      sig_markup = ''
+    if (typeof ctx.request.body['custom-title'] === 'string') {
+        ctx
+            .validateBody('custom-title')
+            .tap(s => s.trim())
+            .isLength(
+                0,
+                50,
+                'custom-title can be up to 50 chars. Yours was ' +
+                    ctx.request.body['custom-title'].length +
+                    '.'
+            )
     }
+    if (
+        ctx.request.body['avatar-url'] &&
+        ctx.request.body['avatar-url'].length > 0
+    )
+        ctx
+            .validateBody('avatar-url')
+            .tap(s => s.trim())
+            .isUrl('Must specify a URL for the avatar')
+    // Coerce checkboxes to bool only if they are defined
+    if (!_.isUndefined(ctx.request.body['hide-sigs']))
+        ctx.validateBody('hide-sigs').tap(x => x !== 'off')
+    if (!_.isUndefined(ctx.request.body['hide-avatars']))
+        ctx.validateBody('hide-avatars').tap(x => x !== 'off')
+    if (!_.isUndefined(ctx.request.body['is-ghost']))
+        ctx.validateBody('is-ghost').tap(x => x !== 'off')
+    if (!_.isUndefined(ctx.request.body['is-grayscale']))
+        ctx.validateBody('is-grayscale').tap(x => x !== 'off')
+    if (!_.isUndefined(ctx.request.body['force-device-width']))
+        ctx.validateBody('force-device-width').tap(x => x !== 'off')
+    if (!_.isUndefined(ctx.request.body.show_arena_stats))
+        ctx.validateBody('show_arena_stats').tap(x => x !== 'off')
 
-  // TODO: use db.users.updateUser
+    debug('AFTER', ctx.request.body)
+    debug(ctx.vals)
 
-  try {
-    await db.updateUser(user.id, {
-      email: ctx.vals.email || user.email,
-      sig: sig_markup,
-      sig_html: sig_html,
-      custom_title: ctx.vals['custom-title'],
-      avatar_url: ctx.request.body['avatar-url'],
-      hide_sigs: _.isBoolean(ctx.vals['hide-sigs'])
-                  ? ctx.vals['hide-sigs']
-                  : user.hide_sigs,
-      hide_avatars: _.isBoolean(ctx.vals['hide-avatars'])
-                  ? ctx.vals['hide-avatars']
-                  : user.hide_avatars,
-      is_ghost: _.isBoolean(ctx.vals['is-ghost'])
-                  ? ctx.vals['is-ghost']
-                  : user.is_ghost,
-      is_grayscale: _.isBoolean(ctx.vals['is-grayscale'])
-                  ? ctx.vals['is-grayscale']
-                  : user.is_grayscale,
-      force_device_width: _.isBoolean(ctx.vals['force-device-width'])
-                  ? ctx.vals['force-device-width']
-                  : user.force_device_width,
-      show_arena_stats: _.isBoolean(ctx.vals.show_arena_stats)
-                  ? ctx.vals.show_arena_stats
-                  : user.show_arena_stats
-    });
-  } catch (err) {
-    if (err === 'EMAIL_TAKEN') {
-      ctx.flash = { message: ['danger', `The email <${ctx.vals.email}> is already in use. Send a PM to Mahz if you want an email address migrated to this account.`] }
-      ctx.redirect('back')
-      return
+    var user = await db.findUserBySlug(ctx.params.slug)
+    ctx.assert(user, 404)
+    ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER', user)
+
+    var sig_html, sig_markup
+    // User is only updating their sig if `sig` is a string.
+    // If it's a blank string, then user is trying to clear their sig
+    if (_.isString(ctx.request.body.sig))
+        if (ctx.request.body.sig.trim().length > 0) {
+            sig_html = bbcode(ctx.request.body.sig)
+            sig_markup = ctx.request.body.sig.trim()
+        } else {
+            sig_html = ''
+            sig_markup = ''
+        }
+
+    // TODO: use db.users.updateUser
+
+    try {
+        await db.updateUser(user.id, {
+            email: ctx.vals.email || user.email,
+            sig: sig_markup,
+            sig_html: sig_html,
+            custom_title: ctx.vals['custom-title'],
+            avatar_url: ctx.request.body['avatar-url'],
+            hide_sigs: _.isBoolean(ctx.vals['hide-sigs'])
+                ? ctx.vals['hide-sigs']
+                : user.hide_sigs,
+            hide_avatars: _.isBoolean(ctx.vals['hide-avatars'])
+                ? ctx.vals['hide-avatars']
+                : user.hide_avatars,
+            is_ghost: _.isBoolean(ctx.vals['is-ghost'])
+                ? ctx.vals['is-ghost']
+                : user.is_ghost,
+            is_grayscale: _.isBoolean(ctx.vals['is-grayscale'])
+                ? ctx.vals['is-grayscale']
+                : user.is_grayscale,
+            force_device_width: _.isBoolean(ctx.vals['force-device-width'])
+                ? ctx.vals['force-device-width']
+                : user.force_device_width,
+            show_arena_stats: _.isBoolean(ctx.vals.show_arena_stats)
+                ? ctx.vals.show_arena_stats
+                : user.show_arena_stats,
+        })
+    } catch (err) {
+        if (err === 'EMAIL_TAKEN') {
+            ctx.flash = {
+                message: [
+                    'danger',
+                    `The email <${
+                        ctx.vals.email
+                    }> is already in use. Send a PM to Mahz if you want an email address migrated to this account.`,
+                ],
+            }
+            ctx.redirect('back')
+            return
+        }
+        throw err
     }
-    throw err
-  }
-  user = pre.presentUser(user);
-  ctx.flash = { message: ['success', 'User updated'] };
-  ctx.response.redirect(user.url + '/edit');
-});
+    user = pre.presentUser(user)
+    ctx.flash = { message: ['success', 'User updated'] }
+    ctx.response.redirect(user.url + '/edit')
+})
 
 //
 // Search users
 // checked
-router.get('/users', async (ctx) => {
-  ctx.assertAuthorized(ctx.currUser, 'READ_USER_LIST');
+router.get('/users', async ctx => {
+    ctx.assertAuthorized(ctx.currUser, 'READ_USER_LIST')
 
-  // undefined || String
-  ctx.validateQuery('text')
-    .optional()
-    .isLength(3, 15, 'Username must be 3-15 chars');
-  ctx.validateQuery('before-id').optional().toInt();  // undefined || Number
+    // undefined || String
+    ctx
+        .validateQuery('text')
+        .optional()
+        .isLength(3, 15, 'Username must be 3-15 chars')
+    ctx
+        .validateQuery('before-id')
+        .optional()
+        .toInt() // undefined || Number
 
-  /* if (ctx.errors) {
+    /* if (ctx.errors) {
    *   ctx.flash = {
    *     message: ['danger', belt.joinErrors(ctx.errors)],
    *     params: ctx.request.body
@@ -524,36 +580,39 @@ router.get('/users', async (ctx) => {
    *   return;
    * }
    */
-  var usersList = [];
-  if (ctx.query['before-id']) {
-    if (ctx.query['text']) {
-      usersList = await db.findUsersContainingStringWithId(ctx.vals['text'], ctx.vals['before-id'])
+    var usersList = []
+    if (ctx.query['before-id']) {
+        if (ctx.query['text']) {
+            usersList = await db.findUsersContainingStringWithId(
+                ctx.vals['text'],
+                ctx.vals['before-id']
+            )
+        } else {
+            usersList = await db.paginateUsers(ctx.vals['before-id'])
+        }
+    } else if (ctx.vals['text']) {
+        usersList = await db.findUsersContainingString(ctx.vals['text'])
     } else {
-      usersList = await db.paginateUsers(ctx.vals['before-id'])
+        usersList = await db.paginateUsers()
     }
-  } else if (ctx.vals['text']) {
-    usersList = await db.findUsersContainingString(ctx.vals['text'])
-  } else {
-    usersList = await db.paginateUsers()
-  }
 
-  usersList.forEach(pre.presentUser)
+    usersList.forEach(pre.presentUser)
 
-  const nextBeforeId = _.last(usersList) ? _.last(usersList).id : null
+    const nextBeforeId = _.last(usersList) ? _.last(usersList).id : null
 
-  ctx.set('X-Robots-Tag', 'noindex')
+    ctx.set('X-Robots-Tag', 'noindex')
 
-  await ctx.render('search_users', {
-    ctx,
-    term: ctx.query['text'],
-    title: 'Search Users',
-    usersList,
-    // Pagination
-    beforeId: ctx.query['before-id'],
-    nextBeforeId,
-    usersPerPage: config.USERS_PER_PAGE
-  });
-});
+    await ctx.render('search_users', {
+        ctx,
+        term: ctx.query['text'],
+        title: 'Search Users',
+        usersList,
+        // Pagination
+        beforeId: ctx.query['before-id'],
+        nextBeforeId,
+        usersPerPage: config.USERS_PER_PAGE,
+    })
+})
 
 //
 // Show user
@@ -562,187 +621,206 @@ router.get('/users', async (ctx) => {
 // We want to redirect those URLs to /users/some-username
 // The purpose of this effort is to not break old URLs, but rather
 // redirect them to the new URLs
-router.get('/users/:userIdOrSlug', async (ctx) => {
-  // If param is all numbers, then assume it's a user-id.
-  // Note: There are some users in the database with only digits in their name
-  // which is not possible anymore since unames require at least one a-z letter.
-  let user;
-  if (/^\d+$/.test(ctx.params.userIdOrSlug)) {
+router.get('/users/:userIdOrSlug', async ctx => {
+    // If param is all numbers, then assume it's a user-id.
+    // Note: There are some users in the database with only digits in their name
+    // which is not possible anymore since unames require at least one a-z letter.
+    let user
+    if (/^\d+$/.test(ctx.params.userIdOrSlug)) {
+        // First, see if it's one of the users with all-digit usernames (legacy)
+        user = await db.findUserBySlug(ctx.params.userIdOrSlug)
 
-    // First, see if it's one of the users with all-digit usernames (legacy)
-    user = await db.findUserBySlug(ctx.params.userIdOrSlug);
+        if (user && user.slug !== ctx.params.userIdOrSlug) {
+            ctx.redirect('/users/' + user.slug)
+            return
+        }
 
-    if (user && user.slug !== ctx.params.userIdOrSlug) {
-      ctx.redirect('/users/' + user.slug)
-      return
+        // Then we see if it's an ID
+        if (!user) {
+            user = await db.findUser(ctx.params.userIdOrSlug)
+            ctx.assert(user, 404)
+            ctx.redirect('/users/' + user.slug)
+            return
+        }
     }
 
-    // Then we see if it's an ID
-    if (!user) {
-      user = await db.findUser(ctx.params.userIdOrSlug)
-      ctx.assert(user, 404)
-      ctx.redirect('/users/' + user.slug)
-      return
+    ctx
+        .validateQuery('before-id')
+        .optional()
+        .toInt() // will be undefined or number
+    var userId = ctx.params.userIdOrSlug
+
+    // FIXME: Keep in sync with cancan READ_USER_RATINGS_TABLE
+    // If currUser is a guest or if currUser is
+    if (
+        ctx.currUser &&
+        (cancan.isStaffRole(ctx.currUser.role) || ctx.currUser.slug === userId)
+    )
+        user = await db.findUserWithRatingsBySlug(userId)
+    else user = await db.findUserBySlug(userId)
+    // Ensure user exists
+    ctx.assert(user, 404)
+    user = pre.presentUser(user)
+
+    if (user.slug !== ctx.params.userIdOrSlug) {
+        ctx.redirect('/users/' + user.slug)
+        return
     }
-  }
 
-  ctx.validateQuery('before-id').optional().toInt();  // will be undefined or number
-  var userId = ctx.params.userIdOrSlug;
+    // OPTIMIZE: Merge into single query?
+    var recentPosts = await db.findRecentPostsForUserId(
+        user.id,
+        ctx.vals['before-id']
+    )
+    // TODO: Figure out how to do this so I'm not possibly serving empty or
+    //       partial pages since they're being filtered post-query.
+    // Filter out posts that currUser is unauthorized to see
+    recentPosts = recentPosts.filter(post => {
+        return cancan.can(ctx.currUser, 'READ_POST', post)
+    })
+    recentPosts = recentPosts.map(pre.presentPost)
 
-  // FIXME: Keep in sync with cancan READ_USER_RATINGS_TABLE
-  // If currUser is a guest or if currUser is
-  if (ctx.currUser &&
-      (cancan.isStaffRole(ctx.currUser.role) || ctx.currUser.slug === userId))
-    user = await db.findUserWithRatingsBySlug(userId);
-  else
-    user = await db.findUserBySlug(userId);
-  // Ensure user exists
-  ctx.assert(user, 404);
-  user = pre.presentUser(user);
+    // FIXME: Way too many queries in this route.
 
-  if (user.slug !== ctx.params.userIdOrSlug) {
-    ctx.redirect('/users/' + user.slug)
-    return
-  }
+    // Only show members in the profile viewers list, esp. not staff or banned.
+    if (
+        ctx.currUser &&
+        ctx.currUser.id !== user.id &&
+        ctx.currUser.role === 'member'
+    ) {
+        // insert in the background
+        db.profileViews
+            .insertView(ctx.currUser.id, user.id)
+            .catch(err => console.error('insertView error', err, err.stack))
+    }
 
-  // OPTIMIZE: Merge into single query?
-  var recentPosts = await db.findRecentPostsForUserId(
-    user.id, ctx.vals['before-id']
-  );
-  // TODO: Figure out how to do this so I'm not possibly serving empty or
-  //       partial pages since they're being filtered post-query.
-  // Filter out posts that currUser is unauthorized to see
-  recentPosts = recentPosts.filter((post) => {
-    return cancan.can(ctx.currUser, 'READ_POST', post);
-  })
-  recentPosts = recentPosts.map(pre.presentPost);
+    const [statuses, friendship, latestViewers] = await Promise.all([
+        db.findLatestStatusesForUserId(user.id),
+        ctx.currUser
+            ? db.findFriendshipBetween(ctx.currUser.id, user.id)
+            : null,
+        db.profileViews
+            .getLatestViews(user.id)
+            .then(xs => xs.map(pre.presentUser)),
+    ])
 
-  // FIXME: Way too many queries in this route.
+    // Load approval if currUser can see it
+    const approver =
+        ctx.currUser && cancan.isStaffRole(ctx.currUser.role)
+            ? await db.findUserById(user.approved_by_id).then(pre.presentUser)
+            : null
 
-  // Only show members in the profile viewers list, esp. not staff or banned.
-  if (ctx.currUser && ctx.currUser.id !== user.id && ctx.currUser.role === 'member') {
-    // insert in the background
-    db.profileViews.insertView(ctx.currUser.id, user.id)
-      .catch((err) => console.error('insertView error', err, err.stack))
-  }
+    // The ?before-id=_ of the "Next" button. i.e. the lowest
+    // id of the posts on the current page
+    const nextBeforeId = recentPosts.length > 0 ? _.last(recentPosts).id : null
 
-  const [statuses, friendship, latestViewers] = await Promise.all([
-    db.findLatestStatusesForUserId(user.id),
-    ctx.currUser
-      ? db.findFriendshipBetween(ctx.currUser.id, user.id) : null,
-    db.profileViews.getLatestViews(user.id)
-      .then((xs) => xs.map(pre.presentUser))
-  ])
+    ctx.set(
+        'Link',
+        util.format('<%s>; rel="canonical"', config.HOST + user.url)
+    )
 
-  // Load approval if currUser can see it
-  const approver = (ctx.currUser && cancan.isStaffRole(ctx.currUser.role))
-    ? await db.findUserById(user.approved_by_id).then(pre.presentUser)
-    : null
+    // For view
+    user.posts_per_day = (
+        user.posts_count / (belt.daysAgo(user.created_at) || 1)
+    ).toFixed(2)
 
-  // The ?before-id=_ of the "Next" button. i.e. the lowest
-  // id of the posts on the current page
-  const nextBeforeId = recentPosts.length > 0 ? _.last(recentPosts).id : null;
-
-  ctx.set('Link', util.format('<%s>; rel="canonical"', config.HOST + user.url));
-
-  // For view
-  user.posts_per_day = (user.posts_count / (belt.daysAgo(user.created_at) || 1))
-    .toFixed(2)
-
-  await ctx.render('show_user', {
-    ctx,
-    user,
-    recentPosts,
-    title: user.uname,
-    statuses,
-    currStatus: statuses.find((x) => x.id === user.current_status_id),
-    friendship,
-    approver,
-    latestViewers,
-    // Pagination
-    nextBeforeId,
-    recentPostsPerPage: config.RECENT_POSTS_PER_PAGE
-  });
-});
+    await ctx.render('show_user', {
+        ctx,
+        user,
+        recentPosts,
+        title: user.uname,
+        statuses,
+        currStatus: statuses.find(x => x.id === user.current_status_id),
+        friendship,
+        approver,
+        latestViewers,
+        // Pagination
+        nextBeforeId,
+        recentPostsPerPage: config.RECENT_POSTS_PER_PAGE,
+    })
+})
 
 //
 // Show user trophies
 //
 // TODO: Sync up with regular show-user route
-router.get('/users/:slug/trophies', async (ctx) => {
-  const user = await db.findUserWithRatingsBySlug(ctx.params.slug)
-    .then(pre.presentUser)
-  ctx.assert(user, 404);
+router.get('/users/:slug/trophies', async ctx => {
+    const user = await db
+        .findUserWithRatingsBySlug(ctx.params.slug)
+        .then(pre.presentUser)
+    ctx.assert(user, 404)
 
-  // TODO: Merge this query into the findUser query
-  // Until then, only execute query if user's column cache indicates that
-  // they actually have trophies
-  let trophies = user.trophy_count === 0
-    ? []
-    : (await db.findTrophiesForUserId(user.id))
-        // Hide anon trophies from their list
-        // TODO: Display anon trophies as a mysterious trophy
-        .filter((t) => !t.is_anon)
-        .map(pre.presentTrophy)
+    // TODO: Merge this query into the findUser query
+    // Until then, only execute query if user's column cache indicates that
+    // they actually have trophies
+    let trophies =
+        user.trophy_count === 0
+            ? []
+            : (await db.findTrophiesForUserId(user.id))
+                  // Hide anon trophies from their list
+                  // TODO: Display anon trophies as a mysterious trophy
+                  .filter(t => !t.is_anon)
+                  .map(pre.presentTrophy)
 
-  trophies = _.sortBy(trophies, [
-    // Put the activeTrophy on top if there is one
-    (t) => t.id === user.active_trophy_id ? 0 : 1,
-    // Sort the rest by newest first
-    (t) => -t.awarded_at
-  ]);
+    trophies = _.sortBy(trophies, [
+        // Put the activeTrophy on top if there is one
+        t => (t.id === user.active_trophy_id ? 0 : 1),
+        // Sort the rest by newest first
+        t => -t.awarded_at,
+    ])
 
-  const [statuses, friendship] = await Promise.all([
-    db.findLatestStatusesForUserId(user.id),
-    ctx.currUser ? db.findFriendshipBetween(ctx.currUser.id, user.id) : null
-  ])
+    const [statuses, friendship] = await Promise.all([
+        db.findLatestStatusesForUserId(user.id),
+        ctx.currUser
+            ? db.findFriendshipBetween(ctx.currUser.id, user.id)
+            : null,
+    ])
 
-  await ctx.render('show_user_trophies', {
-    ctx,
-    user,
-    trophies,
-    statuses,
-    currStatus: statuses.find((x) => x.id === user.current_status_id),
-    friendship,
-  });
-});
+    await ctx.render('show_user_trophies', {
+        ctx,
+        user,
+        trophies,
+        statuses,
+        currStatus: statuses.find(x => x.id === user.current_status_id),
+        friendship,
+    })
+})
 
 //
 // Show user's VM
 //
 // This route is for use on the /me/notifications page since it
 // will clear the notification for this VM
-router.get('/me/vms/:id', async (ctx) => {
-  ctx.assert(ctx.currUser && ctx.currUser.role !== 'banned');
+router.get('/me/vms/:id', async ctx => {
+    ctx.assert(ctx.currUser && ctx.currUser.role !== 'banned')
 
-  ctx.validateParam('id').toInt();
-  await db.clearVmNotification(ctx.currUser.id, ctx.vals.id);
+    ctx.validateParam('id').toInt()
+    await db.clearVmNotification(ctx.currUser.id, ctx.vals.id)
 
-  // TODO: Eventually this will link to VMs that aren't on currUser's profile
-  ctx.redirect('/users/' + ctx.currUser.slug + '/vms#vm-' + ctx.vals.id);
-});
+    // TODO: Eventually this will link to VMs that aren't on currUser's profile
+    ctx.redirect('/users/' + ctx.currUser.slug + '/vms#vm-' + ctx.vals.id)
+})
 
 ////////////////////////////////////////////////////////////
 
 // Delete VM
-router.delete('/vms/:id', async (ctx) => {
-  ctx.validateParam('id').toInt()
-  const vm = await db.vms.getVmById(ctx.vals.id)
-    .then(pre.presentVm)
-  ctx.assert(vm, 404)
-  ctx.assertAuthorized(ctx.currUser, 'DELETE_VM', vm)
+router.delete('/vms/:id', async ctx => {
+    ctx.validateParam('id').toInt()
+    const vm = await db.vms.getVmById(ctx.vals.id).then(pre.presentVm)
+    ctx.assert(vm, 404)
+    ctx.assertAuthorized(ctx.currUser, 'DELETE_VM', vm)
 
-  // Delete VM
-  await db.vms.deleteVm(vm.id)
-  // And any notifications it caused
-  await db.vms.deleteNotificationsForVmId(vm.id)
-  // And all of its children
-  await db.vms.deleteVmChildren(vm.id)
+    // Delete VM
+    await db.vms.deleteVm(vm.id)
+    // And any notifications it caused
+    await db.vms.deleteNotificationsForVmId(vm.id)
+    // And all of its children
+    await db.vms.deleteVmChildren(vm.id)
 
-  // Delete any notifications that this VM caused
+    // Delete any notifications that this VM caused
 
-  ctx.flash = { message: ['success', 'VM deleted'] }
-  ctx.redirect(vm.to_user.url + '/vms#tabs')
+    ctx.flash = { message: ['success', 'VM deleted'] }
+    ctx.redirect(vm.to_user.url + '/vms#tabs')
 })
 
 ////////////////////////////////////////////////////////////
@@ -751,159 +829,173 @@ router.delete('/vms/:id', async (ctx) => {
 // Show user visitor messages
 //
 // TODO: Sync up with regular show-user route
-router.get('/users/:slug/vms', async (ctx) => {
-  const user = await db.findUserWithRatingsBySlug(ctx.params.slug)
-    .then(pre.presentUser)
-  ctx.assert(user, 404)
+router.get('/users/:slug/vms', async ctx => {
+    const user = await db
+        .findUserWithRatingsBySlug(ctx.params.slug)
+        .then(pre.presentUser)
+    ctx.assert(user, 404)
 
-  const [statuses, friendship, vms] = await Promise.all([
-    db.findLatestStatusesForUserId(user.id),
-    ctx.currUser
-      ? db.findFriendshipBetween(ctx.currUser.id, user.id)
-      : null,
-    db.findLatestVMsForUserId(user.id)
-      .then((xs) => xs.map(pre.presentVm))
-  ])
+    const [statuses, friendship, vms] = await Promise.all([
+        db.findLatestStatusesForUserId(user.id),
+        ctx.currUser
+            ? db.findFriendshipBetween(ctx.currUser.id, user.id)
+            : null,
+        db.findLatestVMsForUserId(user.id).then(xs => xs.map(pre.presentVm)),
+    ])
 
-  await ctx.render('show_user_visitor_messages', {
-    ctx,
-    user,
-    vms,
-    statuses,
-    currStatus: statuses.find((x) => x.id === user.current_status_id),
-    friendship,
-  });
-});
+    await ctx.render('show_user_visitor_messages', {
+        ctx,
+        user,
+        vms,
+        statuses,
+        currStatus: statuses.find(x => x.id === user.current_status_id),
+        friendship,
+    })
+})
 
 ////////////////////////////////////////////////////////////
 
 // Create VM
 //
 //
-router.post('/users/:slug/vms', async (ctx) => {
-  ctx.assertAuthorized(ctx.currUser, 'CREATE_VM')
+router.post('/users/:slug/vms', async ctx => {
+    ctx.assertAuthorized(ctx.currUser, 'CREATE_VM')
 
-  // Load user
-  const user = await db.findUserBySlug(ctx.params.slug)
-    .then(pre.presentUser)
-  ctx.assert(user, 404)
+    // Load user
+    const user = await db.findUserBySlug(ctx.params.slug).then(pre.presentUser)
+    ctx.assert(user, 404)
 
-  // Validation
-  ctx.validateBody('markup')
-    .isString('Message is required')
-    .isLength(
-      1, config.MAX_VM_LENGTH,
-      'Message must be 1-'+ config.MAX_VM_LENGTH + ' chars'
-    )
+    // Validation
+    ctx
+        .validateBody('markup')
+        .isString('Message is required')
+        .isLength(
+            1,
+            config.MAX_VM_LENGTH,
+            'Message must be 1-' + config.MAX_VM_LENGTH + ' chars'
+        )
 
-  if (ctx.request.body.parent_vm_id) {
-    ctx.validateBody('parent_vm_id').toInt()
-  }
-
-  const html = bbcode(ctx.vals.markup)
-
-  // Create VM
-  const vm = await db.createVm({
-    from_user_id: ctx.currUser.id,
-    to_user_id: user.id,
-    markup: ctx.vals.markup,
-    html,
-    parent_vm_id: ctx.vals.parent_vm_id
-  })
-
-  // if VM is a reply, notify everyone in the thread and the owner of the
-  // profile. but don't notify currUser.
-  if (vm.parent_vm_id) {
-    let userIds = await db.getVmThreadUserIds(vm.parent_vm_id || vm.id)
-    // push on the profile owner
-    userIds.push(vm.to_user_id)
-    // don't notify anyone twice
-    userIds = _.uniq(userIds)
-    // don't notify self
-    userIds = userIds.filter(id => id !== ctx.currUser.id)
-    // send out notifications in parallel
-    await Promise.all(userIds.map((toUserId) => {
-      return db.createVmNotification({
-        type: 'REPLY_VM',
-        from_user_id: vm.from_user_id,
-        to_user_id: toUserId,
-        vm_id: vm.parent_vm_id || vm.id
-      })
-    }))
-  } else {
-    // else, it's a top-level VM. just notify profile owner
-    // unless we are leaving VM on our own wall
-    if (vm.from_user_id !== vm.to_user_id) {
-      await db.createVmNotification({
-        type: 'TOPLEVEL_VM',
-        from_user_id: vm.from_user_id,
-        to_user_id: vm.to_user_id,
-        vm_id: vm.parent_vm_id || vm.id
-      })
+    if (ctx.request.body.parent_vm_id) {
+        ctx.validateBody('parent_vm_id').toInt()
     }
-  }
 
-  ctx.flash = {
-    message: ['success', 'Visitor message successfully posted']
-  }
-  ctx.redirect(user.url + '/vms#vm-' + vm.id)
+    const html = bbcode(ctx.vals.markup)
+
+    // Create VM
+    const vm = await db.createVm({
+        from_user_id: ctx.currUser.id,
+        to_user_id: user.id,
+        markup: ctx.vals.markup,
+        html,
+        parent_vm_id: ctx.vals.parent_vm_id,
+    })
+
+    // if VM is a reply, notify everyone in the thread and the owner of the
+    // profile. but don't notify currUser.
+    if (vm.parent_vm_id) {
+        let userIds = await db.getVmThreadUserIds(vm.parent_vm_id || vm.id)
+        // push on the profile owner
+        userIds.push(vm.to_user_id)
+        // don't notify anyone twice
+        userIds = _.uniq(userIds)
+        // don't notify self
+        userIds = userIds.filter(id => id !== ctx.currUser.id)
+        // send out notifications in parallel
+        await Promise.all(
+            userIds.map(toUserId => {
+                return db.createVmNotification({
+                    type: 'REPLY_VM',
+                    from_user_id: vm.from_user_id,
+                    to_user_id: toUserId,
+                    vm_id: vm.parent_vm_id || vm.id,
+                })
+            })
+        )
+    } else {
+        // else, it's a top-level VM. just notify profile owner
+        // unless we are leaving VM on our own wall
+        if (vm.from_user_id !== vm.to_user_id) {
+            await db.createVmNotification({
+                type: 'TOPLEVEL_VM',
+                from_user_id: vm.from_user_id,
+                to_user_id: vm.to_user_id,
+                vm_id: vm.parent_vm_id || vm.id,
+            })
+        }
+    }
+
+    ctx.flash = {
+        message: ['success', 'Visitor message successfully posted'],
+    }
+    ctx.redirect(user.url + '/vms#vm-' + vm.id)
 })
 
 //
 // Show user recent topics
 //
-router.get('/users/:slug/recent-topics', async (ctx) => {
-  // Load user
-  var user;
-  if (ctx.currUser &&
-      (cancan.isStaffRole(ctx.currUser.role)
-       || ctx.currUser.slug === ctx.params.slug))
-    user = await db.findUserWithRatingsBySlug(ctx.params.slug);
-  else
-    user = await db.findUserBySlug(ctx.params.slug);
-  ctx.assert(user, 404);
-  user = pre.presentUser(user);
+router.get('/users/:slug/recent-topics', async ctx => {
+    // Load user
+    var user
+    if (
+        ctx.currUser &&
+        (cancan.isStaffRole(ctx.currUser.role) ||
+            ctx.currUser.slug === ctx.params.slug)
+    )
+        user = await db.findUserWithRatingsBySlug(ctx.params.slug)
+    else user = await db.findUserBySlug(ctx.params.slug)
+    ctx.assert(user, 404)
+    user = pre.presentUser(user)
 
-  // will be undefined or number
-  if (ctx.query['before-id'])
-    ctx.validateQuery('before-id').toInt();
+    // will be undefined or number
+    if (ctx.query['before-id']) ctx.validateQuery('before-id').toInt()
 
-  // Load recent topics
-  var topics = (await db.findRecentTopicsForUserId(user.id, ctx.vals['before-id']))
-    .filter((topic) => cancan.can(ctx.currUser, 'READ_TOPIC', topic))
-    .map(pre.presentTopic)
+    // Load recent topics
+    var topics = (await db.findRecentTopicsForUserId(
+        user.id,
+        ctx.vals['before-id']
+    ))
+        .filter(topic => cancan.can(ctx.currUser, 'READ_TOPIC', topic))
+        .map(pre.presentTopic)
 
-  var nextBeforeId = topics.length > 0 ? _.last(topics).id : null;
+    var nextBeforeId = topics.length > 0 ? _.last(topics).id : null
 
-  ctx.set('Link', util.format('<%s>; rel="canonical"', config.HOST + user.url));
+    ctx.set(
+        'Link',
+        util.format('<%s>; rel="canonical"', config.HOST + user.url)
+    )
 
-  await ctx.render('show_user_recent_topics', {
-    ctx,
-    user,
-    topics,
-    title: user.uname,
-    // Pagination
-    nextBeforeId,
-    topicsPerPage: 5
-  });
-
-});
+    await ctx.render('show_user_recent_topics', {
+        ctx,
+        user,
+        topics,
+        title: user.uname,
+        // Pagination
+        nextBeforeId,
+        topicsPerPage: 5,
+    })
+})
 
 //
 // Delete user
 //
-router.delete('/users/:id', async (ctx) => {
-  var user = await db.findUser(ctx.params.id);
-  ctx.assert(user, 404);
-  ctx.assertAuthorized(ctx.currUser, 'DELETE_USER', user);
-  await db.deleteUser(ctx.params.id);
+router.delete('/users/:id', async ctx => {
+    var user = await db.findUser(ctx.params.id)
+    ctx.assert(user, 404)
+    ctx.assertAuthorized(ctx.currUser, 'DELETE_USER', user)
+    await db.deleteUser(ctx.params.id)
 
-  ctx.flash = {
-    message: ['success', util.format('User deleted along with %d posts and %d PMs',
-                                     user.posts_count, user.pms_count)]
-  };
-  ctx.response.redirect('/');
-});
+    ctx.flash = {
+        message: [
+            'success',
+            util.format(
+                'User deleted along with %d posts and %d PMs',
+                user.posts_count,
+                user.pms_count
+            ),
+        ],
+    }
+    ctx.response.redirect('/')
+})
 
 // Params
 // - submit: 'save' | 'delete'
@@ -912,46 +1004,57 @@ router.delete('/users/:id', async (ctx) => {
 //     - path
 //
 // @koa2
-router.post('/users/:slug/avatar', async (ctx) => {
-  // Ensure user exists
-  const user = await db.findUserBySlug(ctx.params.slug)
-    .then(pre.presentUser)
-  ctx.assert(user, 404)
-  // Ensure currUser is authorized to update user
-  ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER', user);
+router.post('/users/:slug/avatar', async ctx => {
+    // Ensure user exists
+    const user = await db.findUserBySlug(ctx.params.slug).then(pre.presentUser)
+    ctx.assert(user, 404)
+    // Ensure currUser is authorized to update user
+    ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER', user)
 
-  // Handle avatar delete button
-  if (ctx.request.body.fields.submit === 'delete') {
-    await db.deleteAvatar(user.id);
-    ctx.flash = { message: ['success', 'Avatar deleted'] };
-    ctx.response.redirect(user.url + '/edit#avatar');
-    return;
-  }
+    // Handle avatar delete button
+    if (ctx.request.body.fields.submit === 'delete') {
+        await db.deleteAvatar(user.id)
+        ctx.flash = { message: ['success', 'Avatar deleted'] }
+        ctx.response.redirect(user.url + '/edit#avatar')
+        return
+    }
 
-  // Ensure params
-  // FIXME: Sloppy/lame validation
-  ctx.assert(ctx.request.body.files, 400, 'Must choose an avatar to upload');
-  ctx.assert(ctx.request.body.files.avatar, 400, 'Must choose an avatar to upload');
+    // Ensure params
+    // FIXME: Sloppy/lame validation
+    ctx.assert(ctx.request.body.files, 400, 'Must choose an avatar to upload')
+    ctx.assert(
+        ctx.request.body.files.avatar,
+        400,
+        'Must choose an avatar to upload'
+    )
 
-  ctx.assert(ctx.request.body.files.avatar.size > 0, 400, 'Must choose an avatar to upload');
-  // TODO: Do a real check. This just looks at mime type
-  ctx.assert(ctx.request.body.files.avatar.type.startsWith('image'), 400, 'Must be an image');
+    ctx.assert(
+        ctx.request.body.files.avatar.size > 0,
+        400,
+        'Must choose an avatar to upload'
+    )
+    // TODO: Do a real check. This just looks at mime type
+    ctx.assert(
+        ctx.request.body.files.avatar.type.startsWith('image'),
+        400,
+        'Must be an image'
+    )
 
-  // Process avatar, upload to S3, and get the S3 url
-  var avatarUrl = await avatar.handleAvatar(
-    user.id,
-    ctx.request.body.files.avatar.path
-  );
+    // Process avatar, upload to S3, and get the S3 url
+    var avatarUrl = await avatar.handleAvatar(
+        user.id,
+        ctx.request.body.files.avatar.path
+    )
 
-  // Save new avatar url to db
-  await db.updateUser(user.id, { avatar_url: avatarUrl });
+    // Save new avatar url to db
+    await db.updateUser(user.id, { avatar_url: avatarUrl })
 
-  // Delete legacy avatar if it exists
-  await db.deleteLegacyAvatar(user.id);
+    // Delete legacy avatar if it exists
+    await db.deleteLegacyAvatar(user.id)
 
-  ctx.flash = { message: ['success', 'Avatar uploaded and saved'] };
-  ctx.response.redirect(user.url + '/edit#avatar');
-});
+    ctx.flash = { message: ['success', 'Avatar uploaded and saved'] }
+    ctx.response.redirect(user.url + '/edit#avatar')
+})
 
 ////////////////////////////////////////////////////////////
 
@@ -959,80 +1062,90 @@ router.post('/users/:slug/avatar', async (ctx) => {
 // - gender: '' | 'MALE' | 'FEMALE'
 //
 // @koa2
-router.post('/users/:slug/gender', loadUserFromSlug('slug'), async (ctx) => {
-  ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER', ctx.state.user);
-  ctx.validateBody('gender')
-    .tap(x => ['MALE', 'FEMALE'].indexOf(x) > -1 ? x : null);
-  await db.users.updateUser(ctx.state.user.id, { gender: ctx.vals.gender });
-  ctx.flash = { message: ['success', 'Gender updated'] };
-  ctx.redirect(ctx.state.user.url + '/edit');
-});
+router.post('/users/:slug/gender', loadUserFromSlug('slug'), async ctx => {
+    ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER', ctx.state.user)
+    ctx
+        .validateBody('gender')
+        .tap(x => (['MALE', 'FEMALE'].indexOf(x) > -1 ? x : null))
+    await db.users.updateUser(ctx.state.user.id, { gender: ctx.vals.gender })
+    ctx.flash = { message: ['success', 'Gender updated'] }
+    ctx.redirect(ctx.state.user.url + '/edit')
+})
 
 ////////////////////////////////////////////////////////////
 // NUKING
 ////////////////////////////////////////////////////////////
 
 // if ?override=true, don't do thw twoWeek check
-router.post('/users/:slug/nuke', async (ctx) => {
-  var user = await db.findUserBySlug(ctx.params.slug);
-  ctx.assert(user, 404);
-  pre.presentUser(user);
-  ctx.assertAuthorized(ctx.currUser, 'NUKE_USER', user);
-  // prevent accidental nukings. if a user is over 2 weeks old,
-  // they aren't likely to be a spambot.
-  if (ctx.query.override !== 'true') {
-    var twoWeeks = 1000 * 60 * 60 * 24 * 7 * 2;
-    if (Date.now() - user.created_at.getTime() > twoWeeks) {
-      ctx.body = '[Accidental Nuke Prevention] User is too old to be nuked. If this really is a spambot, let Mahz know in the mod forum.';
-      return;
+router.post('/users/:slug/nuke', async ctx => {
+    var user = await db.findUserBySlug(ctx.params.slug)
+    ctx.assert(user, 404)
+    pre.presentUser(user)
+    ctx.assertAuthorized(ctx.currUser, 'NUKE_USER', user)
+    // prevent accidental nukings. if a user is over 2 weeks old,
+    // they aren't likely to be a spambot.
+    if (ctx.query.override !== 'true') {
+        var twoWeeks = 1000 * 60 * 60 * 24 * 7 * 2
+        if (Date.now() - user.created_at.getTime() > twoWeeks) {
+            ctx.body =
+                '[Accidental Nuke Prevention] User is too old to be nuked. If this really is a spambot, let Mahz know in the mod forum.'
+            return
+        }
     }
-  }
 
-  try {
-    await db.nukeUser({ spambot: user.id, nuker: ctx.currUser.id })
-  } catch (err) {
-    if (err === 'ALREADY_NUKED') {
-      ctx.flash = { message: ['success', 'Nuked the bastard'] }
-      ctx.redirect(user.url)
-      return
+    try {
+        await db.nukeUser({ spambot: user.id, nuker: ctx.currUser.id })
+    } catch (err) {
+        if (err === 'ALREADY_NUKED') {
+            ctx.flash = { message: ['success', 'Nuked the bastard'] }
+            ctx.redirect(user.url)
+            return
+        }
+        throw err
     }
-    throw err
-  }
 
-  // Unapprove in background
-  db.users.unapproveUser(user.id)
-    .catch((err) => console.error(`error when unapproving user ${user.id}`, err))
+    // Unapprove in background
+    db.users
+        .unapproveUser(user.id)
+        .catch(err =>
+            console.error(`error when unapproving user ${user.id}`, err)
+        )
 
-  // Broadcast to Discord in the background
-  broadcastManualNuke({ nuker: ctx.currUser, spambot: user })
-    .catch((err) => console.error('broadcastManualNuke error', err))
+    // Broadcast to Discord in the background
+    broadcastManualNuke({ nuker: ctx.currUser, spambot: user }).catch(err =>
+        console.error('broadcastManualNuke error', err)
+    )
 
-  ctx.flash = { message: ['success', 'Nuked the bastard'] };
-  ctx.redirect(user.url)
-});
-
-////////////////////////////////////////////////////////////
-
-router.post('/users/:slug/unnuke', async (ctx) => {
-  ctx.assert(ctx.currUser, 404)
-  const user = await db.findUserBySlug(ctx.params.slug).then(pre.presentUser)
-  ctx.assert(user, 404)
-  ctx.assertAuthorized(ctx.currUser, 'NUKE_USER', user)
-
-  await db.unnukeUser(user.id)
-
-  // Approve in background
-  db.users.approveUser({ approvedBy: ctx.currUser.id, targetUser: user.id })
-    .catch((err) => console.error(`error when approving user ${user.id}`, err))
-
-  // Broadcast to Discord in the background
-  broadcastManualUnnuke({ nuker: ctx.currUser, spambot: user })
-    .catch((err) => console.error('broadcastManualUnnuke error', err))
-
-  ctx.flash = { message: ['success', 'Un-nuked the user'] }
-  ctx.redirect(user.url)
+    ctx.flash = { message: ['success', 'Nuked the bastard'] }
+    ctx.redirect(user.url)
 })
 
 ////////////////////////////////////////////////////////////
 
-module.exports = router;
+router.post('/users/:slug/unnuke', async ctx => {
+    ctx.assert(ctx.currUser, 404)
+    const user = await db.findUserBySlug(ctx.params.slug).then(pre.presentUser)
+    ctx.assert(user, 404)
+    ctx.assertAuthorized(ctx.currUser, 'NUKE_USER', user)
+
+    await db.unnukeUser(user.id)
+
+    // Approve in background
+    db.users
+        .approveUser({ approvedBy: ctx.currUser.id, targetUser: user.id })
+        .catch(err =>
+            console.error(`error when approving user ${user.id}`, err)
+        )
+
+    // Broadcast to Discord in the background
+    broadcastManualUnnuke({ nuker: ctx.currUser, spambot: user }).catch(err =>
+        console.error('broadcastManualUnnuke error', err)
+    )
+
+    ctx.flash = { message: ['success', 'Un-nuked the user'] }
+    ctx.redirect(user.url)
+})
+
+////////////////////////////////////////////////////////////
+
+module.exports = router

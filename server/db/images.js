@@ -1,4 +1,4 @@
-'use strict';
+'use strict'
 // 3rd
 const debug = require('debug')('app:db:images')
 const assert = require('better-assert')
@@ -6,14 +6,14 @@ const uuidGen = require('uuid')
 const knex = require('knex')({ client: 'pg' })
 const _ = require('lodash')
 // 1st
-const {pool} = require('./util')
-const {sql} = require('pg-extra')
+const { pool } = require('./util')
+const { sql } = require('pg-extra')
 
 ////////////////////////////////////////////////////////////
 
-exports.getImage = async function (uuid) {
-  assert(typeof uuid === 'string')
-  return pool.one(sql`
+exports.getImage = async function(uuid) {
+    assert(typeof uuid === 'string')
+    return pool.one(sql`
     SELECT
       images.*,
       json_build_object(
@@ -27,9 +27,9 @@ exports.getImage = async function (uuid) {
   `)
 }
 
-exports.getLatestImages = async function (limit = 10) {
-  debug(`[getLatestImages]`)
-  return pool.many(sql`
+exports.getLatestImages = async function(limit = 10) {
+    debug(`[getLatestImages]`)
+    return pool.many(sql`
     SELECT
       images.*,
       json_build_object(
@@ -44,9 +44,9 @@ exports.getLatestImages = async function (limit = 10) {
   `)
 }
 
-exports.getUserAlbums = async function (userId) {
-  assert(Number.isInteger(userId))
-  return pool.many(sql`
+exports.getUserAlbums = async function(userId) {
+    assert(Number.isInteger(userId))
+    return pool.many(sql`
     SELECT
       albums.*,
       json_build_object(
@@ -60,9 +60,9 @@ exports.getUserAlbums = async function (userId) {
   `)
 }
 
-exports.getUserImages = async function (userId) {
-  assert(Number.isInteger(userId))
-  return pool.many(sql`
+exports.getUserImages = async function(userId) {
+    assert(Number.isInteger(userId))
+    return pool.many(sql`
     SELECT
       images.*,
       json_build_object(
@@ -77,9 +77,9 @@ exports.getUserImages = async function (userId) {
   `)
 }
 
-exports.getAlbumImages = async function (albumId) {
-  assert(Number.isInteger(albumId))
-  return pool.many(sql`
+exports.getAlbumImages = async function(albumId) {
+    assert(Number.isInteger(albumId))
+    return pool.many(sql`
     SELECT
       images.*,
       json_build_object(
@@ -95,22 +95,29 @@ exports.getAlbumImages = async function (albumId) {
 }
 
 // description is optional
-exports.insertImage = async function (imageId, albumId, userId, src, mime, description) {
-  assert(typeof imageId === 'string')
-  assert(Number.isInteger(userId))
-  assert(Number.isInteger(albumId))
-  assert(typeof src === 'string')
-  assert(['image/jpeg', 'image/gif', 'image/png'].indexOf(mime) > -1)
-  return pool.query(sql`
+exports.insertImage = async function(
+    imageId,
+    albumId,
+    userId,
+    src,
+    mime,
+    description
+) {
+    assert(typeof imageId === 'string')
+    assert(Number.isInteger(userId))
+    assert(Number.isInteger(albumId))
+    assert(typeof src === 'string')
+    assert(['image/jpeg', 'image/gif', 'image/png'].indexOf(mime) > -1)
+    return pool.query(sql`
     INSERT INTO images (id, album_id, user_id, src, mime, description)
     VALUES (${imageId}, ${albumId}, ${userId}, ${src}, ${mime}, ${description})
   `)
 }
 
 // TODO: Also delete from S3
-exports.deleteImage = async function (imageId) {
-  assert(typeof imageId === 'string')
-  return pool.query(sql`
+exports.deleteImage = async function(imageId) {
+    assert(typeof imageId === 'string')
+    return pool.query(sql`
     UPDATE images
     SET deleted_at = NOW()
     WHERE id = ${imageId}
@@ -118,19 +125,19 @@ exports.deleteImage = async function (imageId) {
 }
 
 // markup is optional
-exports.insertAlbum = async function (userId, title, markup) {
-  assert(Number.isInteger(userId))
-  assert(typeof title === 'string')
-  return pool.one(sql`
+exports.insertAlbum = async function(userId, title, markup) {
+    assert(Number.isInteger(userId))
+    assert(typeof title === 'string')
+    return pool.one(sql`
     INSERT INTO albums (user_id, title, markup)
     VALUES (${userId}, ${title}, ${markup})
     RETURNING *
   `)
 }
 
-exports.getAlbum = async function (albumId) {
-  assert(albumId)
-  return pool.one(sql`
+exports.getAlbum = async function(albumId) {
+    assert(albumId)
+    return pool.one(sql`
     SELECT
       a.*,
       to_json(u.*) "user"
@@ -142,23 +149,20 @@ exports.getAlbum = async function (albumId) {
 
 // Generalized update function that takes an object of
 // field/values to be updated.
-exports.updateAlbum = async function (albumId, fields) {
-  assert(albumId)
-  assert(_.isPlainObject(fields))
-  // Validate fields
-  const WHITELIST = [
-    'title',
-    'markup'
-  ]
-  Object.keys(fields).forEach((key) => {
-    if (WHITELIST.indexOf(key) === -1) {
-      throw new Error('FIELD_NOT_WHITELISTED')
-    }
-  })
-  // Build SQL string
-  const str = knex('albums')
-    .where({ id: albumId })
-    .update(fields)
-    .toString()
-  return pool._query(str)
+exports.updateAlbum = async function(albumId, fields) {
+    assert(albumId)
+    assert(_.isPlainObject(fields))
+    // Validate fields
+    const WHITELIST = ['title', 'markup']
+    Object.keys(fields).forEach(key => {
+        if (WHITELIST.indexOf(key) === -1) {
+            throw new Error('FIELD_NOT_WHITELISTED')
+        }
+    })
+    // Build SQL string
+    const str = knex('albums')
+        .where({ id: albumId })
+        .update(fields)
+        .toString()
+    return pool._query(str)
 }

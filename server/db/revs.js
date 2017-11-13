@@ -1,23 +1,22 @@
-'use strict';
+'use strict'
 // 3rd
-const assert = require('better-assert');
+const assert = require('better-assert')
 // 1st
-const {pool, wrapOptionalClient} = require('./util')
-const {sql} = require('pg-extra')
+const { pool, wrapOptionalClient } = require('./util')
+const { sql } = require('pg-extra')
 
 ////////////////////////////////////////////////////////////
 
 // Reason is optional
-exports.insertPostRev = wrapOptionalClient(async (
-  client, userId, postId, markup, html, reason
-) => {
-  assert(Number.isInteger(userId))
-  assert(Number.isInteger(postId))
-  assert(typeof markup === 'string')
-  assert(typeof html === 'string')
-  assert(!reason || typeof reason === 'string')
+exports.insertPostRev = wrapOptionalClient(
+    async (client, userId, postId, markup, html, reason) => {
+        assert(Number.isInteger(userId))
+        assert(Number.isInteger(postId))
+        assert(typeof markup === 'string')
+        assert(typeof html === 'string')
+        assert(!reason || typeof reason === 'string')
 
-  return client.query(sql`
+        return client.query(sql`
     INSERT INTO post_revs (user_id, post_id, markup, html, length, reason)
     VALUES (
       ${userId},
@@ -28,16 +27,17 @@ exports.insertPostRev = wrapOptionalClient(async (
       ${reason}
     )
   `)
-})
+    }
+)
 
 exports.revertPostRev = async (userId, postId, revId) => {
-  assert(Number.isInteger(userId))
-  assert(Number.isInteger(postId))
-  assert(Number.isInteger(revId))
+    assert(Number.isInteger(userId))
+    assert(Number.isInteger(postId))
+    assert(Number.isInteger(revId))
 
-  const reason = `Reverted to revision ${revId}`
+    const reason = `Reverted to revision ${revId}`
 
-  return pool.query(sql`
+    return pool.query(sql`
     WITH rev AS (
       INSERT INTO post_revs (user_id, post_id, markup, html, length, reason)
       SELECT
@@ -63,24 +63,28 @@ exports.revertPostRev = async (userId, postId, revId) => {
 ////////////////////////////////////////////////////////////
 
 exports.getPostRevMarkup = async (postId, revId) => {
-  assert(Number.isInteger(postId))
-  assert(Number.isInteger(revId))
+    assert(Number.isInteger(postId))
+    assert(Number.isInteger(revId))
 
-  return pool.one(sql`
+    return pool
+        .one(
+            sql`
     SELECT markup
     FROM post_revs
     WHERE post_id = ${postId}
       AND id = ${revId}
-  `).then((row) => {
-    return row && row.markup
-  })
+  `
+        )
+        .then(row => {
+            return row && row.markup
+        })
 }
 
 exports.getPostRev = async (postId, revId) => {
-  assert(Number.isInteger(postId))
-  assert(Number.isInteger(revId))
+    assert(Number.isInteger(postId))
+    assert(Number.isInteger(revId))
 
-  return pool.one(sql`
+    return pool.one(sql`
     SELECT
       post_revs.id,
       post_revs.post_id,
@@ -100,10 +104,10 @@ exports.getPostRev = async (postId, revId) => {
 
 ////////////////////////////////////////////////////////////
 
-exports.listPostRevs = async (postId) => {
-  assert(Number.isInteger(postId))
+exports.listPostRevs = async postId => {
+    assert(Number.isInteger(postId))
 
-  return pool.many(sql`
+    return pool.many(sql`
     SELECT
       post_revs.id,
       post_revs.post_id,
