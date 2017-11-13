@@ -44,7 +44,7 @@ app.use(require('koa-body')({
   formLimit: '25mb'
 }))
 
-const nunjucksRender = convert(require('koa-nunjucks-render'))
+const nunjucksRender = require('koa-nunjucks-render')
 
 // Node
 const util = require('util')
@@ -267,7 +267,7 @@ const nunjucksOptions = {
   }
 }
 
-app.use(convert(nunjucksRender('views', nunjucksOptions)))
+app.use(nunjucksRender('views', nunjucksOptions))
 
 /// /////////////////////////////////////////////////////////
 // Routes //////////////////////////////////////////////////
