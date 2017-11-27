@@ -5,7 +5,8 @@
             "script": "server/index.js",
             "cwd": "/home/ec2-user/guild/current",
             "exec_mode": "cluster",
-            "instances": "max"
+            "instances": "max",
+            "log_date_format": "YYYY-MM-DD HH:mm Z"
         }
     ]
 }
