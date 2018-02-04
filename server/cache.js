@@ -79,40 +79,41 @@ const cache = new IntervalCache()
         'sitemaps',
         1000 * 60 * 60 * 12,
         async () => {
-            console.log('[CACHE] Populating sitemap.txt')
-            const MAX_SITEMAP_URLS = 50000
-
-            const staticPaths = ['/faq']
-
-            const [topicUrls, userUrls] = await Promise.all([
-                db.findAllPublicTopicUrls(),
-                pool
-                    .many(
-                        sql`
-        SELECT *
-        FROM users
-        WHERE is_nuked = false
-        ORDER BY id
-      `
-                    )
-                    .then(users => users.map(u => pre.presentUser(u).url)),
-            ])
-
-            const urls = [...staticPaths, ...userUrls, ...topicUrls].map(
-                url => {
-                    return config.HOST + url
-                }
-            )
-
-            const chunks = _.chunk(urls, 50000)
-
-            console.log(
-                'Sitemap URLs: %j, Chunks: %j',
-                urls.length,
-                chunks.length
-            )
-
-            return chunks
+          return [];
+      //       // console.log('[CACHE] Populating sitemap.txt')
+      //       const MAX_SITEMAP_URLS = 50000
+      //
+      //       const staticPaths = ['/faq']
+      //
+      //       const [topicUrls, userUrls] = await Promise.all([
+      //           db.findAllPublicTopicUrls(),
+      //           pool
+      //               .many(
+      //                   sql`
+      //   SELECT *
+      //   FROM users
+      //   WHERE is_nuked = false
+      //   ORDER BY id
+      // `
+      //               )
+      //               .then(users => users.map(u => pre.presentUser(u).url)),
+      //       ])
+      //
+      //       const urls = [...staticPaths, ...userUrls, ...topicUrls].map(
+      //           url => {
+      //               return config.HOST + url
+      //           }
+      //       )
+      //
+      //       const chunks = _.chunk(urls, 50000)
+      //
+      //       console.log(
+      //           'Sitemap URLs: %j, Chunks: %j',
+      //           urls.length,
+      //           chunks.length
+      //       )
+      //
+      //       return chunks
         },
         []
     )

@@ -61,6 +61,8 @@ function loadUserFromSlug(key, redirectTemplate) {
 // Show user alternate accounts
 //
 router.get('/users/:slug/alts', loadUserFromSlug('slug'), async ctx => {
+    return ctx.body = 'temp disabled'
+
     ctx.assert(ctx.currUser && cancan.isStaffRole(ctx.currUser.role), 403)
 
     const { user } = ctx.state

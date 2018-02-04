@@ -313,7 +313,7 @@ app.use(async (ctx, next) => {
     }
 })
 
-app.use(require('./middleware/track')())
+//app.use(require('./middleware/track')())
 
 // - Create middleware before this
 // app.use(require('koa-router')(app))
