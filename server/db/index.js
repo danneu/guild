@@ -973,7 +973,7 @@ exports.findPostsByTopicId = async function(topicId, postType, page) {
         'arena_wins' , u.arena_wins,
         'arena_losses' , u.arena_losses,
         'arena_draws' , u.arena_draws,
-
+        'active_trophy_id' , u.active_trophy_id,
         'has_bio', CASE
             WHEN u.bio_markup IS NULL THEN false
             WHEN char_length(u.bio_markup) > 3 THEN true
