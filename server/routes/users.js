@@ -355,10 +355,10 @@ router.put('/users/:slug/role', async ctx => {
     if (ctx.currUser.role === 'smod') {
         ctx
             .validateBody('role')
-            .isIn(['banned', 'member', 'conmod', 'mod'], 'Invalid role')
+            .isIn(['banned', 'member', 'conmod', 'mod', 'pwmod'], 'Invalid role')
     } else if (ctx.currUser.role === 'mod') {
-        // mod can only set roles to member and below
-        ctx.validateBody('role').isIn(['banned', 'member'], 'Invalid role')
+        // mod can only set roles to pwmod, member, and below
+        ctx.validateBody('role').isIn(['banned', 'member', 'pwmod'], 'Invalid role')
     }
 
     await db.updateUserRole(user.id, ctx.request.body.role)
