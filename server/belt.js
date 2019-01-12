@@ -551,6 +551,8 @@ exports.presentUserRole = function(role) {
             return 'Co-Admin'
         case 'arenamod':
             return 'Arena Mod'
+        case 'pwmod':
+            return 'Persistent World Mod'
         default:
             return _.capitalize(role)
     }

@@ -11,7 +11,7 @@ const config = require('./config')
 
 // These are forums where topics cannot be posted
 // in if the latest post is older than 1 month
-var ANTI_NECRO_FORUMS = [
+const ANTI_NECRO_FORUMS = [
     30, // Spam
     32, // Member Lounge
     33, // Off-topic
@@ -21,9 +21,10 @@ var ANTI_NECRO_FORUMS = [
     2, // Introduce yourself
 ]
 
-var CONTEST_FORUMS = [45, 44]
-
+const CONTEST_FORUMS = [45, 44]
 const ARENA_FORUMS = [6, 15]
+// Forums that pwmods have mod-privs in
+const PW_FORUMS = [38]
 
 // Applies to anyone above member
 //
@@ -75,6 +76,12 @@ function can(user, action, target) {
             if (
                 user.role === 'arenamod' &&
                 ARENA_FORUMS.includes(target.forum_id)
+            ) {
+                return true
+            }
+            if (
+                user.role === 'pwmod' &&
+                PW_FORUMS.includes(target.forum_id)
             ) {
                 return true
             }
@@ -163,6 +170,11 @@ function can(user, action, target) {
             if (
                 ARENA_FORUMS.includes(target.forum_id) &&
                 user.role === 'arenamod'
+            )
+                return true
+            if (
+                PW_FORUMS.includes(target.forum_id) &&
+                user.role === 'pwmod'
             )
                 return true
             // If non-staff, then cannot if topic is hidden/closed
@@ -279,6 +291,11 @@ function can(user, action, target) {
                 ARENA_FORUMS.includes(target.forum_id)
             )
                 return true
+            if (
+                user.role === 'pwmod' &&
+                PW_FORUMS.includes(target.forum_id)
+            )
+                return true
             return false
         case 'UPDATE_TOPIC_ARENA_OUTCOMES': // target is topic
             // Guests can't
@@ -353,8 +370,10 @@ function can(user, action, target) {
             //}
             // Staff can hide
             if (isStaffRole(user.role)) return true
+            // TODO: Only let boutique mods hide posts in their respective forums.
             if (user.role === 'conmod') return true
             if (user.role === 'arenamod') return true
+            if (user.role === 'pwmod') return true
             // GMs can hide zeroth post
             if (target.idx === -1 && exports.isTopicGm(user, target.topic)) {
                 return true
@@ -394,6 +413,11 @@ function can(user, action, target) {
                 ARENA_FORUMS.includes(target.forum_id)
             )
                 return true
+            if (
+                user.role === 'pwmod' &&
+                PW_FORUMS.includes(target.forum_id)
+            )
+                return true
             // Can if they are forum mod
             if ((target.mods || []).some(m => m.id === user.id)) {
                 return true
@@ -408,10 +432,14 @@ function can(user, action, target) {
             if ((target.mods || []).some(m => m.id === user.id)) {
                 return true
             }
+            // TODO: Limit boutique mods to respective forums.
             if (user.role === 'conmod') {
                 return true
             }
             if (user.role === 'arenamod') {
+                return true
+            }
+            if (user.role === 'pwmod') {
                 return true
             }
             // Members can post as long as it's outside the lexus lounge,
@@ -465,6 +493,14 @@ function can(user, action, target) {
             ) {
                 return true
             }
+            // pwmods can read all posts in pw forums
+            if (
+                user &&
+                user.role === 'pwmod' &&
+                PW_FORUMS.includes(target.topic.forum_id)
+            ) {
+                return true
+            }
             // GMs can always read the zeroth post even if hidden
             if (exports.isTopicGm(user, target.topic)) {
                 return true
@@ -502,7 +538,7 @@ function can(user, action, target) {
             if (!user) return false
             // All staff can access
             if (isStaffRole(user.role)) return true
-            // conmods and arenamods can
+            // conmods and arenamods can (pwmod can't. TODO: remove conmods and arenamods too)
             if (['conmod', 'arenamod'].includes(user.role)) return true
             return false
         // TODO: Replace LEXUS_LOUNGE with this?
@@ -552,6 +588,13 @@ function can(user, action, target) {
                 ARENA_FORUMS.includes(target.forum_id)
             )
                 return true
+            // pwmod can read any topic in pw forums
+            if (
+                user &&
+                user.role === 'pwmod' &&
+                PW_FORUMS.includes(target.forum_id)
+            )
+                return true
             // Staff can always read hidden topics
             if (user && target.is_hidden && isStaffRole(user.role)) {
                 return
@@ -581,7 +624,7 @@ function can(user, action, target) {
                     ['conmod', 'arenamod'].includes(user.role)
                 )
             if (
-                ['mod', 'arenamod', 'conmod', 'smod', 'admin'].includes(
+                ['mod', 'arenamod', 'conmod', 'pwmod', 'smod', 'admin'].includes(
                     user.role
                 )
             )

@@ -2306,6 +2306,7 @@ router.get('/staff', async ctx => {
         conmods: users.filter(u => u.role === 'conmod'),
         admins: users.filter(u => u.role === 'admin'),
         arena_mods: users.filter(u => u.role === 'arenamod'),
+        pwmods: users.filter(u => u.role === 'pwmod'),
     })
 })
 

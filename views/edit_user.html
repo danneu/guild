@@ -84,6 +84,11 @@
                             >
                       Arena Mod
                     </option>
+                    <option value="pwmod"
+                            {% if user.role == 'pwmod' %}selected{% endif %}
+                            >
+                      Persistent World Mod
+                    </option>
                     {% endif %}
                     {% if ctx.currUser.role == 'smod' %}
                     <option value="smod"
@@ -105,6 +110,19 @@
                             {% if user.role == 'arenamod' %}selected{% endif %}
                             >
                       Arena Mod
+                    </option>
+                    <option value="pwmod"
+                            {% if user.role == 'pwmod' %}selected{% endif %}
+                            >
+                      Persistent World Mod
+                    </option>
+                    {% endif %}
+                    {# let Ruby change pw mods #}
+                    {% if ctx.currUser.role == 'mod' %}
+                    <option value="pwmod"
+                            {% if user.role == 'pwmod' %}selected{% endif %}
+                            >
+                      Persistent World Mod
                     </option>
                     {% endif %}
                     <option value="member"

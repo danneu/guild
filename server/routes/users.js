@@ -334,7 +334,16 @@ router.put('/users/:slug/role', async ctx => {
     ctx
         .validateBody('role')
         .isIn(
-            ['banned', 'member', 'mod', 'conmod', 'arenamod', 'smod', 'admin'],
+            [
+                'banned',
+                'member',
+                'mod',
+                'conmod',
+                'arenamod',
+                'pwmod',
+                'smod',
+                'admin',
+            ],
             'Invalid role'
         )
     // TODO: Authorize role param against role of both parties

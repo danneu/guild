@@ -116,6 +116,31 @@
           </div> <!-- /.panel -->
         {% endif %}
 
+        <!-- PW Mods -->
+        {% if pwmods.length > 0 %}
+          <div class="panel panel-default no-select" style="border-color: #000">
+            <div class="panel-heading">
+              {#<img src="/img/arms.png">#}
+              Persistent World Moderators
+              <small style="display: block;">
+                Specialized moderators that focus on the Persistent World forums.
+              </small>
+            </div>
+            <div class="panel-body">
+              <ul>
+              {% for user in pwmods %}
+                <li style="clear: both">
+                  <a href="{{ user.url }}">{{ user.uname }}</a>
+                  <div style="float: right">
+                    {{ macros.onlineStatus(ctx, user) }}
+                  </div>
+                </li>
+              {% endfor %}
+              </ul>
+            </div>
+          </div> <!-- /.panel -->
+        {% endif %}
+
       </form>
     </div> <!-- /col -->
   </div> <!-- /.row -->

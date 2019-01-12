@@ -11,6 +11,7 @@ CREATE EXTENSION IF NOT EXISTS plv8;
 CREATE TYPE role_type AS ENUM ('admin', 'smod', 'mod', 'member', 'banned');
 ALTER TYPE role_type ADD VALUE 'conmod';
 ALTER TYPE role_type ADD VALUE 'arenamod';
+ALTER TYPE role_type ADD VALUE 'pwmod';
 
 CREATE TYPE user_gender AS ENUM ('MALE', 'FEMALE');
 

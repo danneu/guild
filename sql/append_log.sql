@@ -46,3 +46,7 @@ ADD COLUMN is_nuked  BOOLEAN  NOT NULL DEFAULT false
 ALTER TABLE forums
 ADD COLUMN is_hidden BOOLEAN NOT NULL DEFAULT false
 ;
+
+----------------------------------------------
+
+ALTER TYPE role_type ADD VALUE 'pwmod';
