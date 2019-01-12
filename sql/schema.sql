@@ -110,6 +110,8 @@ CREATE TABLE forums (
   has_tags_enabled boolean NOT NULL DEFAULT false,
   tab_title       text NULL,
   is_check        boolean NOT NULL DEFAULT false,
+  -- only hides forum from homepage. forum is still accessible.
+  is_hidden       boolean not null default false,
   -- Cache
   topics_count    int NOT NULL  DEFAULT 0,
   posts_count     int NOT NULL  DEFAULT 0

@@ -1423,6 +1423,7 @@ SELECT
 FROM categories c
 JOIN forums f ON c.id = f.category_id
 LEFT OUTER JOIN posts p ON f.latest_post_id = p.id
+WHERE f.is_hidden = false
 GROUP BY c.id
 ORDER BY c.pos
   `)
