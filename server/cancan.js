@@ -24,7 +24,11 @@ const ANTI_NECRO_FORUMS = [
 const CONTEST_FORUMS = [45, 44]
 const ARENA_FORUMS = [6, 15]
 // Forums that pwmods have mod-privs in
-const PW_FORUMS = [38]
+const PW_FORUMS = [
+    49,
+    50,
+    51,
+]
 
 // Applies to anyone above member
 //
