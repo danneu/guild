@@ -147,7 +147,7 @@
           </div>
         {% endif %}
         <!-- Signature -->
-        {% if not post.is_hidden -%}
+        {% if not post.is_hidden and post.idx > -1 -%}
           {{ macros.renderSig(ctx, post.user) }}
         {%- endif %}
       </div>
