@@ -338,9 +338,9 @@ function can(user, action, target) {
             if (user.role === 'admin') return true
             // smods can change everyone except admin
             if (user.role === 'smod') return target.role !== 'admin'
-            // mods can change non-staff
+            // mods can change non-staff and pw-mods
             if (user.role === 'mod')
-                return ['banned', 'member'].includes(target.role)
+                return ['banned', 'member', 'pwmod'].includes(target.role)
             return false
         case 'UPDATE_USER': // target is user
             if (!user) return false
@@ -351,7 +351,7 @@ function can(user, action, target) {
             if (user.role === 'admin') return true
             if (user.role === 'smod') return target.role !== 'admin'
             if (user.role === 'mod')
-                return ['banned', 'member'].includes(target.role)
+                return ['banned', 'member', 'pwmod'].includes(target.role)
             return false
         // Post state -- target is post
         case 'UNHIDE_POST':
