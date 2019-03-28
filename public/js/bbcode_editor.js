@@ -214,12 +214,14 @@ var w;
       btnText: 'Preview',
       callback: function(e) {
         if (e.$isPreview === false) {
-          e.showPreview();
-          e.enableButtons('bb-preview');
+          e.showPreview()
+          e.enableButtons('bb-preview')
+          e.$editor.find('.post-edit-cancel-btn').prop('disabled', true)
         } else {
-          e.hidePreview();
-          e.$editor.find('.bbcode-errors p').html('');
-          e.$editor.find('.bbcode-errors ul').html('');
+          e.hidePreview()
+          e.$editor.find('.bbcode-errors p').html('')
+          e.$editor.find('.bbcode-errors ul').html('')
+          e.$editor.find('.post-edit-cancel-btn').prop('disabled', false)
         }
       }
     }
