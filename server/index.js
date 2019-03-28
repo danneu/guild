@@ -77,8 +77,11 @@ require('./validation') // Load after koa-bouncer
 const services = require('./services')
 const cache2 = require('./cache2')
 const makeAgo = require('./ago')
+const protectCsrf = require('./middleware/protect-csrf')
 
 app.use(middleware.methodOverride())
+
+app.use(protectCsrf(['roleplayerguild.com']))
 
 // Catch and log all errors that bubble up to koa
 // app.on('error', function(err) {
@@ -1530,7 +1533,7 @@ router.get('/pms/:id/raw', async ctx => {
 //
 // Keep /api/posts/:postId and /api/pms/:pmId in sync
 router.put('/api/posts/:id', async ctx => {
-    var post = await db.findPost(ctx.params.id)
+    const post = await db.findPost(ctx.params.id)
     ctx.assert(post, 404)
     ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
 
@@ -1538,6 +1541,7 @@ router.put('/api/posts/:id', async ctx => {
 
     ctx
         .validateBody('markup')
+        .isString()
         .isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH)
 
     ctx
