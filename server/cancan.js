@@ -748,7 +748,7 @@ function can(user, action, target) {
                 }
             }
             // Everyone else can only change their own username
-            // if (user.id === target.id) return true
+            if (user.id === target.id) return true
             return false
         //
         // DICE
