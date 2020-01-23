@@ -40,7 +40,7 @@
         "koa-router": "7.3.0",
         "koa-send": "4.1.0",
         "koa-static": "3.0.0",
-        "lodash": "4.17.4",
+        "lodash": "4.17.13",
         "node-fetch": "^1.6.3",
         "nodemailer": "4.0.1",
         "nodemailer-ses-transport": "1.5.1",
