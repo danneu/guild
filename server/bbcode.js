@@ -672,7 +672,7 @@ var XBBCODE = (function() {
                     myUrl = ''
                 }
 
-                return '<img src="' + myUrl + '" />'
+                return '<img src="' + escapeHtml(myUrl) + '" />'
             },
             closeTag: function(params, content) {
                 return ''
