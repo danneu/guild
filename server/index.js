@@ -81,7 +81,7 @@ const protectCsrf = require('./middleware/protect-csrf')
 
 app.use(middleware.methodOverride())
 
-app.use(protectCsrf(['roleplayerguild.com']))
+app.use(protectCsrf(['roleplayerguild.com', 'localhost']))
 
 // Catch and log all errors that bubble up to koa
 // app.on('error', function(err) {

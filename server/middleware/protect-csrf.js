@@ -52,11 +52,13 @@ module.exports = function protectCsrf(hostnameWhitelist) {
 
         // CSRF measure failed.
         // For now, log the issue instead of rejecting request.
-        console.warn(
-            `csrf protection triggered for request to ${ctx.request.method} "${
-                ctx.request.path
-            }" with headers:\n${JSON.stringify(ctx.request.headers, null, 2)}`
-        )
-        return next()
+        // console.warn(
+        //     `csrf protection triggered for request to ${ctx.request.method} "${
+        //         ctx.request.path
+        //     }" with headers:\n${JSON.stringify(ctx.request.headers, null, 2)}`
+        // )
+        // return next()
+
+        ctx.throw(403)
     }
 }
