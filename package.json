@@ -26,7 +26,7 @@
         "form-data": "^2.1.4",
         "gm": "1.23.0",
         "interval-cache": "0.0.1",
-        "knex": "^0.14.0",
+        "knex": "^0.19.5",
         "koa": "2.4.1",
         "koa-better-static": "^1.0.5",
         "koa-body": "^2.0.1",
