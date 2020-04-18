@@ -682,10 +682,10 @@ var XBBCODE = (function() {
         justify: {
             trimContents: true,
             openTag: function(params, content) {
-                return '<span class="bb-justify">'
+                return '<div class="bb-justify">'
             },
             closeTag: function(params, content) {
-                return '</span>'
+                return '</div>'
             },
         },
         // "large": {
