@@ -378,7 +378,7 @@ blockquote footer {
 .bb-center { text-align: center; }
 .bb-left { text-align: left; }
 .bb-right { text-align: right; }
-.bb-justify { text-align: justify; }
+.bb-justify { text-align: justify; white-space: pre-line}
 
 .bb-quote {
     padding-top: 0;
