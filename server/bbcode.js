@@ -153,13 +153,8 @@ function replaceGreenText(text) {
         '$1<span class="bb-greentext">$2</span>'
     )
 }
-/*
-function replaceHr(text) {
-    return text.replace(/&#91;hr&#93;/g, '<hr class="bb-hr">')
-}
-*/
-// Replace unames
 
+// Replace unames
 function replaceMentions(text) {
     function slugifyUname(uname) {
         return uname
