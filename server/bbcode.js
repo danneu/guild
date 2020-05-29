@@ -863,8 +863,10 @@ var XBBCODE = (function() {
         table: {
             openTag: function(params, content) {
                 if (params === 'bordered')
-                    return '<div class="table-responsive"><table class="bb-table table table-bordered">'
-                return '<div class="table-responsive"><table class="bb-table table">'
+                    return '<div class="table-responsive"><table class="bb-table table table-bordered"> '
+                return '<div class="table-responsive"><table class="bb-table table"> '
+				//TO DO: Note that a space has been adde. This is a hackjob to fix the table glitch where
+				//a format-breaking <div> is injected by the web browser until a suitable solution can be found.
             },
             closeTag: function(params, content) {
                 isFirstTableRow = true
