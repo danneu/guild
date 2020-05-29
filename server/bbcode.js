@@ -28,7 +28,7 @@ function escapeHtml(unsafe) {
 
 // String -> Maybe String
 function extractYoutubeId(url) {
-    var re = /^.*(?:youtu.be\/|v\/|e\/|u\/\w+\/|embed\/|v=)([^#\&\?]{11}).*/
+    var re = /^.*(?:youtu.be\/|v\/|e\/|u\/\w+\/|embed\/|v=)([A-Za-z0-9_\-]{11}).*/
     var match = url.match(re)
     return match && match[1]
 }
@@ -57,6 +57,7 @@ function extractYoutubeId(url) {
 // <Snipped quote by {{ uname }}> or <Snipped quote>
 // The returned string is then ready to be wrapped with [quote=@...][/quote]
 // and placed in the editor
+
 function extractTopLevelMarkup(markup) {
     var re = /\[(quote)=?@?([a-z0-9_\- ]+)?\]|\[(\/quote)\]/gi
     // A quoteStack item is { idx: Int, uname: String | undefined }
@@ -152,11 +153,11 @@ function replaceGreenText(text) {
         '$1<span class="bb-greentext">$2</span>'
     )
 }
-
+/*
 function replaceHr(text) {
     return text.replace(/&#91;hr&#93;/g, '<hr class="bb-hr">')
 }
-
+*/
 // Replace unames
 
 function replaceMentions(text) {
@@ -201,19 +202,13 @@ var XBBCODE = (function() {
     //
     // Global tabIdx cursor so that [tab] context knows when it's first
     // in the array of [tabs] children.
-    var tabIdx = 0
+    //var tabIdx = 0
     // Only true for the first [row] parsed within a [table]
     // This lets me wrap the first [row] with a <thead>
     var isFirstTableRow = true
-    // Global array of errors that will be concat'd to the errorQueue array at the
-    // end. I use this to implement tag validation.
-    var tagErrs = []
-    // A map of tagName -> Bool. openTag logic should set it to true if it
-    // encounters validation error. closeTag logic should always set it back to false
-    // right before it returns.
-    // This allows openTag and closeTag to communicate an error state.
-    var hasError = {}
 
+
+/*
     function generateUuid() {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(
             c
@@ -223,7 +218,7 @@ var XBBCODE = (function() {
             return v.toString(16)
         })
     }
-
+*/
     // -----------------------------------------------------------------------------
     // Set up private variables
     // -----------------------------------------------------------------------------
@@ -272,7 +267,7 @@ var XBBCODE = (function() {
         colorNamePattern = /^(?:aliceblue|antiquewhite|aqua|aquamarine|azure|beige|bisque|black|blanchedalmond|blue|blueviolet|brown|burlywood|cadetblue|chartreuse|chocolate|coral|cornflowerblue|cornsilk|crimson|cyan|darkblue|darkcyan|darkgoldenrod|darkgray|darkgreen|darkkhaki|darkmagenta|darkolivegreen|darkorange|darkorchid|darkred|darksalmon|darkseagreen|darkslateblue|darkslategray|darkturquoise|darkviolet|deeppink|deepskyblue|dimgray|dodgerblue|firebrick|floralwhite|forestgreen|fuchsia|gainsboro|ghostwhite|gold|goldenrod|gray|green|greenyellow|honeydew|hotpink|indianred|indigo|ivory|khaki|lavender|lavenderblush|lawngreen|lemonchiffon|lightblue|lightcoral|lightcyan|lightgoldenrodyellow|lightgray|lightgreen|lightpink|lightsalmon|lightseagreen|lightskyblue|lightslategray|lightsteelblue|lightyellow|lime|limegreen|linen|magenta|maroon|mediumaquamarine|mediumblue|mediumorchid|mediumpurple|mediumseagreen|mediumslateblue|mediumspringgreen|mediumturquoise|mediumvioletred|midnightblue|mintcream|mistyrose|moccasin|navajowhite|navy|oldlace|olive|olivedrab|orange|orangered|orchid|palegoldenrod|palegreen|paleturquoise|palevioletred|papayawhip|peachpuff|peru|pink|plum|powderblue|purple|red|rosybrown|royalblue|saddlebrown|salmon|sandybrown|seagreen|seashell|sienna|silver|skyblue|slateblue|slategray|snow|springgreen|steelblue|tan|teal|thistle|tomato|turquoise|violet|wheat|white|whitesmoke|yellow|yellowgreen)$/,
         colorCodePattern = /^#?[a-fA-F0-9]{6}$/,
         emailPattern = /[^\s@]+@[^\s@]+\.[^\s@]+/,
-        fontFacePattern = /^([a-z][a-z0-9_]+|"[a-z][a-z0-9_\s]+")$/i,
+        fontFacePattern = /^([a-z][a-z0-9_\s]+)$/i,
         tags,
         tagList,
         tagsNoParseList = [],
@@ -287,63 +282,44 @@ var XBBCODE = (function() {
    * This object contains a list of tags that your code will be able to understand.
    * Each tag object has the following properties:
    *
-   *   openTag - A function that takes in the tag's parameters (if any) and its
-   *             contents, and returns what its HTML open tag should be.
-   *             Example: [color=red]test[/color] would take in "=red" as a
+   *   openTag - A function that takes in the tag's parameters (if any), its
+   *             contents, the current tag stack (with structure [tag, contents],
+   *             and the error queue and returns what its HTML open tag should be.
+   *             Example: [color=red]test[/color] would take in "red" as a
    *             parameter input, and "test" as a content input.
    *             It should be noted that any BBCode inside of "content" will have
    *             been processed by the time it enter the openTag function.
    *
    *   closeTag - A function that takes in the tag's parameters (if any) and its
-   *              contents, and returns what its HTML close tag should be.
-   *
-   *   displayContent - Defaults to true. If false, the content for the tag will
-   *                    not be displayed. This is useful for tags like IMG where
-   *                    its contents are actually a parameter input.
-   *
-   *   restrictChildrenTo - A list of BBCode tags which are allowed to be nested
-   *                        within this BBCode tag. If this property is omitted,
-   *                        any BBCode tag may be nested within the tag.
-   *
-   *   restrictParentsTo - A list of BBCode tags which are allowed to be parents of
-   *                       this BBCode tag. If this property is omitted, any BBCode
-   *                       tag may be a parent of the tag.
-   *
-   *   noParse - true or false. If true, none of the content WITHIN this tag will be
-   *             parsed by the XBBCode parser.
-   *
+	*              contents, the current tag stack (with structure {tag, tagData},
+   *              and the error queue and returns what its HTML close tag should be.
    *
    *
    * LIMITIONS on adding NEW TAGS:
-   *  - Tag names should be alphanumeric (including underscores) and all tags should have an opening tag
-   *    and a closing tag.
-   *    The [*] tag is an exception because it was already a standard
-   *    bbcode tag. Technecially tags don't *have* to be alphanumeric, but since
-   *    regular expressions are used to parse the text, if you use a non-alphanumeric
-   *    tag names, just make sure the tag name gets escaped properly (if needed).
+   *  - Tag names cannot start with an @.
+   *  - If a tag's content is not supposed to be parsed, add it to the stopTag dictionary
+   *  - If a tag has no closing counterpart (e.g. [hr]), add it to the singleTag dictionary
+   *  - If a tag has a standard open and close tag structure, add it to the tags dictionary
+   *  - Allowing tags to inject additional raw BBCode is unsupported. Attempt at your own risk
    * --------------------------------------------------------------------------- */
 
     // Extracting BBCode implementations makes it simpler to create aliases
     // like color & colour -> colorSpec
     var colorSpec = {
-        openTag: function(params, content) {
+		colorErrorStack: [],
+		//Variable local to the object that determines whether the colors are valid
+		//It's a stack so it can keep track of the corresponding closing tags in the case of an error
+        openTag: function(params, content, tagStack, errorQueue) {
             // Ensure they gave us a colorCode
             if (!params) {
-                tagErrs.push(
+                errorQueue.push(
                     'You have a COLOR tag that does not specify a color'
                 )
-                hasError.color = true
+                this.colorErrorStack.push(true)
                 return '&#91;color&#93;'
             }
 
-            // Ensure there's actually content
-            if (content.trim().length === 0) {
-                tagErrs.push('You have a COLOR tag with no contents')
-                hasError.color = true
-                return '&#91;color' + params + '&#93;'
-            }
-
-            var colorCode = params.substr(1).toLowerCase()
+            var colorCode = params.toLowerCase()
 
             // Ensure colorCode is actually a color
             // TODO: Look up why library sets lastIndex to 0. Roll with it for now.
@@ -353,14 +329,14 @@ var XBBCODE = (function() {
                 !colorNamePattern.test(colorCode) &&
                 !colorCodePattern.test(colorCode)
             ) {
-                hasError.color = true
-                tagErrs.push(
+                errorQueue.push(
                     'You have a COLOR tag with an invalid color: ' +
-                        '[color' +
+                        '[color=' +
                         params +
                         ']'
                 )
-                return '&#91;color' + params + '&#93;'
+				this.colorErrorStack.push(true)
+                return '&#91;color=' + params + '&#93;'
             }
 
             // If colorCode is a hex value, prefix it with # if it's missing
@@ -371,13 +347,13 @@ var XBBCODE = (function() {
             ) {
                 colorCode = '#' + colorCode
             }
-
+			this.colorErrorStack.push(false)
+			//False indicating that this color tag is not invalid
             return '<font color="' + colorCode + '">'
         },
-        closeTag: function(params, content) {
-            var ret = hasError.color ? '&#91;/color&#93;' : '</font>'
-            hasError.color = false
-            return ret
+        closeTag: function(params, content, tagStack, errorQueue) {
+            return this.colorErrorStack.pop() ? '&#91;/color&#93;' : '</font>'
+			//Pop is always a safe operation because if there's an imbalance in tags, it'll be handled in parseBBCode
         },
     }
 
@@ -391,6 +367,105 @@ var XBBCODE = (function() {
         },
     }
 
+	var tagInStack = function(tagStack, tag){
+		for(let i = 0; i < tagStack.length; i++)
+		{
+			if(tagStack[i].tag == tag){
+				return true
+			}
+		}
+		return false
+	}
+	var makeUnique = function(a) {
+		var seen = {};
+		return a.filter(function(item) {
+			return seen.hasOwnProperty(item) ? false : (seen[item] = true);
+		});
+	}
+	singleTags = {
+		hr: {
+            openTag: function(params, content) {
+                return '<hr class="bb-hr">'
+            }
+		},
+		br: {
+            openTag: function(params, content) {
+                return '<br>'
+            }
+		}
+	}
+
+	stopTags = {
+		youtube: {
+            openTag: function(params, content, tagStack, errorQueue) {
+                var youtubeId = extractYoutubeId(content)
+                if (!youtubeId){
+					errorQueue.push('The video URL appears to be invalid')
+                    return '&#91;youtube&#93;' + content +' &#91;/youtube]'
+					//TO DO: Fix AutoLinker incompatibilities. For now, there's a space before [/youtube] to fix the broken hotlinking
+				}
+                var src = 'https://youtube.com/embed/' + youtubeId + '?theme=dark'
+                return (
+                    '<iframe src="' +
+                    src +
+                    '" frameborder="0" width="496" height="279" allowfullscreen></iframe>'
+                )
+            },
+            closeTag: function(params, content) {
+                return ''
+            },
+        },
+        code: {
+            trimContents: true,
+            openTag: function(params, content) {
+                return '<code>' + content
+            },
+            closeTag: function(params, content) {
+                return '</code>'
+            },
+        },
+        pre: {
+            trimContents: true,
+            openTag: function(params, content) {
+                return '<pre>' + content
+            },
+            closeTag: function(params, content) {
+                return '</pre>'
+            },
+        },
+		img: {
+            openTag: function(params, content) {
+                var myUrl = content.trim()
+
+                urlPattern.lastIndex = 0
+                if (!urlPattern.test(myUrl)) {
+                    myUrl = ''
+                }
+
+                return '<img src="' + escapeHtml(myUrl) + '" />'
+            },
+            closeTag: function(params, content) {
+                return ''
+            },
+        },
+        noparse: {
+            openTag: function(params, content) {
+                return content
+            },
+            closeTag: function(params, content) {
+                return ''
+            },
+        },
+		legend: {
+            openTag: function(params, content) {
+                return '<a target="_blank" rel="nofollow noopener" href="https://YouTube.com/LegendBegins">' + content + '</a>'
+				//Contributor Easter Egg. Feel free to remove
+            },
+			closeTag: function(params, content) {
+                return ''
+            }
+		}
+	}
     tags = {
         //
         // Custom BBCode for the Guild
@@ -398,7 +473,7 @@ var XBBCODE = (function() {
         hider: {
             trimContents: true,
             openTag: function(params, content) {
-                var title = params ? escapeHtml(params.slice(1)) : 'Hider'
+                var title = params ? escapeHtml(params) : 'Hider'
                 return (
                     '<div class="hider-panel">' +
                     '<div class="hider-heading">' +
@@ -406,8 +481,7 @@ var XBBCODE = (function() {
                     title +
                     '">' +
                     // title + ' [+]'+
-                    // Must use html entity code for brackets so i dont trip
-                    // the "there appears to be misaligned tags" err.
+                    //Using html entity code for bracket
                     title +
                     ' &#91;+&#93;' +
                     '</button>' +
@@ -419,53 +493,16 @@ var XBBCODE = (function() {
                 return '</div></div>'
             },
         },
-        youtube: {
-            displayContent: false,
-            openTag: function(params, content) {
-                var youtubeId = extractYoutubeId(content)
-                if (!youtubeId)
-                    return '&#91;youtube&#93;' + content + '&#91;/youtube&#93;'
-                var src = '//youtube.com/embed/' + youtubeId + '?theme=dark'
-                return (
-                    '<iframe src="' +
-                    src +
-                    '" frameborder="0" width="496" height="279" allowfullscreen></iframe>'
-                )
-            },
-            closeTag: function(params, content) {
-                return ''
-            },
-        },
         abbr: {
             openTag: function(params, content) {
                 return (
                     '<abbr class="bb-abbr" title="' +
-                    (params && params.slice(1)) +
+                    (params) +
                     '">'
                 )
             },
             closeTag: function(params, content) {
                 return '</abbr>'
-            },
-        },
-        code: {
-            noParse: true,
-            trimContents: true,
-            openTag: function(params, content) {
-                return '<code>'
-            },
-            closeTag: function(params, content) {
-                return '</code>'
-            },
-        },
-        pre: {
-            noParse: true,
-            trimContents: true,
-            openTag: function(params, content) {
-                return '<pre>'
-            },
-            closeTag: function(params, content) {
-                return '</pre>'
             },
         },
         mark: {
@@ -560,7 +597,7 @@ var XBBCODE = (function() {
         // "tab": {
         //   restrictParentsTo: ['tabs'],
         //   openTag: function(params, content) {
-        //     var title = params ? params.slice(1) : 'Tab';
+        //     var title = params ? params : 'Tab';
         //     var uuid = generateUuid();
         //     return '<div role="tabpanel" style="white-space: pre-line" class="tab-pane' + (tabIdx++===0 ? ' active' : '') +'" id="'+uuid+'" data-title="' + title + '">';
         //   },
@@ -585,6 +622,7 @@ var XBBCODE = (function() {
       the bbcode input when evaluating parent-child tag relationships
     */
         bbcode: {
+			//Only included for backward compatibility. Can safely be removed
             openTag: function(params, content) {
                 return ''
             },
@@ -594,15 +632,6 @@ var XBBCODE = (function() {
         },
         center: centerSpec,
         centre: centerSpec,
-        // "code": {
-        //   openTag: function(params,content) {
-        //     return '<pre>';
-        //   },
-        //   closeTag: function(params,content) {
-        //     return '</pre>';
-        //   },
-        //   noParse: true
-        // },
         color: colorSpec,
         colour: colorSpec,
         // "email": {
@@ -641,20 +670,20 @@ var XBBCODE = (function() {
         //     return '</span>';
         //   }
         // },
-        // "font": {
-        //   openTag: function(params,content) {
+         font: {
+           openTag: function(params,content) {
 
-        //     var faceCode = params.substr(1) || "inherit";
-        //     fontFacePattern.lastIndex = 0;
-        //     if ( !fontFacePattern.test( faceCode ) ) {
-        //       faceCode = "inherit";
-        //     }
-        //     return '<span style="font-family:' + faceCode + '">';
-        //   },
-        //   closeTag: function(params,content) {
-        //     return '</span>';
-        //   }
-        // },
+             var faceCode = params || "inherit";
+             fontFacePattern.lastIndex = 0;
+             if ( !fontFacePattern.test( faceCode ) ) {
+               faceCode = "inherit";
+             }
+             return '<span style="font-family:' + faceCode + '">';
+           },
+           closeTag: function(params,content) {
+             return '</span>';
+           }
+         },
         i: {
             openTag: function(params, content) {
                 return '<span class="bb-i">'
@@ -662,22 +691,6 @@ var XBBCODE = (function() {
             closeTag: function(params, content) {
                 return '</span>'
             },
-        },
-        img: {
-            openTag: function(params, content) {
-                var myUrl = content.trim()
-
-                urlPattern.lastIndex = 0
-                if (!urlPattern.test(myUrl)) {
-                    myUrl = ''
-                }
-
-                return '<img src="' + escapeHtml(myUrl) + '" />'
-            },
-            closeTag: function(params, content) {
-                return ''
-            },
-            displayContent: false,
         },
         justify: {
             trimContents: true,
@@ -733,16 +746,6 @@ var XBBCODE = (function() {
             closeTag: function(params, content) {
                 return '</ul>'
             },
-            restrictChildrenTo: ['*', 'li'],
-        },
-        noparse: {
-            openTag: function(params, content) {
-                return ''
-            },
-            closeTag: function(params, content) {
-                return ''
-            },
-            noParse: true,
         },
         // "ol": {
         //   openTag: function(params,content) {
@@ -773,14 +776,14 @@ var XBBCODE = (function() {
                     // params starts with '=' unless user messed up.
                     // e.g. '=@Mahz' or '=some guy'
                     if (
-                        params.slice(1).charAt(0) === '@' &&
-                        params.slice(1).length > 1
+                        params.charAt(0) === '@' &&
+                        params.length > 1
                     ) {
                         // This is a @uname mention
-                        var uname = params.slice(2)
-                        html += '<footer>&#91;@' + uname + '&#93;</footer>'
+                        var uname = params.slice(1)
+                        html += '<footer>[@' + uname + ']</footer>'
                     } else {
-                        var source = params.slice(1)
+                        var source = params
                         html += '<footer>' + source + '</footer>'
                     }
                 }
@@ -859,7 +862,7 @@ var XBBCODE = (function() {
         },
         table: {
             openTag: function(params, content) {
-                if (params && params.slice(1) === 'bordered')
+                if (params === 'bordered')
                     return '<div class="table-responsive"><table class="bb-table table table-bordered">'
                 return '<div class="table-responsive"><table class="bb-table table">'
             },
@@ -867,8 +870,6 @@ var XBBCODE = (function() {
                 isFirstTableRow = true
                 return '</table></div>'
             },
-            // restrictChildrenTo: ["tbody","thead", "tfoot", "tr"]
-            restrictChildrenTo: ['row'],
         },
         // "tbody": {
         //   openTag: function(params,content) {
@@ -901,13 +902,28 @@ var XBBCODE = (function() {
         //   restrictParentsTo: ["table"]
         // },
         cell: {
-            openTag: function(params, content) {
-                if (isFirstTableRow) return '<th class="bb-th">'
+            openTag: function(params, content, tagStack, errorQueue) {
+                let parentTag, foundParent = false
+				if(tagStack.length > 1){
+					//If more than just us on the stack
+					parentTag = tagStack[tagStack.length - 2].tag
+					//Grab .tag because the tag stack is strucured {tag, tagData}
+				}
+				for(let i = 0; i < this.restrictParentsTo.length; i++){
+					//Enumerate through acceptable parent list. Faster than for-in
+					if(this.restrictParentsTo[i] == parentTag){
+						foundParent = true
+					}
+				}
+				if(!foundParent){
+					errorQueue.push('The only acceptable parents of the tag \'cell\' include: ' + this.restrictParentsTo)
+					return '<td>'
+				}
 
                 var classNames = [''],
                     status
                 // Determine the status if one is given.
-                switch (params && params.slice(1)) {
+                switch (params) {
                     case 'active':
                         status = 'active'
                         break
@@ -947,15 +963,30 @@ var XBBCODE = (function() {
         //   restrictParentsTo: ["tr"]
         // },
         row: {
-            openTag: function(params, content) {
-                if (isFirstTableRow) {
+            openTag: function(params, content, tagStack, errorQueue) {				
+				let parentTag, foundParent = false
+				if(tagStack.length > 1){
+					//If more than just us on the stack
+					parentTag = tagStack[tagStack.length - 2].tag
+					//Grab .tag because the tag stack is strucured {tag, tagData}
+				}
+				for(let i = 0; i < this.restrictParentsTo.length; i++){
+					//Enumerate through acceptable parent list. Faster than for-in
+					if(this.restrictParentsTo[i] == parentTag){
+						foundParent = true
+					}
+				}
+				if(!foundParent){
+					errorQueue.push('The only acceptable parents of the tag \'row\' include: ' + this.restrictParentsTo)
+					return '<tr>'
+				}
+				if (isFirstTableRow) {
                     return '<thead class="bb-thead"><tr class="bb-tr">'
                 }
-
                 var classNames = [''],
                     status
                 // Determine the status if one is given.
-                switch (params && params.slice(1)) {
+                switch (params) {
                     case 'active':
                         status = 'active'
                         break
@@ -986,8 +1017,7 @@ var XBBCODE = (function() {
                 isFirstTableRow = false
                 return html
             },
-            restrictChildrenTo: ['cell'],
-            restrictParentsTo: ['table'],
+            restrictParentsTo: ['table']
         },
         u: {
             openTag: function(params, content) {
@@ -1008,7 +1038,8 @@ var XBBCODE = (function() {
         // },
         url: {
             trimContents: true,
-            openTag: function(params, content) {
+			urlErrorStack: [],
+            openTag: function(params, content, tagStack, errorQueue) {
                 var myUrl
 
                 if (!params) {
@@ -1016,12 +1047,11 @@ var XBBCODE = (function() {
                 } else {
                     myUrl = params
                         .trim()
-                        .substr(1)
-                        .trim()
                 }
 
                 if (
-                    myUrl.indexOf('http') !== 0 &&
+                    myUrl.indexOf('http://') !== 0 &&
+					myUrl.indexOf('https://') !== 0 &&
                     myUrl.indexOf('ftp://') !== 0
                 ) {
                     // they don't have a valid protocol at the start, so add one [#63]
@@ -1030,15 +1060,17 @@ var XBBCODE = (function() {
 
                 urlPattern.lastIndex = 0
                 if (!urlPattern.test(myUrl)) {
-                    hasError.url = true
-                    tagErrs.push('One of your [url] tags has an invalid url')
+                    this.urlErrorStack.push(true)
+                    errorQueue.push('One of your [url] tags has an invalid url')
                     if (params) return '&#91;url=' + myUrl + '&#93;'
                     else return '&#91;url&#93;'
                 }
 
                 // dumb way to see if user is linking internally or externally
                 // keep synced with Autolinker#replaceFn definedin this file
-                if (/roleplayerguild.com/i.test(myUrl)) {
+				this.urlErrorStack.push(false)
+				//If we reach this point, it is a valid URL
+                if (/^((https?:\/\/)?roleplayerguild.com)/i.test(myUrl)) {
                     // internal link
                     return '<a href="' + myUrl + '">'
                 } else {
@@ -1051,9 +1083,7 @@ var XBBCODE = (function() {
                 }
             },
             closeTag: function(params, content) {
-                var ret = hasError.url ? '&#91;/url&#93;' : '</a>'
-                hasError.url = false
-                return ret
+                return this.urlErrorStack.pop() ? '&#91;/url&#93;' : '</a>'
             },
         },
         /*
@@ -1061,276 +1091,39 @@ var XBBCODE = (function() {
       Instead this module parses the code and adds the closing [/*] tag in for them. None of the tags you
       add will act like this and this tag is an exception to the others.
     */
-        '*': {
+        '*': {	
             trimContents: true,
-            openTag: function(params, content) {
+            openTag: function(params, content, tagStack, errorQueue) {
+				let parentTag, foundParent = false
+				if(tagStack.length > 1){
+					//If more than just us on the stack
+					parentTag = tagStack[tagStack.length - 2].tag
+					//Grab .tag because the tag stack is strucured {tag, tagData}
+				}
+				for(let i = 0; i < this.restrictParentsTo.length; i++){
+					//Enumerate through acceptable parent list. Faster than for-in
+					if(this.restrictParentsTo[i] == parentTag){
+						foundParent = true
+					}
+				}
+				if(!foundParent){
+					errorQueue.push('The only acceptable parents of the tag \'*\' include: ' + this.restrictParentsTo)
+					return '<tr>'
+				}
+				//Return li no matter what
                 return '<li>'
             },
             closeTag: function(params, content) {
                 return '</li>'
             },
-            restrictParentsTo: ['list', 'ul', 'ol'],
+            restrictParentsTo: ['list'] //, 'ul', 'ol'], These are now unused
         },
-    }
-
-    // create tag list and lookup fields
-    function initTags() {
-        tagList = []
-        var prop, ii, len
-        for (prop in tags) {
-            if (tags.hasOwnProperty(prop)) {
-                if (prop === '*') {
-                    tagList.push('\\' + prop)
-                } else {
-                    tagList.push(prop)
-                    if (tags[prop].noParse) {
-                        tagsNoParseList.push(prop)
-                    }
-                }
-
-                tags[prop].validChildLookup = {}
-                tags[prop].validParentLookup = {}
-                tags[prop].restrictParentsTo =
-                    tags[prop].restrictParentsTo || []
-                tags[prop].restrictChildrenTo =
-                    tags[prop].restrictChildrenTo || []
-
-                len = tags[prop].restrictChildrenTo.length
-                for (ii = 0; ii < len; ii++) {
-                    tags[prop].validChildLookup[
-                        tags[prop].restrictChildrenTo[ii]
-                    ] = true
-                }
-                len = tags[prop].restrictParentsTo.length
-                for (ii = 0; ii < len; ii++) {
-                    tags[prop].validParentLookup[
-                        tags[prop].restrictParentsTo[ii]
-                    ] = true
-                }
-            }
-        }
-
-        bbRegExp = new RegExp(
-            '<bbcl=([0-9]+) (' +
-                tagList.join('|') +
-                ')([ =][^>]*?)?>((?:.|[\\r\\n])*?)<bbcl=\\1 /\\2>',
-            'gi'
-        )
-        pbbRegExp = new RegExp(
-            '\\[(' +
-                tagList.join('|') +
-                ')([ =][^\\]]*?)?\\]([^\\[]*?)\\[/\\1\\]',
-            'gi'
-        )
-        pbbRegExp2 = new RegExp(
-            '\\[(' +
-                tagsNoParseList.join('|') +
-                ')([ =][^\\]]*?)?\\]([\\s\\S]*?)\\[/\\1\\]',
-            'gi'
-        )
-
-        // create the regex for escaping ['s that aren't apart of tags
-        ;(function() {
-            var closeTagList = []
-            for (var ii = 0; ii < tagList.length; ii++) {
-                if (tagList[ii] !== '\\*') {
-                    // the * tag doesn't have an offical closing tag
-                    closeTagList.push('/' + tagList[ii])
-                }
-            }
-
-            openTags = new RegExp(
-                '(\\[)((?:' + tagList.join('|') + ')(?:[ =][^\\]]*?)?)(\\])',
-                'gi'
-            )
-            closeTags = new RegExp(
-                '(\\[)(' + closeTagList.join('|') + ')(\\])',
-                'gi'
-            )
-        })()
-    }
-    initTags()
-
-    // -----------------------------------------------------------------------------
-    // private functions
-    // -----------------------------------------------------------------------------
-
-    function checkParentChildRestrictions(
-        parentTag,
-        bbcode,
-        bbcodeLevel,
-        tagName,
-        tagParams,
-        tagContents,
-        errQueue
-    ) {
-        errQueue = errQueue || []
-        bbcodeLevel++
-
-        // get a list of all of the child tags to this tag
-        var reTagNames = new RegExp(
-                '(<bbcl=' +
-                    bbcodeLevel +
-                    ' )(' +
-                    tagList.join('|') +
-                    ')([ =>])',
-                'gi'
-            ),
-            reTagNamesParts = new RegExp(
-                '(<bbcl=' +
-                    bbcodeLevel +
-                    ' )(' +
-                    tagList.join('|') +
-                    ')([ =>])',
-                'i'
-            ),
-            matchingTags = tagContents.match(reTagNames) || [],
-            cInfo,
-            errStr,
-            ii,
-            childTag,
-            pInfo = tags[parentTag] || {}
-
-        reTagNames.lastIndex = 0
-
-        if (!matchingTags) {
-            tagContents = ''
-        }
-
-        for (ii = 0; ii < matchingTags.length; ii++) {
-            reTagNamesParts.lastIndex = 0
-            childTag = matchingTags[ii].match(reTagNamesParts)[2].toLowerCase()
-
-            if (
-                pInfo &&
-                pInfo.restrictChildrenTo &&
-                pInfo.restrictChildrenTo.length > 0
-            ) {
-                if (!pInfo.validChildLookup[childTag]) {
-                    errStr =
-                        'The tag "' +
-                        childTag +
-                        '" is not allowed as a child of the tag "' +
-                        parentTag +
-                        '".'
-                    errQueue.push(errStr)
-                }
-            }
-            cInfo = tags[childTag] || {}
-            if (cInfo.restrictParentsTo.length > 0) {
-                if (!cInfo.validParentLookup[parentTag]) {
-                    errStr =
-                        'The tag "' +
-                        parentTag +
-                        '" is not allowed as a parent of the tag "' +
-                        childTag +
-                        '".'
-                    errQueue.push(errStr)
-                }
-            }
-        }
-
-        tagContents = tagContents.replace(bbRegExp, function(
-            matchStr,
-            bbcodeLevel,
-            tagName,
-            tagParams,
-            tagContents
-        ) {
-            errQueue = checkParentChildRestrictions(
-                tagName.toLowerCase(),
-                matchStr,
-                bbcodeLevel,
-                tagName,
-                tagParams,
-                tagContents,
-                errQueue
-            )
-            return matchStr
-        })
-        return errQueue
-    }
-
-    /*
-    This function updates or adds a piece of metadata to each tag called "bbcl" which
-    indicates how deeply nested a particular tag was in the bbcode. This property is removed
-    from the HTML code tags at the end of the processing.
-  */
-    function updateTagDepths(tagContents) {
-        tagContents = tagContents.replace(/\<([^\>][^\>]*?)\>/gi, function(
-            matchStr,
-            subMatchStr
-        ) {
-            var bbCodeLevel = subMatchStr.match(/^bbcl=([0-9]+) /)
-            if (bbCodeLevel === null) {
-                return '<bbcl=0 ' + subMatchStr + '>'
-            } else {
-                return (
-                    '<' +
-                    subMatchStr.replace(/^(bbcl=)([0-9]+)/, function(
-                        matchStr,
-                        m1,
-                        m2
-                    ) {
-                        return m1 + (parseInt(m2, 10) + 1)
-                    }) +
-                    '>'
-                )
-            }
-        })
-        return tagContents
-    }
-
-    /*
-    This function removes the metadata added by the updateTagDepths function
-  */
-    function unprocess(tagContent) {
-        return tagContent
-            .replace(/<bbcl=[0-9]+ \/\*>/gi, '')
-            .replace(/<bbcl=[0-9]+ /gi, '&#91;')
-            .replace(/>/gi, '&#93;')
-    }
-
-    var replaceFunct = function(
-        matchStr,
-        bbcodeLevel,
-        tagName,
-        tagParams,
-        tagContents
-    ) {
-        tagName = tagName.toLowerCase()
-
-        var processedContent = tags[tagName].noParse
-                ? unprocess(tagContents)
-                : tagContents.replace(bbRegExp, replaceFunct),
-            openTag = tags[tagName].openTag(tagParams, processedContent),
-            closeTag = tags[tagName].closeTag(tagParams, processedContent)
-
-        if (tags[tagName].displayContent === false) {
-            processedContent = ''
-        }
-
-        if (tags[tagName].trimContents) {
-            processedContent = processedContent.trim()
-        }
-
-        return (
-            openTag +
-            processedContent.replace(/^\n+/, '').replace(/\n+$/, '') +
-            closeTag
-        )
-    }
-
-    function parse(config) {
-        var output = config.text
-        output = output.replace(bbRegExp, replaceFunct)
-        return output
     }
 
     /*
     The star tag [*] is special in that it does not use a closing tag. Since this parser requires that tags to have a closing
     tag, we must pre-process the input and add in closing tags [/*] for the star tag.
-    We have a little levaridge in that we know the text we're processing wont contain the <> characters (they have been
+    We have a little leverage in that we know the text we're processing wont contain the <> characters (they have been
     changed into their HTML entity form to prevent XSS and code injection), so we can use those characters as markers to
     help us define boundaries and figure out where to place the [/*] tags.
   */
@@ -1373,22 +1166,155 @@ var XBBCODE = (function() {
         return text
     }
 
-    function addBbcodeLevels(text) {
-        while (
-            text !==
-            (text = text.replace(pbbRegExp, function(
-                matchStr,
-                tagName,
-                tagParams,
-                tagContents
-            ) {
-                matchStr = matchStr.replace(/\[/g, '<')
-                matchStr = matchStr.replace(/\]/g, '>')
-                return updateTagDepths(matchStr)
-            }))
-        );
-        return text
-    }
+	function regexEscapeList(replaceList) {
+		//Makes every string in a list regex-safe
+		for(let i in replaceList){
+			replaceList[i] = replaceList[i].replace(/[\\^$*+?.()|[\]{}]/g, '\\$&');
+		}
+		return replaceList
+	}
+
+	let stopList = regexEscapeList(Object.keys(stopTags))
+	//Noparse tags
+	let allTags = regexEscapeList(Object.keys(tags))
+	//Grab all tag [pairs]
+	//Regular tags with opening and closing versions
+	let singleList = regexEscapeList(Object.keys(singleTags))
+	//Tags that don't have a closing counterpart
+	allTags = allTags.concat(stopList)
+	allTags = allTags.concat(singleList)
+	
+	function onMisalignedTags(errorQueue = []){
+		errorQueue.push('Some tags appear to be misaligned')
+	}
+	function processTag(tag, data = false, tagStack = [], errorQueue = []){
+		if(tags[tag]){
+			return tags[tag].openTag(data, null, tagStack, errorQueue)
+		}
+		else if(singleTags[tag]){
+			return singleTags[tag].openTag(data, null, tagStack, errorQueue)
+		}
+		else{
+			return ''
+		}
+	}
+	function processCloseTag(tag, data = false, tagStack = [], errorQueue = []){
+		if(tags[tag]){
+			return tags[tag].closeTag(data, null, tagStack, errorQueue)
+		}
+		else{
+			return ''
+		}
+	}
+	function findClosingNoParse(tag, message, data = false, tagStack = [], errorQueue = []){
+		let closeFinder = new RegExp('(?<=\\[/)(' + tag + ')(?=\\])', '')
+		let endResult = closeFinder.exec(message)
+		if(!endResult){
+			//if the noparse tag isn't closed
+			onMisalignedTags(errorQueue)
+			return [message.length, message]
+		}
+		else{
+			let innerContent = message.slice(0, endResult.index - 2)
+			//We have no idea how the tag wants to handle the inner data, so that's done in the tag functions themselves.
+			return [endResult.index - 2, stopTags[tag].openTag(data, innerContent, tagStack, errorQueue) + stopTags[tag].closeTag(data, innerContent, tagStack, errorQueue)]
+			//Return the index of the end of the content (accounting for the [/)
+		}
+	}
+
+
+	let tagRegex = new RegExp('(?<=\\[)(' + allTags.join('|') + ')(\\s*=.*?)?(?=\\])', 'i')
+	let endTagRegex = new RegExp('(?<=\\[/)(' + allTags.join('|') + ')(?=\\])', 'i')
+	//Positive lookbehind and lookahead to grab the tag we care about
+
+
+	function getTagAndOptionalData(tagSearch){
+		//Grab the two capturing groups (tag and the tag data) and return them. Return empty by default
+		let mainTag = ''
+		let innerData = ''
+		if(tagSearch){
+			mainTag = tagSearch[1].toLowerCase()
+			//Grab main tag
+			if(tagSearch[2]){
+				innerData = tagSearch[2].slice(1,).trim()
+				//Also grab inner data if(it exists but remove = sign
+			}
+		}
+		return [mainTag, innerData]
+	}
+		
+
+	function parseBBCode(message, errorQueue){
+		let contentEnd = 0
+		//This value changes as we scan through the tag set
+		let rebuiltString = ''
+		let tagStack = []
+		while(true){
+			//Loop until we have traversed every tag in this level
+			let result = tagRegex.exec(message.slice(contentEnd,))
+			//We measure from contentEnd because we need to know where to search from when two tags are embedded on the same level
+			let endResult = endTagRegex.exec(message.slice(contentEnd,))
+			//We grab both the next start and end tags and see which comes first
+			if(result && (!endResult || endResult.index > result.index)){
+				//if our next tag is an open tag
+				let [tag, tagData] = getTagAndOptionalData(result)
+				tagStack.push({'tag':tag, 'data':tagData})
+				//if there is no = in the tag, tagData will be null
+				rebuiltString += message.slice(contentEnd, contentEnd + result.index - 1)
+				rebuiltString += processTag(tag, tagData, tagStack, errorQueue)
+				//Add everything up to and including the tag to the rebuilt string. We have to remember that results is always going to be offset by contentEnd
+				contentEnd += result.index + result[0].length + 1
+				if(singleList.includes(tag)){
+					tagStack.pop()
+				}
+				else if(stopList.includes(tag)){
+					//if we encounter a noparse tag
+					let [endIndex, embeddedContent] = findClosingNoParse(tag, message.slice(contentEnd,), tagData, errorQueue)
+					contentEnd += endIndex
+					rebuiltString += embeddedContent
+					//We have to add the index of the result as well
+				}
+			}
+			else if(endResult){
+				//if the next tag is a closing one
+				rebuiltString += message.slice(contentEnd, contentEnd + endResult.index - 2)
+				let endTag = endResult[0].toLowerCase()
+				let parserEnd = endResult.index + endResult[0].length + 1
+				if(tagStack.length < 1){
+					//if this is an unpaired closing tag, treat it as text and keep going
+					rebuiltString += message.slice(contentEnd, contentEnd + parserEnd)
+					contentEnd += parserEnd
+					continue
+				}
+				else if(endTag != tagStack[tagStack.length - 1].tag){
+					//if our tags don't match
+					onMisalignedTags(errorQueue)
+				}
+				endData = tagStack.pop()
+				//If the end tag is a mismatch, force them to align to not break the post
+				rebuiltString += processCloseTag(endData.tag, endData.data, tagStack, errorQueue)
+				contentEnd += parserEnd
+			}
+			else{
+				//if we're out of tags
+				if(tagStack.length > 0){
+					//if we don't have enough closing tags
+					onMisalignedTags(errorQueue)
+					while(tagStack.length > 0){
+						phantomData = tagStack.pop()
+						rebuiltString += processCloseTag(phantomData.tag, phantomData.data, tagStack, errorQueue)
+						//Finish adding missing ending tags
+					}
+				}
+				rebuiltString += message.slice(contentEnd,)
+				break
+			}
+		}
+		return rebuiltString
+	}
+
+
+	
 
     // -----------------------------------------------------------------------------
     // public functions
@@ -1400,105 +1326,27 @@ var XBBCODE = (function() {
     }
 
     // API
-    me.addTags = function(newtags) {
-        var tag
-        for (tag in newtags) {
-            tags[tag] = newtags[tag]
-        }
-        initTags()
-    }
 
     me.process = function(config) {
         var ret = { html: '', error: false },
             errQueue = []
 
-        config.text = config.text.replace(/</g, '&lt;') // escape HTML tag brackets
-        config.text = config.text.replace(/>/g, '&gt;') // escape HTML tag brackets
-
-        config.text = config.text.replace(openTags, function(
-            matchStr,
-            openB,
-            contents,
-            closeB
-        ) {
-            return '<' + contents + '>'
-        })
-        config.text = config.text.replace(closeTags, function(
-            matchStr,
-            openB,
-            contents,
-            closeB
-        ) {
-            return '<' + contents + '>'
-        })
-
-        config.text = config.text.replace(/\[/g, '&#91;') // escape ['s that aren't apart of tags
-        config.text = config.text.replace(/\]/g, '&#93;') // escape ['s that aren't apart of tags
-        config.text = config.text.replace(/</g, '[') // escape ['s that aren't apart of tags
-        config.text = config.text.replace(/>/g, ']') // escape ['s that aren't apart of tags
-
-        // process tags that don't have their content parsed
-        while (
-            config.text !==
-            (config.text = config.text.replace(pbbRegExp2, function(
-                matchStr,
-                tagName,
-                tagParams,
-                tagContents
-            ) {
-                tagContents = tagContents.replace(/\[/g, '&#91;')
-                tagContents = tagContents.replace(/\]/g, '&#93;')
-                tagParams = tagParams || ''
-                tagContents = tagContents || ''
-                return (
-                    '[' +
-                    tagName +
-                    tagParams +
-                    ']' +
-                    tagContents +
-                    '[/' +
-                    tagName +
-                    ']'
-                )
-            }))
-        );
+		isFirstTableRow = true //Have to reset this global variable until I figure out an elegant way to delete it
+        config.text = escapeHtml(config.text) //Escape dangerous characters
 
         config.text = fixStarTag(config.text) // add in closing tags for the [*] tag
-        config.text = addBbcodeLevels(config.text) // add in level metadata
 
-        errQueue = checkParentChildRestrictions(
-            'bbcode',
-            config.text,
-            -1,
-            '',
-            '',
-            config.text
-        )
+        ret.html = parseBBCode(config.text, errQueue)
 
-        ret.html = parse(config)
 
-        // Replace [hr] with <hr>
-        ret.html = replaceHr(ret.html)
 
         // Wrap >greentext with styling
         ret.html = replaceGreenText(ret.html)
 
-        if (ret.html.indexOf('[') !== -1 || ret.html.indexOf(']') !== -1) {
-            errQueue.push('Some tags appear to be misaligned.')
-        }
-
-        if (config.removeMisalignedTags) {
-            ret.html = ret.html.replace(/\[.*?\]/g, '')
-        }
         if (config.addInLineBreaks) {
-            ret.html =
+            ret.html =	
                 '<div style="white-space:pre-wrap;">' + ret.html + '</div>'
         }
-
-        // ret.html = ret.html.replace("&#91;", "["); // put ['s back in
-        // ret.html = ret.html.replace("&#93;", "]"); // put ['s back in
-        // Needed to patch above 2 lines of library code to replace all instances
-        ret.html = ret.html.replace(/&#91;/g, '[').replace(/&#93;/g, ']')
 
         // Replace smilie codes with <img>s
         ret.html = replaceSmilies(ret.html)
@@ -1511,11 +1359,7 @@ var XBBCODE = (function() {
         ret.html = ret.html.replace(/\n{2,}/g, '\n\n')
         ret.html = ret.html.replace(/\n/g, '<br>')
 
-        // concat tagErrs into errQueue at the last second
-        // and then reset it for next run.
-        errQueue = errQueue.concat(tagErrs)
-        tagErrs = []
-
+		errQueue = makeUnique(errQueue)
         ret.error = errQueue.length !== 0
         ret.errorQueue = errQueue
 
@@ -1538,7 +1382,7 @@ var autolinkerOpts = {
         //var tag = autolinker.getTagBuilder().build(match);
         var tag = match.buildTag()
         // dumb way to see if user is linking internally or externally
-        if (!/roleplayerguild.com/i.test(match.getAnchorHref())) {
+        if (!/^((https?:\/\/)?roleplayerguild.com)/i.test(match.getAnchorHref())) {
             tag.setAttr('rel', 'nofollow noopener').setAttr('target', '_blank')
         }
         return tag
