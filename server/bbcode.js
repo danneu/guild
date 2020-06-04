@@ -732,14 +732,14 @@ var XBBCODE = (function() {
         //     return '</span>';
         //   }
         // },
-        // "left": {
-        //   openTag: function(params,content) {
-        //     return '<div class="bb-left">';
-        //   },
-        //   closeTag: function(params,content) {
-        //     return '</div>';
-        //   }
-        // },
+         "left": {
+           openTag: function(params,content) {
+             return '<div class="bb-left">';
+           },
+           closeTag: function(params,content) {
+             return '</div>';
+           }
+         },
         // "li": {
         //   openTag: function(params,content) {
         //     return '<li style="white-space: pre-line;">';
