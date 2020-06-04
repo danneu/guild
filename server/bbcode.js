@@ -1276,7 +1276,6 @@ var XBBCODE = (function() {
 			}
 			else if(endResult){
 				//if the next tag is a closing one
-				rebuiltString += message.slice(contentEnd, contentEnd + endResult.index - 2)
 				let endTag = endResult[0].toLowerCase()
 				let parserEnd = endResult.index + endResult[0].length + 1
 				if(tagStack.length < 1){
@@ -1289,6 +1288,7 @@ var XBBCODE = (function() {
 					//if our tags don't match
 					onMisalignedTags(errorQueue)
 				}
+				rebuiltString += message.slice(contentEnd, contentEnd + endResult.index - 2)
 				endData = tagStack.pop()
 				//If the end tag is a mismatch, force them to align to not break the post
 				rebuiltString += processCloseTag(endData.tag, endData.data, tagStack, errorQueue)
