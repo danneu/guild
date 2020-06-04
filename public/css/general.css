@@ -385,6 +385,8 @@ blockquote footer {
     margin-bottom: 0;
 }
 
+.bb-table tr.bb-tr td,
+.bb-table td.bb-td {background-color: #2E2C2C ;}
 .bb-table tr.bb-active td,
 .bb-table td.bb-active {background-color: #666 !important;}
 .bb-table tr.bb-success td,
