@@ -1122,7 +1122,7 @@
     <a name="vm-{{ vm.id }}"></a>
     <div class="media" style="position:relative;overflow:hidden;" id="vm-{{ vm.id }}">
       <!-- ribbon if VM writer is also the profile owner -->
-      {% if vm.from_user_id == user.id %}
+      {% if vm.from_user_id == vm.to_user_id %}
         <div class="corner-ribbon top-right">&nbsp;</div>
       {% endif %}
       <div class="media-left">
