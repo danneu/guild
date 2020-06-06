@@ -808,8 +808,7 @@ router.get('/me/vms/:id', async ctx => {
     ctx.validateParam('id').toInt()
     await db.clearVmNotification(ctx.currUser.id, ctx.vals.id)
 
-    // TODO: Eventually this will link to VMs that aren't on currUser's profile
-    ctx.redirect('/users/' + ctx.currUser.slug + '/vms#vm-' + ctx.vals.id)
+    ctx.redirect('/users/' + (await db.vms.getVmById(ctx.vals.id)).to_user.slug + '/vms#vm-' + ctx.vals.id)
 })
 
 ////////////////////////////////////////////////////////////
