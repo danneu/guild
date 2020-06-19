@@ -1183,8 +1183,14 @@ var XBBCODE = (function() {
     allTags = allTags.concat(stopList)
     allTags = allTags.concat(singleList)
     
-    function onMisalignedTags(errorQueue = []){
-        errorQueue.push('Some tags appear to be misaligned')
+    function onMisalignedTags(errorQueue = [], startTag, tag){
+        errorQueue.push('The tag "' + tag + '" appears to be misaligned.')
+    }
+     function onUnclosedTags(errorQueue = [], tag){
+        errorQueue.push('The tag "' + tag + '" does not have a corresponding closing tag.')
+    }
+    function onOrphanClosingTags(errorQueue = [], tag){
+        errorQueue.push('The tag "' + tag + '" does not have a corresponding opening tag.')
     }
     function processTag(tag, data = false, tagStack = [], errorQueue = []){
         if(tags[tag]){
@@ -1210,7 +1216,7 @@ var XBBCODE = (function() {
         let endResult = closeFinder.exec(message)
         if(!endResult){
             //If the noparse tag isn't closed
-            onMisalignedTags(errorQueue)
+            onUnclosedTags(errorQueue, tag)
             return [message.length, message]
         }
         else{
@@ -1269,7 +1275,7 @@ var XBBCODE = (function() {
                 }
                 else if(stopList.includes(tag)){
                     //if we encounter a noparse tag
-                    let [endIndex, embeddedContent] = findClosingNoParse(tag, message.slice(contentEnd,), tagData, errorQueue)
+                    let [endIndex, embeddedContent] = findClosingNoParse(tag, message.slice(contentEnd,), tagData, tagStack, errorQueue)
                     contentEnd += endIndex
                     rebuiltString += embeddedContent
                     //We have to add the index of the result as well
@@ -1281,13 +1287,18 @@ var XBBCODE = (function() {
                 let parserEnd = endResult.index + endResult[0].length + 1
                 if(tagStack.length < 1){
                     //if this is an unpaired closing tag, treat it as text and keep going
-                    rebuiltString += message.slice(contentEnd, contentEnd + parserEnd)
+                    rebuiltString += message.slice(contentEnd, contentEnd + endResult.index) + '<mark>' + message.slice(contentEnd + endResult.index, contentEnd + parserEnd) + '</mark>'
                     contentEnd += parserEnd
+                    onOrphanClosingTags(errorQueue, endTag)
                     continue
                 }
                 else if(endTag != tagStack[tagStack.length - 1].tag){
-                    //If our tags don't match
-                    onMisalignedTags(errorQueue)
+                    //Otherwise, it's a non-matching closing tag. Highlight it, treat it as plaintext, and continue
+                    rebuiltString += message.slice(contentEnd, contentEnd + endResult.index) + '<mark>' + message.slice(contentEnd + endResult.index, contentEnd + parserEnd) + '</mark>'
+                    contentEnd += parserEnd
+                    onMisalignedTags(errorQueue, tagStack[tagStack.length - 1].tag, endTag)
+                    //Pass the invalid tag to the error handler
+                    continue
                 }
                 rebuiltString += message.slice(contentEnd, contentEnd + endResult.index)
                 endData = tagStack.pop()
@@ -1296,17 +1307,20 @@ var XBBCODE = (function() {
                 contentEnd += parserEnd
             }
             else{
-                //if we're out of tags
+                //If we're out of tags
+                rebuiltString += message.slice(contentEnd,)
+                //Finish out the rest of the string
                 if(tagStack.length > 0){
                     //if we don't have enough closing tags
-                    onMisalignedTags(errorQueue)
                     while(tagStack.length > 0){
                         phantomData = tagStack.pop()
+                        onUnclosedTags(errorQueue, phantomData.tag)
+                        //Push all errors to the stack
                         rebuiltString += processCloseTag(phantomData.tag, phantomData.data, tagStack, errorQueue)
-                        //Finish adding missing ending tags
+                        //Finish adding missing ending tags at the end
                     }
                 }
-                rebuiltString += message.slice(contentEnd,)
+                
                 break
             }
         }
