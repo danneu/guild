@@ -1269,7 +1269,7 @@ var XBBCODE = (function() {
                 }
                 else if(stopList.includes(tag)){
                     //if we encounter a noparse tag
-                    let [endIndex, embeddedContent] = findClosingNoParse(tag, message.slice(contentEnd,), tagData, errorQueue)
+                    let [endIndex, embeddedContent] = findClosingNoParse(tag, message.slice(contentEnd,), tagData, tagStack, errorQueue)
                     contentEnd += endIndex
                     rebuiltString += embeddedContent
                     //We have to add the index of the result as well
