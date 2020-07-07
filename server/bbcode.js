@@ -380,12 +380,12 @@ var XBBCODE = (function() {
             openTag: function(params, content) {
                 return '<hr class="bb-hr">'
             }
-        },
+        },/*
         br: {
             openTag: function(params, content) {
                 return '<br>'
             }
-        }
+        }*/
     }
     function isParentCorrect(restrictParentsTo, tagStack){
         let parentTag
@@ -465,7 +465,7 @@ var XBBCODE = (function() {
             closeTag: function(params, content) {
                 return ''
             },
-        },
+        }/*,
         legend: {
             openTag: function(params, content) {
                 return '<a target="_blank" rel="nofollow noopener" href="https://YouTube.com/LegendBegins">' + content + '</a>'
@@ -474,7 +474,7 @@ var XBBCODE = (function() {
             closeTag: function(params, content) {
                 return ''
             }
-        }
+        }*/
     }
     tags = {
         //
@@ -680,7 +680,7 @@ var XBBCODE = (function() {
         //     return '</span>';
         //   }
         // },
-         font: {
+         /*font: {
            openTag: function(params,content) {
 
              var faceCode = params || "inherit";
@@ -693,7 +693,7 @@ var XBBCODE = (function() {
            closeTag: function(params,content) {
              return '</span>';
            }
-         },
+         },*/
         i: {
             openTag: function(params, content) {
                 return '<span class="bb-i">'
@@ -732,14 +732,14 @@ var XBBCODE = (function() {
         //     return '</span>';
         //   }
         // },
-         "left": {
+        /* "left": {
            openTag: function(params,content) {
              return '<div class="bb-left">';
            },
            closeTag: function(params,content) {
              return '</div>';
            }
-         },
+         },*/
         // "li": {
         //   openTag: function(params,content) {
         //     return '<li style="white-space: pre-line;">';
