@@ -12,10 +12,10 @@
 {# minimal is optional boolean #}
 
 {% macro onlineStatus(ctx, user, minimal = false, deghost = false) %}
-  {% if user.is_ghost and not deghost and user.last_online_at and Date.now() - user.last_online_at.getTime() < 1000 * 60 * 60 * 12 %}
+  {% if user.is_ghost and not deghost and user.last_online_at and Date.now() - user.last_online_at.getTime() < 1000 * 60 * 60 * 24 %}
     <span class="text-muted" style="display: inline-block;">
       {% if not minimal %}Seen{% endif %}
-       0-12 hrs ago
+       0-24 hrs ago
       <img src="/img/ghost.png" width="14" height="11" title="Ghost mode">
     </span>
   {% elif user.last_online_at %}
