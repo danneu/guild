@@ -541,9 +541,9 @@ function can(user, action, target) {
         case 'LEXUS_LOUNGE': // no target
             if (!user) return false
             // All staff can access
+            if (['conmod', 'arenamod'].includes(user.role)) return false
+            // conmods and arenamods can't
             if (isStaffRole(user.role)) return true
-            // conmods and arenamods can (pwmod can't. TODO: remove conmods and arenamods too)
-            if (['conmod', 'arenamod'].includes(user.role)) return true
             return false
         // TODO: Replace LEXUS_LOUNGE with this?
         case 'READ_CATEGORY': //  target is category

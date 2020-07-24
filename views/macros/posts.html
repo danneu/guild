@@ -23,7 +23,7 @@
           {{ macros.timeago(post.updated_at) }}
         {% endif %}
 
-        {% if (isZeroth and post.rev_count > 1 and can(ctx.currUser, 'UPDATE_TOPIC', topic)) or ctx.currUser.id == 1 %}
+        {% if (isZeroth and post.rev_count > 1 and can(ctx.currUser, 'UPDATE_TOPIC', topic)) or can(ctx.currUser, 'LEXUS_LOUNGE') or ctx.currUser.id == 1 %}
           <a href="{{ post.url }}/revisions">Revs: {{ post.rev_count }}</a>
         {% endif %}
 

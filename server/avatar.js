@@ -83,7 +83,7 @@ exports.handleAvatar = async (userId, fullInPath) => {
             // width, height, modifier
             // '>' = only resize if image exceeds dimensions
             // http://www.imagemagick.org/script/command-line-processing.php#geometry
-            .resize(150, 200, '>')
+            .resize(300, 400, '>')
             .strip() // Remove all metadata
             .stream(format, (err, processedImageReadStream) => {
                 if (err) return reject(err)

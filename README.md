@@ -11,7 +11,9 @@ The Guild is a Node.js app that talks to a Postgres database.
 
 - Install the latest stable version of Node.
 
-- The Guild depends on the `plv8` Postgres extension.
+- The Guild depends on the `plv8` Postgres extension. This extension can sometimes fail to build, so the binary can be found here: https://github.com/plv8/plv8/issues/220
+
+Archive Link: https://web.archive.org/web/20200604033753/https://github.com/plv8/plv8/issues/220
 
 - Download the repository and enter the directory that it created:
 

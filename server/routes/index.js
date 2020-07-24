@@ -241,7 +241,8 @@ router.get('/posts/:id/revisions', async ctx => {
         .findPostWithTopicAndForum(ctx.params.id)
         .then(pre.presentPost)
     ctx.assert(post, 404)
-    ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
+    ctx.assert(ctx.currUser, 404)
+    cancan.isStaffRole(ctx.currUser.role) || ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
 
     const revs = await db.revs
         .listPostRevs(post.id)
@@ -266,7 +267,8 @@ router.get('/posts/:postId/revisions/:revId', async ctx => {
         .findPostWithTopicAndForum(ctx.params.postId)
         .then(pre.presentPost)
     ctx.assert(post, 404)
-    ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
+    ctx.assert(ctx.currUser, 404)
+    cancan.isStaffRole(ctx.currUser.role) || ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
 
     const rev = await db.revs
         .getPostRev(post.id, revId)
@@ -294,7 +296,8 @@ router.get('/posts/:postId/revisions/:revId/raw', async ctx => {
         .findPostWithTopicAndForum(ctx.params.postId)
         .then(pre.presentPost)
     ctx.assert(post, 404)
-    ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
+    ctx.assert(ctx.currUser, 404)
+    cancan.isStaffRole(ctx.currUser.role) || ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
 
     const markup = await db.revs.getPostRevMarkup(post.id, revId)
     ctx.assert(markup, 404)

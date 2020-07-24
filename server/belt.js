@@ -625,12 +625,12 @@ exports.mergeQuery = function(href, obj) {
 
 // Returns true if user has logged in 0-12 hrs ago
 exports.withinGhostRange = (() => {
-    const hours12 = 1000 * 60 * 60 * 12
+    const hours24 = 1000 * 60 * 60 * 24
 
     return function(lastOnlineAt) {
         // User hasn't loggin in since relaunch
         if (!lastOnlineAt) return false
         assert(lastOnlineAt instanceof Date)
-        return Date.now() - lastOnlineAt.getTime() < hours12
+        return Date.now() - lastOnlineAt.getTime() < hours24
     }
 })()
