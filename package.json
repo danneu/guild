@@ -16,7 +16,7 @@
     "license": "MIT",
     "dependencies": {
         "autolinker": "1.6.0",
-        "aws-sdk": "^2.49.0",
+        "aws-sdk": "^2.814.0",
         "bcryptjs": "2.4.3",
         "better-assert": "1.0.2",
         "create-error": "^0.3.1",
