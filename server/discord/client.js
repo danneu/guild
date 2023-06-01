@@ -18,11 +18,17 @@ class Client {
         this.botToken = botToken
         // https://discordapp.com/developers/docs/reference#user-agent
         this.userAgent = userAgent
+        // https://discord.com/developers/docs/reference#api-versioning
+        this.apiVersion = 6
+        this.baseUrl = `https://discord.com/api/v${this.apiVersion}`
     }
 
-    async request(method, url, { headers: extraHeaders, body }) {
+    async request(method, path, { headers: extraHeaders, body }) {
         assert(['GET', 'POST', 'DELETE', 'PUT', 'PATCH'].includes(method))
-        assert(typeof url === 'string')
+        assert(typeof path === 'string')
+        assert(path.startsWith('/'))
+
+        const url = this.baseUrl + path
 
         const headers = Object.assign(
             {
@@ -78,26 +84,25 @@ class Client {
     }
 
     async createGuild(body) {
-        const url = `https://discordapp.com/api/guilds`
-        return this.botRequest('POST', url, body)
+        return this.botRequest('POST', '/guilds', body)
     }
 
     async deleteGuild(id) {
         assert(typeof id === 'string')
-        const url = `https://discordapp.com/api/guilds/${id}`
+        const url = `/guilds/${id}`
         return this.botRequest('DELETE', url)
     }
 
     async modifyGuild(id, body) {
         assert(typeof id === 'string')
-        const url = `https://discordapp.com/api/guilds/${id}`
+        const url = `/guilds/${id}`
         return this.botRequest('PATCH', url, body)
     }
 
     async createRoles(guildId, roles) {
         assert(typeof guildId === 'string')
         assert(Array.isArray(roles))
-        const url = `https://discordapp.com/api/guilds/${guildId}/roles`
+        const url = `/guilds/${guildId}/roles`
         return promiseMap(
             roles,
             role => {
@@ -109,14 +114,15 @@ class Client {
 
     async listRoles(guildId) {
         assert(typeof guildId === 'string')
-        const url = `https://discordapp.com/api/guilds/${guildId}/roles`
+        const url = `/guilds/${guildId}/roles`
+        // return this.botRequest('GET', url)
         return this.botRequest('GET', url)
     }
 
     async updateRole(guildId, roleId, body) {
         assert(typeof guildId === 'string')
         assert(typeof roleId === 'string')
-        const url = `https://discordapp.com/api/guilds/${guildId}/roles/${
+        const url = `/guilds/${guildId}/roles/${
             roleId
         }`
         return this.botRequest('PATCH', url, body)
@@ -125,7 +131,7 @@ class Client {
     async deleteRole(guildId, roleid) {
         assert(typeof guildId === 'string')
         assert(typeof roleId === 'string')
-        const url = `https://discordapp.com/api/guilds/${guildId}/roles/${
+        const url = `/guilds/${guildId}/roles/${
             roleId
         }`
         return this.botRequest('DELETE', url)
@@ -133,36 +139,36 @@ class Client {
 
     async getGuild(guildId) {
         assert(typeof guildId === 'string')
-        const url = `https://discordapp.com/api/guilds/${guildId}`
+        const url = `/guilds/${guildId}`
         return this.botRequest('GET', url)
     }
 
     // Widget must be enabled
     async getGuildEmbed(guildId) {
         assert(typeof guildId === 'string')
-        const url = `https://discordapp.com/api/guilds/${guildId}/embed.json`
+        const url = `/guilds/${guildId}/widget.json`
         return this.botRequest('GET', url)
     }
 
     async getUser(token) {
         assert(typeof token === 'string')
-        const url = 'https://discordapp.com/api/users/@me'
+        const url = '/users/@me'
         return this.userRequest(token, 'GET', url)
     }
 
     async getBot() {
-        const url = 'https://discordapp.com/api/users/@me'
+        const url = '/users/@me'
         return this.botRequest('GET', url)
     }
 
     async updateBot(body) {
-        const url = 'https://discordapp.com/api/users/@me'
+        const url = '/users/@me'
         return this.botRequest('PATCH', url, body)
     }
 
     async listGuildMembers(guildId) {
         assert(typeof guildId === 'string')
-        const url = `https://discordapp.com/api/guilds/${
+        const url = `/guilds/${
             guildId
         }/members?limit=1000`
         return this.botRequest('GET', url)
@@ -172,7 +178,7 @@ class Client {
     async getGuildMember(guildId, userId) {
         assert(typeof guildId === 'string')
         assert(typeof userId === 'string')
-        const url = `https://discordapp.com/api/guilds/${guildId}/members/${
+        const url = `/guilds/${guildId}/members/${
             userId
         }`
         return this.botRequest('GET', url).catch(err => {
@@ -187,9 +193,7 @@ class Client {
     async modifyGuildMember(guildId, userId, body) {
         assert(typeof guildId === 'string')
         assert(typeof userId === 'string')
-        const url = `https://discordapp.com/api/guilds/${guildId}/members/${
-            userId
-        }`
+        const url = `/guilds/${guildId}/members/${userId}`
         return this.botRequest('PATCH', url, body)
     }
 
@@ -197,21 +201,19 @@ class Client {
         assert(typeof guildId === 'string')
         assert(typeof userId === 'string')
         assert(typeof body.access_token === 'string')
-        const url = `https://discordapp.com/api/guilds/${guildId}/members/${
-            userId
-        }`
+        const url = `/guilds/${guildId}/members/${userId}`
         return this.botRequest('PUT', url, body)
     }
 
     async listGuildChannels(guildId) {
         assert(typeof guildId === 'string')
-        const url = `https://discordapp.com/api/guilds/${guildId}/channels`
+        const url = `/guilds/${guildId}/channels`
         return this.botRequest('GET', url)
     }
 
     async listGuildBans(guildId) {
         assert(typeof guildId === 'string')
-        const url = `https://discordapp.com/api/guilds/${guildId}/bans`
+        const url = `/api/guilds/${guildId}/bans`
         return this.botRequest('GET', url)
     }
 
@@ -221,19 +223,19 @@ class Client {
 
     async createMessage(channelId, body) {
         assert(typeof channelId === 'string')
-        const url = `https://discordapp.com/api/channels/${channelId}/messages`
+        const url = `/channels/${channelId}/messages`
         return this.botRequest('POST', url, body)
     }
 
     async getChannel(channelId) {
         assert(typeof channelId === 'string')
-        const url = `https://discordapp.com/api/channels/${channelId}`
+        const url = `/channels/${channelId}`
         return this.botRequest('GET', url)
     }
 
     async listChannels(guildId) {
         assert(typeof guildId === 'string')
-        const url = `https://discordapp.com/api/guilds/${guildId}/channels`
+        const url = `/guilds/${guildId}/channels`
         return this.botRequest('GET', url)
     }
 
@@ -243,7 +245,7 @@ class Client {
 
     // https://discordapp.com/developers/docs/topics/oauth2#get-current-application-information
     async getBotApplication() {
-        const url = `https://discordapp.com/api/oauth2/applications/@me`
+        const url = `/oauth2/applications/@me`
         return this.botRequest('GET', url)
     }
 }

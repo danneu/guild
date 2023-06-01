@@ -60,7 +60,7 @@ const oauth2 = SimpleOauth2.create({
 const redirect_uri =
     config.NODE_ENV === 'production'
         ? 'https://www.roleplayerguild.com/discord/callback'
-        : 'http://localhost:3000/discord/callback'
+        : `${config.HOST}/discord/callback`
 
 const discord = new DiscordClient({ botToken: config.DISCORD_BOT_TOKEN })
 
@@ -87,7 +87,7 @@ router.get('/discord/channels/:channelName', async ctx => {
     })
     ctx.assert(channel, 404, 'No Discord channel with that name was found')
 
-    const url = `https://discordapp.com/channels/${config.DISCORD_GUILD_ID}/${
+    const url = `https://discord.com/channels/${config.DISCORD_GUILD_ID}/${
         channel.id
     }`
     ctx.redirect(url)
@@ -177,7 +177,7 @@ router.get('/discord/callback', async ctx => {
         )
     }
 
-    ctx.redirect('https://discordapp.com/channels/@me')
+    ctx.redirect('https://discord.com/channels/@me')
 })
 
 ////////////////////////////////////////////////////////////

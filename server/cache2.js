@@ -200,7 +200,7 @@ if (config.IS_DISCORD_CONFIGURED) {
         1000 * 18,
         async () => {
             const result = await client.getGuildEmbed(config.DISCORD_GUILD_ID)
-            return { online: result.members.length }
+            return { online: result.presence_count }
         },
         { online: 0 }
     )
