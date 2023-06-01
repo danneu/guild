@@ -80,8 +80,7 @@
         {% elif n.type == 'REPLY_VM' %}
           <p>
             A
-            <a href="/me/vms/{{ n.vm_id }}">visitor message</a>
-            on your wall
+            <a href="/me/vms/{{ n.vm_id }}">visitor message thread</a>
             {% if n.count == 1 %}
               has a new reply
             {% else %}
