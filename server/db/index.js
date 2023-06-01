@@ -2884,7 +2884,7 @@ exports.findLatestStatuses = async function() {
       to_json(u.*) "user"
     FROM statuses us
     JOIN users u ON us.user_id = u.id
-    WHERE us.user_id NOT IN (26345)
+    WHERE u.is_nuked = false
     ORDER BY created_at DESC
     LIMIT 8
   `)
@@ -2921,10 +2921,11 @@ exports.findAllStatuses = async function() {
     // LIMIT 100
     const statuses = await pool.many(sql`
 WITH sids AS (
-  SELECT id
-  FROM statuses
-  WHERE user_id NOT IN (26345)
-  ORDER BY created_at DESC
+  SELECT s.id
+  FROM statuses s
+  JOIN users u ON s.user_id = u.id
+  WHERE u.is_nuked = false
+  ORDER BY s.created_at DESC
   LIMIT 100
 )
 SELECT
