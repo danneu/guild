@@ -93,6 +93,8 @@ exports.presentUser = function(user) {
 
     user.url = '/users/' + user.slug
 
+    delete user.digest
+
     if (user.is_nuked) {
         user.bio_markup = null
         user.bio_html = null
