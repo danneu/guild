@@ -107,20 +107,26 @@ app.use(protectCsrf(['roleplayerguild.com', 'localhost']))
 //
 // Example value of `dist`:
 // { css: 'all-ab42cf1.css', js: 'all-d181a21.js' }'
-let dist
-;(() => {
-    let manifest = {}
+const dist = (() => {
     const manifestPath = './dist/rev-manifest.json'
-    if (fs.existsSync(manifestPath)) {
-        const jsonString = fs.readFileSync(manifestPath, 'utf8')
-        manifest = JSON.parse(jsonString)
+    let body
+    try {
+        body = fs.readFileSync(manifestPath, 'utf8')
+    } catch (err) {
+        if (err.code === 'ENOENT') {
+            console.log('assets not compiled (dist/rev-manifest.json not found)')
+            return
+        } else {
+            throw err
+        }
     }
-    dist = {
+    const manifest = JSON.parse(body)
+    const dist = {
         css: manifest['all.css'],
         js: manifest['all.js'],
-        chatjs: manifest['chat.js'],
     }
     console.log('dist set', dist)
+    return dist
 })()
 
 // Only allow guild to be iframed from same domain

@@ -2,11 +2,11 @@
     "name": "guild",
     "private": true,
     "scripts": {
+        "assets": "gulp && ls -lah dist",
         "start": "node ./server",
-        "start-dev": "env $(cat .env-dev | xargs) nodemon ./server",
-        "reset-db": "env $(cat .env-dev | xargs) node ./server/reset_db",
-        "pretty-fix": "prettier --write \"{server,sql,test}/**/*.js\"",
-        "deploy": "git checkout production && shipit production deploy"
+        "start-dev": "nodemon ./server",
+        "reset-db": "node ./server/reset_db",
+        "pretty-fix": "prettier --write \"{server,sql,test}/**/*.js\""
     },
     "main": "server/index.js",
     "repository": {
@@ -57,15 +57,13 @@
     },
     "devDependencies": {
         "del": "^2.2.2",
-        "gulp": "^3.8.10",
-        "gulp-clean": "^0.3.1",
+        "gulp": "^4.0.0",
+        "gulp-clean": "^0.4.0",
         "gulp-concat": "^2.4.3",
-        "gulp-cssnano": "^2.1.0",
-        "gulp-rev": "^7.1.2",
-        "gulp-uglify": "^2.1.2",
+        "gulp-cssnano": "^2.1.3",
+        "gulp-rev": "^9.0.0",
+        "gulp-uglify": "^3.0.2",
         "prettier": "^1.8.2",
-        "shipit-cli": "^3.0.0",
-        "shipit-deploy": "^2.4.0",
         "vinyl-paths": "^2.1.0"
     },
     "prettier": {

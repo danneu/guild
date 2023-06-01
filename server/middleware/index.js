@@ -187,10 +187,8 @@ exports.methodOverride = function(
     }
 ) {
     return async (ctx, next) => {
-        if (typeof ctx.request.body === 'undefined') {
-            throw new Error(
-                'methodOverride middleware must be applied after the body is parsed and ctx.request.body is populated'
-            )
+        if (typeof ctx.request.body !== 'object') {
+            return await next()
         }
 
         if (ctx.request.body[bodyKey]) {

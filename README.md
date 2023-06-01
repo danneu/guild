@@ -37,6 +37,31 @@ Archive Link: https://web.archive.org/web/20200604033753/https://github.com/plv8
         npm start
         > Listening on http://localhost:3000
 
+## Building js/css assets
+
+The guild uses [gulp](https://gulpjs.com) to build assets into the folder `./dist/` which will include a manifest file `./dist/rev-manifest.json` that contains the name of the bundles.
+
+```
+dist/
+    fonts/
+    all-155a92ba49.js
+    all-bfacf3040f.css
+    rev-manifest.json
+```
+
+You can run the task with:
+
+```sh
+npm run assets
+```
+
+If the dist folder exists, then the compiled js/css/fonts bundles will be served. 
+
+Otherwise, i.e. for development, all of the js/css/font files are loaded individually and uncompiled.
+
+In other words, you must run `npm run assets` in production for the compiled assets to be served, and you must also remember to rebuild them when they change, else stale bundles will be served.
+
+
 ## Config and Environment Variables
 
 The Guild is configured with environment variable listed in [server/config.js](https://github.com/danneu/guild/blob/master/server/config.js).
