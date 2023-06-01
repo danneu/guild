@@ -1023,7 +1023,7 @@ router.post('/users/:slug/avatar', async ctx => {
     ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER', user)
 
     // Handle avatar delete button
-    if (ctx.request.body.fields.submit === 'delete') {
+    if (ctx.request.body.submit === 'delete') {
         await db.deleteAvatar(user.id)
         ctx.flash = { message: ['success', 'Avatar deleted'] }
         ctx.response.redirect(user.url + '/edit#avatar')
@@ -1032,21 +1032,22 @@ router.post('/users/:slug/avatar', async ctx => {
 
     // Ensure params
     // FIXME: Sloppy/lame validation
-    ctx.assert(ctx.request.body.files, 400, 'Must choose an avatar to upload')
+    ctx.assert(ctx.request.files, 400, 'Must choose an avatar to upload')
     ctx.assert(
-        ctx.request.body.files.avatar,
+        ctx.request.files.avatar,
         400,
         'Must choose an avatar to upload'
     )
 
     ctx.assert(
-        ctx.request.body.files.avatar.size > 0,
+        ctx.request.files.avatar.size > 0,
         400,
         'Must choose an avatar to upload'
     )
     // TODO: Do a real check. This just looks at mime type
+    console.log('ctx.request.files', ctx.request.files)
     ctx.assert(
-        ctx.request.body.files.avatar.type.startsWith('image'),
+        ctx.request.files.avatar.mimetype.startsWith('image/'),
         400,
         'Must be an image'
     )
@@ -1054,7 +1055,7 @@ router.post('/users/:slug/avatar', async ctx => {
     // Process avatar, upload to S3, and get the S3 url
     var avatarUrl = await avatar.handleAvatar(
         user.id,
-        ctx.request.body.files.avatar.path
+        ctx.request.files.avatar.filepath
     )
 
     // Save new avatar url to db

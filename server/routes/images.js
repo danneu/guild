@@ -192,20 +192,20 @@ router.post('/users/:user_slug/images', loadUser, async ctx => {
     ctx.assertAuthorized(ctx.currUser, 'UPLOAD_IMAGE', ctx.state.user)
     // FIXME: Lame validation
     // fields
-    ctx.assert(ctx.request.body.fields, 400)
-    ctx.assert(typeof ctx.request.body.fields.description === 'string', 400)
-    const description = ctx.request.body.fields.description
-    ctx.assert(description.length <= 10000, 400)
-    const albumId = ctx.request.body.fields.album_id
-    ctx.assert(Number.parseInt(albumId), 400)
+    ctx.assert(ctx.request.body, 400, 'no request body')
+    ctx.assert(typeof ctx.request.body.description === 'string', 400, 'description required')
+    const description = ctx.request.body.description
+    ctx.assert(description.length <= 10000, 400, 'description too long')
+    const albumId = ctx.request.body.album_id
+    ctx.assert(Number.parseInt(albumId), 400, 'album id must be integer')
     const album = await db.images.getAlbum(albumId)
     ctx.assert(album, 404)
     // files
-    ctx.assert(ctx.request.body.files, 400)
-    ctx.assert(ctx.request.body.files.image, 400)
-    const upload = ctx.request.body.files.image
-    ctx.assert(Number.isInteger(upload.size), 400)
-    ctx.assert(typeof upload.path === 'string', 400)
+    ctx.assert(ctx.request.files, 400, 'no files provided')
+    ctx.assert(ctx.request.files.image, 400, 'no file with key "image" provided')
+    const upload = ctx.request.files.image
+    ctx.assert(Number.isInteger(upload.size), 400, 'upload.size must be integer')
+    ctx.assert(typeof upload.filepath === 'string', 400, 'upload.filepath must be string')
     // ensure max upload size
     if (upload.size > 2e6) {
         ctx.flash = {
@@ -219,7 +219,7 @@ router.post('/users/:user_slug/images', loadUser, async ctx => {
         return ctx.redirect('back')
     }
     // { 'Mime type': 'image/jpeg' OR 'format': 'JPEG' }
-    const data = await identify(upload.path)
+    const data = await identify(upload.filepath)
     const mime = identifyToMime(data)
     if (!mime || ['image/jpeg', 'image/png', 'image/gif'].indexOf(mime) < 0) {
         ctx.flash = {
@@ -233,7 +233,7 @@ router.post('/users/:user_slug/images', loadUser, async ctx => {
     const uuid = uuidGen.v4()
     const envFolder = config.NODE_ENV === 'production' ? 'prod' : 'dev'
     const s3Key = `${envFolder}/users/${uuid}.${mimeToExt(mime)}`
-    const url = await uploadImage(s3Key, upload.path, mime)
+    const url = await uploadImage(s3Key, upload.filepath, mime)
 
     // INSERT
 

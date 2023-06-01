@@ -45,7 +45,7 @@ if (config.NODE_ENV !== 'production') {
 }
 
 app.use(
-    require('koa-body')({
+    require('koa-body').koaBody({
         multipart: true,
         // Max payload size allowed in request form body
         // Defaults to '56kb'
