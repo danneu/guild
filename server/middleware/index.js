@@ -187,11 +187,7 @@ exports.methodOverride = function(
     }
 ) {
     return async (ctx, next) => {
-        if (typeof ctx.request.body !== 'object') {
-            return await next()
-        }
-
-        if (ctx.request.body[bodyKey]) {
+        if (ctx.request.body && ctx.request.body[bodyKey]) {
             ctx.method = ctx.request.body[bodyKey].toUpperCase()
             delete ctx.request.body[bodyKey]
         } else if (ctx.request.headers[headerKey]) {
