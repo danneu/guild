@@ -4,7 +4,7 @@ const assert = require('better-assert')
 const _ = require('lodash')
 const uuid = require('uuid')
 const debug = require('debug')('app:db')
-const { extend, parseUrl } = require('pg-extra')
+const { extend, parseUrl, _raw } = require('pg-extra')
 const pg = extend(require('pg'))
 // 1st
 const config = require('../config')
@@ -15,10 +15,12 @@ const belt = require('../belt')
 
 // This is the connection pool the rest of our db namespace
 // should import and use
-const pool = new pg.Pool(parseUrl(config.DATABASE_URL))
+const pool = new pg.extra.Pool({ connectionString: config.DATABASE_URL })
+
+pg.Client.prototype.one = pg.extra.Client.prototype.one
 
 function getClient() {
-    return new pg.Client(parseUrl(config.DATABASE_URL))
+    return new pg.Client({ connectionString: config.DATABASE_URL })
 }
 
 // TODO: Get rid of db/index.js' wrapOptionalClient and use this
