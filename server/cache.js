@@ -58,13 +58,6 @@ const cache = new IntervalCache()
     .every('latest-statuses', 1000 * 15, () => db.findLatestStatuses(), [])
     // 60 minutes
     .every('unames->ids', 1000 * 60 * 60, db.getUnamesMappedToIds, {})
-    // 60 minutes
-    .every(
-        'arena-leaderboard',
-        1000 * 60 * 60,
-        () => db.getArenaLeaderboard(5),
-        []
-    )
     // 45 seconds
     .every(
         'current-sidebar-contest',

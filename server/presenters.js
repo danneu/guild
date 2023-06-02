@@ -255,14 +255,6 @@ exports.presentTrophy = function(t) {
 
 ////////////////////////////////////////////////////////////
 
-exports.presentArenaOutcome = function(o) {
-    if (!o) return null
-
-    exports.presentUser(o.user)
-
-    return o
-}
-
 exports.presentFriendship = function(f) {
     if (!f) return null
 

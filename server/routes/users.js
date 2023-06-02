@@ -452,7 +452,6 @@ router.put('/api/users/:id/bio', async ctx => {
 // - custom-title
 // - is-grayscale
 // - force-device-width
-// - show_arena_stats
 //
 // @koa2
 router.put('/users/:slug', async ctx => {
@@ -496,8 +495,6 @@ router.put('/users/:slug', async ctx => {
         ctx.validateBody('is-grayscale').tap(x => x !== 'off')
     if (!_.isUndefined(ctx.request.body['force-device-width']))
         ctx.validateBody('force-device-width').tap(x => x !== 'off')
-    if (!_.isUndefined(ctx.request.body.show_arena_stats))
-        ctx.validateBody('show_arena_stats').tap(x => x !== 'off')
 
     debug('AFTER', ctx.request.body)
     debug(ctx.vals)
@@ -542,9 +539,6 @@ router.put('/users/:slug', async ctx => {
             force_device_width: _.isBoolean(ctx.vals['force-device-width'])
                 ? ctx.vals['force-device-width']
                 : user.force_device_width,
-            show_arena_stats: _.isBoolean(ctx.vals.show_arena_stats)
-                ? ctx.vals.show_arena_stats
-                : user.show_arena_stats,
         })
     } catch (err) {
         if (err === 'EMAIL_TAKEN') {

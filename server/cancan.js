@@ -301,20 +301,6 @@ function can(user, action, target) {
             )
                 return true
             return false
-        case 'UPDATE_TOPIC_ARENA_OUTCOMES': // target is topic
-            // Guests can't
-            if (!user) {
-                return false
-            }
-            // Staff can
-            if (isStaffRole(user.role)) {
-                return true
-            }
-            // Arena mods can if topic is in arena forum
-            if (target.forum.is_arena_rp && user.role === 'arenamod') {
-                return true
-            }
-            return false
         case 'READ_USER_ONLINE_STATUS': // target is user
             // Guests and members can see status if target isn't in invisible mode.
             if (!user) return !target.is_ghost
