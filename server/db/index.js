@@ -206,17 +206,7 @@ exports.findTopicWithIsSubscribed = async function(userId, topicId) {
       FROM tags
       JOIN tags_topics ON tags.id = tags_topics.tag_id
       WHERE tags_topics.topic_id = t.id
-      ) tags,
-      (
-        SELECT COALESCE(json_agg(sub.*), '{}'::json)
-        FROM (
-          SELECT users.uname, arena_outcomes.outcome, u2.uname inserted_by_uname
-          FROM arena_outcomes
-          JOIN users ON arena_outcomes.user_id = users.id
-          JOIN users u2 ON arena_outcomes.inserted_by = u2.id
-          WHERE arena_outcomes.topic_id = t.id
-        ) sub
-      ) arena_outcomes
+      ) tags
     FROM topics t
     JOIN forums f ON t.forum_id = f.id
     LEFT OUTER JOIN topic_subscriptions ts ON t.id = ts.topic_id AND ts.user_id = ${
@@ -650,16 +640,7 @@ SELECT
    FROM tags
    JOIN tags_topics ON tags.id = tags_topics.tag_id
    WHERE tags_topics.topic_id = t.id
-  ) tags,
-  (
-    SELECT COALESCE(json_agg(sub.*), '{}'::json)
-    FROM (
-      SELECT users.uname, arena_outcomes.outcome
-      FROM arena_outcomes
-      JOIN users ON arena_outcomes.user_id = users.id
-      WHERE arena_outcomes.topic_id = t.id
-    ) sub
-  ) arena_outcomes
+  ) tags
 FROM topics t
 JOIN users u ON t.user_id = u.id
 LEFT JOIN posts p ON t.latest_post_id = p.id
@@ -714,16 +695,7 @@ SELECT
    FROM tags
    JOIN tags_topics ON tags.id = tags_topics.tag_id
    WHERE tags_topics.topic_id = t.id
-  ) tags,
-  (
-    SELECT COALESCE(json_agg(sub.*), '{}'::json)
-    FROM (
-      SELECT users.uname, arena_outcomes.outcome
-      FROM arena_outcomes
-      JOIN users ON arena_outcomes.user_id = users.id
-      WHERE arena_outcomes.topic_id = t.id
-    ) sub
-  ) arena_outcomes
+  ) tags
 FROM topics t
 JOIN users u ON t.user_id = u.id
 LEFT JOIN posts p ON t.latest_post_id = p.id
@@ -968,11 +940,6 @@ exports.findPostsByTopicId = async function(topicId, postType, page) {
         'avatar_url', u.avatar_url,
         'slug', u.slug,
         'custom_title', u.custom_title,
-        'show_arena_stats', u.show_arena_stats,
-        'arena_points' , u.arena_points,
-        'arena_wins' , u.arena_wins,
-        'arena_losses' , u.arena_losses,
-        'arena_draws' , u.arena_draws,
         'active_trophy_id' , u.active_trophy_id,
         'has_bio', CASE
             WHEN u.bio_markup IS NULL THEN false
@@ -1152,7 +1119,6 @@ exports.createPost = async function(args) {
 // - isRoleplay Required Boolean
 // - tagIds     Optional [Int]
 // - joinStatus Optional String (Required if roleplay)
-// - is_ranked  Optional Boolean (if set, forum.is_arena_rp must === true)
 //
 exports.createTopic = async function(props) {
     debug('[createTopic]', props)
@@ -1169,15 +1135,13 @@ exports.createTopic = async function(props) {
     if (props.isRoleplay) assert(_.isString(props.joinStatus))
     else assert(_.isUndefined(props.joinStatus))
 
-    props.is_ranked = !!props.is_ranked
-
     return pool.withTransaction(async client => {
         // Create topic
         const topic = await client.one(sql`
       INSERT INTO topics
-        (forum_id, user_id, title, is_roleplay, join_status, is_ranked)
+        (forum_id, user_id, title, is_roleplay, join_status)
       VALUES (${props.forumId}, ${props.userId}, ${props.title},
-        ${props.isRoleplay}, ${props.joinStatus}, ${props.is_ranked})
+        ${props.isRoleplay}, ${props.joinStatus})
       RETURNING *
     `)
 
@@ -1243,8 +1207,7 @@ exports.updateUser = async (userId, attrs) => {
       force_device_width = COALESCE(${
           attrs.force_device_width
       }, force_device_width),
-      hide_avatars = COALESCE(${attrs.hide_avatars}, hide_avatars),
-      show_arena_stats = COALESCE(${attrs.show_arena_stats}, show_arena_stats)
+      hide_avatars = COALESCE(${attrs.hide_avatars}, hide_avatars)
     WHERE id = ${userId}
     RETURNING *
   `
@@ -1874,34 +1837,11 @@ SELECT
    FROM tags
    JOIN tags_topics ON tags.id = tags_topics.tag_id
    WHERE tags_topics.topic_id = t.id
-  ) tags,
-  (
-    SELECT COALESCE(json_agg(sub.*), '{}'::json)
-    FROM (
-			SELECT users.uname, arena_outcomes.outcome, u2.uname inserted_by_uname
-      FROM arena_outcomes
-      JOIN users ON arena_outcomes.user_id = users.id
-      JOIN users u2 ON arena_outcomes.inserted_by = u2.id
-      WHERE arena_outcomes.topic_id = t.id
-    ) sub
-  ) arena_outcomes
+  ) tags
 FROM topics t
 JOIN forums f ON t.forum_id = f.id
 WHERE t.id = ${topicId}
 GROUP BY t.id, f.id
-  `)
-}
-
-exports.findArenaOutcomesForTopicId = async function(topicId) {
-    assert(_.isNumber(topicId))
-
-    return pool.many(sql`
-    SELECT
-      arena_outcomes.*,
-      to_json(users.*) "user"
-    FROM arena_outcomes
-    JOIN users ON arena_outcomes.user_id = users.id
-    WHERE topic_id = ${topicId}
   `)
 }
 
@@ -3132,76 +3072,6 @@ exports.findNotificationById = async function(id) {
 
 ////////////////////////////////////////////////////////////
 
-// - inserted_by is user_id of ARENA_MOD that is adding this outcome
-exports.createArenaOutcome = async function(
-    topic_id,
-    user_id,
-    outcome,
-    inserted_by
-) {
-    assert(_.isNumber(topic_id))
-    assert(_.isNumber(user_id))
-    assert(['WIN', 'LOSS', 'DRAW'].includes(outcome))
-    assert(_.isNumber(inserted_by))
-
-    let profit
-    switch (outcome) {
-        case 'WIN':
-            profit = 100
-            break
-        case 'DRAW':
-            profit = 50
-            break
-        case 'LOSS':
-            profit = 0
-            break
-        default:
-            throw new Error('Unhandled outcome: ' + outcome)
-    }
-
-    return pool.one(sql`
-    INSERT INTO arena_outcomes (topic_id, user_id, outcome, profit, inserted_by)
-    VALUES (${topic_id}, ${user_id}, ${outcome}, ${profit}, ${inserted_by})
-    RETURNING *
-  `)
-}
-
-////////////////////////////////////////////////////////////
-
-exports.deleteArenaOutcome = async function(topic_id, outcome_id) {
-    assert(_.isNumber(topic_id))
-    assert(_.isNumber(outcome_id))
-
-    return pool.query(sql`
-    DELETE FROM arena_outcomes
-    WHERE topic_id = ${topic_id}
-      AND id = ${outcome_id}
-  `)
-}
-
-////////////////////////////////////////////////////////////
-
-// Query is more complex than necessary to make it idempotent
-exports.promoteArenaRoleplayToRanked = async function(topic_id) {
-    assert(_.isNumber(topic_id))
-
-    return pool.many(sql`
-    UPDATE topics
-    SET is_ranked = true
-    WHERE
-      id = ${topic_id}
-      AND is_ranked = false
-      AND EXISTS (
-        SELECT 1
-        FROM forums
-        WHERE
-          is_arena_rp = true
-          AND id = (SELECT forum_id FROM topics WHERE id = ${topic_id})
-      )
-    RETURNING *
-  `)
-}
-
 // Returns the current feedback topic only if:
 // - User has not already replied to it (or clicked ignore)
 exports.findUnackedFeedbackTopic = function(feedback_topic_id, user_id) {
@@ -3505,33 +3375,6 @@ exports.getCurrentSidebarContest = async function() {
     WHERE is_current = true
     ORDER BY id DESC
     LIMIT 1
-  `)
-}
-
-// Grabs info necessary to show the table on /arena-fighters
-//
-// TODO: Replace getminileaderboard with this, just
-// pass in a limit
-exports.getArenaLeaderboard = async function(limit = 1000) {
-    assert(Number.isInteger(limit))
-
-    return pool.many(sql`
-    SELECT
-      uname,
-      slug,
-      arena_wins,
-      arena_losses,
-      arena_draws,
-      arena_points
-    FROM users
-    WHERE (arena_wins > 0 OR arena_losses > 0 OR arena_draws > 0)
-      AND show_arena_stats = true
-    ORDER BY
-      arena_points DESC,
-      arena_wins DESC,
-      arena_losses ASC,
-      arena_draws DESC
-    LIMIT ${limit}
   `)
 }
 

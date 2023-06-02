@@ -44,63 +44,6 @@
     {% endif %}
   </div>
 
-  {% if arenaLeaderboard %}
-    <div class="row">
-      <div class="col-md-6 col-md-offset-3 col-sm-8 col-sm-offset-2">
-        <div class="arena-leaderboard">
-          <h4 class="text-center text-muted">
-            <span style="color:#e67e22;">
-              <span class="glyphicon glyphicon-fire"></span>
-            </span>
-            Current Season
-          </h4>
-          <table class="table table-super-condensed table-borderless">
-            <thead>
-              <tr>
-                <th></th>
-                <th>W/L/Draws</th>
-                <th>Points</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for row in arenaLeaderboard %}
-                <tr>
-                  <td>
-                    {% if loop.index == 1 %}
-                      <span class="badge" style="background-color:#C98910; color:#111;">1st</span>
-                    {% elif loop.index == 2 %}
-                      <span class="badge" style="background-color:#A8A8A8; color:#111;">2nd</span>
-                    {% elif loop.index == 3 %}
-                      <span class="badge" style="background-color:#965A38; color:#111;">3rd</span>
-                    {% else %}
-                      <span class="badge" style="background: none;">
-                        {{ loop.index }}{{ loop.index|getOrdinalSuffix }}
-                      </span>
-                    {% endif %}
-                    <a href="/users/{{ row.slug }}">{{ row.uname }}</a>
-                  </td>
-                  <td class="text-muted">
-                    <span class="green-glow">{{ row.arena_wins }}</span>
-                    /
-                    <span class="red-glow">{{ row.arena_losses }}</span>
-                    /
-                    {{ row.arena_draws }}
-                  </td>
-                  <td>
-                    {{ row.arena_points|commafy }}
-                  </td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-          <p class="text-right" style="margin-bottom: 5px;">
-            <a href="/arena-fighters" class="text-muted">View all...</a>
-          </p>
-        </div><!-- /.arena-leaderboard -->
-      </div>
-    </div>
-  {% endif %}
-
   {{ paginate.render(currPage, totalPages, forum.url) }}
 
 
@@ -202,31 +145,5 @@
   <script type="text/javascript">
     // Activate tag tooltips
     $('[data-toggle="tooltip"]').tooltip()
-
-    var outcomeToHtml = function(outcome) {
-      switch(outcome) {
-        case 'WIN':
-          return '<span class="green-glow">Win</span>';
-        case 'LOSS':
-          return '<span class="red-glow">Loss</span>';
-        case 'DRAW':
-          return 'Draw';
-      }
-    };
-
-    $('.arena-outcome-badge').popover({
-      trigger: 'hover',
-      html: true,
-      title: 'Results:',
-      content: function() {
-        var $this = $(this);
-        var outcomes = JSON.parse($this.attr('data-outcomes'));
-        var html = '';
-        outcomes.forEach(function(o) {
-          html += o.uname + ' &mdash; ' + outcomeToHtml(o.outcome) + '<br>';
-        });
-        return html;
-      }
-    })
   </script>
 {% endblock %}

@@ -936,7 +936,6 @@ router.get('/forums/:forumSlug/topics/new', async ctx => {
         ctx,
         forum: forum,
         tagGroups: tagGroups,
-        is_ranked: (ctx.flash.params && ctx.flash.params.is_ranked) || false,
         postType: (ctx.flash.params && ctx.flash.params['post-type']) || 'ooc',
         initTitle: ctx.flash.params && ctx.flash.params.title,
         selectedTagIds:
@@ -992,15 +991,6 @@ router.get('/forums/:forumSlug', async ctx => {
             : db.findTopicsByForumId(forumId, pager.limit, pager.offset),
     ])
 
-    // If arena, then expose the mini arena leaderboard
-    let arenaLeaderboard
-    if (
-        forum.is_arena_rp ||
-        (forum.parent_forum && forum.parent_forum.is_arena_rp)
-    ) {
-        arenaLeaderboard = cache.get('arena-leaderboard')
-    }
-
     forum.topics = topics
     pre.presentForum(forum)
 
@@ -1021,7 +1011,6 @@ router.get('/forums/:forumSlug', async ctx => {
         totalPages: pager.totalPages,
         title: forum.title,
         className: 'show-forum',
-        arenaLeaderboard,
         // Viewers
         viewers,
     })
@@ -1300,14 +1289,6 @@ router.post(
             )
         ctx.validateBody('forum-id').toInt()
 
-        if (forum.is_arena_rp) {
-            ctx.validateBody('is_ranked').tap(x => x === 'on')
-        } else {
-            ctx.vals.is_ranked = false
-            // ctx.check(_.isUndefined(ctx.request.body.is_ranked),
-            //            'You may only specify Ranked vs Unranked for Arena Roleplays');
-        }
-
         if (forum.is_roleplay) {
             ctx
                 .validateBody('post-type')
@@ -1356,8 +1337,7 @@ router.post(
                 postType: postType,
                 isRoleplay: forum.is_roleplay,
                 tagIds: tagIds,
-                joinStatus: ctx.vals['join-status'],
-                is_ranked: ctx.vals.is_ranked,
+                joinStatus: ctx.vals['join-status']
             })
             .then(pre.presentTopic)
 
@@ -1862,14 +1842,6 @@ router.get('/topics/:slug/edit', async ctx => {
     // Get tag groups
     var tagGroups = await db.findAllTagGroups()
 
-    // Arena outcomes
-    var arenaOutcomes = []
-    if (topic.forum.is_arena_rp) {
-        arenaOutcomes = await db
-            .findArenaOutcomesForTopicId(topic.id)
-            .then(xs => xs.map(pre.presentArenaOutcome))
-    }
-
     // TODO: Only do on RP/IntChk topics
     const topicBans = (await db.listTopicBans(topic.id)).map(
         pre.presentTopicBan
@@ -1880,7 +1852,6 @@ router.get('/topics/:slug/edit', async ctx => {
         topic,
         selectedTagIds: (topic.tags || []).map(tag => tag.id),
         tagGroups,
-        arenaOutcomes,
         className: 'edit-topic',
         topicBans,
     })
@@ -2003,91 +1974,6 @@ router.get('/topics/:slug/:postType/first-unread', async ctx => {
     } else {
         ctx.redirect(topic.url + '/' + ctx.params.postType)
     }
-})
-
-//
-// Promote an arena roleplay to ranked
-//
-router.post('/topics/:slug/promote-to-ranked', async ctx => {
-    // Load topic
-    var topicId = belt.extractId(ctx.params.slug)
-    ctx.assert(topicId, 404)
-    var topic = await db.findTopicById(topicId)
-    ctx.assert(topic, 404)
-    topic = pre.presentTopic(topic)
-
-    // Check currUser authorization
-    ctx.assertAuthorized(ctx.currUser, 'UPDATE_TOPIC_ARENA_OUTCOMES', topic)
-
-    await db.promoteArenaRoleplayToRanked(topic.id)
-
-    ctx.redirect(topic.url + '/edit#arena-outcome')
-})
-
-//
-// Delete arena outcome
-//
-router.del('/topics/:slug/arena-outcomes', async ctx => {
-    // Load topic
-    var topicId = belt.extractId(ctx.params.slug)
-    ctx.assert(topicId, 404)
-    var topic = await db.findTopicById(topicId)
-    ctx.assert(topic, 404)
-    topic = pre.presentTopic(topic)
-
-    // Check currUser authorization
-    ctx.assertAuthorized(ctx.currUser, 'UPDATE_TOPIC_ARENA_OUTCOMES', topic)
-
-    // Ensure topic is ranked
-    ctx.assert(topic.is_ranked, 404)
-
-    // Validation
-    ctx.validateBody('outcome_id').toInt()
-
-    // Create arena outcome
-    await db.deleteArenaOutcome(topic.id, ctx.vals.outcome_id)
-
-    ctx.flash = { message: ['success', 'Arena outcome deleted'] }
-    ctx.redirect(topic.url + '/edit')
-})
-
-//
-// Add arena outcome
-//
-router.post('/topics/:slug/arena-outcomes', async ctx => {
-    // Load topic
-    var topicId = belt.extractId(ctx.params.slug)
-    ctx.assert(topicId, 404)
-    var topic = await db.findTopicById(topicId)
-    ctx.assert(topic, 404)
-    topic = pre.presentTopic(topic)
-
-    // Check currUser authorization
-    ctx.assertAuthorized(ctx.currUser, 'UPDATE_TOPIC_ARENA_OUTCOMES', topic)
-
-    // Ensure topic is ranked
-    ctx.assert(topic.is_ranked, 404)
-
-    // Validation
-    ctx.validateBody('uname').isString()
-    ctx.validateBody('outcome').isIn(['WIN', 'LOSS', 'DRAW'])
-
-    // Validate that uname belongs to a user
-    var user = await db.findUserByUname(ctx.vals.uname)
-    ctx
-        .validateBody('uname')
-        .check(user, 'User not found with username: "' + ctx.vals.uname + '"')
-
-    // Create arena outcome
-    var ao = await db.createArenaOutcome(
-        topic.id,
-        user.id,
-        ctx.vals.outcome,
-        ctx.currUser.id
-    )
-
-    ctx.flash = { message: ['success', 'Arena outcome added'] }
-    ctx.redirect(topic.url + '/edit')
 })
 
 //
@@ -2935,15 +2821,6 @@ router.del('/current-sidebar-contest', async ctx => {
 
     ctx.flash = { message: ['success', 'Current contest cleared'] }
     ctx.redirect('/current-sidebar-contest')
-})
-
-router.get('/arena-fighters', async ctx => {
-    const fighters = await db.getArenaLeaderboard()
-
-    await ctx.render('arena_fighters', {
-        ctx,
-        fighters,
-    })
 })
 
 /// ////////////////////////////////////////////////////////

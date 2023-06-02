@@ -520,45 +520,6 @@
         </div> <!-- /.panel -->
       </form>
 
-      <!-- Toggle arena stats display -->
-
-      <a name="arena-stats"></a>
-      <form action="{{ user.url }}" method="post">
-        <input type="hidden" name="_method" value="put">
-        <div class="panel panel-default no-select" style="border-color: #000">
-          <div class="panel-heading">Show Your Arena Stats?</div>
-          <!-- PANEL BODY -->
-          <div class="panel-body">
-            <p>
-              Enabling this will display your Arena stats in each post and
-              on your profile for other users to see.
-            </p>
-            <div class="form-group">
-
-              <input name="show_arena_stats" type="hidden" value="off">
-              <div class="checkbox">
-                <label>
-                  <input name="show_arena_stats"
-                         type="checkbox"
-                         {% if user.show_arena_stats %}
-                           checked
-                         {% endif %}
-                         >
-                  Show Arena Stats
-                </label>
-              </div>
-
-            </div>
-          </div> <!-- /.panel-body -->
-          <!-- PANEL FOOTER -->
-          <div class="panel-footer" style="border-color: #000">
-            <div class="text-right">
-              <input type="submit" value="Save" class="btn btn-primary">
-            </div>
-          </div> <!-- /.panel-footer -->
-        </div> <!-- /.panel -->
-      </form>
-
       <!-- CHANGE UNAME -->
 
       {% if can(ctx.currUser, 'CHANGE_UNAME', user) %}

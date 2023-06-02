@@ -250,7 +250,7 @@
 
   <!-- User gylphs -->
 
-  {% if user.has_bio or user.bio_markup or user.current_status or user.show_arena_stats %}
+  {% if user.has_bio or user.bio_markup or user.current_status %}
     <div class="user-glyphs">
 
       <!-- Bio -->
@@ -282,45 +282,6 @@
             {{ timeago(user.current_status.created_at) }}
           {% endif %}
         </a>
-      {% endif %}
-
-
-      <!-- Arena stats -->
-      {% if user.show_arena_stats %}
-
-      <div style="font-size: 90%; margin-top: 5px; color: #999;"
-           class="postbit-arena-stats"
-      >
-            <span style="color: #e67e22;">
-              <span class="glyphicon glyphicon-fire"></span>
-              Arena:
-            </span>
-            <div style="display: inline-block; border-bottom: 1px dotted #999; cursor: help;"
-                 data-toggle="tooltip"
-                 data-placement="top"
-                 title="{{ user.arena_points|commafy }} pts"
-                 >
-              <span class="green-glow">{{ user.arena_wins }}</span> /
-              <span class="red-glow">{{ user.arena_losses }}</span> /
-              <span class="text-muted">{{ user.arena_draws }}</span>
-            </div>
-        </div>
-
-        {#
-        <div class="text-muted" style="margin-top: 15px; border: 1px solid #999; position: relative; padding-top: 10px;">
-          <div style="position: absolute; top: -10px; left: 0; right: 0;">
-            <span style="background-color: #2E2B2B; padding-left: 5px; padding-right: 5px;">
-              <span class="glyphicon glyphicon-fire" style="color: #e67e22;"></span>
-              Arena:
-            </span>
-          </div>
-          <span class="green-glow">{{ user.arena_wins }}</span> /
-          <span class="red-glow">{{ user.arena_losses }}</span> /
-          <span class="text-muted">{{ user.arena_draws }}</span>
-          <br>
-          {{ user.arena_points }} points
-        </div>
-        #}
       {% endif %}
 
     </div>
@@ -888,22 +849,6 @@
                   >
                     {{ topic.title }}
                   </a>
-
-                  {% if topic.is_ranked %}
-                    <span style="color:#e67e22;">
-                      <span class="glyphicon glyphicon-fire"></span>Ranked
-                    </span>
-
-                    {% if topic.arena_outcomes.length > 0 %}
-                      <span class="badge badge-warning arena-outcome-badge"
-                            style="background-color:#e67e22;"
-                            data-toggle="popover"
-                            data-outcomes="{{ topic.arena_outcomes|json }}"
-                      >
-                        {{ topic.arena_outcomes.length }}
-                      </span>
-                    {% endif %}
-                  {% endif %}
 
                 </h5>
                 <div class="list-group-item-text">

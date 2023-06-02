@@ -100,7 +100,6 @@ exports.mergeUsers = async ({ mainId, huskId }) => {
         // Do nothing with ratings
         // Do nothing with status_likes
         // Do nothing with friendships
-        // Do nothing with arena_outcomes
         // Do nothing with VMs
         // Do nothing with hits
         // TODO: Trophies
