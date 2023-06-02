@@ -95,10 +95,13 @@ router.get(
         ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER', user)
 
         const lastUnameChange = await db.unames.lastUnameChange(user.id)
+        ctx.assert(lastUnameChange, 400, 'Unexpected: User should have at least one uname change')
+
         const eligibleForUnameChange =
             cancan.isStaffRole(ctx.currUser.role) ||
+            // If change_by_id is falsey, then this is the user's first uname history item (initial uname)
             !lastUnameChange.changed_by_id ||
-            belt.isNewerThan(lastUnameChange.created_at, { months: 3 })
+            belt.isOlderThan(lastUnameChange.created_at, { months: 3 })
 
         await ctx.render('edit_user', {
             ctx,

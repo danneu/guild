@@ -15,6 +15,8 @@ exports.lastUnameChange = async function(userId) {
     FROM unames
     WHERE user_id = ${userId}
       AND recycle = false
+    ORDER BY id DESC
+    LIMIT 1
   `)
 }
 

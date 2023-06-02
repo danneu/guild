@@ -59,6 +59,7 @@ exports.pastDate = function(nowDate, opts) {
     return new Date(
         nowDate.getTime() -
             ((opts.years || 0) * 1000 * 60 * 60 * 24 * 365 +
+                (opts.months || 0) * 1000 * 60 * 60 * 24 * 30 +
                 (opts.days || 0) * 1000 * 60 * 60 * 24 +
                 (opts.hours || 0) * 1000 * 60 * 60 +
                 (opts.minutes || 0) * 1000 * 60 +
@@ -76,6 +77,7 @@ exports.futureDate = function(nowDate, opts) {
     return new Date(
         nowDate.getTime() +
             (opts.years || 0) * 1000 * 60 * 60 * 24 * 365 +
+            (opts.months || 0) * 1000 * 60 * 60 * 24 * 30 +
             (opts.days || 0) * 1000 * 60 * 60 * 24 +
             (opts.hours || 0) * 1000 * 60 * 60 +
             (opts.minutes || 0) * 1000 * 60 +

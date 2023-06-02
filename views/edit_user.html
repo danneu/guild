@@ -534,7 +534,7 @@
               You can only change your username once every three months.
             </p>
 
-            {% if lastUnameChange and lastUnameChange.changed_by_id and lastUnameChange.created_at | isOlderThan({ months: 3 }) %}
+            {% if lastUnameChange and lastUnameChange.changed_by_id %}
               <div class="alert alert-warning text-center">
                 Last username change:
                 {{ macros.timeago(lastUnameChange.created_at) }}
