@@ -1068,11 +1068,10 @@ router.post('/users/:slug/avatar', async ctx => {
         'Must choose an avatar to upload'
     )
     // TODO: Do a real check. This just looks at mime type
-    console.log('ctx.request.files', ctx.request.files)
     ctx.assert(
-        ctx.request.files.avatar.mimetype.startsWith('image/'),
+        ['image/jpeg', 'image/gif', 'image/png'].includes(ctx.request.files.avatar.mimetype),
         400,
-        'Must be an image'
+        'Must be a jpeg, gif, or png'
     )
 
     // Process avatar, upload to S3, and get the S3 url

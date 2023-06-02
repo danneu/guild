@@ -183,9 +183,9 @@
               <span style="display: inline-block; width: 200px; font-family: monospace">
                 <a href="{{ user.url }}">{{ user.uname }}</a>
                 {% if user.is_nuked %}
-                  <img src="/img/nuked.gif" height="33" width="33" title="Nuked">
+                  <img src="/img/nuked.gif" height="33" width="33" title="Nuked" alt="User is nuked">
                 {% elif user.avatar_url %}
-                  <img src="{{ user.avatar_url }}" width="32">
+                  <img src="{{ user.avatar_url }}" width="32" alt="Avatar of {{ user.uname }}">
                 {% endif %}
               </span>
               <input type="text" value="{{ user.email }}" style="display: inline-block; width: 400px; font-family: monospace; box-shadow: none; color: #ccc;" class="form-control">
@@ -243,7 +243,7 @@
                 <td>
                   <a href="{{ change.user.url }}">
                     {% if change.user.avatar_url_sm %}
-                      <img src="{{ change.user.avatar_url_sm }}">
+                      <img src="{{ change.user.avatar_url_sm }}" alt="Avatar of {{ change.user.uname }}">
                     {% endif %}
                     {{ change.user.uname }}
                   </a>
