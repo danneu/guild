@@ -470,20 +470,21 @@
         </div> <!-- /.panel -->
       </form>
 
-      {#
       <!-- Toggle user.force_device_width -->
 
-      <a name="force-device-width"></a>
+      <a name="mobile"></a>
       <form action="{{ user.url }}" method="post">
         <input type="hidden" name="_method" value="put">
         <div class="panel panel-default no-select" style="border-color: #000">
-          <div class="panel-heading">Force Device Width</div>
+          <div class="panel-heading">
+            Force Mobile Device Width
+            <a href="#mobile">
+                <span class="glyphicon glyphicon-link pull-right text-muted"></span>
+            </a>
+         </div>
           <!-- PANEL BODY -->
           <div class="panel-body">
-            <p>
-              Default: On
-            </p>
-            <p>This setting forces the website to render at your device's width. You generally want to leave this on <b>unless</b> the Guild is so broken on your smartphone/tablet that you can't do anything. Disabling this setting might help in some cases.</p>
+            <p>This setting forces the website to render at your device's width. The reason you might want to <em>disable</em> this is when the mobile view (being a work in progress) is a worse experience than the desktop view on your phone.</p>
             <div class="form-group">
 
               <input name="force-device-width" type="hidden" value="off">
@@ -511,7 +512,6 @@
           </div> <!-- /.panel-footer -->
         </div> <!-- /.panel -->
       </form>
-      #}
 
       <!-- GENDER -->
 
