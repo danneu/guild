@@ -23,7 +23,7 @@
              id="email"
             >
           <div class="panel-heading">
-            Edit Email
+            Manage email
             <a href="#email">
                 <span class="glyphicon glyphicon-link pull-right text-muted"></span>
             </a>
@@ -60,12 +60,55 @@
                     </p>
                 </div>
               </div>
+
+            <hr>
+              <div class="form-group">
+                <div class="col-sm-offset-3 col-sm-9">
+                    <h4>
+                        Email notifications
+                    </h4>
+                    <p class="text-muted">
+                        The email system is very experiemntal. Please report bugs / feedback!
+                    </p>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <div class="col-sm-offset-3 col-sm-9">
+
+                    {# Necessary so that you can submit 0 notifs #}
+                    <input type="hidden" name="eflags[]" />
+
+                    <ul class="list-unstyled">
+                        <li>
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" name="eflags[]" value="0b0001" {{ 'checked' if (ctx.currUser.eflags |  bitAnd(0b1)) }}> New private convo
+                                </label>
+                            </div>  
+                        </li>
+                        <li>
+                            <div class="checkbox text-muted">
+                                <label><input type="checkbox" disabled> TODO</label>
+                            </div> 
+                        </li>
+                        <li>
+                            <div class="checkbox text-muted">
+                                <label><input type="checkbox" disabled> TODO</label>
+                            </div>  
+                        </li>
+                    </ul>
+                </div>
+              </div>
+
+
           </div> <!-- /.panel-body -->
           <!-- PANEL FOOTER -->
           <div class="panel-footer" style="border-color: #000">
             <div class="text-right">
-              <input id="email-submit" type="submit" value="Save Email"
-                     class="btn btn-primary">
+              <button id="email-submit" type="submit" class="btn btn-primary">
+                Submit
+              </button>
             </div>
           </div> <!-- /.panel-footer -->
         </div> <!-- /.panel -->

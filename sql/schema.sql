@@ -30,6 +30,7 @@ CREATE TABLE users (
   custom_title   text      NOT NULL  DEFAULT '',
   trophy_count   int       NOT NULL  DEFAULT 0,
   is_nuked       boolean   NOT NULL  DEFAULT false,
+  eflags         int       NOT NULL  DEFAULT 0, 
   -- Cache
   posts_count    int       NOT NULL  DEFAULT 0,
   pms_count      int       NOT NULL  DEFAULT 0,

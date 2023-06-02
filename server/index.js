@@ -293,6 +293,8 @@ const nunjucksOptions = {
             }
         },
         formatChatDate: belt.formatChatDate,
+        bitAnd: (input, mask) => input & mask,
+        bitOr: (input, mask) => input | mask,
     },
 }
 

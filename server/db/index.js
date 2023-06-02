@@ -1208,7 +1208,8 @@ exports.updateUser = async (userId, attrs) => {
           attrs.force_device_width
       }, force_device_width),
       hide_avatars = COALESCE(${attrs.hide_avatars}, hide_avatars),
-      email_verified = COALESCE(${attrs.email_verified}, email_verified)
+      email_verified = COALESCE(${attrs.email_verified}, email_verified),
+      eflags = COALESCE(${attrs.eflags}, eflags)
     WHERE id = ${userId}
     RETURNING *
   `

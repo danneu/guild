@@ -461,6 +461,14 @@ router.put('/users/:slug', async ctx => {
     debug('BEFORE', ctx.request.body)
 
     ctx
+        .validateBody('eflags')
+        .optional()
+        .defaultTo([])
+        .isArray()
+        .tap(xs => xs.map(x => Number.parseInt(x, 2)).filter(Boolean))
+        .tap(xs => xs.reduce((acc, curr) => acc | curr, 0))
+
+    ctx
         .validateBody('email')
         .optional()
         .isEmail('Invalid email address')
@@ -520,7 +528,9 @@ router.put('/users/:slug', async ctx => {
 
     // TODO: use db.users.updateUser
 
-    const email_verified = typeof ctx.vals.email === 'string' && ctx.vals.email === user.email ? user.email_verified : false
+    const email_verified = typeof ctx.vals.email === 'string' && ctx.vals.email === user.email 
+        ? user.email_verified 
+        : false
 
     try {
         await db.updateUser(user.id, {
@@ -545,6 +555,8 @@ router.put('/users/:slug', async ctx => {
             force_device_width: _.isBoolean(ctx.vals['force-device-width'])
                 ? ctx.vals['force-device-width']
                 : user.force_device_width,
+            // eflags: typeof ctx.vals.eflags === 'undefined' ? user.eflags : ctx.vals.eflags
+            eflags: ctx.vals.eflags,
         })
     } catch (err) {
         if (err === 'EMAIL_TAKEN') {

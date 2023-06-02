@@ -14,6 +14,8 @@ var cancan = require('../cancan')
 var avatar = require('../avatar')
 var bbcode = require('../bbcode')
 var paginate = require('../paginate')
+const emailer2 = require('../emailer2')
+const eflags  = require('../eflags')
 
 var router = new Router()
 
@@ -126,7 +128,7 @@ router.post('/convos', async ctx => {
         })
         .then(pre.presentConvo)
 
-    // Create CONVO notification for each recipient
+    // Create on-guild CONVO notification for each recipient
     promiseMap(
         toUserIds,
         toUserId => {
@@ -138,6 +140,37 @@ router.post('/convos', async ctx => {
         },
         2
     ).catch(err => console.error('error sending convo notifications', err))
+
+    // Create email notification for each recipient
+    const recipients = users
+        // Only email-verified users
+        .filter(u => u.email_verified)
+        // Get the users that want to receive emails for new convos
+        .filter(user => user.eflags & eflags.NEW_CONVO)
+
+    emailer2.sendEmail({
+        fromName: `Roleplayer Guild`,
+        fromEmail: 'mahz@roleplayerguild.com',
+        toEmails: recipients.map(u => u.email),
+        subject: `${ctx.currUser.uname} sent you a new convo: ${convo.title}`,
+        bodyText: `
+${ctx.currUser.uname} said: 
+
+${markup.slice(0, 1000)}${markup.length > 1000 ? '...' : ''}
+
+* * *
+
+${config.HOST}${convo.url}
+
+You are receiving this because you opted in to email notifications.
+Manage notifications: ${config.HOST}/me/edit#email
+
+<3 GuildBot
+        `.trim()
+    })
+    .catch(err => {
+        console.error(`Error sending convo notification email:`, err)
+    })
 
     ctx.response.redirect(convo.url)
 })
