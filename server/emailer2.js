@@ -9,6 +9,7 @@ exports.sendEmail = async ({ fromName, fromEmail, toEmails, subject, bodyText}) 
     assert(typeof fromEmail === 'string')
     assert(Array.isArray(toEmails))
     assert(toEmails.every(email => typeof email === 'string'))
+    assert(toEmails.length > 0)
     assert(typeof subject === 'string')
     assert(typeof bodyText === 'string')
 

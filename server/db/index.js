@@ -2027,7 +2027,7 @@ exports.deleteNotificationsForPostId = async function(toUserId, postId) {
     debug(
         `[deleteNotificationsForPostId] toUserId=${toUserId}, postId=${postId}`
     )
-    assert(toUserId)
+    assert(Number.isInteger(toUserId))
     assert(postId)
 
     return pool

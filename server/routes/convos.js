@@ -148,6 +148,7 @@ router.post('/convos', async ctx => {
         // Get the users that want to receive emails for new convos
         .filter(user => user.eflags & eflags.NEW_CONVO)
 
+    if (recipients.length > 0) {
     emailer2.sendEmail({
         fromName: `Roleplayer Guild`,
         fromEmail: 'mahz@roleplayerguild.com',
@@ -171,6 +172,7 @@ Manage notifications: ${config.HOST}/me/edit#email
     .catch(err => {
         console.error(`Error sending convo notification email:`, err)
     })
+    }
 
     ctx.response.redirect(convo.url)
 })
