@@ -42,6 +42,7 @@ CREATE TABLE users (
   is_grayscale   boolean   NOT NULL  DEFAULT false,
   force_device_width boolean NOT NULL DEFAULT true,
   hide_avatars   boolean   NOT NULL  DEFAULT false,
+  email_verified boolean   NOT NULL DEFAULT false,
   -- Bio
   bio_markup     text      NULL,
   bio_html       text      NULL,

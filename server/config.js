@@ -90,6 +90,9 @@ exports.ENABLE_ADS = !!process.env.ENABLE_ADS
 
 exports.CHAT_SERVER_URL = process.env.CHAT_SERVER_URL || 'http://localhost:3001'
 
+// 512-bit (64byte) secret used to generate email verification token
+exports.SECRET = process.env.SECRET
+
 // newrelic
 exports.NEW_RELIC_LICENSE_KEY = process.env.NEW_RELIC_LICENSE_KEY
 exports.NEW_RELIC_APP_NAME = process.env.NEW_RELIC_APP_NAME || 'localhost-guild'

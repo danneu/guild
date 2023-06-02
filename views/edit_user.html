@@ -14,6 +14,64 @@
   <div class="row">
     <div class="col-md-8 col-md-offset-2">
 
+      <!-- Change email form -->
+
+      <form action="{{ user.url }}" method="post" class="form-horizontal">
+        <input type="hidden" name="_method" value="put">
+        <div class="panel panel-default no-select"
+             style="border-color: #000"
+             id="email"
+            >
+          <div class="panel-heading">
+            Edit Email
+            <a href="#email">
+                <span class="glyphicon glyphicon-link pull-right text-muted"></span>
+            </a>
+        </div>
+          <!-- PANEL BODY -->
+          <div class="panel-body">
+
+            <div class="form-group">
+              <label for="email-input" class="col-sm-3 control-label">Email:</label>
+              <div class="col-sm-9">
+                <input id="email-input" name="email" type="text"
+                       class="form-control" value="{{ user.email }}">
+              </div>
+            </div>
+
+            <div class="form-group">
+                <label class="col-sm-3 control-label">Verified:</label>
+                <div class="col-sm-9">
+                    <p class="form-control-static">
+                        {% if user.email_verified %}
+                            ✅ Yes
+                        {% else %}
+                            ❌ No
+                            <span class="pull-right">
+                                <button class="btn btn-default btn-xs send-verification-email" type="button">
+                                    Send verification email
+                                </button>
+                                <span class="result"></span>
+                            </span>
+                            <p class="help-block">
+                                Verifying your email will let you receive email notifications.
+                            </p>
+                        {% endif %}
+                    </p>
+                </div>
+              </div>
+          </div> <!-- /.panel-body -->
+          <!-- PANEL FOOTER -->
+          <div class="panel-footer" style="border-color: #000">
+            <div class="text-right">
+              <input id="email-submit" type="submit" value="Save Email"
+                     class="btn btn-primary">
+            </div>
+          </div> <!-- /.panel-footer -->
+        </div> <!-- /.panel -->
+      </form>
+
+
       <!-- Change custom_title form -->
       {% if ctx.can(ctx.currUser, 'UPDATE_USER_CUSTOM_TITLE', user) %}
         <form action="{{ user.url }}" method="post" class="form-horizontal">
@@ -149,34 +207,6 @@
           </div> <!-- /.panel -->
         </form>
       {% endif %}
-
-      <!-- Change email form -->
-
-      <form action="{{ user.url }}" method="post" class="form-horizontal">
-        <input type="hidden" name="_method" value="put">
-        <div class="panel panel-default no-select"
-             style="border-color: #000">
-          <div class="panel-heading">Edit Email</div>
-          <!-- PANEL BODY -->
-          <div class="panel-body">
-
-            <div class="form-group">
-              <label for="email-input" class="col-sm-3 control-label">Email:</label>
-              <div class="col-sm-9">
-                <input id="email-input" name="email" type="text"
-                       class="form-control" value="{{ user.email }}">
-              </div>
-            </div>
-          </div> <!-- /.panel-body -->
-          <!-- PANEL FOOTER -->
-          <div class="panel-footer" style="border-color: #000">
-            <div class="text-right">
-              <input id="email-submit" type="submit" value="Save Email"
-                     class="btn btn-primary">
-            </div>
-          </div> <!-- /.panel-footer -->
-        </div> <!-- /.panel -->
-      </form>
 
       <!-- Delete legacy signature -->
 
@@ -595,5 +625,62 @@
         height: 388
       });
     });
+  </script>
+
+  <script>
+    const button = document.querySelector('.send-verification-email')
+    if (button) {
+        const info = document.querySelector('.result')
+
+        const handler = e => {
+            const button = e.target
+            const cloneButton = button.cloneNode(true)
+            button.removeEventListener('click', handler)
+            button.textContent = 'Sending...'
+            button.disabled = true
+            button.style.color = 'white'
+            button.classList.add('disabled')
+            const info = document.createElement('span')
+
+            fetch("{{ config.HOST }}/api/verify-email", {
+                method: 'POST'
+            }).finally(() => {
+                button.replaceWith(info)
+            }).then(res => {
+                if (!res.ok) {
+                    console.error('Error with guild api:', res.status, res.statusText)
+                    info.textContent = res.status === 429 ? 'Rate-limited' : `Error: ${res.status} ${res.statusText}`
+                } else {
+                    info.textContent = 'Check your email'
+                }
+            }).catch(err => {
+                console.error('Error with guild api', err)
+                info.textContent = 'Error'
+            }).finally(() => {
+                setTimeout(() => {
+                    info.replaceWith(cloneButton)
+                    cloneButton.addEventListener('click', handler)
+                }, 10000)
+            })
+        }
+
+        button.addEventListener('click', handler)
+    }
+  </script>
+            } else {
+                info.textContent = 'Check your email'
+            }
+        }).catch(err => {
+            console.error('Error with guild api', err)
+            info.textContent = 'Error'
+        }).finally(() => {
+            setTimeout(() => {
+                info.replaceWith(cloneButton)
+                cloneButton.addEventListener('click', handler)
+            }, 10000)
+        })
+    }
+
+    button.addEventListener('click', handler)
   </script>
 {% endblock %}

@@ -356,6 +356,7 @@ app.use(require('./routes/discord').routes())
 app.use(require('./routes/search').routes())
 app.use(require('./routes/topics').routes())
 app.use(require('./routes/admin').routes())
+app.use(require('./routes/verify-email').routes())
 
 // Useful to redirect users to their own profiles since canonical edit-user
 // url is /users/:slug/edit

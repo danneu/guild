@@ -15,6 +15,7 @@
     },
     "license": "MIT",
     "dependencies": {
+        "@aws-sdk/client-ses": "^3.344.0",
         "autolinker": "1.6.0",
         "aws-sdk": "^2.49.0",
         "bcryptjs": "2.4.3",

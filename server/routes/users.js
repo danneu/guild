@@ -520,9 +520,12 @@ router.put('/users/:slug', async ctx => {
 
     // TODO: use db.users.updateUser
 
+    const email_verified = typeof ctx.vals.email === 'string' && ctx.vals.email === user.email ? user.email_verified : false
+
     try {
         await db.updateUser(user.id, {
             email: ctx.vals.email || user.email,
+            email_verified,
             sig: sig_markup,
             sig_html: sig_html,
             custom_title: ctx.vals['custom-title'],

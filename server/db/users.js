@@ -19,7 +19,7 @@ exports.updateUser = async function(userId, fields) {
     assert(Number.isInteger(userId))
     assert(_.isPlainObject(fields))
     // Validate fields
-    const WHITELIST = ['gender']
+    const WHITELIST = ['gender', 'email_verified']
     Object.keys(fields).forEach(key => {
         if (WHITELIST.indexOf(key) === -1) {
             throw new Error('FIELD_NOT_WHITELISTED')
