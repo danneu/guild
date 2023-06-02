@@ -706,22 +706,6 @@
                 }, 10000)
             })
         }
-
-        button.addEventListener('click', handler)
-    }
-  </script>
-            } else {
-                info.textContent = 'Check your email'
-            }
-        }).catch(err => {
-            console.error('Error with guild api', err)
-            info.textContent = 'Error'
-        }).finally(() => {
-            setTimeout(() => {
-                info.replaceWith(cloneButton)
-                cloneButton.addEventListener('click', handler)
-            }, 10000)
-        })
     }
 
     button.addEventListener('click', handler)
