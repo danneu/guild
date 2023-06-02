@@ -4,14 +4,14 @@ const {currUser} = require('../middleware')
 const db = require('../db')
 const assert = require('better-assert')
 const belt = require('../belt')
+const crypto = require('crypto')
 // const { SES } = require('aws-sdk')
 const config = require('../config')
 const { SESClient, SendEmailCommand } = require("@aws-sdk/client-ses");
 
 const router = new Router()
 
-function createToken(email, secret) {
-    const crypto = require('crypto')
+function createToken(secret, email) {
     assert(typeof email === 'string')
     assert(typeof secret === 'string')
     const hmac = crypto.createHmac('sha512', secret)
@@ -19,30 +19,45 @@ function createToken(email, secret) {
     return data.digest('hex')
 }
 
-
-
+// For UX, this is clickable from anywhere. You don't need to ensure you're opening it in the browser
+// that you're logged into the guild on. Not sure of the security implications of that tho.
 router.get('/verify-email', async ctx => {
-    ctx.assert(ctx.currUser, 403)
+    // User doesn't have to be logged in
     const { token, email } = ctx.request.query
     ctx.assert(typeof token === 'string', 400, 'expected token field')
     ctx.assert(typeof email === 'string', 400, 'expected email field')
-    // User echoes back email to ensure they didn't change their email during the trip.
-    if(ctx.currUser.email !== email) { 
-        ctx.flash = { message: ['danger', 'Given email address does not match the one on file.'] }
-        ctx.redirect('/me/edit')
-        return
-    }
-    const expected = createToken(email, config.SECRET)
-    if (expected !== token) {
+
+    if (token !== createToken(config.SECRET, email)) {
         ctx.flash = { message: ['danger', 'Invalid token.'] }
-        ctx.redirect('/me/edit')
+        ctx.redirect(ctx.currUser ? '/me/edit' : '/')
         return
     }
-    await db.users.updateUser(ctx.currUser.id, { 
-        email_verified: true
-    })
+
+    if (ctx.currUser) {
+        // User echoes back email to ensure they didn't change their email during the trip.
+        if(ctx.currUser.email !== email) { 
+            ctx.flash = { message: ['danger', 'Given email address does not match the one on file.'] }
+            ctx.redirect('/me/edit')
+            return
+        }
+        await db.users.updateUser(ctx.currUser.id, { email_verified: true })
+    } else {
+        // Not logged in, so load user from email
+        const user = await db.users.getUserByEmail(email)
+        ctx.assert(user, 404)
+
+        // Since we're also using this as a one-time-use login link, bail if user is 
+        // already verified
+        if (user.email_verified) {
+            ctx.flash = { message: ['info', 'Your email is already verified.'] }
+            ctx.redirect('/')
+            return
+        } 
+        await db.users.updateUser(user.id, { email_verified: true })
+    }
+
     ctx.flash = { message: ['success', 'Email address verified.'] }
-    ctx.redirect('/me/edit')
+    ctx.redirect(ctx.currUser ? '/me/edit' : '/')
 })
 
 // mapping of user id -> Date of email send
@@ -54,7 +69,7 @@ router.post('/api/verify-email', async ctx => {
 
     const prev = sent.get(ctx.currUser.id)
     if (!prev || belt.isOlderThan(prev, { seconds: 60 })) {
-        const token = createToken(ctx.currUser.email, config.SECRET)
+        const token = createToken(config.SECRET, ctx.currUser.email)
         const messageId = await sendEmail(ctx.currUser.uname, ctx.currUser.email, token)
         sent.set(ctx.currUser.id, new Date())
         ctx.status = 201

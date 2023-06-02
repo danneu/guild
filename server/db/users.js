@@ -13,6 +13,15 @@ const { sql } = require('pg-extra')
 
 ////////////////////////////////////////////////////////////
 
+exports.getUserByEmail = async (email) => {
+    const str = knex('users')
+        .where('email', email)
+        .first()
+        .toString()
+    const result = await pool._query(str)
+    return result.rows[0]
+}
+
 // Generalized update function that takes an object of
 // field/values to be updated.
 exports.updateUser = async function(userId, fields) {
