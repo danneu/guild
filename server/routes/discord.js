@@ -51,16 +51,13 @@ const oauth2 = SimpleOauth2.create({
         secret: config.DISCORD_APP_CLIENTSECRET,
     },
     auth: {
-        tokenHost: 'https://discordapp.com',
+        tokenHost: 'https://discord.com',
         tokenPath: '/api/oauth2/token',
         authorizePath: '/api/oauth2/authorize',
     },
 })
 
-const redirect_uri =
-    config.NODE_ENV === 'production'
-        ? 'https://www.roleplayerguild.com/discord/callback'
-        : `${config.HOST}/discord/callback`
+const redirect_uri = `${config.HOST}/discord/callback`
 
 const discord = new DiscordClient({ botToken: config.DISCORD_BOT_TOKEN })
 
@@ -158,13 +155,25 @@ router.get('/discord/callback', async ctx => {
     )
 
     if (guildMember) {
-        guildMember = await discord.modifyGuildMember(
-            config.DISCORD_GUILD_ID,
-            discordUser.id,
-            {
-                nick: ctx.currUser.uname,
+        // FIXME: modifyGuildMember is failing with 403 Forbidden (missing permissions)
+        // However since they are already part of the server, I'll redirect them instead of failing.
+        try {
+            guildMember = await discord.modifyGuildMember(
+                config.DISCORD_GUILD_ID,
+                discordUser.id,
+                {
+                    nick: ctx.currUser.uname,
+                }
+            )
+        } catch (err) { 
+            if (err.status === 403) {
+                // Missing permissions, but just go ahead instead of bailing
+                console.log('TODO: modifyGuildMember 403 Forbidden (missing permissions)')
+            } else {
+                console.error('modifyGuildMember error', err)
+                throw err
             }
-        )
+        }
     } else {
         guildMember = await discord.addGuildMember(
             config.DISCORD_GUILD_ID,
@@ -177,7 +186,7 @@ router.get('/discord/callback', async ctx => {
         )
     }
 
-    ctx.redirect('https://discord.com/channels/@me')
+    ctx.redirect(`https://discord.com/channels/${config.DISCORD_GUILD_ID}`)
 })
 
 ////////////////////////////////////////////////////////////

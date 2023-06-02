@@ -19,7 +19,7 @@ class Client {
         // https://discordapp.com/developers/docs/reference#user-agent
         this.userAgent = userAgent
         // https://discord.com/developers/docs/reference#api-versioning
-        this.apiVersion = 6
+        this.apiVersion = 10
         this.baseUrl = `https://discord.com/api/v${this.apiVersion}`
     }
 
@@ -41,7 +41,7 @@ class Client {
 
         const response = await fetch(url, {
             method,
-            headers: new fetch.Headers(headers),
+            headers,
             body: JSON.stringify(body),
         })
 
@@ -52,7 +52,7 @@ class Client {
             // FIXME: I still don't know the best way nor when to
             // produce / handle errors in my own javascript APIs...
             throw new ResponseNotOkError(
-                `${response.status} ${response.statusText}`,
+                `${response.status} ${response.statusText} ${bodyText}`,
                 {
                     status: response.status,
                     bodyText,
