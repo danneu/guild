@@ -3,14 +3,14 @@
 <html lang="en">
 <head>
   {# Temporarily off
-   Guests always get the mobile version
+   Guests always get the mobile version #}
   {% if not ctx.currUser %}
     <meta name="viewport" content="width=device-width, initial-scale=1">
   {% endif %}
   {% if ctx.currUser and ctx.currUser.force_device_width %}
     <meta name="viewport" content="width=device-width, initial-scale=1">
   {% endif %}
-  #}
+
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <link rel="shortcut icon" href="/favicon.ico?v=3">
