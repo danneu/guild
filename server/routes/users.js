@@ -711,6 +711,8 @@ router.get('/users/:userIdOrSlug', async ctx => {
             .getLatestViews(user.id)
             .then(xs => xs.map(pre.presentUser)),
         db.unames.userUnameHistory(user.id)
+            // Remove current name
+            .then(xs => xs.slice(1))
     ])
 
     // Load approval if currUser can see it
