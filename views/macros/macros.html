@@ -896,7 +896,7 @@
                     {{ topic.posts_count|commafy }} Posts
                   </span>
                   {% if topic.unread_posts %}
-                    <span class="unread-posts-tag">!</span>
+                    <span class="unread-posts-tag" title="Unread posts">!</span>
                   {% endif %}
                 </div>
                 <!-- Latest post -->
@@ -977,7 +977,7 @@
                 <div class="col-sm-2">
                   <span class="text-muted">{{ topic.posts_count|commafy }} Posts</span>
                   {% if topic.unread_posts %}
-                    <span class="unread-posts-tag">!</span>
+                    <span class="unread-posts-tag" title="Unread posts">!</span>
                   {% endif %}
                 </div>
                 <!-- Latest post -->
