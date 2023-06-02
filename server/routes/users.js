@@ -713,6 +713,12 @@ router.get('/users/:userIdOrSlug', async ctx => {
         db.unames.userUnameHistory(user.id)
             // Remove current name
             .then(xs => xs.slice(1))
+            // Only show name changes within past year (privacy) unless currUser is staff.
+            .then(xs => 
+                (ctx.currUser && cancan.isStaffRole(ctx.currUser.role))
+                    ? xs 
+                    : xs.filter(x => belt.isNewerThan(x.created_at, { years: 1 }))
+            )
     ])
 
     // Load approval if currUser can see it
