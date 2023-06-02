@@ -702,7 +702,7 @@ router.get('/users/:userIdOrSlug', async ctx => {
             .catch(err => console.error('insertView error', err, err.stack))
     }
 
-    const [statuses, friendship, latestViewers] = await Promise.all([
+    const [statuses, friendship, latestViewers, unames] = await Promise.all([
         db.findLatestStatusesForUserId(user.id),
         ctx.currUser
             ? db.findFriendshipBetween(ctx.currUser.id, user.id)
@@ -710,6 +710,7 @@ router.get('/users/:userIdOrSlug', async ctx => {
         db.profileViews
             .getLatestViews(user.id)
             .then(xs => xs.map(pre.presentUser)),
+        db.unames.userUnameHistory(user.id)
     ])
 
     // Load approval if currUser can see it
@@ -735,6 +736,7 @@ router.get('/users/:userIdOrSlug', async ctx => {
     await ctx.render('show_user', {
         ctx,
         user,
+        unames,
         recentPosts,
         title: user.uname,
         statuses,

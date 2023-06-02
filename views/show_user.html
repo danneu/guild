@@ -211,6 +211,22 @@
               {% endif %}
               <li>VMs: {{ user.toplevel_vms_count }}</li>
 
+              {% if unames.length > 1 %}
+                <li>
+                    Username history
+                    <ol reversed>
+                    {% for item in unames %}
+                        <li>
+                            <a href="/users/{{ item.slug }}">
+                                {{ item.uname }}
+                            </a>
+                            {{ macros.timeago(item.created_at) }}
+                        </li>
+                    {% endfor %}
+                    </ol>
+                </li>
+              {% endif %}
+
               {% if user.role != 'banned' and latestViewers.length > 0 %}
                 <li>
                   Latest 10 profile visitors:

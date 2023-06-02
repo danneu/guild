@@ -22,6 +22,28 @@ exports.lastUnameChange = async function(userId) {
 
 ////////////////////////////////////////////////////////////
 
+// Get all username changes for a given user. Will return at least one username (their initial username).
+exports.userUnameHistory = async function(userId) {
+    assert(Number.isInteger(userId))
+    return pool.many(sql`
+    SELECT
+      h.*,
+      CASE WHEN u2 IS NULL THEN NULL
+      ELSE
+        json_build_object(
+          'id', u2.id,
+          'uname', u2.uname,
+          'slug', u2.slug,
+          'avatar_url', u2.avatar_url
+        )
+      END "changed_by"
+    FROM unames h
+    LEFT OUTER JOIN users u2 ON h.changed_by_id = u2.id
+    WHERE h.user_id = ${userId}
+    ORDER BY h.id DESC
+    `)
+}
+
 exports.latestUnameChanges = async function(limit = 10) {
     return pool.many(sql`
     SELECT
