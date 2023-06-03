@@ -194,10 +194,9 @@ if (config.IS_DISCORD_CONFIGURED) {
         botToken: config.DISCORD_BOT_TOKEN,
     })
 
-    // 18 seconds
     cache.every(
         'discord-stats',
-        1000 * 18,
+        1000 * 60,
         async () => {
             const result = await client.getGuildEmbed(config.DISCORD_GUILD_ID)
             return { online: result.presence_count }
