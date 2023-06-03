@@ -733,9 +733,11 @@ router.get('/users/:userIdOrSlug', async ctx => {
         // Only reveal name changes within past year (privacy) unless currUser is staff.
         ctx.currUser && cancan.isStaffRole(ctx.currUser.role)
             ? unames
-            : unames.map((x) =>
-                    belt.isOlderThan(x.created_at, { years: 1 })
-                        ? x.uname.replace(/./g, '█')
+            : unames.map((x, i) =>
+                (i === 0)
+                    ? x
+                    : belt.isOlderThan(x.created_at, { years: 1 })
+                        ? { ...x, uname: x.uname.replace(/./g, '█'), cloaked: true }
                         : x,
                 )
 

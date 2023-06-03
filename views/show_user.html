@@ -217,12 +217,12 @@
                 <ol reversed>
                     {% for item in unamesCloaked %}
                     <li>
-                        {% if item | isString %} 
-                            <span style="color: black;">{{ item }}</span> 
+                        {% if item.cloaked %}
+                            <span style="color: black;">{{ item.uname }}</span> 
                         {% else %}
                             <a href="/users/{{ item.slug }}">{{ item.uname }}</a>
-                            {{ macros.timeago(item.created_at) }} 
                         {% endif %}
+                        {{ macros.timeago(item.created_at) }} 
                     </li>
                     {% endfor %}
                 </ol>
