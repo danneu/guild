@@ -211,20 +211,22 @@
               {% endif %}
               <li>VMs: {{ user.toplevel_vms_count }}</li>
 
-              {% if totalUnameCount > 1 %}
-                <li>
-                    Username history
-                    <ol reversed>
-                    {% for item in unames %}
-                        <li>
-                            <a href="/users/{{ item.slug }}">
-                                {{ item.uname }}
-                            </a>
-                            {{ macros.timeago(item.created_at) }}
-                        </li>
+              {% if unamesCloaked.length > 0 %}
+              <li>
+                Username history
+                <ol reversed>
+                    {% for item in unamesCloaked %}
+                    <li>
+                        {% if item | isString %} 
+                            <span style="color: black;">{{ item }}</span> 
+                        {% else %}
+                            <a href="/users/{{ item.slug }}">{{ item.uname }}</a>
+                            {{ macros.timeago(item.created_at) }} 
+                        {% endif %}
+                    </li>
                     {% endfor %}
-                    </ol>
-                </li>
+                </ol>
+              </li>
               {% endif %}
 
               {% if user.role != 'banned' and latestViewers.length > 0 %}

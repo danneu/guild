@@ -229,6 +229,7 @@ const nunjucksOptions = {
         isIn: (v, coll) => (coll || []).includes(v),
         // {% if things|isEmpty %}
         isEmpty: coll => _.isEmpty(coll),
+        isString: x => typeof x === 'string',
         // Specifically replaces \n with <br> in user.custom_title
         replaceTitleNewlines: str => {
             if (!str) return ''

@@ -728,14 +728,16 @@ router.get('/users/:userIdOrSlug', async ctx => {
         db.unames.userUnameHistory(user.id)
     ])
 
-    // We want to handle the case where the user's old unames might be hidden because they are >1yr old
-    // but the user also changed their name this year, so it looks like they only have one name change.
-    // We have to show the latest name because it tells us when their last name change was.
-    const unamesCloaked = 
-        // Only show name changes within past year (privacy) unless currUser is staff.
+    // Array<string | UnameHistoryItem>
+    const unamesCloaked =
+        // Only reveal name changes within past year (privacy) unless currUser is staff.
         ctx.currUser && cancan.isStaffRole(ctx.currUser.role)
             ? unames
-            : unames.filter(x => belt.isNewerThan(x.created_at, { years: 1 }))
+            : unames.map((x) =>
+                    belt.isOlderThan(x.created_at, { years: 1 })
+                        ? x.uname.replace(/./g, '█')
+                        : x,
+                )
 
     // Load approval if currUser can see it
     const approver =
@@ -760,8 +762,7 @@ router.get('/users/:userIdOrSlug', async ctx => {
     await ctx.render('show_user', {
         ctx,
         user,
-        unames: unamesCloaked,
-        totalUnameCount: unames.length,
+        unamesCloaked,
         recentPosts,
         title: user.uname,
         statuses,
