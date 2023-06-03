@@ -1,11 +1,10 @@
 
-const Router = require('koa-router')
+const Router = require('@koa/router')
 const {currUser} = require('../middleware')
 const db = require('../db')
 const assert = require('better-assert')
 const belt = require('../belt')
 const crypto = require('crypto')
-// const { SES } = require('aws-sdk')
 const config = require('../config')
 const { SESClient, SendEmailCommand } = require("@aws-sdk/client-ses");
 

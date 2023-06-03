@@ -1,6 +1,6 @@
 'use strict'
 // 3rd
-const Router = require('koa-router')
+const Router = require('@koa/router')
 const debug = require('debug')('app:routes:topics')
 // 1st
 const cancan = require('../cancan')

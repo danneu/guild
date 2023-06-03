@@ -2,7 +2,7 @@
 // Node
 const util = require('util')
 // 3rd party
-const Router = require('koa-router')
+const Router = require('@koa/router')
 const _ = require('lodash')
 const debug = require('debug')('app:routes:users')
 const assert = require('better-assert')

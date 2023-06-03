@@ -1,7 +1,7 @@
 'use strict'
 // 3rd
 const assert = require('better-assert')
-const router = require('koa-router')()
+const router = require('@koa/router')()
 const debug = require('debug')('app:routes:dice')
 // 1st
 const db = require('../db')

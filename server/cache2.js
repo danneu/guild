@@ -46,7 +46,7 @@ class Cache {
     // be step()'ed.
     async tick() {
         const promises = []
-        Object.keys(this.tasks).forEach(key => {
+        Object.keys(this.tasks).forEach((key) => {
             // Skip tasks that aren't yet due for a refresh
             if (
                 this.clock.Date.now() - this.tasks[key].lastRun <
@@ -97,9 +97,9 @@ class Cache {
         // Refresh is already in flight, so do nothing
         if (this.locks.has(key)) {
             debug(
-                `[refresh] --bail-- lock taken for ${
-                    key
-                }. lock age = ${Date.now() - this.locks.get(key)}ms`
+                `[refresh] --bail-- lock taken for ${key}. lock age = ${
+                    Date.now() - this.locks.get(key)
+                }ms`,
             )
             return
         }
@@ -117,7 +117,7 @@ class Cache {
             // On error, we do nothing but hope the next interval is more successful
             console.error(
                 `[IntervalCache2] Error updating cache key "${key}"`,
-                err
+                err,
             )
         } finally {
             // Release lock
@@ -162,7 +162,7 @@ const cache = new Cache()
             // maps forumId -> [User]
             const mapping = {}
             const rows = await db.allForumMods()
-            rows.forEach(row => {
+            rows.forEach((row) => {
                 if (mapping[row.forum_id]) {
                     mapping[row.forum_id].push(row.user)
                 } else {
@@ -171,7 +171,7 @@ const cache = new Cache()
             })
             return mapping
         },
-        {}
+        {},
     )
 
 if (config.FAQ_POST_ID) {
@@ -189,7 +189,7 @@ if (config.WELCOME_POST_ID) {
 
 // DISCORD
 
-if (config.IS_DISCORD_CONFIGURED) {
+if (false && config.IS_DISCORD_CONFIGURED) {
     const client = new DiscordClient({
         botToken: config.DISCORD_BOT_TOKEN,
     })
@@ -201,10 +201,10 @@ if (config.IS_DISCORD_CONFIGURED) {
             const result = await client.getGuildEmbed(config.DISCORD_GUILD_ID)
             return { online: result.presence_count }
         },
-        { online: 0 }
+        { online: 0 },
     )
 } else {
-    cache.once('discord-stats', async x => x, { online: 0 })
+    cache.once('discord-stats', async (x) => x, { online: 0 })
 }
 
 ////////////////////////////////////////////////////////////

@@ -1,6 +1,6 @@
 'use strict'
 // 3rd party
-var Router = require('koa-router')
+var Router = require('@koa/router')
 var _ = require('lodash')
 var debug = require('debug')('app:routes:convos')
 var bouncer = require('koa-bouncer')

@@ -1,5 +1,5 @@
 // 3rd
-const Router = require('koa-router')
+const Router = require('@koa/router')
 // 1st
 const db = require('../db')
 const pre = require('../presenters')

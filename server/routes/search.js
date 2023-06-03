@@ -1,6 +1,6 @@
 'use strict'
 // 3rd
-const Router = require('koa-router')
+const Router = require('@koa/router')
 const knex = require('knex')({ client: 'pg' })
 const { _raw } = require('pg-extra')
 const debug = require('debug')('app:search')

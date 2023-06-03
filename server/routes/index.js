@@ -1,7 +1,7 @@
 'use strict'
 // 3rd
 const assert = require('better-assert')
-const Router = require('koa-router')
+const Router = require('@koa/router')
 const debug = require('debug')('app:routes:index')
 const { sql, _raw } = require('pg-extra')
 const _ = require('lodash')

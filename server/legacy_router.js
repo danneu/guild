@@ -1,7 +1,7 @@
 'use strict'
 // Node
 // 3rd party
-var Router = require('koa-router')
+var Router = require('@koa/router')
 var _ = require('lodash')
 var koaSend = require('koa-send')
 var debug = require('debug')('app:legacy_router.js')

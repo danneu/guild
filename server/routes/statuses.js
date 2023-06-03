@@ -1,6 +1,6 @@
 'use strict'
 // 3rd party
-var Router = require('koa-router')
+var Router = require('@koa/router')
 var debug = require('debug')('app:routes:statuses')
 // 1st party
 var db = require('../db')

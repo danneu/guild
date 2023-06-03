@@ -1,5 +1,5 @@
 // 3rd
-const Router = require('koa-router')
+const Router = require('@koa/router')
 const compress = require('koa-compress')
 const nunjucks = require('nunjucks')
 // 1st

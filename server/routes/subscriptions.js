@@ -1,6 +1,6 @@
 'use strict'
 // 3rd
-const Router = require('koa-router')
+const Router = require('@koa/router')
 const _ = require('lodash')
 const debug = require('debug')('app:routes:subscriptions')
 // 1st

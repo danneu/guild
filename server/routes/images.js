@@ -2,22 +2,18 @@
 // Node
 const fs = require('fs')
 // 3rd
+const fsp = require('fs/promises')
 const assert = require('better-assert')
-const router = require('koa-router')()
+const router = require('@koa/router')()
 const debug = require('debug')('app:routes:images')
 const gm = require('gm').subClass({ imageMagick: true })
-const Uploader = require('s3-streaming-upload').Uploader
 const uuidGen = require('uuid')
-const AWS = require('aws-sdk')
+const { S3Client, PutObjectCommand, } = require("@aws-sdk/client-s3");
 // 1st
 const belt = require('../belt')
 const db = require('../db')
 const pre = require('../presenters')
 const config = require('../config')
-
-////////////////////////////////////////////////////////////
-
-const s3 = new AWS.S3({ apiVersion: '2006-03-01' })
 
 ////////////////////////////////////////////////////////////
 
@@ -145,43 +141,23 @@ function readPath(path) {
 }
 
 // returns promise that resolves into s3 url of uploaded image
-function uploadImage(key, path, mime) {
+async function uploadImage(key, path, mime) {
     assert(typeof key === 'string')
     assert(typeof path === 'string')
     assert(typeof mime === 'string')
-    const inStream = fs.createReadStream(path)
-    const uploader = new Uploader({
-        stream: inStream,
-        accessKey: config.AWS_KEY,
-        secretKey: config.AWS_SECRET,
-        bucket: config.S3_IMAGE_BUCKET,
-        objectName: key,
-        objectParams: {
-            ContentType: mime,
-            CacheControl: 'max-age=31536000', // 1 year
-        },
-    })
-    return new Promise(function(resolve, reject) {
-        uploader.send(function(err, data) {
-            if (err) return reject(err)
-            const srcUrl = data.Location
-            assert(typeof srcUrl === 'string')
-            return resolve(srcUrl)
-        })
-    })
-}
-
-function deleteObject(key) {
-    const params = {
-        Bucket: config.S3_IMAGE_BUCKET,
+    const body = await  fsp.readFile(path, { encoding: null })
+    const data = {
         Key: key,
+        Bucket: config.S3_IMAGE_BUCKET,
+        Body: body,
+        ContentType: mime,
+        CacheControl: 'max-age=31536000', // 1 year
     }
-    return new Promise(function(resolve, reject) {
-        s3.deleteObject(params, function(err, data) {
-            if (err) return reject(err)
-            return resolve()
-        })
-    })
+    const command = new PutObjectCommand(data)
+    const client = new S3Client({ region: 'us-east-1' })
+    const response = await client.send(command)
+    const url = `https://s3.amazonaws.com/${config.S3_IMAGE_BUCKET}/${key}`
+    return url
 }
 
 router.post('/users/:user_slug/images', loadUser, async ctx => {
@@ -234,6 +210,7 @@ router.post('/users/:user_slug/images', loadUser, async ctx => {
     const envFolder = config.NODE_ENV === 'production' ? 'prod' : 'dev'
     const s3Key = `${envFolder}/users/${uuid}.${mimeToExt(mime)}`
     const url = await uploadImage(s3Key, upload.filepath, mime)
+    console.log('url: : :', url)
 
     // INSERT
 

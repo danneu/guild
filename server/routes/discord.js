@@ -1,6 +1,6 @@
 'use strict'
 // 3rd
-const Router = require('koa-router')
+const Router = require('@koa/router')
 const SimpleOauth2 = require('simple-oauth2')
 const uuid = require('uuid')
 const debug = require('debug')('app:routes:discord')
