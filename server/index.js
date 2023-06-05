@@ -981,12 +981,14 @@ router.get('/forums/:forumSlug', async ctx => {
     ctx.assertAuthorized(ctx.currUser, 'READ_FORUM', forum)
 
     var pager = belt.calcPager(ctx.vals.page, 25, forum.topics_count)
+    const authFindTopicsFunc = ctx.currUser && cancan.isStaffRole(ctx.currUser.role) ? db.findTopicsWithHasPostedByForumIdIncludingHidden : db.findTopicsWithHasPostedByForumId
+    //Mods can see hidden threads
 
     const [viewers, topics] = await Promise.all([
         db.findViewersForForumId(forum.id),
         // Avoids the has_posted subquery if guest
         ctx.currUser
-            ? db.findTopicsWithHasPostedByForumId(
+            ? authFindTopicsFunc(
                   forumId,
                   pager.limit,
                   pager.offset,
@@ -994,6 +996,7 @@ router.get('/forums/:forumSlug', async ctx => {
               )
             : db.findTopicsByForumId(forumId, pager.limit, pager.offset),
     ])
+
 
     forum.topics = topics
     pre.presentForum(forum)
