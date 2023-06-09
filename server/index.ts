@@ -357,11 +357,6 @@ app.use(require('./routes/statuses').routes())
 app.use(require('./routes/chat').routes())
 app.use(require('./routes/subscriptions').routes())
 app.use(require('./routes/friendships').routes())
-// app.use(require('./routes/sitemaps').routes())
-
-import sitemap from './routes/sitemap'
-app.use(sitemap.routes())
-
 app.use(require('./routes/tags').routes())
 app.use(require('./routes/discord').routes())
 app.use(require('./routes/search').routes())
