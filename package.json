@@ -2,8 +2,7 @@
     "name": "guild",
     "private": true,
     "scripts": {
-        "//build": "Builds server .ts -> .js and also client css/js files",
-        "build": "tsc && gulp && ls -lah dist",
+        "build": "gulp && ls -lah dist",
         "start": "ts-node --transpile-only ./server",
         "start-dev": "ts-node-dev --respawn ./server",
         "reset-db": "node ./server/reset_db",
