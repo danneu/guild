@@ -298,7 +298,7 @@ exports.findUserBySlug = exports.getUserBySlug = async function(slug) {
 
     slug = slug.toLowerCase()
 
-    return pool.one(sql`
+    var user = await pool.one(sql`
     SELECT u.*
     FROM users u
     WHERE u.slug = ${slug}
@@ -308,7 +308,25 @@ exports.findUserBySlug = exports.getUserBySlug = async function(slug) {
          WHERE slug = ${slug}
            AND recycle = false
        )
-  `)
+    `)
+    if (user && user.id){
+        //Get all users from the database where the user ID is any account owned by the same user as our account
+        const altList = await pool.one(sql`SELECT json_agg(users.* ORDER BY users.uname ASC)
+        FROM users
+        WHERE id IN (SELECT
+          id
+          FROM alts
+          WHERE ownerId = (
+            SELECT ownerId
+            FROM alts
+            WHERE id = ${user.id}
+          )
+          AND id != ${user.id}
+        )`)
+        user.alts = altList.json_agg
+    }
+
+    return user
 }
 
 ////////////////////////////////////////////////////////////
