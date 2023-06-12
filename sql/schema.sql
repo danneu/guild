@@ -1029,6 +1029,14 @@ AS $$
   SELECT regexp_replace(string, '^\s+|\s+$', '', 'g');
 $$ LANGUAGE SQL IMMUTABLE;
 
+------------------------------------------------------------
+------------------------------------------------------------
+
+CREATE TABLE alts ( 
+  id SERIAL PRIMARY KEY,
+  ownerId SERIAL NOT NULL
+);
+
 -- CREATE OR REPLACE FUNCTION strip_quotes(markup text) RETURNS text
 -- AS $$
 --   SELECT trim_whitespace(regexp_replace(regexp_replace(regexp_replace(markup, '\[quote[^\]]*\]((?!\[[[\/]*quote).)*\[\/quote\]', '', 'gi'), '\[quote[^\]]*\]((?!\[[[\/]*quote).)*\[\/quote\]', '', 'gi'), '\[quote[^\]]*\]((?!\[[[\/]*quote).)*\[\/quote\]', '', 'gi'));
