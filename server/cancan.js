@@ -587,7 +587,7 @@ function can(user, action, target) {
                 return true
             // Staff can always read hidden topics
             if (user && target.is_hidden && isStaffRole(user.role)) {
-                return
+                return true
             }
             // forum mods can read all tpics in their appointed forum
             if (user && (target.mods || []).some(m => m.id === user.id)) {

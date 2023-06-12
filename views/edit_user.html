@@ -649,6 +649,69 @@
       </form>
       {% endif %}
 
+    <!-- Account Linker -->
+
+      <form action="/me/link" method="post" class="form-horizontal">
+        <div class="panel panel-default no-select"
+             style="border-color: #000">
+          <div class="panel-heading">Link Account</div>
+          <!-- PANEL BODY -->
+          <div class="panel-body">
+
+            <p>Link another account to switch freely without logging out.</p>
+
+            <div class="form-group">
+              <label for="uname-input"
+                     class="col-sm-3 control-label">
+                Username/Email:
+              </label>
+              <div class="col-sm-9">
+                <input id="uname-input"
+                       type="text"
+                       name="uname-or-email"
+                       class="form-control"
+                       {% if ctx.flash.params %}
+                         value="{{ ctx.flash.params['uname-or-email'] }}"
+                       {% endif %}
+                       >
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="password1-input"
+                     class="col-sm-3 control-label">
+                Password:
+              </label>
+              <div class="col-sm-9">
+                <input id="password1-input"
+                       type="password"
+                       name="password"
+                       class="form-control">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div class="col-sm-offset-3 col-sm-9">
+              </div>
+            </div>
+          </div> <!-- /.panel-body -->
+          <!--
+              PANEL FOOTER
+              -->
+          <div class="panel-footer" style="border-color: #000">
+            <div class="text-right">
+              <input id="login-submit"
+                     type="submit"
+                     value="Submit"
+                     class="btn btn-primary">
+            </div>
+          </div> <!-- /.panel-footer -->
+          </div> <!-- /.panel-body -->
+        </div> <!-- /.panel -->
+      </form>
+
+
+
     </div> <!-- /col -->
   </div> <!-- /.row -->
 
