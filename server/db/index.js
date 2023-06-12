@@ -1494,7 +1494,7 @@ exports.createUserWithSession = async function(props) {
             ipAddress: props.ipAddress,
             interval: '1 year', // TODO: Decide how long to log user in upon registration
         })
-
+        await pool.query('INSERT INTO alts VALUES (${user.id}, ${user.id})')  //Register user alt
         return { user, session }
     })
 }
