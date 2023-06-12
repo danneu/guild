@@ -1033,8 +1033,8 @@ $$ LANGUAGE SQL IMMUTABLE;
 ------------------------------------------------------------
 
 CREATE TABLE alts ( 
-  id SERIAL PRIMARY KEY,
-  ownerId SERIAL NOT NULL
+  id             serial             PRIMARY KEY,
+  ownerId        serial             NOT NULL
 );
 
 -- CREATE OR REPLACE FUNCTION strip_quotes(markup text) RETURNS text
