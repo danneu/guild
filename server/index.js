@@ -23,8 +23,8 @@ app.use(
         require('koa-better-static')('public', {
             maxage: 1000 * 60 * 60 * 24 * 365,
             gzip: false,
-        })
-    )
+        }),
+    ),
 )
 
 app.use(
@@ -32,8 +32,8 @@ app.use(
         require('koa-better-static')('dist', {
             maxage: 1000 * 60 * 60 * 24 * 365,
             gzip: false,
-        })
-    )
+        }),
+    ),
 )
 
 app.use(require('koa-conditional-get')()) // Works with koa-etag
@@ -51,7 +51,7 @@ app.use(
         // Defaults to '56kb'
         // CloudFlare limits to 100mb max
         formLimit: '25mb',
-    })
+    }),
 )
 
 const nunjucksRender = require('koa-nunjucks-render')
@@ -114,7 +114,9 @@ const dist = (() => {
         body = fs.readFileSync(manifestPath, 'utf8')
     } catch (err) {
         if (err.code === 'ENOENT') {
-            console.log('assets not compiled (dist/rev-manifest.json not found)')
+            console.log(
+                'assets not compiled (dist/rev-manifest.json not found)',
+            )
             return
         } else {
             throw err
@@ -182,7 +184,7 @@ app.use(async (ctx, next) => {
             '[assertAuthorized] Can %j %j: %j',
             (user && user.uname) || '<Guest>',
             action,
-            canResult
+            canResult,
         )
         ctx.assert(canResult, 404)
     }
@@ -214,12 +216,12 @@ const nunjucksOptions = {
         cache,
         cache2,
         ago: makeAgo(),
-        currYear: () => new Date().getFullYear()
+        currYear: () => new Date().getFullYear(),
     },
     // filters are functions that we can pipe values to from nunjucks templates.
     // e.g. {{ user.uname | md5 | toAvatarUrl }}
     filters: {
-        json: s => JSON.stringify(s, null, '  '),
+        json: (s) => JSON.stringify(s, null, '  '),
         ordinalize: belt.ordinalize,
         getOrdinalSuffix: belt.getOrdinalSuffix,
         isNewerThan: belt.isNewerThan,
@@ -228,15 +230,15 @@ const nunjucksOptions = {
         // {% if user.id|isIn([1, 2, 3]) %}
         isIn: (v, coll) => (coll || []).includes(v),
         // {% if things|isEmpty %}
-        isEmpty: coll => _.isEmpty(coll),
+        isEmpty: (coll) => _.isEmpty(coll),
         // Specifically replaces \n with <br> in user.custom_title
-        replaceTitleNewlines: str => {
+        replaceTitleNewlines: (str) => {
             if (!str) return ''
             return _.escape(str)
                 .replace(/\\n/, '<br>')
                 .replace(/^<br>|<br>$/g, '')
         },
-        replaceTitleNewlinesMobile: str => {
+        replaceTitleNewlinesMobile: (str) => {
             if (!str) return ''
             return _.escape(str)
                 .replace(/(?:\\n){2,}/, '\n')
@@ -244,7 +246,7 @@ const nunjucksOptions = {
                 .replace(/\\n/, ' / ')
         },
         // Sums `nums`, an array of numbers. Returns zero if `nums` is falsey.
-        sum: nums => {
+        sum: (nums) => {
             return (nums || []).reduce((memo, n) => memo + n, 0)
         },
         parseIntOr: (str, defaultTo = 0) => {
@@ -252,10 +254,10 @@ const nunjucksOptions = {
             return Number.isNaN(n) ? defaultTo : n
         },
         // Sums the values of an object
-        sumValues: obj => {
+        sumValues: (obj) => {
             return _.values(obj).reduce((memo, n) => memo + n, 0)
         },
-        ratingTypeToImageSrc: type => {
+        ratingTypeToImageSrc: (type) => {
             switch (type) {
                 case 'like':
                     return '/ratings/like.png'
@@ -267,6 +269,7 @@ const nunjucksOptions = {
                     throw new Error('Unsupported rating type: ' + type)
             }
         },
+        isString: (x) => typeof x === 'string',
         // {{ 'firetruck'|truncate(5) }}  -> 'firet...'
         // {{ 'firetruck'|truncate(6) }}  -> 'firetruck'
         truncate: belt.makeTruncate('…'),
@@ -277,13 +280,14 @@ const nunjucksOptions = {
         bbcode,
         // commafy(10) -> 10
         // commafy(1000000) -> 1,000,000
-        commafy: n => (n || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','),
+        commafy: (n) =>
+            (n || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','),
         formatDate: pre.formatDate,
         slugifyUname: belt.slugifyUname,
         presentUserRole: belt.presentUserRole,
-        encodeURIComponent: s => encodeURIComponent(s),
+        encodeURIComponent: (s) => encodeURIComponent(s),
         // String -> String
-        outcomeToElement: outcome => {
+        outcomeToElement: (outcome) => {
             switch (outcome) {
                 case 'WIN':
                     return '<span class="green-glow">Win</span>'
@@ -336,7 +340,7 @@ app.use(async (ctx, next) => {
 // app.use(require('@koa/router')(app))
 const router = new Router()
 
-router.post('/test', async ctx => {
+router.post('/test', async (ctx) => {
     ctx.body = JSON.stringify(ctx.request.body, null, '  ')
 })
 
@@ -344,7 +348,7 @@ app.use(require('./legacy_router').routes())
 
 /// /////////////////////////////////////////////////////////
 
-router.get('/rules', async ctx => {
+router.get('/rules', async (ctx) => {
     ctx.assert(config.RULES_POST_ID, 404)
     ctx.redirect(`/posts/${config.RULES_POST_ID}`)
 })
@@ -358,7 +362,6 @@ app.use(require('./routes/statuses').routes())
 app.use(require('./routes/chat').routes())
 app.use(require('./routes/subscriptions').routes())
 app.use(require('./routes/friendships').routes())
-app.use(require('./routes/sitemaps').routes())
 app.use(require('./routes/tags').routes())
 app.use(require('./routes/discord').routes())
 app.use(require('./routes/search').routes())
@@ -370,7 +373,7 @@ app.use(require('./routes/verify-email').routes())
 // url is /users/:slug/edit
 
 // Ex: /me/edit#grayscale-avatars to show users how to toggle that feature
-router.get('/me/edit', async ctx => {
+router.get('/me/edit', async (ctx) => {
     // Ensure current user can edit themself
     ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER', ctx.currUser)
 
@@ -380,7 +383,7 @@ router.get('/me/edit', async ctx => {
 
 /// /////////////////////////////////////////////////////////
 
-router.post('/topics/:topicSlug/co-gms', async ctx => {
+router.post('/topics/:topicSlug/co-gms', async (ctx) => {
     var topicId = belt.extractId(ctx.params.topicSlug)
     var topic = await db.findTopicById(topicId).then(pre.presentTopic)
     ctx.assert(topic, 404)
@@ -397,7 +400,7 @@ router.post('/topics/:topicSlug/co-gms', async ctx => {
     // Ensure topic has room for another co-GM
     ctx.check(
         topic.co_gm_ids.length < config.MAX_CO_GM_COUNT,
-        'Cannot have more than ' + config.MAX_CO_GM_COUNT + ' co-GMs'
+        'Cannot have more than ' + config.MAX_CO_GM_COUNT + ' co-GMs',
     )
 
     await db.updateTopicCoGms(topic.id, [...topic.co_gm_ids, user.id])
@@ -415,7 +418,7 @@ router.post('/topics/:topicSlug/co-gms', async ctx => {
 
 /// /////////////////////////////////////////////////////////
 
-router.delete('/topics/:topicSlug/co-gms/:userSlug', async ctx => {
+router.delete('/topics/:topicSlug/co-gms/:userSlug', async (ctx) => {
     var topicId = belt.extractId(ctx.params.topicSlug)
     var topic = await db.findTopicById(topicId).then(pre.presentTopic)
     ctx.assert(topic, 404)
@@ -427,9 +430,9 @@ router.delete('/topics/:topicSlug/co-gms/:userSlug', async ctx => {
 
     await db.updateTopicCoGms(
         topic.id,
-        topic.co_gm_ids.filter(co_gm_id => {
+        topic.co_gm_ids.filter((co_gm_id) => {
             return co_gm_id !== user.id
-        })
+        }),
     )
 
     ctx.flash = {
@@ -438,7 +441,7 @@ router.delete('/topics/:topicSlug/co-gms/:userSlug', async ctx => {
     ctx.response.redirect(topic.url + '/edit#co-gms')
 })
 
-router.get('/unames.json', async ctx => {
+router.get('/unames.json', async (ctx) => {
     ctx.type = 'application/json'
     ctx.body = await db.findAllUnamesJson()
 })
@@ -446,10 +449,9 @@ router.get('/unames.json', async ctx => {
 // Required body params:
 // - type: like | laugh | thank
 // - post_id: Int
-router.post('/posts/:postId/rate', async ctx => {
+router.post('/posts/:postId/rate', async (ctx) => {
     try {
-        ctx
-            .validateBody('type')
+        ctx.validateBody('type')
             .isString('type is required')
             .trim()
             .isIn(['like', 'laugh', 'thank'], 'Invalid type')
@@ -495,15 +497,13 @@ router.post('/posts/:postId/rate', async ctx => {
     // so do not create notification
     if (rating) {
         // Send receiver a RATING notification in the background
-        db
-            .createRatingNotification({
-                from_user_id: ctx.currUser.id,
-                to_user_id: post.user_id,
-                post_id: post.id,
-                topic_id: post.topic_id,
-                rating_type: rating.type,
-            })
-            .catch(err => console.error(err, err.stack))
+        db.createRatingNotification({
+            from_user_id: ctx.currUser.id,
+            to_user_id: post.user_id,
+            post_id: post.id,
+            topic_id: post.topic_id,
+            rating_type: rating.type,
+        }).catch((err) => console.error(err, err.stack))
     }
 
     ctx.type = 'json'
@@ -513,7 +513,7 @@ router.post('/posts/:postId/rate', async ctx => {
 //
 // Logout
 //
-router.post('/me/logout', async ctx => {
+router.post('/me/logout', async (ctx) => {
     if (ctx.currUser) {
         await db.logoutSession(ctx.currUser.id, ctx.cookies.get('sessionId'))
     }
@@ -524,7 +524,7 @@ router.post('/me/logout', async ctx => {
 //
 // Login form
 //
-router.get('/login', async ctx => {
+router.get('/login', async (ctx) => {
     await ctx.render('login', {
         ctx,
         title: 'Login',
@@ -592,7 +592,7 @@ router.post('/swapAccount', async ctx => {
 //
 // Create session
 //
-router.post('/sessions', async ctx => {
+router.post('/sessions', async (ctx) => {
     ctx.validateBody('uname-or-email').required('Invalid creds (1)')
     ctx.validateBody('password').required('Invalid creds (2)')
     ctx.validateBody('remember-me').toBoolean()
@@ -600,7 +600,7 @@ router.post('/sessions', async ctx => {
     ctx.check(user, 'Invalid creds (3)')
     ctx.check(
         await belt.checkPassword(ctx.vals.password, user.digest),
-        'Invalid creds (4)'
+        'Invalid creds (4)',
     )
 
     // User authenticated
@@ -622,7 +622,7 @@ router.post('/sessions', async ctx => {
 //
 // BBCode Cheatsheet
 //
-router.get('/bbcode', async ctx => {
+router.get('/bbcode', async (ctx) => {
     await ctx.render('bbcode_cheatsheet', {
         ctx,
         title: 'BBCode Cheatsheet',
@@ -632,7 +632,7 @@ router.get('/bbcode', async ctx => {
 //
 // Registration form
 //
-router.get('/register', async ctx => {
+router.get('/register', async (ctx) => {
     assert(config.RECAPTCHA_SITEKEY)
     assert(config.RECAPTCHA_SITESECRET)
     const registration = await db.keyvals.getRowByKey('REGISTRATION_ENABLED')
@@ -647,7 +647,7 @@ router.get('/register', async ctx => {
 //
 // Homepage
 //
-router.get('/', async ctx => {
+router.get('/', async (ctx) => {
     const categories = cache.get('categories')
 
     // We don't show the mod forum on the homepage.
@@ -655,11 +655,11 @@ router.get('/', async ctx => {
     // TODO: Abstract
     _.remove(categories, { id: 4 })
 
-    const allForums = _.flatten(categories.map(c => c.forums))
+    const allForums = _.flatten(categories.map((c) => c.forums))
 
     // Assoc forum viewCount from cache
     var viewerCounts = cache.get('forum-viewer-counts')
-    allForums.forEach(forum => {
+    allForums.forEach((forum) => {
         forum.viewerCount = viewerCounts[forum.id]
     })
 
@@ -667,7 +667,7 @@ router.get('/', async ctx => {
     var childForums = _.filter(allForums, 'parent_forum_id')
 
     // Map of {CategoryId: [Forums...]}
-    childForums.forEach(childForum => {
+    childForums.forEach((childForum) => {
         var parentIdx = _.findIndex(topLevelForums, {
             id: childForum.parent_forum_id,
         })
@@ -678,9 +678,9 @@ router.get('/', async ctx => {
         }
     })
     var groupedTopLevelForums = _.groupBy(topLevelForums, 'category_id')
-    categories.forEach(category => {
+    categories.forEach((category) => {
         category.forums = (groupedTopLevelForums[category.id] || []).map(
-            pre.presentForum
+            pre.presentForum,
         )
     })
 
@@ -700,9 +700,9 @@ router.get('/', async ctx => {
         ftopic = await db
             .findUnackedFeedbackTopic(
                 config.CURRENT_FEEDBACK_TOPIC_ID,
-                ctx.currUser.id
+                ctx.currUser.id,
             )
-            .then(ftopic => {
+            .then((ftopic) => {
                 // Discard ftopic if currUser has registered after it.
                 if (ftopic && ctx.currUser.created_at > ftopic.created_at) {
                     return ftopic
@@ -713,12 +713,11 @@ router.get('/', async ctx => {
     // Get users friends for the sidebar
     const friendships = { count: 0, ghosts: [], nonghosts: [] }
     if (ctx.currUser) {
-        const rows = (await db.findFriendshipsForUserId(
-            ctx.currUser.id,
-            10
-        )).map(pre.presentFriendship)
+        const rows = (
+            await db.findFriendshipsForUserId(ctx.currUser.id, 10)
+        ).map(pre.presentFriendship)
 
-        rows.forEach(row => {
+        rows.forEach((row) => {
             friendships.count += 1
             if (
                 row.to_user.is_ghost &&
@@ -750,7 +749,7 @@ router.get('/', async ctx => {
 //
 // Forgot password page
 //
-router.get('/forgot', async ctx => {
+router.get('/forgot', async (ctx) => {
     if (!config.IS_EMAIL_CONFIGURED) {
         ctx.body = 'This feature is currently disabled'
         return
@@ -764,7 +763,7 @@ router.get('/forgot', async ctx => {
 //
 //
 // - Required param: email
-router.post('/forgot', async ctx => {
+router.post('/forgot', async (ctx) => {
     if (!config.IS_EMAIL_CONFIGURED) {
         ctx.body = 'This feature is currently disabled'
         return
@@ -807,7 +806,7 @@ router.post('/forgot', async ctx => {
         await emailer.sendResetTokenEmail(
             user.uname,
             user.email,
-            resetToken.token
+            resetToken.token,
         )
     } catch (err) {
         ctx.flash = {
@@ -827,7 +826,7 @@ router.post('/forgot', async ctx => {
 // Password reset form
 // - This form allows a user to enter a reset token and new password
 // - The email from /forgot will link the user here
-router.get('/reset-password', async ctx => {
+router.get('/reset-password', async (ctx) => {
     if (!config.IS_EMAIL_CONFIGURED) {
         ctx.body = 'This feature is currently disabled'
         return
@@ -844,7 +843,7 @@ router.get('/reset-password', async ctx => {
 // - token
 // - password1
 // - password2
-router.post('/reset-password', async ctx => {
+router.post('/reset-password', async (ctx) => {
     if (!config.IS_EMAIL_CONFIGURED) {
         ctx.body = 'This feature is currently disabled'
         return
@@ -896,7 +895,7 @@ router.post('/reset-password', async ctx => {
     ctx.cookies.set('sessionId', session.id, {
         expires: belt.futureDate(
             new Date(),
-            rememberMe ? { years: 1 } : { days: 1 }
+            rememberMe ? { years: 1 } : { days: 1 },
         ),
     })
 
@@ -910,7 +909,7 @@ router.post('/reset-password', async ctx => {
 // The user that STAFF_REPRESENTATIVE_ID points to.
 // Loaded once upon boot since env vars require reboot to update.
 var staffRep
-router.get('/lexus-lounge', async ctx => {
+router.get('/lexus-lounge', async (ctx) => {
     ctx.assertAuthorized(ctx.currUser, 'LEXUS_LOUNGE')
 
     if (!staffRep && config.STAFF_REPRESENTATIVE_ID) {
@@ -921,19 +920,17 @@ router.get('/lexus-lounge', async ctx => {
 
     const latestUserLimit = 50
 
-    const [
-        latestUsers,
-        registration,
-        category,
-        unameChanges,
-    ] = await Promise.all([
-        db.findLatestUsers(latestUserLimit).then(xs => xs.map(pre.presentUser)),
-        db.keyvals.getRowByKey('REGISTRATION_ENABLED'),
-        db.findModCategory(),
-        db.unames
-            .latestUnameChanges()
-            .then(xs => xs.map(pre.presentUnameChange)),
-    ])
+    const [latestUsers, registration, category, unameChanges] =
+        await Promise.all([
+            db
+                .findLatestUsers(latestUserLimit)
+                .then((xs) => xs.map(pre.presentUser)),
+            db.keyvals.getRowByKey('REGISTRATION_ENABLED'),
+            db.findModCategory(),
+            db.unames
+                .latestUnameChanges()
+                .then((xs) => xs.map(pre.presentUnameChange)),
+        ])
 
     const forums = await db.findForums([category.id])
 
@@ -952,11 +949,11 @@ router.get('/lexus-lounge', async ctx => {
     })
 })
 
-router.get('/lexus-lounge/images', async ctx => {
+router.get('/lexus-lounge/images', async (ctx) => {
     ctx.assertAuthorized(ctx.currUser, 'LEXUS_LOUNGE')
     const images = await db.images
         .getLatestImages(25)
-        .then(xs => xs.map(pre.presentImage))
+        .then((xs) => xs.map(pre.presentImage))
     await ctx.render('lexus_lounge_images', {
         ctx,
         images,
@@ -965,7 +962,7 @@ router.get('/lexus-lounge/images', async ctx => {
 })
 
 // toggle user registration on/off
-router.post('/lexus-lounge/registration', async ctx => {
+router.post('/lexus-lounge/registration', async (ctx) => {
     ctx.assertAuthorized(ctx.currUser, 'LEXUS_LOUNGE')
     const enable = ctx.request.body.enable === 'true'
     await db.keyvals.setKey('REGISTRATION_ENABLED', enable, ctx.currUser.id)
@@ -981,7 +978,7 @@ router.post('/lexus-lounge/registration', async ctx => {
 //
 // New topic form
 //
-router.get('/forums/:forumSlug/topics/new', async ctx => {
+router.get('/forums/:forumSlug/topics/new', async (ctx) => {
     // Load forum
     var forumId = belt.extractId(ctx.params.forumSlug)
     ctx.assert(forumId, 404)
@@ -994,7 +991,7 @@ router.get('/forums/:forumSlug/topics/new', async ctx => {
     // Get tag groups
     var tagGroups = forum.has_tags_enabled ? await db.findAllTagGroups() : []
 
-    var toArray = function(stringOrArray) {
+    var toArray = function (stringOrArray) {
         return _.isArray(stringOrArray) ? stringOrArray : [stringOrArray]
     }
 
@@ -1007,7 +1004,7 @@ router.get('/forums/:forumSlug/topics/new', async ctx => {
         initTitle: ctx.flash.params && ctx.flash.params.title,
         selectedTagIds:
             (ctx.flash.params &&
-                toArray(ctx.flash.params['tag-ids']).map(function(idStr) {
+                toArray(ctx.flash.params['tag-ids']).map(function (idStr) {
                     return parseInt(idStr)
                 })) ||
             [],
@@ -1018,14 +1015,11 @@ router.get('/forums/:forumSlug/topics/new', async ctx => {
 // Canonical show forum
 //
 // @koa2
-router.get('/forums/:forumSlug', async ctx => {
+router.get('/forums/:forumSlug', async (ctx) => {
     var forumId = belt.extractId(ctx.params.forumSlug)
     ctx.assert(forumId, 404)
 
-    ctx
-        .validateQuery('page')
-        .optional()
-        .toInt()
+    ctx.validateQuery('page').optional().toInt()
 
     var forum = await db.findForum2(forumId).then(pre.presentForum)
     ctx.assert(forum, 404)
@@ -1055,7 +1049,7 @@ router.get('/forums/:forumSlug', async ctx => {
                   forumId,
                   pager.limit,
                   pager.offset,
-                  ctx.currUser.id
+                  ctx.currUser.id,
               )
             : db.findTopicsByForumId(forumId, pager.limit, pager.offset),
     ])
@@ -1071,7 +1065,7 @@ router.get('/forums/:forumSlug', async ctx => {
     ].filter(Boolean)
 
     // update viewers in background
-    db.upsertViewer(ctx, forum.id).catch(err => console.error(err, err.stack))
+    db.upsertViewer(ctx, forum.id).catch((err) => console.error(err, err.stack))
 
     await ctx.render('show_forum', {
         ctx,
@@ -1095,25 +1089,24 @@ router.get('/forums/:forumSlug', async ctx => {
 router.post(
     '/topics/:topicSlug/posts',
     middleware.ratelimit(),
-    /* middleware.ensureRecaptcha, */ async ctx => {
+    /* middleware.ensureRecaptcha, */ async (ctx) => {
         var topicId = belt.extractId(ctx.params.topicSlug)
         ctx.assert(topicId, 404)
 
-        ctx
-            .validateBody('post-type')
-            .isIn(['ic', 'ooc', 'char'], 'Invalid post-type')
-        ctx
-            .validateBody('markup')
-            .isLength(
-                config.MIN_POST_LENGTH,
-                config.MAX_POST_LENGTH,
-                'Post must be between ' +
-                    config.MIN_POST_LENGTH +
-                    ' and ' +
-                    config.MAX_POST_LENGTH +
-                    ' chars long. Yours was ' +
-                    ctx.request.body.markup.length
-            )
+        ctx.validateBody('post-type').isIn(
+            ['ic', 'ooc', 'char'],
+            'Invalid post-type',
+        )
+        ctx.validateBody('markup').isLength(
+            config.MIN_POST_LENGTH,
+            config.MAX_POST_LENGTH,
+            'Post must be between ' +
+                config.MIN_POST_LENGTH +
+                ' and ' +
+                config.MAX_POST_LENGTH +
+                ' chars long. Yours was ' +
+                ctx.request.body.markup.length,
+        )
 
         var postType = ctx.vals['post-type']
         var topic = await db.findTopic(topicId)
@@ -1163,11 +1156,13 @@ router.post(
             // Send subscription notifications
 
             // Get all people who do not have this sub archived
-            const subscribers = (await db.subscriptions.listActiveSubscribersForTopic(
-                post.topic_id
-            ))
+            const subscribers = (
+                await db.subscriptions.listActiveSubscribersForTopic(
+                    post.topic_id,
+                )
+            )
                 // Ignore self
-                .filter(u => u.id !== ctx.currUser.id)
+                .filter((u) => u.id !== ctx.currUser.id)
 
             // Create notifications in the background
             promiseMap(
@@ -1177,12 +1172,12 @@ router.post(
                         ctx.currUser.id,
                         id,
                         post.topic_id,
-                        postType
+                        postType,
                     )
                 },
-                2
-            ).catch(err =>
-                console.error('error creating sub notes on new post:', err)
+                2,
+            ).catch((err) =>
+                console.error('error creating sub notes on new post:', err),
             )
         }
 
@@ -1192,7 +1187,7 @@ router.post(
                 util.format(
                     'Post created. Mentions sent: %s, Quotes sent: %s',
                     mentionNotificationsCount,
-                    quoteNotificationsCount
+                    quoteNotificationsCount,
                 ),
             ],
         }
@@ -1201,12 +1196,12 @@ router.post(
 
         // Check if post is spam in the background
         services.antispam.process(ctx, post.markup, post.id)
-    }
+    },
 )
 
 // (AJAX)
 // Delete specific notification
-router.del('/api/me/notifications/:id', async ctx => {
+router.del('/api/me/notifications/:id', async (ctx) => {
     ctx.validateParam('id')
     var n = await db.findNotificationById(ctx.vals.id)
     // Ensure exists
@@ -1230,13 +1225,12 @@ router.del('/api/me/notifications/:id', async ctx => {
 //     "clear notifications" button only deletes the notifications the
 //     user has on screen and not any notifications they may've received
 //     in the meantime.
-router.del('/me/notifications', async ctx => {
-    ctx
-        .validateBody('ids')
+router.del('/me/notifications', async (ctx) => {
+    ctx.validateBody('ids')
         .toInts()
-        .tap(function(ids) {
+        .tap(function (ids) {
             debug(ids)
-            return ids.filter(function(n) {
+            return ids.filter(function (n) {
                 return n > 0
             })
         })
@@ -1252,7 +1246,7 @@ router.del('/me/notifications', async ctx => {
 })
 
 // Delete only convo notifications
-router.delete('/me/notifications/convos', async ctx => {
+router.delete('/me/notifications/convos', async (ctx) => {
     // Ensure a user is logged in
     ctx.assert(ctx.currUser, 404)
     await db.clearConvoNotifications(ctx.currUser.id)
@@ -1266,7 +1260,7 @@ router.delete('/me/notifications/convos', async ctx => {
 // Update topic tags
 // - tag-ids: Required [StringIds]
 //
-router.put('/topics/:topicSlug/tags', async ctx => {
+router.put('/topics/:topicSlug/tags', async (ctx) => {
     // Load topic
     var topicId = belt.extractId(ctx.params.topicSlug)
     ctx.assert(topicId, 404)
@@ -1277,12 +1271,11 @@ router.put('/topics/:topicSlug/tags', async ctx => {
     ctx.assertAuthorized(ctx.currUser, 'UPDATE_TOPIC_TAGS', topic)
 
     // Validate body params
-    ctx
-        .validateBody('tag-ids')
+    ctx.validateBody('tag-ids')
         .toInts()
         .uniq()
-        .tap(function(ids) {
-            return ids.filter(function(n) {
+        .tap(function (ids) {
+            return ids.filter(function (n) {
                 return n > 0
             })
         })
@@ -1314,7 +1307,7 @@ router.put('/topics/:topicSlug/tags', async ctx => {
 router.post(
     '/forums/:slug/topics',
     middleware.ratelimit(),
-    /* middleware.ensureRecaptcha, */ async ctx => {
+    /* middleware.ensureRecaptcha, */ async (ctx) => {
         var forumId = belt.extractId(ctx.params.slug)
         ctx.assert(forumId, 404)
 
@@ -1331,8 +1324,7 @@ router.post(
         ctx.assertAuthorized(ctx.currUser, 'CREATE_TOPIC', forum)
 
         // Validate params
-        ctx
-            .validateBody('title')
+        ctx.validateBody('title')
             .isString('Title is required')
             .trim()
             .isLength(
@@ -1342,10 +1334,9 @@ router.post(
                     config.MIN_TOPIC_TITLE_LENGTH +
                     ' and ' +
                     config.MAX_TOPIC_TITLE_LENGTH +
-                    ' chars'
+                    ' chars',
             )
-        ctx
-            .validateBody('markup')
+        ctx.validateBody('markup')
             .isString('Post is required')
             .trim()
             .isLength(
@@ -1355,28 +1346,29 @@ router.post(
                     config.MIN_POST_LENGTH +
                     ' and ' +
                     config.MAX_POST_LENGTH +
-                    ' chars'
+                    ' chars',
             )
         ctx.validateBody('forum-id').toInt()
 
         if (forum.is_roleplay) {
-            ctx
-                .validateBody('post-type')
-                .isIn(['ooc', 'ic'], 'post-type must be "ooc" or "ic"')
-            ctx
-                .validateBody('join-status')
-                .isIn(['jump-in', 'apply', 'full'], 'Invalid join-status')
+            ctx.validateBody('post-type').isIn(
+                ['ooc', 'ic'],
+                'post-type must be "ooc" or "ic"',
+            )
+            ctx.validateBody('join-status').isIn(
+                ['jump-in', 'apply', 'full'],
+                'Invalid join-status',
+            )
         }
 
         // Validate tags (only for RPs/Checks
         if (forum.has_tags_enabled) {
-            ctx
-                .validateBody('tag-ids')
+            ctx.validateBody('tag-ids')
                 .toArray()
                 .toInts()
-                .tap(ids => {
+                .tap((ids) => {
                     // One of them will be -1
-                    return ids.filter(n => n > 0)
+                    return ids.filter((n) => n > 0)
                 })
                 .isLength(1, 7, 'Must select 1-7 tags')
         }
@@ -1407,7 +1399,7 @@ router.post(
                 postType: postType,
                 isRoleplay: forum.is_roleplay,
                 tagIds: tagIds,
-                joinStatus: ctx.vals['join-status']
+                joinStatus: ctx.vals['join-status'],
             })
             .then(pre.presentTopic)
 
@@ -1417,23 +1409,25 @@ router.post(
         const result = await services.antispam.process(
             ctx,
             ctx.vals.markup,
-            topic.post.id
+            topic.post.id,
         )
 
         // Don't broadcast to discord if they tripped the spam detector
         if (!result && topic.forum_id === 2) {
             services.discord
                 .broadcastIntroTopic(ctx.currUser, topic)
-                .catch(err => console.error('broadcastIntroTopic failed', err))
+                .catch((err) =>
+                    console.error('broadcastIntroTopic failed', err),
+                )
         }
-    }
+    },
 )
 
 // Edit post form
 // - The "Edit" button on posts links here so that people without
 // javascript or poor support for javascript will land on a basic edit-post
 // form that does not depend on javascript.
-router.get('/posts/:id/edit', async ctx => {
+router.get('/posts/:id/edit', async (ctx) => {
     // Short-circuit if user isn't logged in
     ctx.assert(ctx.currUser, 403)
 
@@ -1453,7 +1447,7 @@ router.get('/posts/:id/edit', async ctx => {
 })
 
 // See and keep in sync with GET /posts/:id/edit
-router.get('/pms/:id/edit', async ctx => {
+router.get('/pms/:id/edit', async (ctx) => {
     // Short-circuit if user isn't logged in
     ctx.assert(ctx.currUser, 403)
 
@@ -1478,23 +1472,19 @@ router.get('/pms/:id/edit', async ctx => {
 // for people on devices where the Edit button doesn't work.
 //
 // Params: markup
-router.put('/posts/:id', async ctx => {
+router.put('/posts/:id', async (ctx) => {
     const post = await db.findPostById(ctx.params.id).then(pre.presentPost)
     ctx.assert(post, 404)
     ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
 
     // Validation
 
-    ctx
-        .validateBody('markup')
-        .isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH)
+    ctx.validateBody('markup').isLength(
+        config.MIN_POST_LENGTH,
+        config.MAX_POST_LENGTH,
+    )
 
-    ctx
-        .validateBody('reason')
-        .optional()
-        .isString()
-        .trim()
-        .isLength(0, 300)
+    ctx.validateBody('reason').optional().isString().trim().isLength(0, 300)
 
     // Succeeded
 
@@ -1513,7 +1503,7 @@ router.put('/posts/:id', async ctx => {
             post.id,
             ctx.vals.markup,
             html,
-            ctx.vals.reason
+            ctx.vals.reason,
         )
         .then(pre.presentPost)
 
@@ -1534,10 +1524,11 @@ router.put('/posts/:id', async ctx => {
 
 // See and keep in sync with PUT /posts/:id
 // Params: markup
-router.put('/pms/:id', async ctx => {
-    ctx
-        .validateBody('markup')
-        .isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH)
+router.put('/pms/:id', async (ctx) => {
+    ctx.validateBody('markup').isLength(
+        config.MIN_POST_LENGTH,
+        config.MAX_POST_LENGTH,
+    )
 
     var pm = await db.findPmById(ctx.params.id)
     ctx.assert(pm, 404)
@@ -1558,7 +1549,7 @@ router.put('/pms/:id', async ctx => {
 //
 // Returns the unformatted post source.
 //
-router.get('/posts/:id/raw', async ctx => {
+router.get('/posts/:id/raw', async (ctx) => {
     var post = await db.findPostWithTopicAndForum(ctx.params.id)
     ctx.assert(post, 404)
     ctx.assertAuthorized(ctx.currUser, 'READ_POST', post)
@@ -1567,7 +1558,7 @@ router.get('/posts/:id/raw', async ctx => {
     ctx.body = post.markup ? post.markup : post.text
 })
 
-router.get('/pms/:id/raw', async ctx => {
+router.get('/pms/:id/raw', async (ctx) => {
     if (!config.IS_PM_SYSTEM_ONLINE) {
         ctx.body = 'PM system currently disabled'
         return
@@ -1588,24 +1579,18 @@ router.get('/pms/:id/raw', async ctx => {
 // - reason (optional)
 //
 // Keep /api/posts/:postId and /api/pms/:pmId in sync
-router.put('/api/posts/:id', async ctx => {
+router.put('/api/posts/:id', async (ctx) => {
     const post = await db.findPost(ctx.params.id)
     ctx.assert(post, 404)
     ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
 
     // Validation
 
-    ctx
-        .validateBody('markup')
+    ctx.validateBody('markup')
         .isString()
         .isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH)
 
-    ctx
-        .validateBody('reason')
-        .optional()
-        .isString()
-        .trim()
-        .isLength(0, 300)
+    ctx.validateBody('reason').optional().isString().trim().isLength(0, 300)
 
     // Succeeded
 
@@ -1626,7 +1611,7 @@ router.put('/api/posts/:id', async ctx => {
             post.id,
             ctx.vals.markup,
             html,
-            ctx.vals.reason
+            ctx.vals.reason,
         )
         .then(pre.presentPost)
 
@@ -1644,15 +1629,16 @@ router.put('/api/posts/:id', async ctx => {
     // TODO: Submit to spam service like PUT /posts/:id
 })
 
-router.put('/api/pms/:id', async ctx => {
+router.put('/api/pms/:id', async (ctx) => {
     if (!config.IS_PM_SYSTEM_ONLINE) {
         ctx.body = 'PM system currently disabled'
         return
     }
 
-    ctx
-        .validateBody('markup')
-        .isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH)
+    ctx.validateBody('markup').isLength(
+        config.MIN_POST_LENGTH,
+        config.MAX_POST_LENGTH,
+    )
 
     // Users that aren't logged in can't read any PMs, so just short-circuit
     // if user is a guest so we don't even incur DB query.
@@ -1681,7 +1667,7 @@ router.put('/api/pms/:id', async ctx => {
 // Params
 // - status (Required) String, one of STATUS_WHITELIST
 //
-router.put('/topics/:topicSlug/status', async ctx => {
+router.put('/topics/:topicSlug/status', async (ctx) => {
     var topicId = belt.extractId(ctx.params.topicSlug)
     ctx.assert(topicId, 404)
     var STATUS_WHITELIST = [
@@ -1706,12 +1692,12 @@ router.put('/topics/:topicSlug/status', async ctx => {
 })
 
 // Update post state
-router.post('/posts/:postId/:status', async ctx => {
+router.post('/posts/:postId/:status', async (ctx) => {
     var STATUS_WHITELIST = ['hide', 'unhide']
     ctx.assert(
         STATUS_WHITELIST.includes(ctx.params.status),
         400,
-        'Invalid status'
+        'Invalid status',
     )
     ctx.assert(ctx.currUser, 403)
     var post = await db.findPost(ctx.params.postId)
@@ -1719,7 +1705,7 @@ router.post('/posts/:postId/:status', async ctx => {
     ctx.assertAuthorized(
         ctx.currUser,
         ctx.params.status.toUpperCase() + '_POST',
-        post
+        post,
     )
     var updatedPost = await db
         .updatePostStatus(ctx.params.postId, ctx.params.status)
@@ -1741,7 +1727,7 @@ router.post('/posts/:postId/:status', async ctx => {
 // If it has ?created=true query, then add it onto redirect:
 // /posts/:id#post-:id&created=true
 // and take it off client-side.
-router.get('/posts/:postId', async ctx => {
+router.get('/posts/:postId', async (ctx) => {
     // "/posts/1234]" is such a common issue that we should fix it
     ctx.params.postId = Number.parseInt(ctx.params.postId, 10)
     ctx.assert(ctx.params.postId, 404)
@@ -1797,7 +1783,7 @@ router.get('/posts/:postId', async ctx => {
         // Delete notifications related to this post
         var notificationsDeletedCount = await db.deleteNotificationsForPostId(
             ctx.currUser.id,
-            ctx.params.postId
+            ctx.params.postId,
         )
         // Update the stale user
         ctx.currUser.notifications_count -= notificationsDeletedCount
@@ -1808,7 +1794,7 @@ router.get('/posts/:postId', async ctx => {
 
 // PM permalink
 // Keep this in sync with /posts/:postId
-router.get('/pms/:id', async ctx => {
+router.get('/pms/:id', async (ctx) => {
     if (!config.IS_PM_SYSTEM_ONLINE) {
         ctx.body = 'PM system currently disabled'
         return
@@ -1841,7 +1827,7 @@ router.get('/pms/:id', async ctx => {
 // Add topic ban
 //
 // Body { uname: String }
-router.post('/topics/:slug/bans', async ctx => {
+router.post('/topics/:slug/bans', async (ctx) => {
     const topicId = belt.extractId(ctx.params.slug)
     const topic = await db.findTopicById(topicId).then(pre.presentTopic)
     ctx.assert(topic, 404)
@@ -1879,7 +1865,7 @@ router.post('/topics/:slug/bans', async ctx => {
     ctx.redirect(topic.url + '/edit#topic-bans')
 })
 
-router.delete('/topic-bans/:id', async ctx => {
+router.delete('/topic-bans/:id', async (ctx) => {
     ctx.validateParam('id').toInt()
 
     const ban = await db.getTopicBan(ctx.vals.id).then(pre.presentTopicBan)
@@ -1901,7 +1887,7 @@ router.delete('/topic-bans/:id', async ctx => {
 // Ensure this comes before /topics/:slug/:xxx so that "edit" is not
 // considered the second param
 //
-router.get('/topics/:slug/edit', async ctx => {
+router.get('/topics/:slug/edit', async (ctx) => {
     ctx.assert(ctx.currUser, 403)
     var topicId = belt.extractId(ctx.params.slug)
     ctx.assert(topicId, 404)
@@ -1914,13 +1900,13 @@ router.get('/topics/:slug/edit', async ctx => {
 
     // TODO: Only do on RP/IntChk topics
     const topicBans = (await db.listTopicBans(topic.id)).map(
-        pre.presentTopicBan
+        pre.presentTopicBan,
     )
 
     await ctx.render('edit_topic', {
         ctx,
         topic,
-        selectedTagIds: (topic.tags || []).map(tag => tag.id),
+        selectedTagIds: (topic.tags || []).map((tag) => tag.id),
         tagGroups,
         className: 'edit-topic',
         topicBans,
@@ -1930,7 +1916,7 @@ router.get('/topics/:slug/edit', async ctx => {
 // Update topic
 // Params:
 // - title Required
-router.put('/topics/:slug/edit', async ctx => {
+router.put('/topics/:slug/edit', async (ctx) => {
     // Authorization
     ctx.assert(ctx.currUser, 403)
     var topicId = belt.extractId(ctx.params.slug)
@@ -1945,8 +1931,7 @@ router.put('/topics/:slug/edit', async ctx => {
     try {
         if (ctx.request.body.title) {
             ctx.assert(cancan.can(ctx.currUser, 'UPDATE_TOPIC_TITLE', topic))
-            ctx
-                .validateBody('title')
+            ctx.validateBody('title')
                 .defaultTo(topic.title)
                 .isLength(
                     config.MIN_TOPIC_TITLE_LENGTH,
@@ -1955,16 +1940,15 @@ router.put('/topics/:slug/edit', async ctx => {
                         config.MIN_TOPIC_TITLE_LENGTH +
                         ' - ' +
                         config.MAX_TOPIC_TITLE_LENGTH +
-                        ' chars long'
+                        ' chars long',
                 )
         }
 
         if (ctx.request.body['join-status']) {
             ctx.assert(
-                cancan.can(ctx.currUser, 'UPDATE_TOPIC_JOIN_STATUS', topic)
+                cancan.can(ctx.currUser, 'UPDATE_TOPIC_JOIN_STATUS', topic),
             )
-            ctx
-                .validateBody('join-status')
+            ctx.validateBody('join-status')
                 .defaultTo(topic.join_status)
                 .isIn(['jump-in', 'apply', 'full'], 'Invalid join-status')
         }
@@ -1991,7 +1975,7 @@ router.put('/topics/:slug/edit', async ctx => {
 })
 
 // Always redirects to the last post of a tab
-router.get('/topics/:slug/:postType/last', async ctx => {
+router.get('/topics/:slug/:postType/last', async (ctx) => {
     const { postType } = ctx.params
     ctx.assert(['ic', 'ooc', 'char'].includes(postType), 404)
 
@@ -2011,7 +1995,7 @@ router.get('/topics/:slug/:postType/last', async ctx => {
 })
 
 // Go to first unread post in a topic
-router.get('/topics/:slug/:postType/first-unread', async ctx => {
+router.get('/topics/:slug/:postType/first-unread', async (ctx) => {
     // This page should not be indexed
     ctx.set('X-Robots-Tag', 'noindex')
 
@@ -2050,12 +2034,11 @@ router.get('/topics/:slug/:postType/first-unread', async ctx => {
 // Canonical show topic
 //
 
-router.get('/topics/:slug/:postType', async ctx => {
+router.get('/topics/:slug/:postType', async (ctx) => {
     ctx.assert(['ic', 'ooc', 'char'].includes(ctx.params.postType), 404)
-    ctx
-        .validateQuery('page')
+    ctx.validateQuery('page')
         .optional()
-        .tap(s => s.replace(/,/g, ''))
+        .tap((s) => s.replace(/,/g, ''))
         .toInt()
     const topicId = belt.extractId(ctx.params.slug)
     ctx.assert(topicId, 404)
@@ -2123,9 +2106,9 @@ router.get('/topics/:slug/:postType', async ctx => {
     topic.mods = cache2.get('forum-mods')[topic.forum_id] || []
 
     if (ctx.currUser) {
-        posts.forEach(post => {
+        posts.forEach((post) => {
             var rating = post.ratings.find(
-                x => x.from_user_id === ctx.currUser.id
+                (x) => x.from_user_id === ctx.currUser.id,
             )
             post.has_rated = rating
         })
@@ -2140,7 +2123,9 @@ router.get('/topics/:slug/:postType', async ctx => {
                 post_type: ctx.params.postType,
                 post_id: _.last(posts).id,
             })
-            .catch(err => console.error('error updating topic watermark', err))
+            .catch((err) =>
+                console.error('error updating topic watermark', err),
+            )
     }
 
     // Clear sub notifications with this topic_id if they have sub_notes > 0
@@ -2150,11 +2135,11 @@ router.get('/topics/:slug/:postType', async ctx => {
         ])
         ctx.currUser.sub_notifications_count = Math.max(
             0,
-            ctx.currUser.sub_notifications_count - notesDeleted
+            ctx.currUser.sub_notifications_count - notesDeleted,
         )
         ctx.currUser.notifications_count = Math.max(
             0,
-            ctx.currUser.notifications_count - notesDeleted
+            ctx.currUser.notifications_count - notesDeleted,
         )
     }
 
@@ -2169,9 +2154,9 @@ router.get('/topics/:slug/:postType', async ctx => {
     var postType = ctx.params.postType
 
     // update viewers in background
-    db
-        .upsertViewer(ctx, topic.forum_id, topic.id)
-        .catch(err => console.error(err, err.stack))
+    db.upsertViewer(ctx, topic.forum_id, topic.id).catch((err) =>
+        console.error(err, err.stack),
+    )
 
     await ctx.render('show_topic', {
         ctx,
@@ -2197,7 +2182,7 @@ router.get('/topics/:slug/:postType', async ctx => {
 
 // Legacy URL
 // Redirect to the new, shorter topic URL
-router.get('/topics/:topicId/posts/:postType', async ctx => {
+router.get('/topics/:topicId/posts/:postType', async (ctx) => {
     var redirectUrl =
         '/topics/' + ctx.params.topicId + '/' + ctx.params.postType
     ctx.status = 301
@@ -2213,7 +2198,7 @@ router.get('/topics/:topicId/posts/:postType', async ctx => {
 // Else it is a non-roleplay
 //   Go to OOC tab
 //
-router.get('/topics/:slug', async ctx => {
+router.get('/topics/:slug', async (ctx) => {
     var topicId = belt.extractId(ctx.params.slug)
     ctx.assert(topicId, 404)
 
@@ -2262,17 +2247,17 @@ router.get('/topics/:slug', async ctx => {
 //
 // Staff list
 //
-router.get('/staff', async ctx => {
+router.get('/staff', async (ctx) => {
     const users = cache.get('staff').map(pre.presentUser)
 
     await ctx.render('staff', {
         ctx,
-        mods: users.filter(u => u.role === 'mod'),
-        smods: users.filter(u => u.role === 'smod'),
-        conmods: users.filter(u => u.role === 'conmod'),
-        admins: users.filter(u => u.role === 'admin'),
-        arena_mods: users.filter(u => u.role === 'arenamod'),
-        pwmods: users.filter(u => u.role === 'pwmod'),
+        mods: users.filter((u) => u.role === 'mod'),
+        smods: users.filter((u) => u.role === 'smod'),
+        conmods: users.filter((u) => u.role === 'conmod'),
+        admins: users.filter((u) => u.role === 'admin'),
+        arena_mods: users.filter((u) => u.role === 'arenamod'),
+        pwmods: users.filter((u) => u.role === 'pwmod'),
     })
 })
 
@@ -2280,11 +2265,11 @@ router.get('/staff', async ctx => {
 // GET /me/notifications
 // List currUser's notifications
 //
-router.get('/me/notifications', async ctx => {
+router.get('/me/notifications', async (ctx) => {
     ctx.assert(ctx.currUser, 404)
     const notifications = await db
         .findReceivedNotificationsForUserId(ctx.currUser.id)
-        .then(xs => xs.map(pre.presentNotification))
+        .then((xs) => xs.map(pre.presentNotification))
 
     await ctx.render('me_notifications', {
         ctx,
@@ -2295,7 +2280,7 @@ router.get('/me/notifications', async ctx => {
 //
 // Move topic
 //
-router.post('/topics/:slug/move', async ctx => {
+router.post('/topics/:slug/move', async (ctx) => {
     const topicId = belt.extractId(ctx.params.slug)
     let topic = await db.findTopicById(topicId).then(pre.presentTopic)
     ctx.assert(topic, 404)
@@ -2303,22 +2288,21 @@ router.post('/topics/:slug/move', async ctx => {
 
     // Validation
 
-    ctx
-        .validateBody('forum-id')
+    ctx.validateBody('forum-id')
         .toInt('forum-id required')
         .notEq(
             topic.forum_id,
-            'Topic already belongs to the forum you tried to move it to'
+            'Topic already belongs to the forum you tried to move it to',
         )
     console.log('redire', ctx.request.body)
-    ctx.validateBody('leave-redirect?').tap(x => x === 'on')
+    ctx.validateBody('leave-redirect?').tap((x) => x === 'on')
 
     topic = await db
         .moveTopic(
             topic.id,
             topic.forum_id,
             ctx.vals['forum-id'],
-            ctx.vals['leave-redirect?']
+            ctx.vals['leave-redirect?'],
         )
         .then(pre.presentTopic)
 
@@ -2332,12 +2316,12 @@ router.post('/topics/:slug/move', async ctx => {
 //
 // Delete currUser's rating for a post
 //
-router.delete('/me/ratings/:postId', async ctx => {
+router.delete('/me/ratings/:postId', async (ctx) => {
     // Ensure user is logged in
     ctx.assert(ctx.currUser, 403)
     var rating = await db.findRatingByFromUserIdAndPostId(
         ctx.currUser.id,
-        ctx.params.postId
+        ctx.params.postId,
     )
     // Ensure rating exists
     ctx.assert(rating, 404)
@@ -2353,7 +2337,7 @@ router.delete('/me/ratings/:postId', async ctx => {
 
     await db.deleteRatingByFromUserIdAndPostId(
         ctx.currUser.id,
-        ctx.params.postId
+        ctx.params.postId,
     )
 
     ctx.response.redirect('/posts/' + ctx.params.postId)
@@ -2361,12 +2345,12 @@ router.delete('/me/ratings/:postId', async ctx => {
 
 /// /////////////////////////////////////////////////////////
 
-router.get('/trophies', async ctx => {
+router.get('/trophies', async (ctx) => {
     ctx.body = 'TODO'
 })
 
 // List all trophy groups
-router.get('/trophy-groups', async ctx => {
+router.get('/trophy-groups', async (ctx) => {
     var groups = await db.findTrophyGroups()
 
     await ctx.render('list_trophy_groups', {
@@ -2376,20 +2360,18 @@ router.get('/trophy-groups', async ctx => {
 })
 
 // Create trophy group
-router.post('/trophy-groups', async ctx => {
+router.post('/trophy-groups', async (ctx) => {
     // Authorize
     ctx.assertAuthorized(ctx.currUser, 'CREATE_TROPHY_GROUP')
 
-    ctx
-        .validateBody('title')
+    ctx.validateBody('title')
         .isString('Title required')
         .trim()
         .isLength(3, 50, 'Title must be 3-50 chars')
 
     ctx.validateBody('description-markup')
     if (ctx.request.body['description-markup']) {
-        ctx
-            .validateBody('description-markup')
+        ctx.validateBody('description-markup')
             .trim()
             .isLength(3, 3000, 'Description must be 3-3000 chars')
     }
@@ -2402,7 +2384,7 @@ router.post('/trophy-groups', async ctx => {
     await db.createTrophyGroup(
         ctx.vals.title,
         ctx.vals['description-markup'],
-        description_html
+        description_html,
     )
 
     ctx.flash = { message: ['success', 'Trophy group created'] }
@@ -2410,7 +2392,7 @@ router.post('/trophy-groups', async ctx => {
 })
 
 // Update trophy-group
-router.put('/trophy-groups/:id', async ctx => {
+router.put('/trophy-groups/:id', async (ctx) => {
     // Load
     var group = await db.findTrophyGroupById(ctx.params.id)
     ctx.assert(group, 404)
@@ -2420,16 +2402,14 @@ router.put('/trophy-groups/:id', async ctx => {
 
     ctx.validateParam('id').toInt()
 
-    ctx
-        .validateBody('title')
+    ctx.validateBody('title')
         .isString('Title required')
         .trim()
         .isLength(3, 50, 'Title must be 3-50 chars')
 
     ctx.validateBody('description-markup')
     if (ctx.request.body['description-markup']) {
-        ctx
-            .validateBody('description-markup')
+        ctx.validateBody('description-markup')
             .trim()
             .isLength(3, 3000, 'Description must be 3-3000 chars')
     }
@@ -2443,14 +2423,14 @@ router.put('/trophy-groups/:id', async ctx => {
         ctx.vals.id,
         ctx.vals.title,
         ctx.vals['description-markup'],
-        description_html
+        description_html,
     )
 
     ctx.redirect('/trophy-groups/' + group.id)
 })
 
 // Delete active trophy
-router.del('/users/:user_id/active-trophy', async ctx => {
+router.del('/users/:user_id/active-trophy', async (ctx) => {
     // Ensure user is logged in
     ctx.assert(ctx.currUser, 403)
 
@@ -2476,15 +2456,12 @@ router.del('/users/:user_id/active-trophy', async ctx => {
 //
 // Body:
 // - trophy_id: Required Int
-router.put('/users/:user_id/active-trophy', async ctx => {
+router.put('/users/:user_id/active-trophy', async (ctx) => {
     // Ensure user is logged in
     ctx.assert(ctx.currUser, 403)
 
     ctx.validateParam('user_id').toInt()
-    ctx
-        .validateBody('trophy_id')
-        .isString('trophy_id required')
-        .toInt()
+    ctx.validateBody('trophy_id').isString('trophy_id required').toInt()
 
     // Ensure user exists
     const user = await db.findUserById(ctx.vals.user_id).then(pre.presentUser)
@@ -2502,7 +2479,7 @@ router.put('/users/:user_id/active-trophy', async ctx => {
     ctx.redirect(user.url)
 })
 
-router.get('/trophy-groups/:id/edit', async ctx => {
+router.get('/trophy-groups/:id/edit', async (ctx) => {
     // Load
     var group = await db.findTrophyGroupById(ctx.params.id)
     ctx.assert(group, 404)
@@ -2517,7 +2494,7 @@ router.get('/trophy-groups/:id/edit', async ctx => {
 })
 
 // Show trophies-users bridge record edit form
-router.get('/trophies-users/:id/edit', async ctx => {
+router.get('/trophies-users/:id/edit', async (ctx) => {
     // Load
     var record = await db.findTrophyUserBridgeById(ctx.params.id)
     ctx.assert(record, 404)
@@ -2532,7 +2509,7 @@ router.get('/trophies-users/:id/edit', async ctx => {
 })
 
 // Update trophies-users bridge record
-router.put('/trophies-users/:id', async ctx => {
+router.put('/trophies-users/:id', async (ctx) => {
     // Load
     var record = await db.findTrophyUserBridgeById(ctx.params.id)
     ctx.assert(record, 404)
@@ -2544,8 +2521,7 @@ router.put('/trophies-users/:id', async ctx => {
 
     ctx.validateBody('message-markup')
     if (ctx.request.body['message-markup']) {
-        ctx
-            .validateBody('message-markup')
+        ctx.validateBody('message-markup')
             .trim()
             .isLength(3, 500, 'Message must be 3-500 chars')
     }
@@ -2558,14 +2534,14 @@ router.put('/trophies-users/:id', async ctx => {
     await db.updateTrophyUserBridge(
         ctx.vals.id,
         ctx.vals['message-markup'],
-        message_html
+        message_html,
     )
 
     ctx.redirect('/trophies/' + record.trophy.id)
 })
 
 // Show trophy edit form
-router.get('/trophies/:id/edit', async ctx => {
+router.get('/trophies/:id/edit', async (ctx) => {
     // Load
     var trophy = await db.findTrophyById(ctx.params.id)
     ctx.assert(trophy, 404)
@@ -2580,7 +2556,7 @@ router.get('/trophies/:id/edit', async ctx => {
 })
 
 // Update trophy
-router.put('/trophies/:id', async ctx => {
+router.put('/trophies/:id', async (ctx) => {
     // Load
     var trophy = await db.findTrophyById(ctx.params.id)
     ctx.assert(trophy, 404)
@@ -2590,16 +2566,14 @@ router.put('/trophies/:id', async ctx => {
 
     ctx.validateParam('id').toInt()
 
-    ctx
-        .validateBody('title')
+    ctx.validateBody('title')
         .isString('Title required')
         .trim()
         .isLength(3, 50, 'Title must be 3-50 chars')
 
     ctx.validateBody('description-markup')
     if (ctx.request.body['description-markup']) {
-        ctx
-            .validateBody('description-markup')
+        ctx.validateBody('description-markup')
             .trim()
             .isLength(3, 3000, 'Description must be 3-3000 chars')
     }
@@ -2613,13 +2587,13 @@ router.put('/trophies/:id', async ctx => {
         ctx.vals.id,
         ctx.vals.title,
         ctx.vals['description-markup'],
-        description_html
+        description_html,
     )
 
     ctx.redirect('/trophies/' + trophy.id)
 })
 
-router.get('/trophy-groups/:id', async ctx => {
+router.get('/trophy-groups/:id', async (ctx) => {
     var group = await db.findTrophyGroupById(ctx.params.id)
 
     // Ensure group exists
@@ -2635,7 +2609,7 @@ router.get('/trophy-groups/:id', async ctx => {
     })
 })
 
-router.get('/trophies/:id', async ctx => {
+router.get('/trophies/:id', async (ctx) => {
     const trophy = await db
         .findTrophyById(ctx.params.id)
         .then(pre.presentTrophy)
@@ -2653,13 +2627,13 @@ router.get('/trophies/:id', async ctx => {
     })
 })
 
-router.get('/refresh-homepage/:anchor_name', async ctx => {
+router.get('/refresh-homepage/:anchor_name', async (ctx) => {
     ctx.set('X-Robots-Tag', 'none')
     ctx.status = 301
     ctx.redirect(util.format('/#%s', ctx.params.anchor_name))
 })
 
-router.get('/current-feedback-topic', async ctx => {
+router.get('/current-feedback-topic', async (ctx) => {
     // ensure user is logged in and admin
     ctx.assert(ctx.currUser && ctx.currUser.role === 'admin', 403)
     // ensure a feedback topic is set
@@ -2670,11 +2644,11 @@ router.get('/current-feedback-topic', async ctx => {
 
     // Load ftopic
     var ftopic = await db.findFeedbackTopicById(
-        config.CURRENT_FEEDBACK_TOPIC_ID
+        config.CURRENT_FEEDBACK_TOPIC_ID,
     )
     ctx.assert(ftopic, 404)
     var replies = await db.findFeedbackRepliesByTopicId(
-        config.CURRENT_FEEDBACK_TOPIC_ID
+        config.CURRENT_FEEDBACK_TOPIC_ID,
     )
 
     await ctx.render('show_feedback_topic', {
@@ -2685,7 +2659,7 @@ router.get('/current-feedback-topic', async ctx => {
 })
 
 // text: String
-router.post('/current-feedback-topic/replies', async ctx => {
+router.post('/current-feedback-topic/replies', async (ctx) => {
     // user must be logged in
     ctx.assert(ctx.currUser, 403)
     // user must not be banned
@@ -2695,15 +2669,14 @@ router.post('/current-feedback-topic/replies', async ctx => {
     // ensure user hasn't already acked the ftopic
     var ftopic = await db.findUnackedFeedbackTopic(
         config.CURRENT_FEEDBACK_TOPIC_ID,
-        ctx.currUser.id
+        ctx.currUser.id,
     )
     ctx.assert(ftopic, 404)
 
     // Validate form
     ctx.validateBody('commit').isIn(['send', 'ignore'])
     if (ctx.vals.commit === 'send') {
-        ctx
-            .validateBody('text')
+        ctx.validateBody('text')
             .trim()
             .isLength(0, 3000, 'Message may be up to 3000 chars')
     }
@@ -2712,14 +2685,14 @@ router.post('/current-feedback-topic/replies', async ctx => {
         ftopic.id,
         ctx.currUser.id,
         ctx.vals.text,
-        ctx.vals.commit === 'ignore'
+        ctx.vals.commit === 'ignore',
     )
 
     ctx.flash = { message: ['success', 'Thanks for the feedback <3'] }
     ctx.redirect('/')
 })
 
-router.get('/chat', async ctx => {
+router.get('/chat', async (ctx) => {
     await ctx.render('chat', {
         ctx,
         session_id: ctx.state.session_id,
@@ -2736,11 +2709,11 @@ router.get('/chat', async ctx => {
 
 // Show the current-sidebar-contest form which is what's displayed
 // on the Current Contest sidebar panel
-router.get('/current-sidebar-contest', async ctx => {
+router.get('/current-sidebar-contest', async (ctx) => {
     // Ensure user is an admin or conmod
     ctx.assert(
         ctx.currUser && ['admin', 'conmod'].includes(ctx.currUser.role),
-        404
+        404,
     )
 
     var currentContest = await db.getCurrentSidebarContest()
@@ -2752,22 +2725,22 @@ router.get('/current-sidebar-contest', async ctx => {
 })
 
 // Show create form
-router.get('/current-sidebar-contest/new', async ctx => {
+router.get('/current-sidebar-contest/new', async (ctx) => {
     // Ensure user is an admin or conmod
     ctx.assert(
         ctx.currUser && ['admin', 'conmod'].includes(ctx.currUser.role),
-        404
+        404,
     )
 
     await ctx.render('current_sidebar_contest_new', { ctx })
 })
 
 // Show edit form
-router.get('/current-sidebar-contest/edit', async ctx => {
+router.get('/current-sidebar-contest/edit', async (ctx) => {
     // Ensure user is an admin or conmod
     ctx.assert(
         ctx.currUser && ['admin', 'conmod'].includes(ctx.currUser.role),
-        404
+        404,
     )
 
     var currentContest = await db.getCurrentSidebarContest()
@@ -2793,28 +2766,23 @@ router.get('/current-sidebar-contest/edit', async ctx => {
 // Update current contest
 //
 // Keep in sync with the POST (creation) route
-router.put('/current-sidebar-contest', async ctx => {
+router.put('/current-sidebar-contest', async (ctx) => {
     // Ensure user is an admin or conmod
     ctx.assert(
         ctx.currUser && ['admin', 'conmod'].includes(ctx.currUser.role),
-        404
+        404,
     )
 
     // Validation
 
-    ctx
-        .validateBody('title')
+    ctx.validateBody('title').isString().trim()
+    ctx.validateBody('topic_url')
         .isString()
-        .trim()
-    ctx
-        .validateBody('topic_url')
+        .tap((s) => s.trim())
+    ctx.validateBody('deadline')
         .isString()
-        .tap(s => s.trim())
-    ctx
-        .validateBody('deadline')
-        .isString()
-        .tap(s => s.trim())
-    ctx.validateBody('image_url').tap(url => url || undefined)
+        .tap((s) => s.trim())
+    ctx.validateBody('image_url').tap((url) => url || undefined)
 
     // Ensure there is a current contest to update
 
@@ -2846,28 +2814,25 @@ router.put('/current-sidebar-contest', async ctx => {
 })
 
 // Create new sidebar contest
-router.post('/current-sidebar-contest', async ctx => {
+router.post('/current-sidebar-contest', async (ctx) => {
     // Ensure user is an admin or conmod
     ctx.assert(
         ctx.currUser && ['admin', 'conmod'].includes(ctx.currUser.role),
-        404
+        404,
     )
 
     // Validation
 
-    ctx
-        .validateBody('title')
+    ctx.validateBody('title')
         .isString()
-        .tap(s => s.trim())
-    ctx
-        .validateBody('topic_url')
+        .tap((s) => s.trim())
+    ctx.validateBody('topic_url')
         .isString()
-        .tap(s => s.trim())
-    ctx
-        .validateBody('deadline')
+        .tap((s) => s.trim())
+    ctx.validateBody('deadline')
         .isString()
-        .tap(s => s.trim())
-    ctx.validateBody('image_url').tap(url => url || undefined)
+        .tap((s) => s.trim())
+    ctx.validateBody('image_url').tap((url) => url || undefined)
 
     await db.insertCurrentSidebarContest({
         title: ctx.vals.title,
@@ -2880,11 +2845,11 @@ router.post('/current-sidebar-contest', async ctx => {
     ctx.redirect('/current-sidebar-contest')
 })
 
-router.del('/current-sidebar-contest', async ctx => {
+router.del('/current-sidebar-contest', async (ctx) => {
     // Ensure user is an admin or conmod
     ctx.assert(
         ctx.currUser && ['admin', 'conmod'].includes(ctx.currUser.role),
-        404
+        404,
     )
 
     await db.clearCurrentSidebarContest()
@@ -2897,7 +2862,7 @@ router.del('/current-sidebar-contest', async ctx => {
 
 require('./guildbot')
     .connect()
-    .catch(err => console.error('guildbot error', err))
+    .catch((err) => console.error('guildbot error', err))
 
 /// /////////////////////////////////////////////////////////
 

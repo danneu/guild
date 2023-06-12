@@ -558,7 +558,7 @@
         Latest Statuses
       </h4>
 
-      <div class="collapsible" style="{{ 'display' if ctx.cookies.get('collapse-statuses') }}">
+      <div class="collapsible" style="{{ 'display: none;' if ctx.cookies.get('collapse-statuses') }}">
 
       {% if latestStatuses.length == 0 %}
         <div class="text-center">-- None --</div>

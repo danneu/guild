@@ -188,16 +188,15 @@
   {% endif %}
 
   <div class="row">
-    <div class="col-sm-6">
-
-      <!-- Avatar -->
-        <div class="media">
       {% if user.avatar_url %}
-          <div class="media-left">
-            <img src="{{ user.avatar_url }}" class="media-object" alt="Avatar of {{ user.uname }}">
-          </div>
+        <div class="col-sm-4">
+        <!-- Avatar -->
+            <img src="{{ user.avatar_url }}" class="media-object" alt="Avatar of {{ user.uname }}" style="max-width: 100%;">
+        </div><!-- /left column -->
       {% endif %}
-          <div class="media-body">
+
+
+    <div class="col-sm-{{ '8' if user.avatar_url else '12' }}">{# remember to sync column width with avatar column #}
             <!-- Stats list -->
             <ul>
               <li>
@@ -257,14 +256,11 @@
                 </li>
               {% endif %}
             </ul>
-          </div>
-        </div>
+    </div> <!-- /right column -->
+
+    </div><!-- /row -->
 
 
-    </div><!-- col-6 -->
-
-
-    <div class="col-sm-6">
       <!-- Ratings table -->
 
       {% if not ctx.currUser %}
@@ -346,9 +342,6 @@
           Use ratings to give kudos to posts you liked, thought were funny, or found helpful.<br>Please don't abuse the system.
         </p>
       {% endif %}
-    </div> <!-- /.col-6 -->
-
-    </div><!-- /row -->
 
   <!-- Status -->
 
