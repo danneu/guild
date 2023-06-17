@@ -142,7 +142,7 @@ INSERT INTO tags (id, tag_group_id, title, description, slug) VALUES
 (17,	3,	'Romance',	'Emphasis on love (whether it comes around or not)',	'romance')
 ,(6 , 2 ,  'Large Group',	'5+ players',	'large-group')
 ,(21,	4,	'Apocalyptic',	'Involves the end of times, perhaps due to catastrophe',	'apoc')
-,(22,	4,	'Post-Apocalyptic',	'Takes place after the distaster that ruined the world',	'post-apoc')
+,(22,	4,	'Post-Apocalyptic',	'Takes place after the disaster that ruined the world',	'post-apoc')
 ,(29,	3,	'Superhero',	'Supernatural, superheroic, superhuman abilities',	'superhero')
 ,(18,	3,	'Fandom',	'Inspired by existing art (TV shows, books, movies)',	'fandom')
 ,(7 , 4 ,  'Modern',	'Based in our present world or what'',s trending in it',	'modern')
