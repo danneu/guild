@@ -1063,7 +1063,16 @@
         You
       {% endif %}
     </a>
-  </div>
+  {% if ctx.currUser.alts %}
+    <button style="width: 35px" name="accounts" onclick='this.querySelector("#accountsElement").classList.toggle("show")' class="btn btn-default navbar-btn dropdown">▼
+      <div class="dropdown-content" id="accountsElement">
+        {% for account in ctx.currUser.alts %}
+          <a href="#" class="btn-default" onclick='fetch("/swapAccount", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({uname:"{{ account.uname }}"})}).then(response => {location.reload()})'>{{ account.uname }}</a>
+        {% endfor %}
+      </div>
+    </button>
+  {% endif %} 
+ </div>
 {% endmacro %}
 
 

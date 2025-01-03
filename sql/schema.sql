@@ -1029,6 +1029,23 @@ AS $$
   SELECT regexp_replace(string, '^\s+|\s+$', '', 'g');
 $$ LANGUAGE SQL IMMUTABLE;
 
+------------------------------------------------------------
+------------------------------------------------------------
+
+CREATE TABLE alts (
+  id         integer     PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  owner_id   integer     NOT NULL REFERENCES users(id),
+  created_at timestamptz  NOT NULL DEFAULT NOW()
+);
+
+-- There's already an index on primary keys but lets add one for the foreign key.
+CREATE INDEX idx_alts_owner_id ON alts(owner_id);
+
+-- Initialize with existing users
+INSERT INTO alts (id, owner_id)
+SELECT id, id
+FROM users
+
 -- CREATE OR REPLACE FUNCTION strip_quotes(markup text) RETURNS text
 -- AS $$
 --   SELECT trim_whitespace(regexp_replace(regexp_replace(regexp_replace(markup, '\[quote[^\]]*\]((?!\[[[\/]*quote).)*\[\/quote\]', '', 'gi'), '\[quote[^\]]*\]((?!\[[[\/]*quote).)*\[\/quote\]', '', 'gi'), '\[quote[^\]]*\]((?!\[[[\/]*quote).)*\[\/quote\]', '', 'gi'));
