@@ -71,13 +71,13 @@ exports.approveUser = async ({ approvedBy, targetUser }) => {
 
 ////////////////////////////////////////////////////////////
 //Updates alts table: looks up the row with the alt's ID, then finds its owner ID, then updates all rows with the same owner ID. This merges two alt chains into one.
-//SET: Grabs the ownerId of the user registering the alt (in case they're an alt of some other account)
+//SET: Grabs the owner_id of the user registering the alt (in case they're an alt of some other account)
 //WHERE: Everyone owned by the same account as the current alt
 exports.linkUserAlts = async function(userId, altId) {
   return pool.query(sql`
     UPDATE alts
-    SET ownerId = (SELECT ownerId from alts WHERE id=${userId})
-    WHERE ownerId = (SELECT ownerId FROM alts WHERE id = ${altId})
+    SET owner_id = (SELECT owner_id from alts WHERE id=${userId})
+    WHERE owner_id = (SELECT owner_id FROM alts WHERE id = ${altId})
   `)
 }
 
@@ -87,17 +87,17 @@ exports.linkUserAlts = async function(userId, altId) {
 exports.unlinkUserAlts = async function(userId) {
   await pool.query(sql`
     UPDATE alts
-    SET ownerId = (
+    SET owner_id = (
       SELECT MIN(id)
       FROM alts
-      WHERE ownerId = ${userId}
+      WHERE owner_id = ${userId}
       AND id <> ${userId}
   )
-    WHERE ownerId = ${userId} AND id <> ${userId}`)
+    WHERE owner_id = ${userId} AND id <> ${userId}`)
 
   return pool.query(sql`
     UPDATE alts
-    SET ownerId = ${userId}
+    SET owner_id = ${userId}
     WHERE id=${userId}`
   )
 }
