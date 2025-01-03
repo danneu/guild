@@ -316,8 +316,8 @@ exports.findUserBySlug = exports.getUserBySlug = async function(slug) {
         WHERE id IN (SELECT
           id
           FROM alts
-          WHERE ownerId = (
-            SELECT ownerId
+          WHERE owner_id = (
+            SELECT owner_id
             FROM alts
             WHERE id = ${user.id}
           )
@@ -617,8 +617,8 @@ exports.findUserBySessionId = async function(sessionId) {
         WHERE id IN (SELECT
           id
           FROM alts
-          WHERE ownerId = (
-            SELECT ownerId
+          WHERE owner_id = (
+            SELECT owner_id
             FROM alts
             WHERE id = ${user.id}
           )
