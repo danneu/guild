@@ -1034,7 +1034,7 @@ $$ LANGUAGE SQL IMMUTABLE;
 
 CREATE TABLE alts ( 
   id             serial             PRIMARY KEY,
-  ownerId        serial             NOT NULL
+  owner_id        serial             NOT NULL
 );
 
 -- CREATE OR REPLACE FUNCTION strip_quotes(markup text) RETURNS text
