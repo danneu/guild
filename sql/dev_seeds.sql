@@ -251,6 +251,6 @@ VALUES
 -- ALTS
 ------------------------------------------------------------
 
-INSERT INTO alts (id, ownerId)
+INSERT INTO alts (id, owner_id)
 SELECT id, id
 FROM users;
