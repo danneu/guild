@@ -298,7 +298,7 @@ exports.findUserBySlug = exports.getUserBySlug = async function(slug) {
 
     slug = slug.toLowerCase()
 
-    return pool.one(sql`
+    var user = await pool.one(sql`
     SELECT u.*
     FROM users u
     WHERE u.slug = ${slug}
@@ -308,7 +308,25 @@ exports.findUserBySlug = exports.getUserBySlug = async function(slug) {
          WHERE slug = ${slug}
            AND recycle = false
        )
-  `)
+    `)
+    if (user && user.id){
+        //Get all users from the database where the user ID is any account owned by the same user as our account
+        const altList = await pool.one(sql`SELECT json_agg(users.* ORDER BY users.uname ASC)
+        FROM users
+        WHERE id IN (SELECT
+          id
+          FROM alts
+          WHERE owner_id = (
+            SELECT owner_id
+            FROM alts
+            WHERE id = ${user.id}
+          )
+          AND id != ${user.id}
+        )`)
+        user.alts = altList.json_agg
+    }
+
+    return user
 }
 
 ////////////////////////////////////////////////////////////
@@ -592,6 +610,23 @@ exports.findUserBySessionId = async function(sessionId) {
     if (user && user.roles) {
         user.roles = pgArray.parse(user.roles, _.identity)
     }
+    if (user && user.id){
+        //Get all users from the database where the user ID is any account owned by the same user as our account
+        const altList = await pool.one(sql`SELECT json_agg(users.* ORDER BY users.uname ASC)
+        FROM users
+        WHERE id IN (SELECT
+          id
+          FROM alts
+          WHERE owner_id = (
+            SELECT owner_id
+            FROM alts
+            WHERE id = ${user.id}
+          )
+          AND id != ${user.id}
+        )`)
+
+        user.alts = altList.json_agg
+    }
 
     return user
 }
@@ -628,30 +663,7 @@ exports.findTopicsByForumId = async function(forumId, limit, offset) {
         offset
     )
 
-    return pool.many(sql`
-SELECT
-  t.*,
-  to_json(u.*) "user",
-  to_json(p.*) "latest_post",
-  to_json(u2.*) "latest_user",
-  to_json(f.*) "forum",
-  (
-   SELECT json_agg(tags.*)
-   FROM tags
-   JOIN tags_topics ON tags.id = tags_topics.tag_id
-   WHERE tags_topics.topic_id = t.id
-  ) tags
-FROM topics t
-JOIN users u ON t.user_id = u.id
-LEFT JOIN posts p ON t.latest_post_id = p.id
-LEFT JOIN users u2 ON p.user_id = u2.id
-LEFT JOIN forums f ON t.forum_id = f.id
-WHERE t.forum_id = ${forumId}
-  AND t.is_hidden = false
-ORDER BY t.is_sticky DESC, t.latest_post_at DESC
-LIMIT ${limit}
-OFFSET ${offset}
-  `)
+    return _sqlQueryForTopicID(forumId, limit, offset, null, false)
 }
 
 ////////////////////////////////////////////////////////////
@@ -672,41 +684,75 @@ exports.findTopicsWithHasPostedByForumId = async function(
         userId
     )
 
-    return pool.many(sql`
-SELECT
-  EXISTS(
-    SELECT 1 FROM posts WHERE topic_id = t.id AND user_id = ${userId}
-  ) has_posted,
-  (
-    SELECT t.latest_post_id > (
-      SELECT COALESCE(MAX(w.watermark_post_id), 0)
-      FROM topics_users_watermark w
-      WHERE w.topic_id = t.id
-        AND w.user_id = ${userId}
+    return _sqlQueryForTopicID(forumId, limit, offset, userId, false)
+}
+
+exports.findTopicsWithHasPostedByForumIdIncludingHidden = async function(
+    forumId,
+    limit,
+    offset,
+    userId
+) {
+    assert(userId)
+    debug(
+        '[findTopicsWithHasPostedByForumIdIncludingHidden] forumId: %s, userId: %s',
+        forumId,
+        userId
     )
-  ) unread_posts,
-  t.*,
-  to_json(u.*) "user",
-  to_json(p.*) "latest_post",
-  to_json(u2.*) "latest_user",
-  to_json(f.*) "forum",
-  (
-   SELECT json_agg(tags.*)
-   FROM tags
-   JOIN tags_topics ON tags.id = tags_topics.tag_id
-   WHERE tags_topics.topic_id = t.id
-  ) tags
-FROM topics t
-JOIN users u ON t.user_id = u.id
-LEFT JOIN posts p ON t.latest_post_id = p.id
-LEFT JOIN users u2 ON p.user_id = u2.id
-LEFT JOIN forums f ON t.forum_id = f.id
-WHERE t.forum_id = ${forumId}
-  AND t.is_hidden = false
-ORDER BY t.is_sticky DESC, t.latest_post_at DESC
-LIMIT ${limit}
-OFFSET ${offset}
-  `)
+
+    return _sqlQueryForTopicID(forumId, limit, offset, userId, true)
+}
+
+//Implemented to allow staff to read and restore deleted threads without knowing the thread ID
+async function _sqlQueryForTopicID(forumId,
+    limit,
+    offset,
+    userId,
+    canSeeHidden
+){
+    //We have to build out the string step by step because we can't supply template variables (that aren't parameters) to SQL queries
+    let query = sql`SELECT `
+    if(userId){
+        query.append(sql`EXISTS(
+            SELECT 1 FROM posts WHERE topic_id = t.id AND user_id = ${userId}
+            ) has_posted,
+            (
+                SELECT t.latest_post_id > (
+                  SELECT COALESCE(MAX(w.watermark_post_id), 0)
+                  FROM topics_users_watermark w
+                  WHERE w.topic_id = t.id
+                    AND w.user_id = ${userId}
+                )
+            ) unread_posts,
+        `)
+    }
+    query.append(sql`t.*,
+        to_json(u.*) "user",
+        to_json(p.*) "latest_post",
+        to_json(u2.*) "latest_user",
+        to_json(f.*) "forum",
+        (
+           SELECT json_agg(tags.*)
+           FROM tags
+           JOIN tags_topics ON tags.id = tags_topics.tag_id
+           WHERE tags_topics.topic_id = t.id
+        ) tags
+        FROM topics t
+        JOIN users u ON t.user_id = u.id
+        LEFT JOIN posts p ON t.latest_post_id = p.id
+        LEFT JOIN users u2 ON p.user_id = u2.id
+        LEFT JOIN forums f ON t.forum_id = f.id
+        WHERE t.forum_id = ${forumId}
+    `)
+    if(!canSeeHidden){
+        query.append(sql`AND t.is_hidden = false`)
+    }
+    query.append(sql`
+        ORDER BY t.is_sticky DESC, t.latest_post_at DESC
+        LIMIT ${limit}
+        OFFSET ${offset}
+    `)
+    return pool.many(query)
 }
 
 ////////////////////////////////////////////////////////////
@@ -1466,7 +1512,7 @@ exports.createUserWithSession = async function(props) {
             ipAddress: props.ipAddress,
             interval: '1 year', // TODO: Decide how long to log user in upon registration
         })
-
+        await pool.query('INSERT INTO alts VALUES (${user.id}, ${user.id})')  //Register user alt
         return { user, session }
     })
 }
