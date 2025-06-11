@@ -288,8 +288,10 @@ router.post('/users', async ctx => {
     })
 
     // Send user the introductory PM
-    if (config.STAFF_REPRESENTATIVE_ID && cache2.get('welcome-post')) {
-        const { markup, html } = cache2.get('welcome-post')
+    // quirk: welcome-post can point to a post that has no html/markup if the post is ancient
+    const welcomePost = cache2.get('welcome-post')
+    if (config.STAFF_REPRESENTATIVE_ID && welcomePost && welcomePost.markup && welcomePost.html) {
+        const { markup, html } = welcomePost
         const convo = await db.createConvo({
             userId: config.STAFF_REPRESENTATIVE_ID,
             toUserIds: [user.id],
