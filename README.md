@@ -67,4 +67,4 @@ The Guild is configured with environment variable listed in [server/config.js](h
 It will run with the default variables, but some features are turned off until they are configured:
 
 - Email-sending system requires `AWS_KEY` and `AWS_SECRET` (your http://aws.amazon.com/ API creds)
-- User registration system requires `RECAPTCHA_SITEKEY` and `RECAPTCHA_SITESECRET` (your https://www.google.com/recaptcha/intro/index.html API creds)
+- User registration system requires `CF_TURNSTILE_SITEKEY` and `CF_TURNSTILE_SECRET` (your https://www.cloudflare.com/turnstile/ API creds)

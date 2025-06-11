@@ -132,10 +132,6 @@
   }
   </script>
 
-  {% if config.NODE_ENV == 'production' %}
-    <script async defer src='https://www.google.com/recaptcha/api.js'></script>
-  {% endif %}
-
   {% if config.IS_CF_TURNSTILE_CONFIGURED %}
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script>
 

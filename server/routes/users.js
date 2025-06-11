@@ -188,7 +188,7 @@ router.post('/users/:slug/unames', async ctx => {
 // - password1
 // - password2
 // - email
-// - g-recaptcha-response
+// - cf-turnstile-response
 //
 // @koa2
 router.post('/users', checkCloudflareTurnstile, async ctx => {

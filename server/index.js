@@ -594,7 +594,6 @@ router.get('/register', async (ctx) => {
     const registration = await db.keyvals.getRowByKey('REGISTRATION_ENABLED')
     await ctx.render('register', {
         ctx,
-        recaptchaSitekey: config.RECAPTCHA_SITEKEY,
         registration,
         title: 'Register',
     })
