@@ -3,7 +3,7 @@ name: Deploy to Fly.io
 on:
   push:
     tags:
-      - '[0-9]+.[0-9]+.[0-9]+'  # Matches 1.2.3, 10.0.0, etc.
+      - 'v*'
     branches: [master]
 
 jobs:
@@ -35,7 +35,7 @@ jobs:
   deploy:
     needs: test
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/v')
     
     steps:
       - uses: actions/checkout@v3
