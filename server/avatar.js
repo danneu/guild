@@ -72,7 +72,7 @@ exports.handleAvatar = async (userId, fullInPath) => {
         assert(typeof mime === 'string')
     }
 
-    const uuid = uuidGen.v4()
+    const uuid = uuidGen.v7()
     const folderName =
         config.NODE_ENV === 'production' ? 'production' : 'development'
 

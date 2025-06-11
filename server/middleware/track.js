@@ -50,7 +50,7 @@ module.exports = ({ cookieKey = 't', interval = 5000 } = {}) => {
         if (isValidUuid(ctx.cookies.get(cookieKey))) {
             track = ctx.cookies.get(cookieKey)
         } else {
-            track = uuid.v4()
+            track = uuid.v7()
             ctx.cookies.set(cookieKey, track, {
                 expires: futureDate({ years: 1 }),
             })

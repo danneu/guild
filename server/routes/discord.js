@@ -64,7 +64,7 @@ const discord = new DiscordClient({ botToken: config.DISCORD_BOT_TOKEN })
 ////////////////////////////////////////////////////////////
 
 router.get('/discord', async ctx => {
-    const state = uuid.v4()
+    const state = uuid.v7()
     const authzUri = oauth2.authorizationCode.authorizeURL({
         redirect_uri,
         state,

@@ -274,7 +274,7 @@ exports.findLatestActiveResetToken = async function(userId) {
 exports.createResetToken = async function(userId) {
     debug('[createResetToken] userId: ' + userId)
 
-    const uuid = genUuid.v4()
+    const uuid = genUuid.v7()
 
     return pool.one(sql`
     INSERT INTO reset_tokens (user_id, token)
@@ -607,7 +607,7 @@ async function createSession(client, props) {
     assert(_.isString(props.ipAddress))
     assert(_.isString(props.interval))
 
-    const uuid = genUuid.v4()
+    const uuid = genUuid.v7()
 
     return client.one(sql`
     INSERT INTO sessions (user_id, id, ip_address, expired_at)

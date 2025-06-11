@@ -208,7 +208,7 @@ router.post('/users/:user_slug/images', loadUser, async ctx => {
 
     // UPLOAD
 
-    const uuid = uuidGen.v4()
+    const uuid = uuidGen.v7()
     const envFolder = config.NODE_ENV === 'production' ? 'prod' : 'dev'
     const s3Key = `${envFolder}/users/${uuid}.${mimeToExt(mime)}`
     const url = await uploadImage(s3Key, upload.filepath, mime)
