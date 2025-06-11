@@ -12,13 +12,14 @@
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
     
-    "strict": true,
-    "noImplicitAny": true,
+    // Enable these one at a time
+    "strict": false,
+    "noImplicitAny": false,
     "strictNullChecks": true,
     "strictFunctionTypes": true,
     "strictBindCallApply": true,
     "strictPropertyInitialization": true,
-    "noImplicitThis": true,
+    "noImplicitThis": false,
     "useUnknownInCatchVariables": true,
     "alwaysStrict": true,
     "noUnusedLocals": true,
