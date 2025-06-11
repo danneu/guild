@@ -1,9 +1,7 @@
 
 # Guild
 
-[![Dependency Status](https://david-dm.org/danneu/guild.svg)](https://david-dm.org/danneu/guild)
-
-A forum running in production.
+An ancient forum somehow still running in production.
 
 ## Setup and Install
 
