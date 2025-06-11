@@ -1,7 +1,7 @@
 'use strict'
 // 3rd
 const assert = require('better-assert')
-const router = require('@koa/router')()
+const Router = require('@koa/router')
 const debug = require('debug')('app:routes:dice')
 // 1st
 const db = require('../db')
@@ -26,6 +26,8 @@ async function loadRoll(ctx, next) {
 }
 
 ////////////////////////////////////////////////////////////
+
+const router = new Router()
 
 // List all dice campaigns/rolls
 //

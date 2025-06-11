@@ -4,7 +4,7 @@ const fs = require('fs')
 // 3rd
 const fsp = require('fs/promises')
 const assert = require('better-assert')
-const router = require('@koa/router')()
+const Router = require('@koa/router')
 const debug = require('debug')('app:routes:images')
 const gm = require('gm').subClass({ imageMagick: true })
 const uuidGen = require('uuid')
@@ -14,6 +14,8 @@ const belt = require('../belt')
 const db = require('../db')
 const pre = require('../presenters')
 const config = require('../config')
+
+const router = new Router()
 
 ////////////////////////////////////////////////////////////
 

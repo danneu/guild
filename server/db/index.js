@@ -14,7 +14,8 @@ const genUuid = require('uuid')
 const config = require('../config')
 const belt = require('../belt')
 const pre = require('../presenters')
-const { pool } = require('./util')
+// const { pool } = require('./util')
+import { pool } from './util.ts'
 const { sql } = require('pg-extra')
 const revs = require('./revs')
 

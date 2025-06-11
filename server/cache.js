@@ -122,4 +122,6 @@ if (config.LATEST_RPGN_TOPIC_ID) {
     )
 }
 
+cache.start()
+
 module.exports = cache
