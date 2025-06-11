@@ -13,7 +13,11 @@
 
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <link rel="shortcut icon" href="/favicon.ico?v=3">
+  {% if config.NODE_ENV == 'production' %}
+    <link rel="shortcut icon" href="/favicon.ico?v=3">
+  {% else %}
+    <link rel="shortcut icon" href="/favicon-dev.ico">
+  {% endif %}
 
   {% if ctx.path == '/' %}
     <meta name="description" content="Laid-back and free-form roleplaying. From fandoms to original plots, you'll find other players that share your interests. Roleplays are organized by skill-level and tags.">
