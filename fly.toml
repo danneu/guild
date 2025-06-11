@@ -45,7 +45,9 @@ primary_region = "dfw"
   [[services.ports]]
     handlers = ["http"]
     port = 80
-    force_https = true
+    # Turned this off so website works with CF ssl=flexible until 
+    # dns is propagated to everyone
+    # force_https = true
 
   [[services.ports]]
     handlers = ["tls", "http"]
