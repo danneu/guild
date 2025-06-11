@@ -127,12 +127,7 @@ export const IS_EMAIL_CONFIGURED = !!(
 )
 console.log('Email is configured:', IS_EMAIL_CONFIGURED)
 
-// if (NODE_ENV === 'development') {
-//     console.log('Config vars:')
-//     console.log(JSON.stringify(process.env, null, '  '))
-// }
-
-// Print all config vars for now while I get auto deploy working
-// TODO: Remove this
-console.log('Config vars:')
-console.log(JSON.stringify(process.env, null, '  '))
+if (NODE_ENV === 'development') {
+    console.log('Config vars:')
+    console.log(JSON.stringify(process.env, null, '  '))
+}

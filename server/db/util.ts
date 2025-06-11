@@ -11,8 +11,8 @@ const rdsRootCert = readFileSync(path.join(__dirname, '../../us-east-1-bundle.pe
 
 const connectionConfig: pg.ClientConfig = {
   connectionString: config.DATABASE_URL,
-  ssl: {
-    // rejectUnauthorized: false,
+  ssl: config.DATABASE_URL.includes('localhost') ? false : {
+    rejectUnauthorized: true,
     ca: rdsRootCert
   }
 }
