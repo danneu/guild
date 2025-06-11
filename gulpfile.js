@@ -4,12 +4,12 @@ const concat = require('gulp-concat')
 const rev = require('gulp-rev')
 const minifyCss = require('gulp-cssnano')
 const uglifyJs = require('gulp-uglify')
-const del = require('del')
+const { deleteAsync } = require('del')
 const vinylPaths = require('vinyl-paths')
 
 
 function clean() {
-    return del(['dist/**/*'])
+    return deleteAsync(['dist/**/*'])
 }
 
 function copyFonts() {
@@ -70,7 +70,7 @@ const buildAssets = series(
 
 function manifest() {
     return src(['dist/all.css', 'dist/all.js'])
-    .pipe(vinylPaths(del))
+    .pipe(vinylPaths(deleteAsync))
     .pipe(rev())
     .pipe(dest('dist'))
     .pipe(rev.manifest())
