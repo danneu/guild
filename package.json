@@ -12,7 +12,7 @@
         "pm2-hard": "pm2 kill && pm2 start ecosystem.config.js --env production --update-env",
         "docker:build": "docker build -t guild .",
         "docker:run": "docker run -p 3000:3000 guild",
-        "deploy": "npm version patch && git push origin"
+        "deploy": "npm version patch && git push origin --follow-tags"
     },
     "main": "server/index.ts",
     "repository": {
