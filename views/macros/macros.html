@@ -718,7 +718,9 @@
                       {% endif %}
                       "
                style="background-color: #3d3a3a; border: 1px solid #111; color: #fff;"
-               title="You participated"
+               {% if topic.has_posted %}
+                title="You participated"
+               {% endif %}
                >
             <div class="row">
               <div class="col-sm-1">
@@ -824,9 +826,10 @@
                       {% if topic.is_sticky %}
                         topic-item-sticky
                       {% endif %}
-
                       "
-                title="You participated"
+                {% if topic.has_posted %}
+                  title="You participated"
+                {% endif %}
           >
             <div class="row">
               <div class="col-sm-6">
@@ -943,7 +946,9 @@
                         topic-item-sticky
                       {% endif %}
                       "
+              {% if topic.has_posted %}
                 title="You participated"
+              {% endif %}
           >
             <div class="row">
               <div class="col-sm-6">
