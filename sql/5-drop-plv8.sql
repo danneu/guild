@@ -4,8 +4,8 @@
 -- All variables are prefixed with underscore to avoid column name collisions
 
 -- Drop dead plv8 trigger/fn
-drop trigger arena_outcomes_trigger on arena_outcomes;
-drop function update_user_arena_stats;
+DROP TRIGGER IF EXISTS arena_outcomes_trigger ON arena_outcomes;
+DROP FUNCTION IF EXISTS update_user_arena_stats();
 
 
 ------------------------------------------------------------
@@ -45,12 +45,14 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER update_user_posts_count_insert_trigger
     AFTER INSERT ON posts
     FOR EACH ROW
+    -- Ignore 0th posts
     WHEN (NEW.idx > -1)
     EXECUTE PROCEDURE update_user_posts_count();
 
 CREATE TRIGGER update_user_posts_count_delete_trigger
     AFTER DELETE ON posts
     FOR EACH ROW
+    -- Ignore 0th posts
     WHEN (OLD.idx > -1)
     EXECUTE PROCEDURE update_user_posts_count();
 
@@ -236,12 +238,14 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER post_inserted
     AFTER INSERT ON posts
     FOR EACH ROW
+    -- Ignore 0th posts
     WHEN (NEW.idx > -1)
     EXECUTE PROCEDURE update_topic_post_counts();
 
 CREATE TRIGGER post_deleted
     AFTER DELETE ON posts
     FOR EACH ROW
+    -- Ignore 0th posts
     WHEN (OLD.idx > -1)
     EXECUTE PROCEDURE update_topic_post_counts();
 
@@ -306,6 +310,8 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER post_hidden
     AFTER UPDATE ON posts
     FOR EACH ROW
+    -- Only execute when is_hidden is changed
+    -- Ignore 0th posts
     WHEN (OLD.is_hidden != NEW.is_hidden AND NEW.idx > -1)
     EXECUTE PROCEDURE on_post_hidden();
 
@@ -367,6 +373,7 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER post_created5
     AFTER INSERT ON posts
     FOR EACH ROW
+    -- Ignore 0th posts
     WHEN (NEW.idx > -1)
     EXECUTE PROCEDURE update_latest_post_id();
 
@@ -747,4 +754,4 @@ CREATE TRIGGER trigger_set_post_idx
 
 -- THIS IS THE MOMENT WE'VE BEEN WAITING FOR
 
-DROP EXTENSION plv8 CASCADE;
+DROP EXTENSION IF EXISTS plv8 CASCADE;

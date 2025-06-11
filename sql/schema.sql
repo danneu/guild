@@ -6,7 +6,7 @@ CREATE SCHEMA public;
 -- COPY FROM migration.
 --
 
-CREATE EXTENSION IF NOT EXISTS plv8;
+-- CREATE EXTENSION IF NOT EXISTS plv8;
 
 CREATE TYPE role_type AS ENUM ('admin', 'smod', 'mod', 'member', 'banned');
 ALTER TYPE role_type ADD VALUE 'conmod';
@@ -456,45 +456,47 @@ CREATE INDEX trophies_users__awarded_at ON trophies_users (awarded_at);
 ------------------------------------------------------------
 -- Set post idx before inserted
 
-CREATE OR REPLACE FUNCTION set_post_idx() RETURNS trigger AS
-$$
-  if (NEW.idx === -1) {
-    return NEW
-  }
+-- Moved to 5-drop-plv8.sql
+-- CREATE OR REPLACE FUNCTION set_post_idx() RETURNS trigger AS
+-- $$
+--   if (NEW.idx === -1) {
+--     return NEW
+--   }
 
-  q = 'SELECT COALESCE(MAX(p.idx) + 1, 0) "idx"  '+
-      'FROM posts p                              '+
-      'WHERE p.topic_id = $1 AND p.type = $2     ';
-  var rows = plv8.execute(q, [NEW.topic_id, NEW.type]);
-  NEW.idx = rows[0].idx;
-  return NEW;
-$$ LANGUAGE 'plv8';
+--   q = 'SELECT COALESCE(MAX(p.idx) + 1, 0) "idx"  '+
+--       'FROM posts p                              '+
+--       'WHERE p.topic_id = $1 AND p.type = $2     ';
+--   var rows = plv8.execute(q, [NEW.topic_id, NEW.type]);
+--   NEW.idx = rows[0].idx;
+--   return NEW;
+-- $$ LANGUAGE 'plv8';
 
-DROP TRIGGER IF EXISTS trigger_set_post_idx ON posts;
-CREATE TRIGGER trigger_set_post_idx
-    BEFORE INSERT ON posts
-    FOR EACH ROW
-    EXECUTE PROCEDURE set_post_idx();
+-- DROP TRIGGER IF EXISTS trigger_set_post_idx ON posts;
+-- CREATE TRIGGER trigger_set_post_idx
+--     BEFORE INSERT ON posts
+--     FOR EACH ROW
+--     EXECUTE PROCEDURE set_post_idx();
 
 ------------------------------------------------------------
 ------------------------------------------------------------
 -- Set pm idx before insertion
 
-CREATE OR REPLACE FUNCTION set_pm_idx() RETURNS trigger AS
-$$
-  q = 'SELECT COALESCE(MAX(pms.idx) + 1, 0) "idx"  '+
-      'FROM pms                                    '+
-      'WHERE pms.convo_id = $1                     ';
-  var rows = plv8.execute(q, [NEW.convo_id]);
-  NEW.idx = rows[0].idx;
-  return NEW;
-$$ LANGUAGE 'plv8';
+-- Moved to 5-drop-plv8.sql
+-- CREATE OR REPLACE FUNCTION set_pm_idx() RETURNS trigger AS
+-- $$
+--   q = 'SELECT COALESCE(MAX(pms.idx) + 1, 0) "idx"  '+
+--       'FROM pms                                    '+
+--       'WHERE pms.convo_id = $1                     ';
+--   var rows = plv8.execute(q, [NEW.convo_id]);
+--   NEW.idx = rows[0].idx;
+--   return NEW;
+-- $$ LANGUAGE 'plv8';
 
-DROP TRIGGER IF EXISTS trigger_set_pm_idx ON pms;
-CREATE TRIGGER trigger_set_pm_idx
-    BEFORE INSERT ON pms
-    FOR EACH ROW
-    EXECUTE PROCEDURE set_pm_idx();
+-- DROP TRIGGER IF EXISTS trigger_set_pm_idx ON pms;
+-- CREATE TRIGGER trigger_set_pm_idx
+--     BEFORE INSERT ON pms
+--     FOR EACH ROW
+--     EXECUTE PROCEDURE set_pm_idx();
 
 ------------------------------------------------------------
 ------------------------------------------------------------
@@ -674,71 +676,72 @@ ALTER TABLE users
 
 -- Set vm idx before insertion
 -- Note: Only set vm on vms without a parent_vm_id (only top-level vms)
-CREATE OR REPLACE FUNCTION set_vm_idx() RETURNS trigger AS
-$$
-  if (NEW.parent_vm_id)
-    return NEW;
+-- Moved to 5-drop-plv8.sql
+-- CREATE OR REPLACE FUNCTION set_vm_idx() RETURNS trigger AS
+-- $$
+--   if (NEW.parent_vm_id)
+--     return NEW;
 
-  var q;
-  q = 'SELECT COALESCE(MAX(vms.idx) + 1, 0) "idx"  '+
-      'FROM vms                                    '+
-      'WHERE vms.to_user_id = $1                   ';
-  var rows = plv8.execute(q, [NEW.to_user_id]);
-  NEW.idx = rows[0].idx;
-  return NEW;
-$$ LANGUAGE 'plv8';
+--   var q;
+--   q = 'SELECT COALESCE(MAX(vms.idx) + 1, 0) "idx"  '+
+--       'FROM vms                                    '+
+--       'WHERE vms.to_user_id = $1                   ';
+--   var rows = plv8.execute(q, [NEW.to_user_id]);
+--   NEW.idx = rows[0].idx;
+--   return NEW;
+-- $$ LANGUAGE 'plv8';
 
-DROP TRIGGER IF EXISTS trigger_set_vm_idx ON vms;
-CREATE TRIGGER trigger_set_vm_idx
-    BEFORE INSERT ON vms
-    FOR EACH ROW
-    EXECUTE PROCEDURE set_vm_idx();
+-- DROP TRIGGER IF EXISTS trigger_set_vm_idx ON vms;
+-- CREATE TRIGGER trigger_set_vm_idx
+--     BEFORE INSERT ON vms
+--     FOR EACH ROW
+--     EXECUTE PROCEDURE set_vm_idx();
 
-CREATE OR REPLACE FUNCTION update_parent_vm() RETURNS trigger AS
-$$
+-- CREATE OR REPLACE FUNCTION update_parent_vm() RETURNS trigger AS
+-- $$
 
-  // Short-circuit if there is no parent VM
-  var thisVm = (OLD || NEW);
-  if (!thisVm.parent_vm_id)
-    return;
+--   // Short-circuit if there is no parent VM
+--   var thisVm = (OLD || NEW);
+--   if (!thisVm.parent_vm_id)
+--     return;
 
-  var delta = 0;
-  if (TG_OP === 'INSERT') delta++
-  if (TG_OP === 'DELETE') delta--;
-  q = 'UPDATE vms SET vms_count = vms_count + $2 WHERE id = $1';
-  plv8.execute(q, [thisVm.parent_vm_id, delta]);
-$$ LANGUAGE 'plv8';
+--   var delta = 0;
+--   if (TG_OP === 'INSERT') delta++
+--   if (TG_OP === 'DELETE') delta--;
+--   q = 'UPDATE vms SET vms_count = vms_count + $2 WHERE id = $1';
+--   plv8.execute(q, [thisVm.parent_vm_id, delta]);
+-- $$ LANGUAGE 'plv8';
 
-DROP TRIGGER IF EXISTS update_parent_vm_trigger ON vms;
-CREATE TRIGGER update_parent_vm_trigger
-    AFTER INSERT OR DELETE ON vms
-    FOR EACH ROW
-    EXECUTE PROCEDURE update_parent_vm();
+-- DROP TRIGGER IF EXISTS update_parent_vm_trigger ON vms;
+-- CREATE TRIGGER update_parent_vm_trigger
+--     AFTER INSERT OR DELETE ON vms
+--     FOR EACH ROW
+--     EXECUTE PROCEDURE update_parent_vm();
 
-CREATE OR REPLACE FUNCTION update_user_vms_count() RETURNS trigger AS
-$$
-  var totalDelta = 0, toplevelDelta = 0;
-  var thisVm = (OLD || NEW);
-  var toUserId = thisVm.to_user_id;
-  if (TG_OP === 'INSERT') {
-    totalDelta++;
-    if (!thisVm.parent_vm_id) toplevelDelta++;
-  }
-  if (TG_OP === 'DELETE') {
-    totalDelta--;
-    if (!thisVm.parent_vm_id) toplevelDelta--;
-  }
-  q = 'UPDATE users                                               '+
-      'SET total_vms_count = total_vms_count + $2,                '+
-      '    toplevel_vms_count = toplevel_vms_count + $3           '+
-      'WHERE id = $1                                              ';
-  plv8.execute(q, [toUserId, totalDelta, toplevelDelta]);
-$$ LANGUAGE 'plv8';
-DROP TRIGGER IF EXISTS update_user_vms_count_trigger ON vms;
-CREATE TRIGGER update_user_vms_count_trigger
-    AFTER INSERT OR DELETE ON vms
-    FOR EACH ROW
-    EXECUTE PROCEDURE update_user_vms_count();
+-- CREATE OR REPLACE FUNCTION update_user_vms_count() RETURNS trigger AS
+-- $$
+--   var totalDelta = 0, toplevelDelta = 0;
+--   var thisVm = (OLD || NEW);
+--   var toUserId = thisVm.to_user_id;
+--   if (TG_OP === 'INSERT') {
+--     totalDelta++;
+--     if (!thisVm.parent_vm_id) toplevelDelta++;
+--   }
+--   if (TG_OP === 'DELETE') {
+--     totalDelta--;
+--     if (!thisVm.parent_vm_id) toplevelDelta--;
+--   }
+--   q = 'UPDATE users                                               '+
+--       'SET total_vms_count = total_vms_count + $2,                '+
+--       '    toplevel_vms_count = toplevel_vms_count + $3           '+
+--       'WHERE id = $1                                              ';
+--   plv8.execute(q, [toUserId, totalDelta, toplevelDelta]);
+-- $$ LANGUAGE 'plv8';
+-- DROP TRIGGER IF EXISTS update_user_vms_count_trigger ON vms;
+-- CREATE TRIGGER update_user_vms_count_trigger
+--     AFTER INSERT OR DELETE ON vms
+--     FOR EACH ROW
+--     EXECUTE PROCEDURE update_user_vms_count();
 
 ALTER TABLE trophies_users
 ADD COLUMN id serial PRIMARY KEY;
@@ -958,20 +961,21 @@ CREATE TABLE post_revs (
 -- For finding all revisions for a post
 CREATE INDEX ON post_revs (post_id);
 
-CREATE OR REPLACE FUNCTION update_post_rev_count() RETURNS trigger AS
-$$
-  var delta = 0
-  var postId = (OLD && OLD.post_id) || (NEW && NEW.post_id)
-  if (TG_OP === 'DELETE') delta--
-  if (TG_OP === 'INSERT') delta++
-  q = 'UPDATE posts SET rev_count = rev_count + $2 WHERE id = $1'
-  plv8.execute(q, [postId, delta])
-$$ LANGUAGE 'plv8';
-DROP TRIGGER IF EXISTS update_post_rev_count_trigger ON post_revs;
-CREATE TRIGGER update_post_rev_count_trigger
-    AFTER INSERT OR DELETE ON post_revs
-    FOR EACH ROW
-    EXECUTE PROCEDURE update_post_rev_count();
+-- Moved to 5-drop-plv8.sql
+-- CREATE OR REPLACE FUNCTION update_post_rev_count() RETURNS trigger AS
+-- $$
+--   var delta = 0
+--   var postId = (OLD && OLD.post_id) || (NEW && NEW.post_id)
+--   if (TG_OP === 'DELETE') delta--
+--   if (TG_OP === 'INSERT') delta++
+--   q = 'UPDATE posts SET rev_count = rev_count + $2 WHERE id = $1'
+--   plv8.execute(q, [postId, delta])
+-- $$ LANGUAGE 'plv8';
+-- DROP TRIGGER IF EXISTS update_post_rev_count_trigger ON post_revs;
+-- CREATE TRIGGER update_post_rev_count_trigger
+--     AFTER INSERT OR DELETE ON post_revs
+--     FOR EACH ROW
+--     EXECUTE PROCEDURE update_post_rev_count();
 
 ------------------------------------------------------------
 ------------------------------------------------------------
