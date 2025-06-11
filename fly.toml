@@ -43,9 +43,9 @@ primary_region = "dfw"
   min_machines_running = 1  # Always keep 1 running
 
   [[services.ports]]
-    force_https = true
     handlers = ["http"]
     port = 80
+    force_https = true
 
   [[services.ports]]
     handlers = ["tls", "http"]
@@ -53,7 +53,10 @@ primary_region = "dfw"
 
   [[services.http_checks]]
     interval = "30s"
+    grace_period = "10s"
     method = "get"
     path = "/health"
     protocol = "http"
     timeout = "3s"
+    [services.http_checks.headers]
+      X-Forwarded-Proto = "https"  # Helps with CF health checks
