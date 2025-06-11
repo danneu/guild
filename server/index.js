@@ -1,10 +1,10 @@
 'use strict'
 require('dotenv').config()
 const config = require('./config')
+const { z } = require('zod')
 
 // Node
 const fs = require('fs')
-// 3rd
 const Router = require('@koa/router')
 
 const Koa = require('koa')
@@ -315,6 +315,20 @@ app.use(async (ctx, next) => {
     try {
         await next()
     } catch (ex) {
+        // Catch any ZodErrors that bubble up and return a flash message
+        if (ex instanceof z.ZodError) {
+            // Adding the path is nice if I forget to set a message: `Required (username)`
+            // FIXME: But if I do add a custom message, then it's weird: `You must set a tag (tag)`
+            const message = `${ex.issues[0].message} (${ex.issues[0].path.join('.')})`
+            ctx.flash = {
+                message: ['danger', message],
+                // FIXME: This breaks if body is bigger than ~4kb cookie size limit
+                // i.e. large posts, large bodies of text
+                params: ctx.request.body,
+            }
+            ctx.response.redirect('back')
+            return
+        }
         if (ex instanceof bouncer.ValidationError) {
             ctx.flash = {
                 message: ['danger', ex.message || 'Validation error'],
@@ -1028,7 +1042,7 @@ router.get('/forums/:forumSlug', async (ctx) => {
 router.post(
     '/topics/:topicSlug/posts',
     middleware.ratelimit(),
-    /* middleware.ensureRecaptcha, */ async (ctx) => {
+    async (ctx) => {
         var topicId = belt.extractId(ctx.params.topicSlug)
         ctx.assert(topicId, 404)
 
@@ -1246,7 +1260,7 @@ router.put('/topics/:topicSlug/tags', async (ctx) => {
 router.post(
     '/forums/:slug/topics',
     middleware.ratelimit(),
-    /* middleware.ensureRecaptcha, */ async (ctx) => {
+    async (ctx) => {
         var forumId = belt.extractId(ctx.params.slug)
         ctx.assert(forumId, 404)
 

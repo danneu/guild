@@ -3,7 +3,6 @@
 const util = require('util')
 // 3rd party
 const debug = require('debug')('app:middleware')
-const recaptcha = require('recaptcha-validator')
 const _ = require('lodash')
 const { assert } = require('../util')
 const bouncer = require('koa-bouncer')
@@ -12,6 +11,7 @@ const db = require('../db')
 const pre = require('../presenters')
 const belt = require('../belt')
 const config = require('../config')
+const checkCloudflareTurnstile = require('./cloudflare-turnstile')
 
 // Assoc ctx.currUser if the sessionId cookie (UUIDv4 String)
 // is an active session.
@@ -72,47 +72,6 @@ exports.flash = function(cookieName = 'flash') {
             ctx.cookies.set(cookieName, null)
         }
     }
-}
-
-exports.ensureRecaptcha = async function(ctx, next) {
-    if (
-        ['development', 'test'].includes(config.NODE_ENV) &&
-        !ctx.request.body['g-recaptcha-response']
-    ) {
-        console.log('Development mode, so skipping recaptcha check')
-        return next()
-    }
-
-    if (!config.RECAPTCHA_SITEKEY) {
-        console.warn(
-            'Warn: Recaptcha environment variables not set, so skipping recaptcha check'
-        )
-        return next()
-    }
-
-    ctx
-        .validateBody('g-recaptcha-response')
-        .isString('You must attempt the human test')
-
-    try {
-        await recaptcha.promise(
-            config.RECAPTCHA_SITESECRET,
-            ctx.vals['g-recaptcha-response'],
-            ctx.request.ip
-        )
-    } catch (err) {
-        console.warn(
-            'Got invalid captcha: ',
-            ctx.vals['g-recaptcha-response'],
-            err
-        )
-        ctx
-            .validateBody('g-recaptcha-response')
-            .check(false, 'Could not verify recaptcha was correct')
-        return
-    }
-
-    return next()
 }
 
 ////////////////////////////////////////////////////////////

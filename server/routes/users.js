@@ -1,4 +1,7 @@
 'use strict'
+
+import checkCloudflareTurnstile from '../middleware/cloudflare-turnstile'
+
 // Node
 const util = require('util')
 // 3rd party
@@ -188,7 +191,7 @@ router.post('/users/:slug/unames', async ctx => {
 // - g-recaptcha-response
 //
 // @koa2
-router.post('/users', async ctx => {
+router.post('/users', checkCloudflareTurnstile, async ctx => {
     if (!await db.keyvals.getValueByKey('REGISTRATION_ENABLED')) {
         return ctx.redirect('/register')
     }
@@ -227,26 +230,6 @@ router.post('/users', async ctx => {
         .isString('Password required')
         .isLength(6, 100, 'Password must be at least 6 chars long')
         .eq(ctx.vals.password2, 'Password confirmation must match')
-
-    // In production, check recaptcha against google
-    if (config.NODE_ENV === 'production') {
-        ctx
-            .validateBody('g-recaptcha-response')
-            .isString('You must attempt the human test')
-
-        const passedRecaptcha = await belt.makeRecaptchaRequest(
-            ctx.vals['g-recaptcha-response'],
-            ctx.request.ip
-        )
-
-        if (!passedRecaptcha) {
-            ctx.flash = {
-                message: ['danger', 'You failed the recaptcha challenge'],
-                params: ctx.request.body,
-            }
-            return ctx.response.redirect('/register')
-        }
-    }
 
     // User params validated, so create a user and log them in
     let user

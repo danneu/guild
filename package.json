@@ -52,13 +52,13 @@
         "promise.map": "0.0.2",
         "react": "^19.1.0",
         "react-dom": "^19.1.0",
-        "recaptcha-validator": "1.0.11",
         "regex-trie": "1.0.4",
         "s3-streaming-upload": "0.2.3",
         "simple-oauth2": "^1.2.0",
         "tsafe": "^1.8.5",
         "tsx": "^4.20.1",
-        "uuid": "^11.1.0"
+        "uuid": "^11.1.0",
+        "zod": "^3.25.62"
     },
     "devDependencies": {
         "@types/koa": "^2.13.6",

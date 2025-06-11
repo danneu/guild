@@ -73,17 +73,27 @@
                  {% endif %}
                  class="form-control" required>
         </div>
+
+              <div class="cf-turnstile" data-sitekey="{{ config.CF_TURNSTILE_SITEKEY }}"
+                data-callback="turnstileCallback"
+
+              ></div>
+
+
             </div> <!-- /.panel-body -->
 
           <div class="panel-footer" style="border: black">
             <div class="text-right">
-              <button id="register-submit" type="submit"
-                      class="btn btn-primary g-recaptcha"
-                      data-sitekey="{{ recaptchaSitekey }}"
-                      data-callback="onSubmit"
-                      data-badge="bottomleft"
+              <button id="register-submit" type="submit" class="btn btn-primary"
+                {% if config.IS_CF_TURNSTILE_CONFIGURED %}
+                  disabled
+                {% endif %}
               >
-                Submit
+                {% if config.IS_CF_TURNSTILE_CONFIGURED %}
+                  Waiting for captcha...
+                {% else %}
+                  Submit
+                {% endif %}
               </button>
             </div>
           </div> <!-- /.panel-footer -->
@@ -124,6 +134,20 @@
 
   {% if config.NODE_ENV == 'production' %}
     <script async defer src='https://www.google.com/recaptcha/api.js'></script>
+  {% endif %}
+
+  {% if config.IS_CF_TURNSTILE_CONFIGURED %}
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script>
+
+    <script>
+      function turnstileCallback(idk) {
+        console.log('turnstileCallback');
+        // Enable form submission
+        const button = document.getElementById('register-submit')
+        button.disabled = false
+        button.textContent = 'Submit'
+      }
+    </script>
   {% endif %}
 
   <script>

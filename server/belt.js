@@ -8,7 +8,6 @@ const { assert } = require('./util')
 const bcrypt = require('bcryptjs')
 const _ = require('lodash')
 const Autolinker = require('autolinker')
-const recaptchaValidator = require('recaptcha-validator')
 // 1st party
 const config = require('./config')
 
@@ -166,25 +165,6 @@ exports.isValidUuid = (() => {
         return re.test(uuid)
     }
 })()
-
-// reCaptcha ///////////////////////////////////////////////
-
-// Returns Bool
-exports.makeRecaptchaRequest = async function(userResponse, remoteIp) {
-    assert(config.RECAPTCHA_SITESECRET)
-    assert(_.isString(userResponse))
-    assert(_.isString(remoteIp))
-
-    return recaptchaValidator
-        .promise(config.RECAPTCHA_SITESECRET, userResponse, remoteIp)
-        .then(() => {
-            return true
-        })
-        .catch(err => {
-            if (typeof err === 'string') return false
-            throw err
-        })
-}
 
 ////////////////////////////////////////////////////////////
 

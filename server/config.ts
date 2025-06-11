@@ -127,6 +127,13 @@ export const IS_EMAIL_CONFIGURED = !!(
 )
 console.log('Email is configured:', IS_EMAIL_CONFIGURED)
 
+
+// CLOUDFLARE TURNSTILE
+export const CF_TURNSTILE_SITEKEY = process.env.CF_TURNSTILE_SITEKEY
+export const CF_TURNSTILE_SECRET = process.env.CF_TURNSTILE_SECRET
+export const IS_CF_TURNSTILE_CONFIGURED = !!(CF_TURNSTILE_SITEKEY && CF_TURNSTILE_SECRET)
+console.log('Turnstile is configured:', IS_CF_TURNSTILE_CONFIGURED)
+
 if (NODE_ENV === 'development') {
     console.log('Config vars:')
     console.log(JSON.stringify(process.env, null, '  '))
