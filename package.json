@@ -78,13 +78,5 @@
         "prettier": "^2.8.8",
         "ts-node-dev": "^2.0.0",
         "vinyl-paths": "^2.1.0"
-    },
-    "prettier": {
-        "semi": false,
-        "singleQuote": true,
-        "trailingComma": "all",
-        "tabWidth": 4,
-        "jsxSingleQuote": true,
-        "arrowParens": "always"
     }
 }
