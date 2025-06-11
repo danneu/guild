@@ -1,7 +1,7 @@
 'use strict'
 // 3rd
 const debug = require('debug')('app:db:images')
-const assert = require('better-assert')
+const { assert } = require('../util')
 const uuidGen = require('uuid')
 const knex = require('knex')({ client: 'pg' })
 const _ = require('lodash')

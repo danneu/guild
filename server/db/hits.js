@@ -1,6 +1,6 @@
 'use strict'
 // 3rd
-const assert = require('better-assert')
+const { assert } = require('../util')
 const knex = require('knex')({ client: 'pg' })
 const debug = require('debug')('app:db:hits')
 // 1st

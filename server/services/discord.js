@@ -1,6 +1,6 @@
 // 3rd
 const debug = require('debug')('app:services:discord')
-const assert = require('better-assert')
+const { assert } = require('../util')
 // 1st
 const Client = require('../discord/client')
 const config = require('../config')

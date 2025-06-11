@@ -2,7 +2,7 @@
 // Node
 const fs = require('fs')
 // 3rd
-const assert = require('better-assert')
+const { assert } = require('../server/util')
 const Uploader = require('s3-streaming-upload').Uploader
 const {sql} = require('pg-extra')
 const gm = require('gm').subClass({ imageMagick: true })

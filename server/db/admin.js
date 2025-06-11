@@ -1,5 +1,5 @@
 // 3rd
-const assert = require('better-assert')
+const { assert } = require('../util')
 const { sql } = require('pg-extra')
 const knex = require('knex')({ client: 'pg' })
 // 1st

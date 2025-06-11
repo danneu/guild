@@ -1,7 +1,7 @@
 // Node
 const { URL } = require('url')
 // 3rd
-const assert = require('better-assert')
+const { assert } = require('../../util')
 const fetch = require('node-fetch')
 // 1st
 const { broadcastIpAddressAutoNuke } = require('../discord')

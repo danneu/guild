@@ -3,7 +3,7 @@ const path = require('path')
 const nodeFs = require('fs')
 const crypto = require('crypto')
 // 3rd party
-const assert = require('better-assert')
+const { assert } = require('./util')
 const gm = require('gm').subClass({ imageMagick: true })
 const debug = require('debug')('app:avatar')
 const Uploader = require('s3-streaming-upload').Uploader

@@ -5,7 +5,7 @@ const path = require('path')
 const util = require('util')
 // 3rd party
 const _ = require('lodash')
-const assert = require('better-assert')
+const { assert } = require('../util')
 const debug = require('debug')('app:db')
 const pgArray = require('postgres-array')
 const promiseMap = require('promise.map')

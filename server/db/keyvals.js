@@ -1,6 +1,6 @@
 'use strict'
 // 3rd
-const assert = require('better-assert')
+const { assert } = require('../util')
 const debug = require('debug')('app:db:keyvals')
 // 1st
 const { pool } = require('./util')

@@ -2,7 +2,7 @@
 // 3rd party
 const nodemailer = require('nodemailer')
 const ses = require('nodemailer-ses-transport')
-const assert = require('better-assert')
+const { assert } = require('./util')
 const _ = require('lodash')
 const nunjucks = require('nunjucks')
 const debug = require('debug')('app:emailer')

@@ -2,7 +2,7 @@
 const Router = require('@koa/router')
 const {currUser} = require('../middleware')
 const db = require('../db')
-const assert = require('better-assert')
+const { assert } = require('../util')
 const belt = require('../belt')
 const crypto = require('crypto')
 const config = require('../config')

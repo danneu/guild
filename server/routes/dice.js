@@ -1,6 +1,6 @@
 'use strict'
 // 3rd
-const assert = require('better-assert')
+const { assert } = require('../util')
 const Router = require('@koa/router')
 const debug = require('debug')('app:routes:dice')
 // 1st

@@ -1,7 +1,7 @@
 'use strict'
 // 3rd
 const debug = require('debug')('app:db:dice')
-const assert = require('better-assert')
+const { assert } = require('../util')
 // 1st
 const bbcode = require('../bbcode')
 const dice = require('../dice')

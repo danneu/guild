@@ -5,7 +5,7 @@ const util = require('util')
 const debug = require('debug')('app:middleware')
 const recaptcha = require('recaptcha-validator')
 const _ = require('lodash')
-const assert = require('better-assert')
+const { assert } = require('../util')
 const bouncer = require('koa-bouncer')
 // 1st party
 const db = require('../db')

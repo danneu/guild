@@ -1,6 +1,6 @@
 'use strict'
 // 3rd
-const assert = require('better-assert')
+const { assert } = require('../util')
 const fetch = require('node-fetch')
 const debug = require('debug')('app:client:index')
 const promiseMap = require('promise.map')

@@ -4,7 +4,7 @@ const Router = require('@koa/router')
 const SimpleOauth2 = require('simple-oauth2')
 const uuid = require('uuid')
 const debug = require('debug')('app:routes:discord')
-const assert = require('better-assert')
+const { assert } = require('../util')
 // 1st
 const config = require('../config')
 const DiscordClient = require('../discord/client')

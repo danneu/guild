@@ -1,5 +1,5 @@
 const {SESClient, SendEmailCommand } = require('@aws-sdk/client-ses')
-const assert = require('better-assert')
+const { assert } = require('./util')
 
 // TODO: Replace emailer.js
 

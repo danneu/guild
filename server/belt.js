@@ -4,7 +4,7 @@ const { URL } = require('url')
 const crypto = require('crypto')
 // 3rd party
 const debug = require('debug')('app:belt')
-const assert = require('better-assert')
+const { assert } = require('./util')
 const bcrypt = require('bcryptjs')
 const _ = require('lodash')
 const Autolinker = require('autolinker')

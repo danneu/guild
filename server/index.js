@@ -61,7 +61,7 @@ const util = require('util')
 // 3rd party
 const _ = require('lodash')
 const debug = require('debug')('app:index')
-const assert = require('better-assert')
+const { assert } = require('./util')
 const promiseMap = require('promise.map')
 // 1st party
 const db = require('./db')

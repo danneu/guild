@@ -1,6 +1,6 @@
 'use strict'
 // 3rd
-const assert = require('better-assert')
+const { assert } = require('../util')
 const debug = require('debug')('db:ratelimits')
 const _ = require('lodash')
 // 1st

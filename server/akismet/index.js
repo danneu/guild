@@ -2,7 +2,7 @@
 const debug = require('debug')('app:akismet')
 const fetch = require('node-fetch')
 const FormData = require('form-data')
-const assert = require('better-assert')
+const { assert } = require('../util')
 // 1st
 const config = require('../config')
 
