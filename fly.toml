@@ -28,12 +28,17 @@ primary_region = "dfw"
   MAX_CO_GM_COUNT = "2"
   POSTS_PER_PAGE = "20"
   USERS_PER_PAGE = "20"
-  RECENT_POSTS_PER_PAGE = "5"
+  RECENT_POSTS_PER_PAGE = "10"
   CONVOS_PER_PAGE = "10"
   SEARCH_RESULTS_PER_PAGE = "50"
+  RULES_POST_ID= "4291608"
   IS_PM_SYSTEM_ONLINE = "true"
-  FROM_EMAIL="mahz@roleplayerguild.com"
-  HOST="https://www.roleplayerguild.com"
+  FROM_EMAIL= "mahz@roleplayerguild.com"
+  HOST= "https://www.roleplayerguild.com"
+  # TODO: what do these do?
+  ERROR_PAGE_URL= "https://guild.neocities.org/error.html"
+  MAINTENANCE_PAGE_URL= "https://guild.neocities.org/maintenance.html"
+  STAFF_REPRESENTATIVE_ID= "8231"
 
 [[services]]
   internal_port = 3000
