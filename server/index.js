@@ -81,7 +81,7 @@ const protectCsrf = require('./middleware/protect-csrf')
 
 app.use(middleware.methodOverride())
 
-app.use(protectCsrf(['roleplayerguild.com', 'localhost']))
+app.use(protectCsrf(['roleplayerguild.com', 'localhost', 'rpguild.fly.dev']))
 
 // Catch and log all errors that bubble up to koa
 // app.on('error', function(err) {
@@ -334,6 +334,11 @@ app.use(async (ctx, next) => {
 // - Create middleware before this
 // app.use(require('@koa/router')(app))
 const router = new Router()
+
+// For fly.io health check
+router.get('/health', (ctx) => {
+    ctx.status = 200
+})
 
 router.post('/test', async (ctx) => {
     ctx.body = JSON.stringify(ctx.request.body, null, '  ')
