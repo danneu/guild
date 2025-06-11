@@ -4,14 +4,25 @@ import pg from 'pg'
 const config = require('../config')
 const belt = require('../belt')
 import { assert } from '../util.js'
+import { readFileSync } from 'fs'
+import path from 'path'
 
+const rdsRootCert = readFileSync(path.join(__dirname, '../../us-east-1-bundle.pem'), 'utf8')
+
+const connectionConfig: pg.ClientConfig = {
+  connectionString: config.DATABASE_URL,
+  ssl: {
+    // rejectUnauthorized: false,
+    ca: rdsRootCert
+  }
+}
 
 // TODO: Update db/index.js to use this module,
 //       and remove all those dead functions
 
 // This is the connection pool the rest of our db namespace
 // should import and use
-const pool = new pg.Pool({ connectionString: config.DATABASE_URL })
+const pool = new pg.Pool(connectionConfig)
 
 
 // These versions work with both datablan/pg and pg's query results.
@@ -83,7 +94,7 @@ pg.Client.prototype.one = function<T extends QueryResultRow = any>(
 };
 
 function getClient() {
-    return new pg.Client({ connectionString: config.DATABASE_URL })
+    return new pg.Client(connectionConfig)
 }
 
 // TODO: Get rid of db/index.js' wrapOptionalClient and use this
