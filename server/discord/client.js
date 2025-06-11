@@ -4,9 +4,16 @@ const { assert } = require('../util')
 const fetch = require('node-fetch')
 const debug = require('debug')('app:client:index')
 const promiseMap = require('promise.map')
-const createError = require('create-error')
 
-const ResponseNotOkError = createError('ResponseNotOkError')
+class ResponseNotOkError extends Error {
+    constructor(message, details = {}) {
+        super(message);
+        this.name = 'ResponseNotOkError';
+        this.details = details;
+        // Capture stack trace, excluding the constructor call from it
+        Error.captureStackTrace(this, this.constructor);
+    }
+}
 
 class Client {
     constructor({

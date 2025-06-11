@@ -22,7 +22,6 @@
         "@koa/router": "^13.1.0",
         "autolinker": "1.6.0",
         "bcryptjs": "2.4.3",
-        "create-error": "^0.3.1",
         "debug": "3.1.0",
         "discord.js": "^11.5.1",
         "dotenv": "^16.5.0",
