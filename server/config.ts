@@ -39,7 +39,7 @@ export const MENTIONS_PER_POST = parseInt(process.env.MENTIONS_PER_POST || '10',
 export const QUOTES_PER_POST = parseInt(process.env.QUOTES_PER_POST || '10', 10)
 
 // Determines the link in password reset token email
-export const HOST = process.env.HOST || 'http://localhost:' + exports.PORT
+export const HOST = process.env.HOST || 'http://localhost:' + PORT
 // Required for sending emails
 export const AWS_KEY = process.env.AWS_KEY
 export const AWS_SECRET = process.env.AWS_SECRET
