@@ -8,11 +8,16 @@
         "dev": "tsx watch ./server",
         "reset-db": "tsx ./server/reset_db.ts",
         "pretty-fix": "prettier --write \"{server,sql,test}/**/*.js\"",
-        "pm2-soft": "pm2 reload ecosystem.config.js --env production --update-env",
-        "pm2-hard": "pm2 kill && pm2 start ecosystem.config.js --env production --update-env",
         "docker:build": "docker build -t guild .",
         "docker:run": "docker run -p 3000:3000 --env-file .env guild",
-        "deploy": "npm version patch -m '%s [deploy]' && git push origin --follow-tags"
+        "// ==================": "prod ==================================",
+        "deploy:_prod": "npm version patch -m '%s [deploy]' && git push origin --follow-tags",
+        "logs:_prod": "fly logs --app rpguild",
+        "ssh:_prod": "fly ssh console --app rpguild",
+        "// ===================": "staging ==================================",
+        "deploy:staging": "fly deploy --config fly.staging.toml --app rpguild-staging",
+        "logs:staging": "fly logs --app rpguild-staging",
+        "ssh:staging": "fly ssh console --app rpguild-staging"
     },
     "main": "server/index.ts",
     "repository": {
@@ -31,7 +36,6 @@
         "discord.js": "^11.5.1",
         "dotenv": "^16.5.0",
         "form-data": "^2.1.4",
-        "gm": "^1.23.1",
         "knex": "^1.0.0",
         "koa": "2.4.1",
         "koa-better-static": "^1.0.5",

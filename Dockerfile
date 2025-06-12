@@ -1,13 +1,13 @@
 FROM node:23-alpine
 
 # Install dependencies
-RUN apk add --no-cache graphicsmagick
+# RUN apk add --no-cache graphicsmagick
 
 WORKDIR /app
 
 # Copy package files and install dependencies
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --verbose
 
 # Copy source code
 COPY . .
