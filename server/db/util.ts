@@ -3,7 +3,7 @@ import { QueryConfig, QueryResult, QueryResultRow } from "pg"
 import pg from 'pg'
 const config = require('../config')
 const belt = require('../belt')
-import { assert } from '../util.js'
+import assert from 'assert'
 import { readFileSync } from 'fs'
 import path from 'path'
 
@@ -11,7 +11,7 @@ const rdsRootCert = readFileSync(path.join(__dirname, '../../us-east-1-bundle.pe
 
 const connectionConfig: pg.ClientConfig = {
   connectionString: config.DATABASE_URL,
-  ssl: config.DATABASE_URL.includes('localhost') ? false : {
+  ssl: config.DATABASE_URL.includes('localhost') || config.DATABASE_URL.includes('host.docker.internal') ? false : {
     rejectUnauthorized: true,
     ca: rdsRootCert
   }
@@ -22,7 +22,7 @@ const connectionConfig: pg.ClientConfig = {
 
 // This is the connection pool the rest of our db namespace
 // should import and use
-const pool = new pg.Pool(connectionConfig)
+export const pool = new pg.Pool(connectionConfig)
 
 
 // These versions work with both datablan/pg and pg's query results.
@@ -60,6 +60,13 @@ declare module 'pg' {
   }
   
   interface Client {
+    one<T extends QueryResultRow = any>(
+      queryTextOrConfig: string | QueryConfig<any[]>,
+      values?: any[]
+    ): Promise<T | undefined>;
+  }
+
+  interface PoolClient {
     one<T extends QueryResultRow = any>(
       queryTextOrConfig: string | QueryConfig<any[]>,
       values?: any[]

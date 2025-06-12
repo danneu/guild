@@ -1,3 +1,4 @@
+// needs to be .js 
 /*
        TODO: Patch xbbcode.js so the library itself is compat with node
 */

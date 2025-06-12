@@ -1,6 +1,4 @@
-'use strict'
-
-// Should also work in the browser
+// Should also work in the browser - needs to be .js 
 
 var defaults = {
     prefixFromNow: 'in',
@@ -68,5 +66,6 @@ if (typeof module !== 'undefined') {
     module.exports = make
 } else {
     // expose instant to browser
+    // @ts-ignore
     window.ago = make()
 }
