@@ -1,10 +1,10 @@
 // 3rd
-const assert = require('assert')
+import assert from 'assert'
 // 1st
-const { broadcastIpAddressAutoNuke } = require('../discord')
-const { timeout } = require('../../belt')
-const db = require('../../db')
-const config = require('../../config')
+import { broadcastIpAddressAutoNuke } from '../discord'
+import { timeout } from '../../belt.js'
+import * as db from '../../db'
+import * as config from '../../config'
 
 // For testing, here are some bad ip addrs:
 //
@@ -73,7 +73,7 @@ class IntelClient {
 // Use singleton for now
 const client = new IntelClient()
 
-module.exports = {
+export default {
     process: async (ipAddress, user) => {
         assert(typeof ipAddress === 'string')
         assert(typeof user.uname === 'string')

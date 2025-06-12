@@ -1,26 +1,47 @@
 'use strict'
-require('dotenv').config()
-const config = require('./config')
-const { z } = require('zod')
+import 'dotenv/config'
+import * as config from './config'
+import { z } from 'zod'
 
 // Node
-const fs = require('fs')
-const Router = require('@koa/router')
+import fs from 'fs'
+import Router from '@koa/router'
 
-const Koa = require('koa')
+import Koa, { Context, Next } from 'koa'
 const app = new Koa()
-app.poweredBy = false
 if (config.NODE_ENV === 'production') {
     app.proxy = true
 }
 
-const convert = require('koa-convert')
+import convert from 'koa-convert'
+import koaBetterStatic from 'koa-better-static'
+import koaLogger from 'koa-logger'
+import { koaBody } from 'koa-body'
+
+// Routes
+import legacyRouter from './legacy_router.js'
+import indexRoutes from './routes/index.js'
+import usersRoutes from './routes/users.js'
+import convosRoutes from './routes/convos.js'
+import imagesRoutes from './routes/images.js'
+import diceRoutes from './routes/dice.js'
+import statusesRoutes from './routes/statuses.js'
+import chatRoutes from './routes/chat.js'
+import subscriptionsRoutes from './routes/subscriptions.js'
+import friendshipsRoutes from './routes/friendships.js'
+import tagsRoutes from './routes/tags.js'
+import discordRoutes from './routes/discord.js'
+import searchRoutes from './routes/search.js'
+import topicsRoutes from './routes/topics.js'
+import adminRoutes from './routes/admin.js'
+import verifyEmailRoutes from './routes/verify-email.js'
+import guildbot from './guildbot.js'
 
 // static assets
 
 app.use(
     convert(
-        require('koa-better-static')('public', {
+        koaBetterStatic('public', {
             maxage: 1000 * 60 * 60 * 24 * 365,
             gzip: false,
         }),
@@ -29,23 +50,25 @@ app.use(
 
 app.use(
     convert(
-        require('koa-better-static')('dist', {
+        koaBetterStatic('dist', {
             maxage: 1000 * 60 * 60 * 24 * 365,
             gzip: false,
         }),
     ),
 )
 
-app.use(require('koa-conditional-get')()) // Works with koa-etag
-app.use(require('koa-etag')())
+import koaConditionalGet from 'koa-conditional-get'
+import koaEtag from 'koa-etag'
+app.use(koaConditionalGet()) // Works with koa-etag
+app.use(koaEtag())
 
 // heroku already has access logger
 if (config.NODE_ENV !== 'production') {
-    app.use(require('koa-logger')())
+    app.use(koaLogger())
 }
 
 app.use(
-    require('koa-body').koaBody({
+    koaBody({
         multipart: true,
         // Max payload size allowed in request form body
         // Defaults to '56kb'
@@ -54,30 +77,31 @@ app.use(
     }),
 )
 
-const nunjucksRender = require('koa-nunjucks-render')
+import nunjucksRender from 'koa-nunjucks-render'
 
 // Node
-const util = require('util')
+import util from 'util'
 // 3rd party
-const _ = require('lodash')
-const debug = require('debug')('app:index')
-const assert = require('assert')
-const promiseMap = require('promise.map')
+import _ from 'lodash'
+import createDebug from 'debug'
+const debug = createDebug('app:index')
+import assert from 'assert'
+import promiseMap from 'promise.map'
 // 1st party
-const db = require('./db')
-const pre = require('./presenters')
-const middleware = require('./middleware')
-const cancan = require('./cancan')
+import * as db from './db'
+import * as pre from './presenters'
+import * as middleware from './middleware'
+import * as cancan from './cancan'
 import * as emailer from './emailer'
-const cache = require('./cache')
-const belt = require('./belt')
-const bbcode = require('./bbcode')
-const bouncer = require('koa-bouncer')
-require('./validation') // Load after koa-bouncer
-const services = require('./services')
-const cache2 = require('./cache2')
-const makeAgo = require('./ago')
-const protectCsrf = require('./middleware/protect-csrf')
+import cache from './cache'
+import * as belt from './belt'
+import bbcode from './bbcode'
+import bouncer from 'koa-bouncer'
+import './validation' // Load after koa-bouncer
+import services from './services'
+import cache2 from './cache2'
+import makeAgo from './ago'
+import protectCsrf from './middleware/protect-csrf'
 
 app.use(middleware.methodOverride())
 
@@ -132,26 +156,26 @@ const dist = (() => {
 })()
 
 // Only allow guild to be iframed from same domain
-app.use(async (ctx, next) => {
+app.use(async (ctx: Context, next: Next) => {
     ctx.set('X-Frame-Options', 'SAMEORIGIN')
     return next()
 })
 
-app.use(async (ctx, next) => {
+app.use(async (ctx: Context, next: Next) => {
     ctx.dist = dist
     return next()
 })
 
 // Expose config to view layer
 // TODO: use nunjucks instead of MW
-app.use(async (ctx, next) => {
+app.use(async (ctx: Context, next: Next) => {
     ctx.config = config
     ctx.cache = cache
     return next()
 })
 
 // Remove trailing slashes from url path
-app.use(async (ctx, next) => {
+app.use(async (ctx: Context, next: Next) => {
     // If path has more than one character and ends in a slash, then redirect to
     // the same path without that slash. Note: homepage is "/" which is why
     // we check for more than 1 char.
@@ -173,7 +197,7 @@ app.use(async (ctx, next) => {
 app.use(middleware.currUser())
 app.use(middleware.flash())
 
-app.use(async (ctx, next) => {
+app.use(async (ctx: Context, next: Next) => {
     // Must become before koa-router
     ctx.can = cancan.can
     ctx.assertAuthorized = (user, action, target) => {
@@ -287,7 +311,7 @@ const nunjucksOptions = {
         presentUserRole: belt.presentUserRole,
         encodeURIComponent: (s) => encodeURIComponent(s),
         // String -> String
-        outcomeToElement: (outcome) => {
+        outcomeToElement: (outcome: string) => {
             switch (outcome) {
                 case 'WIN':
                     return '<span class="green-glow">Win</span>'
@@ -295,6 +319,10 @@ const nunjucksOptions = {
                     return '<span class="red-glow">Loss</span>'
                 case 'DRAW':
                     return '<span style="color: #999">Draw</span>'
+                // TODO: Had to add this for type warning. need to see what i had expected 
+                // this behavior to be.
+                default:
+                    return 
             }
         },
         formatChatDate: belt.formatChatDate,
@@ -311,7 +339,7 @@ app.use(nunjucksRender('views', nunjucksOptions))
 
 app.use(bouncer.middleware())
 
-app.use(async (ctx, next) => {
+app.use(async (ctx: Context, next: Next) => {
     try {
         await next()
     } catch (ex: any) {
@@ -319,7 +347,9 @@ app.use(async (ctx, next) => {
         if (ex instanceof z.ZodError) {
             // Adding the path is nice if I forget to set a message: `Required (username)`
             // FIXME: But if I do add a custom message, then it's weird: `You must set a tag (tag)`
-            const message = `${ex.issues[0].message} (${ex.issues[0].path.join('.')})`
+            const message = ex.issues[0] 
+              ? `${ex.issues[0].message} (${ex.issues[0].path.join('.')})` 
+              : ex.message
             ctx.flash = {
                 message: ['danger', message],
                 // FIXME: This breaks if body is bigger than ~4kb cookie size limit
@@ -350,44 +380,44 @@ app.use(async (ctx, next) => {
 const router = new Router()
 
 // For fly.io health check
-router.get('/health', (ctx) => {
+router.get('/health', (ctx: Context) => {
     ctx.status = 200
 })
 
-router.post('/test', async (ctx) => {
+router.post('/test', async (ctx: Context) => {
     ctx.body = JSON.stringify(ctx.request.body, null, '  ')
 })
 
-app.use(require('./legacy_router').routes())
+app.use(legacyRouter.routes())
 
 /// /////////////////////////////////////////////////////////
 
-router.get('/rules', async (ctx) => {
+router.get('/rules', async (ctx: Context) => {
     ctx.assert(config.RULES_POST_ID, 404)
     ctx.redirect(`/posts/${config.RULES_POST_ID}`)
 })
 
-app.use(require('./routes/index').routes())
-app.use(require('./routes/users').routes())
-app.use(require('./routes/convos').routes())
-app.use(require('./routes/images').routes())
-app.use(require('./routes/dice').routes())
-app.use(require('./routes/statuses').routes())
-app.use(require('./routes/chat').routes())
-app.use(require('./routes/subscriptions').routes())
-app.use(require('./routes/friendships').routes())
-app.use(require('./routes/tags').routes())
-app.use(require('./routes/discord').routes())
-app.use(require('./routes/search').routes())
-app.use(require('./routes/topics').routes())
-app.use(require('./routes/admin').routes())
-app.use(require('./routes/verify-email').routes())
+app.use(indexRoutes.routes())
+app.use(usersRoutes.routes())
+app.use(convosRoutes.routes())
+app.use(imagesRoutes.routes())
+app.use(diceRoutes.routes())
+app.use(statusesRoutes.routes())
+app.use(chatRoutes.routes())
+app.use(subscriptionsRoutes.routes())
+app.use(friendshipsRoutes.routes())
+app.use(tagsRoutes.routes())
+app.use(discordRoutes.routes())
+app.use(searchRoutes.routes())
+app.use(topicsRoutes.routes())
+app.use(adminRoutes.routes())
+app.use(verifyEmailRoutes.routes())
 
 // Useful to redirect users to their own profiles since canonical edit-user
 // url is /users/:slug/edit
 
 // Ex: /me/edit#grayscale-avatars to show users how to toggle that feature
-router.get('/me/edit', async (ctx) => {
+router.get('/me/edit', async (ctx: Context) => {
     // Ensure current user can edit themself
     ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER', ctx.currUser)
 
@@ -397,7 +427,7 @@ router.get('/me/edit', async (ctx) => {
 
 /// /////////////////////////////////////////////////////////
 
-router.post('/topics/:topicSlug/co-gms', async (ctx) => {
+router.post('/topics/:topicSlug/co-gms', async (ctx: Context) => {
     var topicId = belt.extractId(ctx.params.topicSlug)
     var topic = await db.findTopicById(topicId).then(pre.presentTopic)
     ctx.assert(topic, 404)
@@ -432,7 +462,7 @@ router.post('/topics/:topicSlug/co-gms', async (ctx) => {
 
 /// /////////////////////////////////////////////////////////
 
-router.delete('/topics/:topicSlug/co-gms/:userSlug', async (ctx) => {
+router.delete('/topics/:topicSlug/co-gms/:userSlug', async (ctx: Context) => {
     var topicId = belt.extractId(ctx.params.topicSlug)
     var topic = await db.findTopicById(topicId).then(pre.presentTopic)
     ctx.assert(topic, 404)
@@ -455,7 +485,7 @@ router.delete('/topics/:topicSlug/co-gms/:userSlug', async (ctx) => {
     ctx.response.redirect(topic.url + '/edit#co-gms')
 })
 
-router.get('/unames.json', async (ctx) => {
+router.get('/unames.json', async (ctx: Context) => {
     ctx.type = 'application/json'
     ctx.body = await db.findAllUnamesJson()
 })
@@ -463,7 +493,7 @@ router.get('/unames.json', async (ctx) => {
 // Required body params:
 // - type: like | laugh | thank
 // - post_id: Int
-router.post('/posts/:postId/rate', async (ctx) => {
+router.post('/posts/:postId/rate', async (ctx: Context) => {
     try {
         ctx.validateBody('type')
             .isString('type is required')
@@ -527,7 +557,7 @@ router.post('/posts/:postId/rate', async (ctx) => {
 //
 // Logout
 //
-router.post('/me/logout', async (ctx) => {
+router.post('/me/logout', async (ctx: Context) => {
     if (ctx.currUser) {
         await db.logoutSession(ctx.currUser.id, ctx.cookies.get('sessionId'))
     }
@@ -538,7 +568,7 @@ router.post('/me/logout', async (ctx) => {
 //
 // Login form
 //
-router.get('/login', async (ctx) => {
+router.get('/login', async (ctx: Context) => {
     await ctx.render('login', {
         ctx,
         title: 'Login',
@@ -548,7 +578,7 @@ router.get('/login', async (ctx) => {
 //
 // Create session
 //
-router.post('/sessions', async (ctx) => {
+router.post('/sessions', async (ctx: Context) => {
     ctx.validateBody('uname-or-email').required('Invalid creds (1)')
     ctx.validateBody('password').required('Invalid creds (2)')
     ctx.validateBody('remember-me').toBoolean()
@@ -578,7 +608,7 @@ router.post('/sessions', async (ctx) => {
 //
 // BBCode Cheatsheet
 //
-router.get('/bbcode', async (ctx) => {
+router.get('/bbcode', async (ctx: Context) => {
     await ctx.render('bbcode_cheatsheet', {
         ctx,
         title: 'BBCode Cheatsheet',
@@ -588,7 +618,7 @@ router.get('/bbcode', async (ctx) => {
 //
 // Registration form
 //
-router.get('/register', async (ctx) => {
+router.get('/register', async (ctx: Context) => {
     assert(config.RECAPTCHA_SITEKEY)
     assert(config.RECAPTCHA_SITESECRET)
     const registration = await db.keyvals.getRowByKey('REGISTRATION_ENABLED')
@@ -602,7 +632,7 @@ router.get('/register', async (ctx) => {
 //
 // Homepage
 //
-router.get('/', async (ctx) => {
+router.get('/', async (ctx: Context) => {
     const categories = cache.get('categories')
 
     // We don't show the mod forum on the homepage.
@@ -704,7 +734,7 @@ router.get('/', async (ctx) => {
 //
 // Forgot password page
 //
-router.get('/forgot', async (ctx) => {
+router.get('/forgot', async (ctx: Context) => {
     if (!config.IS_EMAIL_CONFIGURED) {
         ctx.body = 'This feature is currently disabled'
         return
@@ -718,7 +748,7 @@ router.get('/forgot', async (ctx) => {
 //
 //
 // - Required param: email
-router.post('/forgot', async (ctx) => {
+router.post('/forgot', async (ctx: Context) => {
     if (!config.IS_EMAIL_CONFIGURED) {
         ctx.body = 'This feature is currently disabled'
         return
@@ -781,7 +811,7 @@ router.post('/forgot', async (ctx) => {
 // Password reset form
 // - This form allows a user to enter a reset token and new password
 // - The email from /forgot will link the user here
-router.get('/reset-password', async (ctx) => {
+router.get('/reset-password', async (ctx: Context) => {
     if (!config.IS_EMAIL_CONFIGURED) {
         ctx.body = 'This feature is currently disabled'
         return
@@ -798,7 +828,7 @@ router.get('/reset-password', async (ctx) => {
 // - token
 // - password1
 // - password2
-router.post('/reset-password', async (ctx) => {
+router.post('/reset-password', async (ctx: Context) => {
     if (!config.IS_EMAIL_CONFIGURED) {
         ctx.body = 'This feature is currently disabled'
         return
@@ -864,7 +894,7 @@ router.post('/reset-password', async (ctx) => {
 // The user that STAFF_REPRESENTATIVE_ID points to.
 // Loaded once upon boot since env vars require reboot to update.
 var staffRep
-router.get('/lexus-lounge', async (ctx) => {
+router.get('/lexus-lounge', async (ctx: Context) => {
     ctx.assertAuthorized(ctx.currUser, 'LEXUS_LOUNGE')
 
     if (!staffRep && config.STAFF_REPRESENTATIVE_ID) {
@@ -904,7 +934,7 @@ router.get('/lexus-lounge', async (ctx) => {
     })
 })
 
-router.get('/lexus-lounge/images', async (ctx) => {
+router.get('/lexus-lounge/images', async (ctx: Context) => {
     ctx.assertAuthorized(ctx.currUser, 'LEXUS_LOUNGE')
     const images = await db.images
         .getLatestImages(25)
@@ -917,7 +947,7 @@ router.get('/lexus-lounge/images', async (ctx) => {
 })
 
 // toggle user registration on/off
-router.post('/lexus-lounge/registration', async (ctx) => {
+router.post('/lexus-lounge/registration', async (ctx: Context) => {
     ctx.assertAuthorized(ctx.currUser, 'LEXUS_LOUNGE')
     const enable = ctx.request.body.enable === 'true'
     await db.keyvals.setKey('REGISTRATION_ENABLED', enable, ctx.currUser.id)
@@ -933,7 +963,7 @@ router.post('/lexus-lounge/registration', async (ctx) => {
 //
 // New topic form
 //
-router.get('/forums/:forumSlug/topics/new', async (ctx) => {
+router.get('/forums/:forumSlug/topics/new', async (ctx: Context) => {
     // Load forum
     var forumId = belt.extractId(ctx.params.forumSlug)
     ctx.assert(forumId, 404)
@@ -970,7 +1000,7 @@ router.get('/forums/:forumSlug/topics/new', async (ctx) => {
 // Canonical show forum
 //
 // @koa2
-router.get('/forums/:forumSlug', async (ctx) => {
+router.get('/forums/:forumSlug', async (ctx: Context) => {
     var forumId = belt.extractId(ctx.params.forumSlug)
     ctx.assert(forumId, 404)
 
@@ -1041,7 +1071,7 @@ router.get('/forums/:forumSlug', async (ctx) => {
 router.post(
     '/topics/:topicSlug/posts',
     middleware.ratelimit(),
-    async (ctx) => {
+    async (ctx: Context) => {
         var topicId = belt.extractId(ctx.params.topicSlug)
         ctx.assert(topicId, 404)
 
@@ -1153,7 +1183,7 @@ router.post(
 
 // (AJAX)
 // Delete specific notification
-router.del('/api/me/notifications/:id', async (ctx) => {
+router.del('/api/me/notifications/:id', async (ctx: Context) => {
     ctx.validateParam('id')
     var n = await db.findNotificationById(ctx.vals.id)
     // Ensure exists
@@ -1177,7 +1207,7 @@ router.del('/api/me/notifications/:id', async (ctx) => {
 //     "clear notifications" button only deletes the notifications the
 //     user has on screen and not any notifications they may've received
 //     in the meantime.
-router.del('/me/notifications', async (ctx) => {
+router.del('/me/notifications', async (ctx: Context) => {
     ctx.validateBody('ids')
         .toInts()
         .tap(function (ids) {
@@ -1198,7 +1228,7 @@ router.del('/me/notifications', async (ctx) => {
 })
 
 // Delete only convo notifications
-router.delete('/me/notifications/convos', async (ctx) => {
+router.delete('/me/notifications/convos', async (ctx: Context) => {
     // Ensure a user is logged in
     ctx.assert(ctx.currUser, 404)
     await db.clearConvoNotifications(ctx.currUser.id)
@@ -1212,7 +1242,7 @@ router.delete('/me/notifications/convos', async (ctx) => {
 // Update topic tags
 // - tag-ids: Required [StringIds]
 //
-router.put('/topics/:topicSlug/tags', async (ctx) => {
+router.put('/topics/:topicSlug/tags', async (ctx: Context) => {
     // Load topic
     var topicId = belt.extractId(ctx.params.topicSlug)
     ctx.assert(topicId, 404)
@@ -1259,7 +1289,7 @@ router.put('/topics/:topicSlug/tags', async (ctx) => {
 router.post(
     '/forums/:slug/topics',
     middleware.ratelimit(),
-    async (ctx) => {
+    async (ctx: Context) => {
         var forumId = belt.extractId(ctx.params.slug)
         ctx.assert(forumId, 404)
 
@@ -1379,7 +1409,7 @@ router.post(
 // - The "Edit" button on posts links here so that people without
 // javascript or poor support for javascript will land on a basic edit-post
 // form that does not depend on javascript.
-router.get('/posts/:id/edit', async (ctx) => {
+router.get('/posts/:id/edit', async (ctx: Context) => {
     // Short-circuit if user isn't logged in
     ctx.assert(ctx.currUser, 403)
 
@@ -1399,7 +1429,7 @@ router.get('/posts/:id/edit', async (ctx) => {
 })
 
 // See and keep in sync with GET /posts/:id/edit
-router.get('/pms/:id/edit', async (ctx) => {
+router.get('/pms/:id/edit', async (ctx: Context) => {
     // Short-circuit if user isn't logged in
     ctx.assert(ctx.currUser, 403)
 
@@ -1424,7 +1454,7 @@ router.get('/pms/:id/edit', async (ctx) => {
 // for people on devices where the Edit button doesn't work.
 //
 // Params: markup
-router.put('/posts/:id', async (ctx) => {
+router.put('/posts/:id', async (ctx: Context) => {
     const post = await db.findPostById(ctx.params.id).then(pre.presentPost)
     ctx.assert(post, 404)
     ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
@@ -1476,7 +1506,7 @@ router.put('/posts/:id', async (ctx) => {
 
 // See and keep in sync with PUT /posts/:id
 // Params: markup
-router.put('/pms/:id', async (ctx) => {
+router.put('/pms/:id', async (ctx: Context) => {
     ctx.validateBody('markup').isLength(
         config.MIN_POST_LENGTH,
         config.MAX_POST_LENGTH,
@@ -1501,7 +1531,7 @@ router.put('/pms/:id', async (ctx) => {
 //
 // Returns the unformatted post source.
 //
-router.get('/posts/:id/raw', async (ctx) => {
+router.get('/posts/:id/raw', async (ctx: Context) => {
     var post = await db.findPostWithTopicAndForum(ctx.params.id)
     ctx.assert(post, 404)
     ctx.assertAuthorized(ctx.currUser, 'READ_POST', post)
@@ -1510,7 +1540,7 @@ router.get('/posts/:id/raw', async (ctx) => {
     ctx.body = post.markup ? post.markup : post.text
 })
 
-router.get('/pms/:id/raw', async (ctx) => {
+router.get('/pms/:id/raw', async (ctx: Context) => {
     if (!config.IS_PM_SYSTEM_ONLINE) {
         ctx.body = 'PM system currently disabled'
         return
@@ -1531,7 +1561,7 @@ router.get('/pms/:id/raw', async (ctx) => {
 // - reason (optional)
 //
 // Keep /api/posts/:postId and /api/pms/:pmId in sync
-router.put('/api/posts/:id', async (ctx) => {
+router.put('/api/posts/:id', async (ctx: Context) => {
     const post = await db.findPost(ctx.params.id)
     ctx.assert(post, 404)
     ctx.assertAuthorized(ctx.currUser, 'UPDATE_POST', post)
@@ -1581,7 +1611,7 @@ router.put('/api/posts/:id', async (ctx) => {
     // TODO: Submit to spam service like PUT /posts/:id
 })
 
-router.put('/api/pms/:id', async (ctx) => {
+router.put('/api/pms/:id', async (ctx: Context) => {
     if (!config.IS_PM_SYSTEM_ONLINE) {
         ctx.body = 'PM system currently disabled'
         return
@@ -1619,7 +1649,7 @@ router.put('/api/pms/:id', async (ctx) => {
 // Params
 // - status (Required) String, one of STATUS_WHITELIST
 //
-router.put('/topics/:topicSlug/status', async (ctx) => {
+router.put('/topics/:topicSlug/status', async (ctx: Context) => {
     var topicId = belt.extractId(ctx.params.topicSlug)
     ctx.assert(topicId, 404)
     var STATUS_WHITELIST = [
@@ -1644,7 +1674,7 @@ router.put('/topics/:topicSlug/status', async (ctx) => {
 })
 
 // Update post state
-router.post('/posts/:postId/:status', async (ctx) => {
+router.post('/posts/:postId/:status', async (ctx: Context) => {
     var STATUS_WHITELIST = ['hide', 'unhide']
     ctx.assert(
         STATUS_WHITELIST.includes(ctx.params.status),
@@ -1679,7 +1709,7 @@ router.post('/posts/:postId/:status', async (ctx) => {
 // If it has ?created=true query, then add it onto redirect:
 // /posts/:id#post-:id&created=true
 // and take it off client-side.
-router.get('/posts/:postId', async (ctx) => {
+router.get('/posts/:postId', async (ctx: Context) => {
     // "/posts/1234]" is such a common issue that we should fix it
     ctx.params.postId = Number.parseInt(ctx.params.postId, 10)
     ctx.assert(ctx.params.postId, 404)
@@ -1746,7 +1776,7 @@ router.get('/posts/:postId', async (ctx) => {
 
 // PM permalink
 // Keep this in sync with /posts/:postId
-router.get('/pms/:id', async (ctx) => {
+router.get('/pms/:id', async (ctx: Context) => {
     if (!config.IS_PM_SYSTEM_ONLINE) {
         ctx.body = 'PM system currently disabled'
         return
@@ -1779,7 +1809,7 @@ router.get('/pms/:id', async (ctx) => {
 // Add topic ban
 //
 // Body { uname: String }
-router.post('/topics/:slug/bans', async (ctx) => {
+router.post('/topics/:slug/bans', async (ctx: Context) => {
     const topicId = belt.extractId(ctx.params.slug)
     const topic = await db.findTopicById(topicId).then(pre.presentTopic)
     ctx.assert(topic, 404)
@@ -1817,7 +1847,7 @@ router.post('/topics/:slug/bans', async (ctx) => {
     ctx.redirect(topic.url + '/edit#topic-bans')
 })
 
-router.delete('/topic-bans/:id', async (ctx) => {
+router.delete('/topic-bans/:id', async (ctx: Context) => {
     ctx.validateParam('id').toInt()
 
     const ban = await db.getTopicBan(ctx.vals.id).then(pre.presentTopicBan)
@@ -1839,7 +1869,7 @@ router.delete('/topic-bans/:id', async (ctx) => {
 // Ensure this comes before /topics/:slug/:xxx so that "edit" is not
 // considered the second param
 //
-router.get('/topics/:slug/edit', async (ctx) => {
+router.get('/topics/:slug/edit', async (ctx: Context) => {
     ctx.assert(ctx.currUser, 403)
     var topicId = belt.extractId(ctx.params.slug)
     ctx.assert(topicId, 404)
@@ -1868,7 +1898,7 @@ router.get('/topics/:slug/edit', async (ctx) => {
 // Update topic
 // Params:
 // - title Required
-router.put('/topics/:slug/edit', async (ctx) => {
+router.put('/topics/:slug/edit', async (ctx: Context) => {
     // Authorization
     ctx.assert(ctx.currUser, 403)
     var topicId = belt.extractId(ctx.params.slug)
@@ -1927,7 +1957,7 @@ router.put('/topics/:slug/edit', async (ctx) => {
 })
 
 // Always redirects to the last post of a tab
-router.get('/topics/:slug/:postType/last', async (ctx) => {
+router.get('/topics/:slug/:postType/last', async (ctx: Context) => {
     const { postType } = ctx.params
     ctx.assert(['ic', 'ooc', 'char'].includes(postType), 404)
 
@@ -1947,7 +1977,7 @@ router.get('/topics/:slug/:postType/last', async (ctx) => {
 })
 
 // Go to first unread post in a topic
-router.get('/topics/:slug/:postType/first-unread', async (ctx) => {
+router.get('/topics/:slug/:postType/first-unread', async (ctx: Context) => {
     // This page should not be indexed
     ctx.set('X-Robots-Tag', 'noindex')
 
@@ -1986,7 +2016,7 @@ router.get('/topics/:slug/:postType/first-unread', async (ctx) => {
 // Canonical show topic
 //
 
-router.get('/topics/:slug/:postType', async (ctx) => {
+router.get('/topics/:slug/:postType', async (ctx: Context) => {
     ctx.assert(['ic', 'ooc', 'char'].includes(ctx.params.postType), 404)
     ctx.validateQuery('page')
         .optional()
@@ -2134,7 +2164,7 @@ router.get('/topics/:slug/:postType', async (ctx) => {
 
 // Legacy URL
 // Redirect to the new, shorter topic URL
-router.get('/topics/:topicId/posts/:postType', async (ctx) => {
+router.get('/topics/:topicId/posts/:postType', async (ctx: Context) => {
     var redirectUrl =
         '/topics/' + ctx.params.topicId + '/' + ctx.params.postType
     ctx.status = 301
@@ -2150,7 +2180,7 @@ router.get('/topics/:topicId/posts/:postType', async (ctx) => {
 // Else it is a non-roleplay
 //   Go to OOC tab
 //
-router.get('/topics/:slug', async (ctx) => {
+router.get('/topics/:slug', async (ctx: Context) => {
     var topicId = belt.extractId(ctx.params.slug)
     ctx.assert(topicId, 404)
 
@@ -2199,7 +2229,7 @@ router.get('/topics/:slug', async (ctx) => {
 //
 // Staff list
 //
-router.get('/staff', async (ctx) => {
+router.get('/staff', async (ctx: Context) => {
     const users = cache.get('staff').map(pre.presentUser)
 
     await ctx.render('staff', {
@@ -2217,7 +2247,7 @@ router.get('/staff', async (ctx) => {
 // GET /me/notifications
 // List currUser's notifications
 //
-router.get('/me/notifications', async (ctx) => {
+router.get('/me/notifications', async (ctx: Context) => {
     ctx.assert(ctx.currUser, 404)
     const notifications = await db
         .findReceivedNotificationsForUserId(ctx.currUser.id)
@@ -2232,7 +2262,7 @@ router.get('/me/notifications', async (ctx) => {
 //
 // Move topic
 //
-router.post('/topics/:slug/move', async (ctx) => {
+router.post('/topics/:slug/move', async (ctx: Context) => {
     const topicId = belt.extractId(ctx.params.slug)
     let topic = await db.findTopicById(topicId).then(pre.presentTopic)
     ctx.assert(topic, 404)
@@ -2268,7 +2298,7 @@ router.post('/topics/:slug/move', async (ctx) => {
 //
 // Delete currUser's rating for a post
 //
-router.delete('/me/ratings/:postId', async (ctx) => {
+router.delete('/me/ratings/:postId', async (ctx: Context) => {
     // Ensure user is logged in
     ctx.assert(ctx.currUser, 403)
     var rating = await db.findRatingByFromUserIdAndPostId(
@@ -2297,12 +2327,12 @@ router.delete('/me/ratings/:postId', async (ctx) => {
 
 /// /////////////////////////////////////////////////////////
 
-router.get('/trophies', async (ctx) => {
+router.get('/trophies', async (ctx: Context) => {
     ctx.body = 'TODO'
 })
 
 // List all trophy groups
-router.get('/trophy-groups', async (ctx) => {
+router.get('/trophy-groups', async (ctx: Context) => {
     var groups = await db.findTrophyGroups()
 
     await ctx.render('list_trophy_groups', {
@@ -2312,7 +2342,7 @@ router.get('/trophy-groups', async (ctx) => {
 })
 
 // Create trophy group
-router.post('/trophy-groups', async (ctx) => {
+router.post('/trophy-groups', async (ctx: Context) => {
     // Authorize
     ctx.assertAuthorized(ctx.currUser, 'CREATE_TROPHY_GROUP')
 
@@ -2344,7 +2374,7 @@ router.post('/trophy-groups', async (ctx) => {
 })
 
 // Update trophy-group
-router.put('/trophy-groups/:id', async (ctx) => {
+router.put('/trophy-groups/:id', async (ctx: Context) => {
     // Load
     var group = await db.findTrophyGroupById(ctx.params.id)
     ctx.assert(group, 404)
@@ -2382,7 +2412,7 @@ router.put('/trophy-groups/:id', async (ctx) => {
 })
 
 // Delete active trophy
-router.del('/users/:user_id/active-trophy', async (ctx) => {
+router.del('/users/:user_id/active-trophy', async (ctx: Context) => {
     // Ensure user is logged in
     ctx.assert(ctx.currUser, 403)
 
@@ -2408,7 +2438,7 @@ router.del('/users/:user_id/active-trophy', async (ctx) => {
 //
 // Body:
 // - trophy_id: Required Int
-router.put('/users/:user_id/active-trophy', async (ctx) => {
+router.put('/users/:user_id/active-trophy', async (ctx: Context) => {
     // Ensure user is logged in
     ctx.assert(ctx.currUser, 403)
 
@@ -2431,7 +2461,7 @@ router.put('/users/:user_id/active-trophy', async (ctx) => {
     ctx.redirect(user.url)
 })
 
-router.get('/trophy-groups/:id/edit', async (ctx) => {
+router.get('/trophy-groups/:id/edit', async (ctx: Context) => {
     // Load
     var group = await db.findTrophyGroupById(ctx.params.id)
     ctx.assert(group, 404)
@@ -2446,7 +2476,7 @@ router.get('/trophy-groups/:id/edit', async (ctx) => {
 })
 
 // Show trophies-users bridge record edit form
-router.get('/trophies-users/:id/edit', async (ctx) => {
+router.get('/trophies-users/:id/edit', async (ctx: Context) => {
     // Load
     var record = await db.findTrophyUserBridgeById(ctx.params.id)
     ctx.assert(record, 404)
@@ -2461,7 +2491,7 @@ router.get('/trophies-users/:id/edit', async (ctx) => {
 })
 
 // Update trophies-users bridge record
-router.put('/trophies-users/:id', async (ctx) => {
+router.put('/trophies-users/:id', async (ctx: Context) => {
     // Load
     var record = await db.findTrophyUserBridgeById(ctx.params.id)
     ctx.assert(record, 404)
@@ -2493,7 +2523,7 @@ router.put('/trophies-users/:id', async (ctx) => {
 })
 
 // Show trophy edit form
-router.get('/trophies/:id/edit', async (ctx) => {
+router.get('/trophies/:id/edit', async (ctx: Context) => {
     // Load
     var trophy = await db.findTrophyById(ctx.params.id)
     ctx.assert(trophy, 404)
@@ -2508,7 +2538,7 @@ router.get('/trophies/:id/edit', async (ctx) => {
 })
 
 // Update trophy
-router.put('/trophies/:id', async (ctx) => {
+router.put('/trophies/:id', async (ctx: Context) => {
     // Load
     var trophy = await db.findTrophyById(ctx.params.id)
     ctx.assert(trophy, 404)
@@ -2545,7 +2575,7 @@ router.put('/trophies/:id', async (ctx) => {
     ctx.redirect('/trophies/' + trophy.id)
 })
 
-router.get('/trophy-groups/:id', async (ctx) => {
+router.get('/trophy-groups/:id', async (ctx: Context) => {
     var group = await db.findTrophyGroupById(ctx.params.id)
 
     // Ensure group exists
@@ -2561,7 +2591,7 @@ router.get('/trophy-groups/:id', async (ctx) => {
     })
 })
 
-router.get('/trophies/:id', async (ctx) => {
+router.get('/trophies/:id', async (ctx: Context) => {
     const trophy = await db
         .findTrophyById(ctx.params.id)
         .then(pre.presentTrophy)
@@ -2579,13 +2609,13 @@ router.get('/trophies/:id', async (ctx) => {
     })
 })
 
-router.get('/refresh-homepage/:anchor_name', async (ctx) => {
+router.get('/refresh-homepage/:anchor_name', async (ctx: Context) => {
     ctx.set('X-Robots-Tag', 'none')
     ctx.status = 301
     ctx.redirect(util.format('/#%s', ctx.params.anchor_name))
 })
 
-router.get('/current-feedback-topic', async (ctx) => {
+router.get('/current-feedback-topic', async (ctx: Context) => {
     // ensure user is logged in and admin
     ctx.assert(ctx.currUser && ctx.currUser.role === 'admin', 403)
     // ensure a feedback topic is set
@@ -2611,7 +2641,7 @@ router.get('/current-feedback-topic', async (ctx) => {
 })
 
 // text: String
-router.post('/current-feedback-topic/replies', async (ctx) => {
+router.post('/current-feedback-topic/replies', async (ctx: Context) => {
     // user must be logged in
     ctx.assert(ctx.currUser, 403)
     // user must not be banned
@@ -2644,7 +2674,7 @@ router.post('/current-feedback-topic/replies', async (ctx) => {
     ctx.redirect('/')
 })
 
-router.get('/chat', async (ctx) => {
+router.get('/chat', async (ctx: Context) => {
     await ctx.render('chat', {
         ctx,
         session_id: ctx.state.session_id,
@@ -2661,7 +2691,7 @@ router.get('/chat', async (ctx) => {
 
 // Show the current-sidebar-contest form which is what's displayed
 // on the Current Contest sidebar panel
-router.get('/current-sidebar-contest', async (ctx) => {
+router.get('/current-sidebar-contest', async (ctx: Context) => {
     // Ensure user is an admin or conmod
     ctx.assert(
         ctx.currUser && ['admin', 'conmod'].includes(ctx.currUser.role),
@@ -2677,7 +2707,7 @@ router.get('/current-sidebar-contest', async (ctx) => {
 })
 
 // Show create form
-router.get('/current-sidebar-contest/new', async (ctx) => {
+router.get('/current-sidebar-contest/new', async (ctx: Context) => {
     // Ensure user is an admin or conmod
     ctx.assert(
         ctx.currUser && ['admin', 'conmod'].includes(ctx.currUser.role),
@@ -2688,7 +2718,7 @@ router.get('/current-sidebar-contest/new', async (ctx) => {
 })
 
 // Show edit form
-router.get('/current-sidebar-contest/edit', async (ctx) => {
+router.get('/current-sidebar-contest/edit', async (ctx: Context) => {
     // Ensure user is an admin or conmod
     ctx.assert(
         ctx.currUser && ['admin', 'conmod'].includes(ctx.currUser.role),
@@ -2718,7 +2748,7 @@ router.get('/current-sidebar-contest/edit', async (ctx) => {
 // Update current contest
 //
 // Keep in sync with the POST (creation) route
-router.put('/current-sidebar-contest', async (ctx) => {
+router.put('/current-sidebar-contest', async (ctx: Context) => {
     // Ensure user is an admin or conmod
     ctx.assert(
         ctx.currUser && ['admin', 'conmod'].includes(ctx.currUser.role),
@@ -2766,7 +2796,7 @@ router.put('/current-sidebar-contest', async (ctx) => {
 })
 
 // Create new sidebar contest
-router.post('/current-sidebar-contest', async (ctx) => {
+router.post('/current-sidebar-contest', async (ctx: Context) => {
     // Ensure user is an admin or conmod
     ctx.assert(
         ctx.currUser && ['admin', 'conmod'].includes(ctx.currUser.role),
@@ -2797,7 +2827,7 @@ router.post('/current-sidebar-contest', async (ctx) => {
     ctx.redirect('/current-sidebar-contest')
 })
 
-router.del('/current-sidebar-contest', async (ctx) => {
+router.del('/current-sidebar-contest', async (ctx: Context) => {
     // Ensure user is an admin or conmod
     ctx.assert(
         ctx.currUser && ['admin', 'conmod'].includes(ctx.currUser.role),
@@ -2812,7 +2842,7 @@ router.del('/current-sidebar-contest', async (ctx) => {
 
 /// ////////////////////////////////////////////////////////
 
-require('./guildbot')
+guildbot
     .connect()
     .catch((err) => console.error('guildbot error', err))
 

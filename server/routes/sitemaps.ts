@@ -1,19 +1,20 @@
 // 3rd
-const Router = require('@koa/router')
-const compress = require('koa-compress')
-const nunjucks = require('nunjucks')
+import Router from '@koa/router'
+import compress from 'koa-compress'
+import nunjucks from 'nunjucks'
 // 1st
-const cache = require('../cache')
+import cache from '../cache'
+import { Context } from 'koa'
 
 const router = new Router()
 
 ////////////////////////////////////////////////////////////
 
-router.get('/sitemap.txt', async ctx => {
+router.get('/sitemap.txt', async (ctx: Context) => {
     ctx.redirect('/sitemap.xml')
 })
 
-router.get('/sitemaps/:idx.txt', compress(), async ctx => {
+router.get('/sitemaps/:idx.txt', compress(), async (ctx: Context) => {
     const idx = parseInt(ctx.params.idx) || 0
     const chunk = cache.get('sitemaps')[idx]
     ctx.assert(chunk, 404)
@@ -37,7 +38,7 @@ const indexTemplate = nunjucks.compile(
 `.trim()
 )
 
-router.get('/sitemap.xml', async ctx => {
+router.get('/sitemap.xml', async (ctx: Context) => {
     var chunks = cache.get('sitemaps')
     ctx.type = 'text/xml'
     ctx.body = indexTemplate.render({ count: chunks.length })
@@ -45,4 +46,4 @@ router.get('/sitemap.xml', async ctx => {
 
 ////////////////////////////////////////////////////////////
 
-module.exports = router
+export default router

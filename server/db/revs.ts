@@ -1,15 +1,14 @@
-'use strict'
 // 3rd
-const assert = require('assert')
+import assert from 'assert'
 // 1st
-const { pool, wrapOptionalClient } = require('./util')
-const { sql } = require('pg-extra')
+import { pool  } from './util'
+import { sql } from 'pg-extra'
+import pg from 'pg'
 
 ////////////////////////////////////////////////////////////
 
 // Reason is optional
-exports.insertPostRev = wrapOptionalClient(
-    async (client, userId, postId, markup, html, reason) => {
+export async function insertPostRev(client: pg.PoolClient, userId: number, postId: number, markup: string, html: string, reason?: string) {
         assert(Number.isInteger(userId))
         assert(Number.isInteger(postId))
         assert(typeof markup === 'string')
@@ -28,9 +27,8 @@ exports.insertPostRev = wrapOptionalClient(
     )
   `)
     }
-)
 
-exports.revertPostRev = async (userId, postId, revId) => {
+export async function revertPostRev(userId: number, postId: number, revId: number) {
     assert(Number.isInteger(userId))
     assert(Number.isInteger(postId))
     assert(Number.isInteger(revId))
@@ -62,7 +60,7 @@ exports.revertPostRev = async (userId, postId, revId) => {
 
 ////////////////////////////////////////////////////////////
 
-exports.getPostRevMarkup = async (postId, revId) => {
+export async function getPostRevMarkup(postId: number, revId: number) {
     assert(Number.isInteger(postId))
     assert(Number.isInteger(revId))
 
@@ -80,7 +78,7 @@ exports.getPostRevMarkup = async (postId, revId) => {
         })
 }
 
-exports.getPostRev = async (postId, revId) => {
+export async function getPostRev(postId: number, revId: number) {
     assert(Number.isInteger(postId))
     assert(Number.isInteger(revId))
 
@@ -104,7 +102,7 @@ exports.getPostRev = async (postId, revId) => {
 
 ////////////////////////////////////////////////////////////
 
-exports.listPostRevs = async postId => {
+export async function listPostRevs(postId: number) {
     assert(Number.isInteger(postId))
 
     return pool.many(sql`

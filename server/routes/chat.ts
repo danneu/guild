@@ -1,9 +1,9 @@
 'use strict'
 // 3rd
-const Router = require('@koa/router')
+import Router from '@koa/router'
 // 1st
-const cancan = require('../cancan')
-const db = require('../db')
+import * as db from '../db'
+import { Context } from 'koa'
 
 ////////////////////////////////////////////////////////////
 
@@ -11,7 +11,7 @@ const router = new Router()
 
 ////////////////////////////////////////////////////////////
 
-router.get('/chatlogs', async ctx => {
+router.get('/chatlogs', async (ctx: Context) => {
     ctx.assertAuthorized(ctx.currUser, 'READ_CHATLOGS')
     const logs = await db.chat.getChatLogDays()
     await ctx.render('list_chatlogs', {
@@ -23,7 +23,7 @@ router.get('/chatlogs', async ctx => {
 ////////////////////////////////////////////////////////////
 
 // :when is 'YYYY-MM-DD'
-router.get('/chatlogs/:when', async ctx => {
+router.get('/chatlogs/:when', async (ctx: Context) => {
     // Temporarily disable
     ctx.assertAuthorized(ctx.currUser, 'READ_CHATLOGS')
     // TODO: Validate
@@ -42,4 +42,4 @@ router.get('/chatlogs/:when', async ctx => {
 
 ////////////////////////////////////////////////////////////
 
-module.exports = router
+export default router

@@ -1,13 +1,16 @@
 'use strict'
 // 3rd
-const Router = require('@koa/router')
-const knex = require('knex')({ client: 'pg' })
-const { _raw } = require('pg-extra')
-const debug = require('debug')('app:search')
+import Router from '@koa/router'
+import Knex from 'knex'
+const knex = Knex({ client: 'pg' })
+import { _raw } from 'pg-extra'
+import createDebug from 'debug'
+const debug = createDebug('app:search')
 // 1st
-const { pool } = require('../db/util')
-const cache = require('../cache')
-const pre = require('../presenters')
+import { pool } from '../db/util.js'
+import cache from '../cache'
+import * as pre from '../presenters'
+import { Context } from 'koa'
 
 ////////////////////////////////////////////////////////////
 
@@ -26,7 +29,7 @@ const router = new Router()
 //
 // TODO: Remove the old CloudSearch cruft from search_results.html and anywhere
 // else in the codebase.
-router.get('/search', async ctx => {
+router.get('/search', async (ctx: Context) => {
     // Must be logged in to search
     if (!ctx.currUser) {
         ctx.flash = { message: ['danger', 'You must be logged in to search'] }
@@ -215,4 +218,4 @@ router.get('/search', async ctx => {
 
 ////////////////////////////////////////////////////////////
 
-module.exports = router
+export default router

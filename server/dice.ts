@@ -583,7 +583,7 @@ var parser /*
 // then we can reduce a sum across all .values for each roll term
 //
 // Returns { total: Int, rolls: RollObject }
-exports.roll = function(syntax) {
+export const roll = function(syntax) {
     // throws if syntax is invalid
     let rolls
     try {

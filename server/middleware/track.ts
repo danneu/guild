@@ -1,19 +1,21 @@
-'use strict'
 // 3rd
 import { v7 as uuidv7 } from 'uuid'
-const debug = require('debug')('app:middleware:track')
+import createDebug from 'debug'
+const debug = createDebug('app:middleware:track')
 // 1st
-const db = require('../db')
-const { isValidUuid, futureDate } = require('../belt')
-const config = require('../config')
+import * as db from '../db'
+import { isValidUuid, futureDate } from '../belt.js'
+import * as config from '../config'
+import { Context, Next } from 'koa'
 
-module.exports = ({ cookieKey = 't', interval = 5000 } = {}) => {
+export default ({ cookieKey = 't', interval = 5000 } = {}) => {
     debug('initializing track middleware')
     let queue: any[] = []
 
-    const clearQueue = () => {
+    const clearQueue = (): void => {
         if (queue.length === 0) {
-            return setTimeout(clearQueue, interval)
+            setTimeout(clearQueue, interval)
+            return
         }
 
         const hits = queue.slice()
@@ -34,7 +36,7 @@ module.exports = ({ cookieKey = 't', interval = 5000 } = {}) => {
     // Start loop
     setTimeout(clearQueue, interval)
 
-    return async (ctx, next) => {
+    return async (ctx: Context, next: Next) => {
         // Skip guests
         if (!ctx.currUser) {
             return next()

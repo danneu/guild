@@ -1,10 +1,10 @@
-const {SESClient, SendEmailCommand } = require('@aws-sdk/client-ses')
-const assert = require('assert')
+import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses'
+import assert from 'assert'
 
 // TODO: Replace emailer.js
 
 
-exports.sendEmail = async ({ fromName, fromEmail, toEmails, subject, bodyText}) => {
+export const sendEmail = async ({ fromName, fromEmail, toEmails, subject, bodyText}) => {
     assert(typeof fromName === 'string')
     assert(typeof fromEmail === 'string')
     assert(Array.isArray(toEmails))

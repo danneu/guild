@@ -1,13 +1,10 @@
-'use strict'
-// Node
-var util = require('util')
-var nodeUrl = require('url')
 // 3rd party
-var _ = require('lodash')
-var debug = require('debug')('app:presenters')
+import _ from 'lodash'
+// import createDebug from 'debug'
+// const debug = createDebug('app:presenters')
 // 1st party
-var belt = require('./belt')
-var config = require('./config')
+import * as belt from './belt.js'
+import * as config from './config.js'
 
 /*
    Presenters should mutate*return the obj passed in, and handle null
@@ -16,8 +13,7 @@ var config = require('./config')
 // Util ////////////////////////////////////////////////////
 
 // Ex: formatDate(d) -> '8 Dec 2014 16:24'
-exports.formatDate = formatDate
-function formatDate(d) {
+export function formatDate(d: Date) {
     // HACK: Help me realize when I call formatDate when there is no date in dev
     if (config.NODE_ENV === 'development' && !d) {
         return '[DATE WAS UNDEFINED]'
@@ -48,47 +44,42 @@ function formatDate(d) {
     ].join(' ')
 }
 
-// Number -> String
-// Ex: numWithCommas(10000) => '10,000'
-function numWithCommas(n) {
-    return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-}
 
 ////////////////////////////////////////////////////////////
 
-exports.presentForum = function(forum) {
+export const presentForum = function(forum) {
     if (!forum) return null
 
     forum.url = '/forums/' + belt.slugify(forum.id, forum.title)
 
-    exports.presentForum(forum.parent_forum)
-    exports.presentForum(forum.child_forum)
+    presentForum(forum.parent_forum)
+    presentForum(forum.child_forum)
 
     if (forum.mods) {
-        forum.mods.forEach(exports.presentUser)
+        forum.mods.forEach(presentUser)
     }
     if (forum.topics) {
-        forum.topics.forEach(exports.presentTopic)
+        forum.topics.forEach(presentTopic)
     }
     if (forum.forums) {
-        forum.forums.forEach(exports.presentForum)
+        forum.forums.forEach(presentForum)
     }
 
     // For findForum2
     if (Array.isArray(forum.child_forums)) {
-        forum.child_forums.forEach(exports.presentForum)
+        forum.child_forums.forEach(presentForum)
     }
     if (Array.isArray(forum.sibling_forums)) {
-        forum.sibling_forums.forEach(exports.presentForum)
+        forum.sibling_forums.forEach(presentForum)
     }
 
-    exports.presentPost(forum.latest_post)
-    exports.presentUser(forum.latest_user)
+    presentPost(forum.latest_post)
+    presentUser(forum.latest_user)
 
     return forum
 }
 
-exports.presentUser = function(user) {
+export const presentUser = function(user) {
     if (!user) return null
 
     user.url = '/users/' + user.slug
@@ -104,15 +95,15 @@ exports.presentUser = function(user) {
         user.custom_title = ''
     }
 
-    exports.presentUser(user.nuked_by)
-    exports.presentUser(user.approved_by)
+    presentUser(user.nuked_by)
+    presentUser(user.approved_by)
 
     // Reminder: Only avatar uploads since the S3 bucket update will
     // be served from the avatars.roleplayeguild.com bucket,
     // so here we'll check for that and only write those to go through
     // our avatars subdomain
-    if (user.avatar_url) {
-        const parsed = nodeUrl.parse(user.avatar_url)
+    if (user.avatar_url && URL.canParse(user.avatar_url)) {
+        const parsed = new URL(user.avatar_url)
         if (parsed.pathname.startsWith('/avatars.roleplayerguild.com/')) {
             user.avatar_url = 'https://' + parsed.pathname.slice(1)
         }
@@ -135,7 +126,7 @@ exports.presentUser = function(user) {
     return user
 }
 
-exports.presentTopic = function(topic) {
+export const presentTopic = function(topic) {
     if (!topic) return null
 
     topic.url = '/topics/' + belt.slugify(topic.id, topic.title)
@@ -147,36 +138,36 @@ exports.presentTopic = function(topic) {
     // Subs
     topic.subscriptionUrl = '/me/subscriptions/' + topic.id
 
-    if (topic.posts) topic.posts.forEach(exports.presentPost)
-    exports.presentForum(topic.forum)
-    exports.presentUser(topic.user)
+    if (topic.posts) topic.posts.forEach(presentPost)
+    presentForum(topic.forum)
+    presentUser(topic.user)
 
     //// Check for cache props
     // Post caches
-    exports.presentPost(topic.latest_post)
-    exports.presentPost(topic.latest_ic_post)
-    exports.presentPost(topic.latest_ooc_post)
-    exports.presentPost(topic.latest_char_post)
+    presentPost(topic.latest_post)
+    presentPost(topic.latest_ic_post)
+    presentPost(topic.latest_ooc_post)
+    presentPost(topic.latest_char_post)
     // User caches
-    exports.presentUser(topic.latest_user)
-    exports.presentUser(topic.latest_ic_user)
-    exports.presentUser(topic.latest_ooc_user)
-    exports.presentUser(topic.latest_char_user)
+    presentUser(topic.latest_user)
+    presentUser(topic.latest_ic_user)
+    presentUser(topic.latest_ooc_user)
+    presentUser(topic.latest_char_user)
 
     return topic
 }
 
-exports.presentCategory = function(category) {
+export const presentCategory = function(category) {
     if (!category) return null
 
     if (category.forums) {
-        category.forums.forEach(exports.presentForum)
+        category.forums.forEach(presentForum)
     }
 
     return category
 }
 
-exports.presentConvo = function(convo) {
+export const presentConvo = function(convo) {
     if (!convo) return null
 
     if (_.isString(convo.created_at))
@@ -184,16 +175,16 @@ exports.presentConvo = function(convo) {
 
     convo.url = '/convos/' + convo.id
 
-    exports.presentUser(convo.user)
-    if (convo.participants) convo.participants.forEach(exports.presentUser)
-    if (convo.pms) convo.pms.forEach(exports.presentPm)
-    exports.presentUser(convo.latest_user)
-    exports.presentPm(convo.latest_pm)
+    presentUser(convo.user)
+    if (convo.participants) convo.participants.forEach(presentUser)
+    if (convo.pms) convo.pms.forEach(presentPm)
+    presentUser(convo.latest_user)
+    presentPm(convo.latest_pm)
 
     return convo
 }
 
-exports.presentPost = function(post) {
+export const presentPost = function(post) {
     if (!post) return null
 
     if (_.isString(post.created_at)) post.created_at = new Date(post.created_at)
@@ -201,69 +192,69 @@ exports.presentPost = function(post) {
     if (_.isString(post.updated_at)) post.updated_at = new Date(post.updated_at)
     if (post.updated_at) post.formattedUpdatedAt = formatDate(post.updated_at)
     post.url = '/posts/' + post.id
-    exports.presentUser(post.user)
-    exports.presentTopic(post.topic)
-    exports.presentForum(post.forum)
+    presentUser(post.user)
+    presentTopic(post.topic)
+    presentForum(post.forum)
     return post
 }
 
-exports.presentPm = function(pm) {
+export const presentPm = function(pm) {
     if (!pm) return null
     if (_.isString(pm.created_at)) pm.created_at = new Date(pm.created_at)
     pm.formattedCreatedAt = formatDate(pm.created_at)
     pm.url = '/pms/' + pm.id
 
-    exports.presentUser(pm.user)
-    exports.presentConvo(pm.convo)
+    presentUser(pm.user)
+    presentConvo(pm.convo)
 
     return pm
 }
 
-exports.presentNotification = function(n) {
+export const presentNotification = function(n) {
     if (!n) return null
 
-    exports.presentTopic(n.topic)
-    exports.presentConvo(n.convo)
-    exports.presentPost(n.post)
+    presentTopic(n.topic)
+    presentConvo(n.convo)
+    presentPost(n.post)
 
     return n
 }
 
 ////////////////////////////////////////////////////////////
 
-exports.presentStatus = function(x) {
+export const presentStatus = function(x) {
     if (!x) return null
 
-    exports.presentUser(x.user)
+    presentUser(x.user)
 
     return x
 }
 
-exports.presentTrophy = function(t) {
+export const presentTrophy = function(t) {
     if (!t) return null
 
     t.url = '/trophies/' + t.id
 
     // awarded_by is normally a user_id, but it should be SELECT'd
     // as a json object of the user that awarded the trophy
-    exports.presentUser(t.awarded_by)
+    presentUser(t.awarded_by)
 
-    if (t.winners) t.winners.forEach(exports.presentUser)
+    if (t.winners) t.winners.forEach(presentUser)
 
     return t
 }
 
 ////////////////////////////////////////////////////////////
 
-exports.presentFriendship = function(f) {
+export const presentFriendship = function(f) {
     if (!f) return null
 
-    exports.presentUser(f.to_user)
+    presentUser(f.to_user)
 
     return f
 }
 
-exports.presentVm = function(vm) {
+export const presentVm = function(vm) {
     if (!vm) return null
 
     vm.url = `/vms/${vm.id}`
@@ -274,11 +265,11 @@ exports.presentVm = function(vm) {
         vm.created_at = new Date(vm.created_at)
     }
 
-    exports.presentUser(vm.from_user)
-    exports.presentUser(vm.to_user)
+    presentUser(vm.from_user)
+    presentUser(vm.to_user)
 
     if (vm.child_vms) {
-        vm.child_vms.forEach(exports.presentVm)
+        vm.child_vms.forEach(presentVm)
     }
 
     return vm
@@ -286,20 +277,20 @@ exports.presentVm = function(vm) {
 
 ////////////////////////////////////////////////////////////
 
-exports.presentKeyval = function(x) {
+export const presentKeyval = function(x) {
     if (!x) return null
 
-    exports.presentUser(x.updated_by)
+    presentUser(x.updated_by)
 
     return x
 }
 
 ////////////////////////////////////////////////////////////
 
-exports.presentImage = function(x) {
+export const presentImage = function(x) {
     if (!x) return null
 
-    exports.presentUser(x.user)
+    presentUser(x.user)
 
     // Legacy image url: https://s3.amazonaws.com/img.roleplayerguild.com/prod/users/0001999e-ac95-468b-a526-0fd8ffc8591b.png
     // New image url: https://img.roleplayerguild.com/prod/users/0001999e-ac95-468b-a526-0fd8ffc8591b.avif
@@ -316,33 +307,33 @@ exports.presentImage = function(x) {
     return x
 }
 
-exports.presentAlbum = function(x) {
+export const presentAlbum = function(x) {
     if (!x) return null
-    exports.presentUser(x.user)
+    presentUser(x.user)
     x.url = `/albums/${x.id}`
     return x
 }
 
 // DICE
 
-exports.presentCampaign = function(x) {
+export const presentCampaign = function(x) {
     if (!x) return null
-    exports.presentUser(x.user)
-    exports.presentRoll(x.last_roll)
+    presentUser(x.user)
+    presentRoll(x.last_roll)
     x.url = `/campaigns/${x.id}`
     return x
 }
 
-exports.presentRoll = function(x) {
+export const presentRoll = function(x) {
     if (!x) return null
-    exports.presentUser(x.user)
-    exports.presentCampaign(x.campaign)
+    presentUser(x.user)
+    presentCampaign(x.campaign)
     x.absoluteUrl = `${config.HOST}/rolls/${x.id}`
     x.url = `/rolls/${x.id}`
     return x
 }
 
-exports.presentTag = function(x) {
+export const presentTag = function(x) {
     if (!x) return null
 
     if (typeof x.created_at === 'string') {
@@ -354,11 +345,11 @@ exports.presentTag = function(x) {
     return x
 }
 
-exports.presentTagGroup = function(x) {
+export const presentTagGroup = function(x) {
     if (!x) return null
 
     if (x.tags) {
-        x.tags.forEach(exports.presentTag)
+        x.tags.forEach(presentTag)
     }
 
     x.url = `/tag-groups/${x.id}`
@@ -366,32 +357,32 @@ exports.presentTagGroup = function(x) {
     return x
 }
 
-exports.presentTopicBan = function(x) {
+export const presentTopicBan = function(x) {
     if (!x) return null
 
     x.url = `/topic-bans/${x.id}`
 
-    exports.presentUser(x.banned)
-    exports.presentUser(x.banned_by)
+    presentUser(x.banned)
+    presentUser(x.banned_by)
 
     return x
 }
 
-exports.presentPostRev = function(x) {
+export const presentPostRev = function(x) {
     if (!x) return null
 
     x.url = `/posts/${x.post_id}/revisions/${x.id}`
 
-    exports.presentUser(x.user)
+    presentUser(x.user)
 
     return x
 }
 
-exports.presentUnameChange = function(x) {
+export const presentUnameChange = function(x) {
     if (!x) return null
 
-    exports.presentUser(x.user)
-    exports.presentUser(x.changed_by)
+    presentUser(x.user)
+    presentUser(x.changed_by)
 
     return x
 }

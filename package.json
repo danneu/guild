@@ -3,6 +3,7 @@
     "version": "0.0.12",
     "private": true,
     "scripts": {
+        "check": "tsc --noEmit",
         "build": "gulp && ls -lah dist",
         "start": "tsx ./server",
         "dev": "tsx watch ./server",

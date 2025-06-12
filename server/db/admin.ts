@@ -1,16 +1,17 @@
 // 3rd
-const assert = require('assert')
-const { sql } = require('pg-extra')
-const knex = require('knex')({ client: 'pg' })
+import assert from 'assert'
+import { sql } from 'pg-extra'
+// import Knex from 'knex'
+// const knex = Knex({ client: 'pg' })
 // 1st
-const { pool } = require('./util')
+import { pool } from './util'
 
 // WARNING: This is only stubbed out and quickly tested on
 // localhost. Need to revisit it and finish it up before
 // using it in production.
 //
 // Husk user is merged into main user
-exports.mergeUsers = async ({ mainId, huskId }) => {
+export const mergeUsers = async ({ mainId, huskId }) => {
     return
 
     return pool.withTransaction(async client => {
@@ -137,7 +138,7 @@ exports.mergeUsers = async ({ mainId, huskId }) => {
 // blurb is optional string
 //
 // Returns number of notifications created
-exports.createGuildUpdateNotifications = async (postId, blurb) => {
+export const createGuildUpdateNotifications = async (postId, blurb) => {
     return
 
     assert(Number.isInteger(postId))

@@ -1,18 +1,13 @@
-'use strict'
-// Node
-var util = require('util')
 // 3rd party
-var _ = require('lodash')
-var RegexTrie = require('regex-trie')
-var debug = require('debug')('app:cache')
-var assert = require('better-assert')
-const { sql } = require('pg-extra')
+import _ from 'lodash'
+import RegexTrie from 'regex-trie'
+// import createDebug from 'debug'
+// const debug = createDebug('app:cache')
 // 1st party
-const IntervalCache = require('../lib/interval-cache')
-var db = require('./db')
-var pre = require('./presenters')
-var config = require('./config')
-const { pool } = require('./db/util')
+import IntervalCache from '../lib/interval-cache'
+import * as db from './db/index.js'
+import * as pre from './presenters.js'
+import * as config from './config.js'
 
 const cache = new IntervalCache()
     // 5 minutes
@@ -123,4 +118,4 @@ if (config.LATEST_RPGN_TOPIC_ID) {
 
 cache.start()
 
-module.exports = cache
+export default cache

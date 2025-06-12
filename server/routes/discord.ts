@@ -68,7 +68,7 @@ function createRouter() {
 
   ////////////////////////////////////////////////////////////
 
-  router.get("/discord", async (ctx) => {
+  router.get("/discord", async (ctx: Context) => {
     const state = uuidv7();
     const authzUri = oauth2.authorizationCode.authorizeURL({
       redirect_uri,
@@ -204,4 +204,4 @@ function createRouter() {
   return router;
 }
 
-module.exports = createRouter()
+export default createRouter()

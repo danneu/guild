@@ -1,15 +1,22 @@
 'use strict'
 // 3rd
-const _ = require('lodash')
-const debug = require('debug')('app:sandbox')
+import _ from 'lodash'
 // 1st
-const config = require('./config')
+import * as config from './config'
+
+type PaginatorItem = 
+ | { kind: "SEPARATOR" } 
+ | {
+    text: string
+    href: string
+    kind: 'BUTTON'
+    isActive?: boolean
+}
 
 // perPage is optional override, defaults to config
 //
 // Returns falsey if no paginator needs to be displayed
-exports.makeFullPaginator = function(currPage, totalItems, perPage) {
-    perPage = perPage || config.CONVOS_PER_PAGE
+export const makeFullPaginator = function(currPage: number, totalItems: number, perPage: number = config.CONVOS_PER_PAGE) {
     const totalPages = Math.max(1, Math.ceil(totalItems / perPage))
     currPage = Math.min(currPage, totalPages)
 
@@ -17,7 +24,7 @@ exports.makeFullPaginator = function(currPage, totalItems, perPage) {
         return null
     }
 
-    let innerItems = []
+    let innerItems: PaginatorItem[] = []
     let startPgNum = Math.max(1, currPage - 3)
     let endPgNum = Math.min(totalPages, startPgNum + 6)
 
@@ -38,7 +45,7 @@ exports.makeFullPaginator = function(currPage, totalItems, perPage) {
     }
 
     _.range(startPgNum, endPgNum + 1).forEach(n => {
-        const btn = {
+        const btn: PaginatorItem = {
             text: n.toString(),
             href: `?page=${n}`,
             isActive: n === currPage,

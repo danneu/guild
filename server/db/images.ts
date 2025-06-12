@@ -1,16 +1,17 @@
-'use strict'
 // 3rd
-const debug = require('debug')('app:db:images')
-const assert = require('assert')
-const knex = require('knex')({ client: 'pg' })
-const _ = require('lodash')
+import createDebug from 'debug'
+const debug = createDebug('app:db:images')
+import assert from 'assert'
+import Knex from 'knex'
+const knex = Knex({ client: 'pg' })
+import _ from 'lodash'
 // 1st
-const { pool } = require('./util')
-const { sql } = require('pg-extra')
+import { pool } from './util.js'
+import { sql } from 'pg-extra'
 
 ////////////////////////////////////////////////////////////
 
-exports.getImage = async function(uuid) {
+export const getImage = async function(uuid) {
     assert(typeof uuid === 'string')
     return pool.one(sql`
     SELECT
@@ -26,7 +27,7 @@ exports.getImage = async function(uuid) {
   `)
 }
 
-exports.getLatestImages = async function(limit = 10) {
+export const getLatestImages = async function(limit = 10) {
     debug(`[getLatestImages]`)
     return pool.many(sql`
     SELECT
@@ -43,7 +44,7 @@ exports.getLatestImages = async function(limit = 10) {
   `)
 }
 
-exports.getUserAlbums = async function(userId) {
+export const getUserAlbums = async function(userId) {
     assert(Number.isInteger(userId))
     return pool.many(sql`
     SELECT
@@ -59,7 +60,7 @@ exports.getUserAlbums = async function(userId) {
   `)
 }
 
-exports.getUserImages = async function(userId) {
+export const getUserImages = async function(userId) {
     assert(Number.isInteger(userId))
     return pool.many(sql`
     SELECT
@@ -76,7 +77,7 @@ exports.getUserImages = async function(userId) {
   `)
 }
 
-exports.getAlbumImages = async function(albumId) {
+export const getAlbumImages = async function(albumId) {
     assert(Number.isInteger(albumId))
     return pool.many(sql`
     SELECT
@@ -94,7 +95,7 @@ exports.getAlbumImages = async function(albumId) {
 }
 
 // description is optional
-exports.insertImage = async function(
+export const insertImage = async function(
     imageId,
     albumId,
     userId,
@@ -114,7 +115,7 @@ exports.insertImage = async function(
 }
 
 // TODO: Also delete from S3
-exports.deleteImage = async function(imageId) {
+export const deleteImage = async function(imageId) {
     assert(typeof imageId === 'string')
     return pool.query(sql`
     UPDATE images
@@ -124,7 +125,7 @@ exports.deleteImage = async function(imageId) {
 }
 
 // markup is optional
-exports.insertAlbum = async function(userId, title, markup) {
+export const insertAlbum = async function(userId, title, markup) {
     assert(Number.isInteger(userId))
     assert(typeof title === 'string')
     return pool.one(sql`
@@ -134,7 +135,7 @@ exports.insertAlbum = async function(userId, title, markup) {
   `)
 }
 
-exports.getAlbum = async function(albumId) {
+export const getAlbum = async function(albumId) {
     assert(albumId)
     return pool.one(sql`
     SELECT
@@ -148,7 +149,7 @@ exports.getAlbum = async function(albumId) {
 
 // Generalized update function that takes an object of
 // field/values to be updated.
-exports.updateAlbum = async function(albumId, fields) {
+export const updateAlbum = async function(albumId, fields) {
     assert(albumId)
     assert(_.isPlainObject(fields))
     // Validate fields

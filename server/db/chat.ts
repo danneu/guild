@@ -1,14 +1,14 @@
 'use strict'
 // 3rd
-const assert = require('assert')
+import assert from 'assert'
 // 1st
-const { pool } = require('./util')
-const { sql } = require('pg-extra')
+import { pool } from './util'
+import { sql } from 'pg-extra'
 
 ////////////////////////////////////////////////////////////
 
 // Returns [{when: '2015-7-25', count: 64}, ...]
-exports.getChatLogDays = async function() {
+export const getChatLogDays = async function() {
     return pool.many(sql`
     SELECT to_char(sub.day, 'YYYY-MM-DD') "when", sub.count "count"
     FROM (
@@ -23,7 +23,7 @@ exports.getChatLogDays = async function() {
 ////////////////////////////////////////////////////////////
 
 // `when` is string 'YYYY-MM-DD'
-exports.findLogByDateTrunc = async function(when) {
+export const findLogByDateTrunc = async function(when) {
     assert(typeof when === 'string')
     return pool.many(sql`
     SELECT sub.*

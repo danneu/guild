@@ -1,13 +1,13 @@
 'use strict'
 // 3rd
-const assert = require('assert')
-const debug = require('debug')('app:db:keyvals')
+import assert from 'assert'
+import createDebug from 'debug'; const debug = createDebug('app:db:keyvals')
 // 1st
-const { pool } = require('./util')
-const { sql } = require('pg-extra')
-const pre = require('../presenters')
+import { pool } from './util'
+import { sql } from 'pg-extra'
+import * as pre from '../presenters'
 
-exports.deleteKey = async key => {
+export const deleteKey = async key => {
     assert(typeof key === 'string')
 
     return pool.query(sql`
@@ -17,7 +17,7 @@ exports.deleteKey = async key => {
 }
 
 // String -> keyvals record object
-exports.getRowByKey = async function(key) {
+export const getRowByKey = async function(key) {
     debug(`[getRowByKey] key=${key}`)
     assert(typeof key === 'string')
     const row = await pool.one(sql`
@@ -38,14 +38,14 @@ exports.getRowByKey = async function(key) {
 }
 
 // String -> Undefined | JSValue
-exports.getValueByKey = async function(key) {
+export const getValueByKey = async function(key) {
     assert(typeof key === 'string')
-    const row = await exports.getRowByKey(key)
+    const row = await getRowByKey(key)
     return row && row.value
 }
 
 // updatedById (Optional Int): user_id that's updating the row
-exports.setKey = async function(key, value, updatedById) {
+export const setKey = async function(key, value, updatedById) {
     debug('[setKey] key=%j, value=%j, updatedById=%j', key, value, updatedById)
     assert(typeof key === 'string')
 

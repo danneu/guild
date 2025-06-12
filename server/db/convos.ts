@@ -1,20 +1,20 @@
 // 3rd
-const assert = require('assert')
-const _ = require('lodash')
-const debug = require('debug')('app:db:convos')
+import assert from 'assert'
+import _ from 'lodash'
+import createDebug from 'debug'; const debug = createDebug('app:db:convos')
 // 1st
-const config = require('../config')
-const { pool } = require('./util')
-const { sql } = require('pg-extra')
+import * as config from '../config'
+import { pool } from './util'
+import { sql } from 'pg-extra'
 
 ////////////////////////////////////////////////////////////
 
-exports.getConvo = async id => {
+export const getConvo = async id => {
     assert(id)
-    return exports.getConvos([id]).then(([x]) => x)
+    return getConvos([id]).then(([x]) => x)
 }
 
-exports.getConvos = async ids => {
+export const getConvos = async ids => {
     debug('[getConvos] ids=%j', ids)
     assert(Array.isArray(ids))
 
@@ -36,33 +36,30 @@ exports.getConvos = async ids => {
 ////////////////////////////////////////////////////////////
 
 // Also clears notifications associated with those convos
-exports.deleteTrash = async function(userId) {
+export async function deleteTrash(userId: number) {
     return pool.withTransaction(async client => {
-        const convoIds = await client
-            .many(
-                sql`
-      UPDATE convos_participants
-      SET deleted_at = NOW()
-      WHERE user_id = ${userId}
-        AND folder = 'TRASH'
-      RETURNING convo_id
-    `
-            )
-            .then(rows => rows.map(row => row.convo_id))
+        const convoIds = await client.query<{ convo_id: number }>(`
+          UPDATE convos_participants
+          SET deleted_at = NOW()
+          WHERE user_id = $1
+            AND folder = 'TRASH'
+          RETURNING convo_id
+        `, [userId])
+            .then(res => res.rows.map(row => row.convo_id))
 
         if (convoIds.length > 0) {
-            await client.query(sql`
-        DELETE FROM notifications
-        WHERE to_user_id = ${userId}
-          AND convo_id = ANY (${convoIds})
-      `)
+          await client.query(sql`
+            DELETE FROM notifications
+            WHERE to_user_id = $1
+              AND convo_id = ANY ($2)
+          `, [userId, convoIds])
         }
     })
 }
 
 ////////////////////////////////////////////////////////////
 
-exports.deleteConvos = async (userId, convoIds) => {
+export const deleteConvos = async (userId, convoIds) => {
     debug(`[deleteConvos] userId=%j, convoIds=%j`, userId, convoIds)
     assert(Number.isInteger(userId))
     assert(Array.isArray(convoIds))
@@ -77,7 +74,7 @@ exports.deleteConvos = async (userId, convoIds) => {
 
 ////////////////////////////////////////////////////////////
 
-exports.getConvoParticipantsWithNotifications = async function(userId) {
+export const getConvoParticipantsWithNotifications = async function(userId) {
     assert(Number.isInteger(userId))
     return pool.many(sql`
     select cp.*
@@ -90,7 +87,7 @@ exports.getConvoParticipantsWithNotifications = async function(userId) {
 
 ////////////////////////////////////////////////////////////
 
-exports.getConvoFolderCounts = async function(userId) {
+export const getConvoFolderCounts = async function(userId) {
     assert(Number.isInteger(userId))
 
     return pool.one(sql`
@@ -107,7 +104,7 @@ exports.getConvoFolderCounts = async function(userId) {
 
 ////////////////////////////////////////////////////////////
 
-exports.findConvosInvolvingUserId = async function(userId, folder, page) {
+export const findConvosInvolvingUserId = async function(userId, folder, page) {
     assert(_.isNumber(page))
     assert(['INBOX', 'STAR', 'ARCHIVE', 'TRASH'].includes(folder))
 
@@ -185,7 +182,7 @@ LIMIT ${limit}
 
 ////////////////////////////////////////////////////////////
 
-exports.findParticipantIds = async function(convoId) {
+export const findParticipantIds = async function(convoId) {
     return pool
         .many(
             sql`
@@ -200,7 +197,7 @@ exports.findParticipantIds = async function(convoId) {
 
 ////////////////////////////////////////////////////////////
 
-exports.undeleteAllConvos = async userId => {
+export const undeleteAllConvos = async userId => {
     assert(Number.isInteger(userId))
 
     return pool.query(sql`
@@ -212,7 +209,7 @@ exports.undeleteAllConvos = async userId => {
 
 ////////////////////////////////////////////////////////////
 
-exports.moveConvos = async (userId, convoIds, folder) => {
+export const moveConvos = async (userId, convoIds, folder) => {
     debug(
         `[moveConvos] userId=%j, folder=%j, convoIds=%j`,
         userId,

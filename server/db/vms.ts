@@ -1,12 +1,9 @@
-// 3rd
-const assert = require('assert')
-// 1st
-const { pool } = require('./util')
-const { sql } = require('pg-extra')
+import { pool } from './util.js'
+import { sql } from 'pg-extra'
 
 ////////////////////////////////////////////////////////////
 
-exports.getVmById = async id => {
+export const getVmById = async id => {
     return pool.one(sql`
     SELECT
       vms.*,
@@ -19,7 +16,7 @@ exports.getVmById = async id => {
 
 ////////////////////////////////////////////////////////////
 
-exports.deleteVm = async id => {
+export const deleteVm = async id => {
     return pool.query(sql`
     DELETE FROM vms
     WHERE id = ${id}
@@ -28,7 +25,7 @@ exports.deleteVm = async id => {
 
 ////////////////////////////////////////////////////////////
 
-exports.deleteVmChildren = async parentId => {
+export const deleteVmChildren = async parentId => {
     return pool.query(sql`
     DELETE FROM vms
     WHERE parent_vm_id = ${parentId}
@@ -37,7 +34,7 @@ exports.deleteVmChildren = async parentId => {
 
 ////////////////////////////////////////////////////////////
 
-exports.deleteNotificationsForVmId = async id => {
+export const deleteNotificationsForVmId = async id => {
     return pool.query(sql`
     DELETE FROM notifications
     WHERE id = ${id}

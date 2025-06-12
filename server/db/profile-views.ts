@@ -1,14 +1,14 @@
-'use strict'
 // 3rd
-const debug = require('debug')('app:db:profile-views')
-const assert = require('assert')
+// import createDebug from 'debug'
+// const debug = createDebug('app:db:profile-views')
+import assert from 'assert'
 // 1st
-const { pool } = require('./util')
-const { sql } = require('pg-extra')
+import { pool } from './util.js'
+import { sql } from 'pg-extra'
 
 ////////////////////////////////////////////////////////////
 
-exports.insertView = async function(viewerId, viewedId) {
+export const insertView = async function(viewerId, viewedId) {
     assert(Number.isInteger(viewerId))
     assert(Number.isInteger(viewedId))
     return pool.query(sql`
@@ -17,7 +17,7 @@ exports.insertView = async function(viewerId, viewedId) {
   `)
 }
 
-exports.getLatestViews = async function(viewedId) {
+export const getLatestViews = async function(viewedId) {
     assert(Number.isInteger(viewedId))
 
     return pool.many(sql`

@@ -1,17 +1,18 @@
 'use strict'
 // 3rd
-const assert = require('assert')
-const knex = require('knex')({ client: 'pg' })
-const debug = require('debug')('app:db:hits')
+import assert from 'assert'
+import Knex from 'knex'
+const knex = Knex({ client: 'pg' })
+import createDebug from 'debug'; const debug = createDebug('app:db:hits')
 // 1st
-const { pool } = require('./util')
-const { sql } = require('pg-extra')
-const { isValidUuid } = require('../belt')
+import { pool } from './util'
+import { sql } from 'pg-extra'
+import { isValidUuid } from '../belt'
 
 ////////////////////////////////////////////////////////////
 
 // hits is array of {user_id, ip_address, track}
-exports.insertHits = async hits => {
+export const insertHits = async hits => {
     debug('[insertHits] hits: %j', hits)
 
     hits.forEach(hit => {
@@ -24,13 +25,13 @@ exports.insertHits = async hits => {
         .insert(hits)
         .toString()
 
-    return pool._query(string)
+    return pool.query(string)
 }
 
 ////////////////////////////////////////////////////////////
 
 // TODO: Search within last 30 days or so.
-exports.findAltsFromRequest = async (ipAddress, track) => {
+export const findAltsFromRequest = async (ipAddress, track) => {
     debug(`[findAltsFromRequest] ipAddress=%j track=%j`, ipAddress, track)
     assert(typeof ipAddress === 'string')
     assert(isValidUuid(track))
@@ -102,7 +103,7 @@ exports.findAltsFromRequest = async (ipAddress, track) => {
 // TODO: Search within last 30 days or so.
 //
 // http://sqlfiddle.com/#!17/e3e74/1/0
-exports.findAltsFromUserId = async userId => {
+export const findAltsFromUserId = async userId => {
     debug(`[findAltsFromUserId] userId=%j`, userId)
     assert(Number.isInteger(userId))
 

@@ -1,12 +1,13 @@
 // 3rd
-const assert = require('assert')
+import assert from 'assert'
 // 1st
-const belt = require('../../belt')
-const akismet = require('../../akismet')
+import * as belt from '../../belt'
+import * as akismet from '../../akismet'
+import { Context } from 'koa'
 
 // Returns SPAM | NOT_SPAM | API_TIMEOUT | API_ERROR
 // Only SPAM should result in a nuke
-async function analyze(ctx, markup) {
+async function analyze(ctx: Context, markup: string) {
     assert(ctx.currUser)
     assert(typeof markup === 'string')
 
@@ -16,10 +17,10 @@ async function analyze(ctx, markup) {
             .checkComment({
                 commentType: 'reply',
                 commentAuthor: ctx.currUser.uname,
-                commentEmail: ctx.currUser.email,
+                commentAuthorEmail: ctx.currUser.email,
                 commentContent: markup,
                 userIp: ctx.ip,
-                userAgent: ctx.headers['user-agent'],
+                userAgent: ctx.headers['user-agent'] ?? '',
             })
             .then(isSpam => (isSpam ? 'SPAM' : 'NOT_SPAM')),
     ]).catch(err => {
@@ -29,6 +30,6 @@ async function analyze(ctx, markup) {
     })
 }
 
-module.exports = {
+export default {
     analyze,
 }

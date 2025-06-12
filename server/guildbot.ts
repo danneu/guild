@@ -1,16 +1,16 @@
 // 3rd
-const Discord = require('discord.js')
-const { sql } = require('pg-extra')
+import Discord from 'discord.js'
+import { sql } from 'pg-extra'
 // 1st
-const config = require('./config')
-const dice = require('./dice')
-const { getClient } = require('./db/util')
+import * as config from './config'
+import * as dice from './dice'
+import { getClient } from './db/util'
 
-function timeout(ms) {
+function timeout(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-module.exports = {
+export default {
     async connect() {
         if (!config.IS_DISCORD_CONFIGURED) {
             console.log(
@@ -52,7 +52,7 @@ module.exports = {
 
             if (msg.content.startsWith('!roll ')) {
                 const [_, syntax] = msg.content.split(/\s+/)
-                if (syntax.length === 0) return
+                if (syntax!.length === 0) return
 
                 let output
                 try {

@@ -1,11 +1,10 @@
-// Node
-const nodeUrl = require('url')
 // 3rd
-const Router = require('@koa/router')
+import Router from '@koa/router'
 // 1st
-const db = require('../db')
-const pre = require('../presenters')
-const belt = require('../belt')
+import * as db from '../db'
+import * as pre from '../presenters'
+import * as belt from '../belt'
+import { Context } from 'koa'
 
 const router = new Router()
 
@@ -17,7 +16,7 @@ const router = new Router()
 // - commit: Required 'add' | 'remove'
 //
 // Optionally pass a redirect-to (URI encoded)
-router.post('/me/friendships', async ctx => {
+router.post('/me/friendships', async (ctx: Context) => {
     // ensure user logged in
     ctx.assert(ctx.currUser, 404)
     ctx.assert(ctx.currUser.role !== 'banned', 404)
@@ -26,11 +25,11 @@ router.post('/me/friendships', async ctx => {
     ctx.validateBody('commit').isIn(['add', 'remove'])
     ctx.validateBody('to_user_id').toInt()
 
-    const nodeUrl = require('url')
+    // nodeUrl already imported at top
 
     let redirectTo
-    if (ctx.query['redirect-to']) {
-        const parsed = nodeUrl.parse(
+    if (typeof ctx.query['redirect-to'] === 'string') {
+        const parsed = new URL(
             decodeURIComponent(ctx.query['redirect-to'])
         )
         redirectTo = parsed.pathname
@@ -62,13 +61,13 @@ router.post('/me/friendships', async ctx => {
 
 ////////////////////////////////////////////////////////////
 
-router.get('/me/friendships', async ctx => {
+router.get('/me/friendships', async (ctx: Context) => {
     // ensure user logged in
     ctx.assert(ctx.currUser, 404)
     ctx.assert(ctx.currUser.role !== 'banned', 404)
 
     // load friendships
-    const friendships = { count: 0, ghosts: [], nonghosts: [] }
+    const friendships = { count: 0, ghosts: [] as any[], nonghosts: [] as any[] }
 
     const rows = await db
         .findFriendshipsForUserId(ctx.currUser.id)
@@ -97,4 +96,4 @@ router.get('/me/friendships', async ctx => {
 
 ////////////////////////////////////////////////////////////
 
-module.exports = router
+export default router

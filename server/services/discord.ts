@@ -1,10 +1,9 @@
 // 3rd
-const debug = require('debug')('app:services:discord')
-const assert = require('assert')
+import assert from 'assert'
 // 1st
-const Client = require('../discord/client')
-const config = require('../config')
-const pre = require('../presenters')
+import Client from '../discord/client'
+import * as config from '../config'
+import * as pre from '../presenters'
 
 //
 // TODO: DRY up these functions.
@@ -20,7 +19,7 @@ function makeClient() {
 ////////////////////////////////////////////////////////////
 
 // nuker and spambot are users
-exports.broadcastManualNuke = async ({ nuker, spambot }) => {
+export const broadcastManualNuke = async ({ nuker, spambot }) => {
     assert(nuker)
     assert(spambot)
     pre.presentUser(nuker)
@@ -45,7 +44,7 @@ exports.broadcastManualNuke = async ({ nuker, spambot }) => {
 ////////////////////////////////////////////////////////////
 
 // nuker and spambot are users
-exports.broadcastManualUnnuke = async ({ nuker, spambot }) => {
+export const broadcastManualUnnuke = async ({ nuker, spambot }) => {
     assert(nuker)
     assert(spambot)
     pre.presentUser(nuker)
@@ -68,7 +67,7 @@ exports.broadcastManualUnnuke = async ({ nuker, spambot }) => {
 ////////////////////////////////////////////////////////////
 
 // When a user is auto-nuked because of their IP address
-exports.broadcastIpAddressAutoNuke = async (user, ipAddress) => {
+export const broadcastIpAddressAutoNuke = async (user, ipAddress) => {
     assert(user)
     assert(typeof ipAddress === 'string')
 
@@ -95,7 +94,7 @@ exports.broadcastIpAddressAutoNuke = async (user, ipAddress) => {
 
 // Info is an object of arbitrary data about the analysis
 // to be sent along with the broadcast for debugging purposes.
-exports.broadcastAutoNuke = async (user, postId, info) => {
+export const broadcastAutoNuke = async (user, postId, info) => {
     assert(user)
     assert(Number.isInteger(postId))
 
@@ -133,7 +132,7 @@ ${JSON.stringify(info, null, 2)}
 
 ////////////////////////////////////////////////////////////
 
-exports.broadcastUserJoin = async user => {
+export const broadcastUserJoin = async user => {
     // Need url
     pre.presentUser(user)
 
@@ -159,7 +158,7 @@ exports.broadcastUserJoin = async user => {
 
 ////////////////////////////////////////////////////////////
 
-exports.broadcastIntroTopic = async (user, topic) => {
+export const broadcastIntroTopic = async (user, topic) => {
     // Need url
     pre.presentUser(user)
     pre.presentTopic(topic)
@@ -187,7 +186,7 @@ exports.broadcastIntroTopic = async (user, topic) => {
 
 ////////////////////////////////////////////////////////////
 
-exports.broadcastBioUpdate = async (user, bioMarkup) => {
+export const broadcastBioUpdate = async (user, bioMarkup) => {
     assert(user)
     assert(typeof bioMarkup === 'string')
 

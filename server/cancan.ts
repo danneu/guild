@@ -1,13 +1,11 @@
-'use strict'
 // Node
-var util = require('util')
+import util from 'util'
 // 3rd party
-var _ = require('lodash')
-var debug = require('debug')('app:cancan')
-var assert = require('better-assert')
+import _ from 'lodash'
+import createDebug from 'debug'; const debug = createDebug('app:cancan')
+import assert from 'better-assert'
 // 1st
-const belt = require('./belt')
-const config = require('./config')
+import * as config from './config'
 
 // These are forums where topics cannot be posted
 // in if the latest post is older than 1 month
@@ -37,12 +35,11 @@ const PW_FORUMS = [
 // access) I don't want to include conmods. But I would still consider them staff.
 // I think I should replace this function with explicitly inlining the
 // [x, y, z].includes(role) call and removing this function.
-exports.isStaffRole = isStaffRole
-function isStaffRole(role) {
+export const isStaffRole = function isStaffRole(role) {
     return ['mod', 'smod', 'admin'].includes(role)
 }
 
-exports.isTopicGm = (user, topic) => {
+export const isTopicGm = (user, topic) => {
     assert(topic)
     assert(Array.isArray(topic.co_gm_ids))
     if (!user) return false
@@ -53,8 +50,8 @@ exports.isTopicGm = (user, topic) => {
 
 // TODO: Actually write tests for these
 // TODO: Implement rules for all rules, not just member and admin
-exports.can = function(user, action, target) {
-    var result = can(user, action, target)
+export const can = function(user, action, target) {
+    var result = _can(user, action, target)
     debug(
         '[cancan] %s %s %s %s %s: %s',
         (user && util.format('%s [%d]', user.uname, user.id)) || '<Guest>',
@@ -66,7 +63,7 @@ exports.can = function(user, action, target) {
     )
     return result
 }
-function can(user, action, target) {
+function _can(user, action, target: any | undefined = undefined) {
     switch (action) {
         case 'ACCESS_TOPIC_MODKIT': // target is topic
             if (!user) return false
@@ -184,7 +181,7 @@ function can(user, action, target) {
             // If non-staff, then cannot if topic is hidden/closed
             if (target.is_closed || target.is_hidden) return false
             // GMs can
-            if (exports.isTopicGm(user, target)) {
+            if (isTopicGm(user, target)) {
                 return true
             }
             // FIXME: (Sloppy) Check if user is eligible for any of the types of edits
@@ -347,7 +344,7 @@ function can(user, action, target) {
             if (user.role === 'conmod') return true
             if (user.role === 'arenamod') return true
             // GMs can unhide zeroth post
-            if (target.idx === -1 && exports.isTopicGm(user, target.topic)) {
+            if (target.idx === -1 && isTopicGm(user, target.topic)) {
                 return true
             }
             return false
@@ -365,7 +362,7 @@ function can(user, action, target) {
             if (user.role === 'arenamod') return true
             if (user.role === 'pwmod') return true
             // GMs can hide zeroth post
-            if (target.idx === -1 && exports.isTopicGm(user, target.topic)) {
+            if (target.idx === -1 && isTopicGm(user, target.topic)) {
                 return true
             }
             // Users can hide their own post if the post within 1 hour
@@ -465,7 +462,7 @@ function can(user, action, target) {
             // Staff can read all posts
             if (user && isStaffRole(user.role)) return true
             if (target.forum.category_id === 4) {
-                return can(user, 'LEXUS_LOUNGE')
+                return _can(user, 'LEXUS_LOUNGE')
             }
             // conmods can read all posts in contest forums
             if (
@@ -492,7 +489,7 @@ function can(user, action, target) {
                 return true
             }
             // GMs can always read the zeroth post even if hidden
-            if (exports.isTopicGm(user, target.topic)) {
+            if (isTopicGm(user, target.topic)) {
                 return true
             }
 
@@ -639,7 +636,7 @@ function can(user, action, target) {
             // Admin can update any post
             if (user.role === 'admin') return true
             // GM and Co-GM can edit the 0th post
-            if (target.idx === -1 && exports.isTopicGm(user, target.topic)) {
+            if (target.idx === -1 && isTopicGm(user, target.topic)) {
                 return true
             }
             // Cannot update post if banned from topic
@@ -794,6 +791,6 @@ function can(user, action, target) {
     }
 }
 
-exports.cannot = function(user, action, target) {
+export const cannot = function(user, action, target) {
     return !can(user, action, target)
 }

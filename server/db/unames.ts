@@ -1,15 +1,15 @@
 'use strict'
 // 3rd
-const assert = require('assert')
-const { sql } = require('pg-extra')
-const debug = require('debug')('app:db:unames')
+import assert from 'assert'
+import { sql } from 'pg-extra'
+import createDebug from 'debug'; const debug = createDebug('app:db:unames')
 // 1st
-const { pool } = require('./util')
-const belt = require('../belt')
+import { pool } from './util'
+import * as belt from '../belt'
 
 ////////////////////////////////////////////////////////////
 
-exports.lastUnameChange = async function(userId) {
+export const lastUnameChange = async function(userId) {
     return pool.one(sql`
     SELECT *
     FROM unames
@@ -23,7 +23,7 @@ exports.lastUnameChange = async function(userId) {
 ////////////////////////////////////////////////////////////
 
 // Get all username changes for a given user. Will return at least one username (their initial username).
-exports.userUnameHistory = async function(userId) {
+export const userUnameHistory = async function(userId) {
     assert(Number.isInteger(userId))
     return pool.many(sql`
     SELECT
@@ -44,7 +44,7 @@ exports.userUnameHistory = async function(userId) {
     `)
 }
 
-exports.latestUnameChanges = async function(limit = 10) {
+export const latestUnameChanges = async function(limit = 10) {
     return pool.many(sql`
     SELECT
       h.*,
@@ -85,7 +85,7 @@ exports.latestUnameChanges = async function(limit = 10) {
 
 ////////////////////////////////////////////////////////////
 
-exports.changeUname = async function({
+export const changeUname = async function({
     userId,
     changedById,
     oldUname,

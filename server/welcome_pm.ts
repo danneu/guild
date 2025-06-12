@@ -2,7 +2,7 @@
 // 3rd party
 // ...
 // 1st party
-const bbcode = require('./bbcode')
+import bbcode from './bbcode'
 
 // Markup and HTML for the welcome/introductory PM
 const markup = `
@@ -24,7 +24,7 @@ The Roleplayer Guild Staff
 
 const html = bbcode(markup)
 
-module.exports = {
+export default {
     markup,
     html,
 }

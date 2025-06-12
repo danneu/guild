@@ -1,16 +1,16 @@
-'use strict'
 // 3rd
-const assert = require('assert')
-const debug = require('debug')('app:db:subscriptions')
+import assert from 'assert'
+// import createDebug from 'debug'; 
+// const debug = createDebug('app:db:subscriptions')
 // 1st
-const { pool } = require('./util')
-const { sql } = require('pg-extra')
-const db = require('.')
+import { pool } from './util'
+import { sql } from 'pg-extra'
+import * as db from '.'
 
 ////////////////////////////////////////////////////////////
 
 // Gets non-archived subs
-exports.listActiveSubscribersForTopic = async function(topicId) {
+export const listActiveSubscribersForTopic = async function(topicId) {
     assert(Number.isInteger(topicId))
 
     return pool.many(sql`
@@ -26,7 +26,7 @@ exports.listActiveSubscribersForTopic = async function(topicId) {
 ////////////////////////////////////////////////////////////
 
 // Sort them by latest_posts first
-exports.findSubscribedTopicsForUserId = async function(userId, isArchived) {
+export const findSubscribedTopicsForUserId = async function(userId, isArchived) {
     assert(Number.isInteger(userId))
     assert(typeof isArchived === 'boolean')
 
@@ -125,7 +125,7 @@ ORDER BY t.latest_post_id DESC
 ////////////////////////////////////////////////////////////
 
 // Do nothing if subscription already exists
-exports.subscribeToTopic = async function(userId, topicId) {
+export const subscribeToTopic = async function(userId, topicId) {
     assert(userId)
     assert(topicId)
     return pool.query(sql`
@@ -138,7 +138,7 @@ exports.subscribeToTopic = async function(userId, topicId) {
 ////////////////////////////////////////////////////////////
 
 // unsub/archive should delete any existing notifications
-exports.massUpdate = async function(userId, topicIds, action) {
+export const massUpdate = async function(userId, topicIds, action) {
     assert(['unsub', 'archive', 'unarchive'].includes(action))
 
     if (action === 'archive') {
@@ -181,7 +181,7 @@ exports.massUpdate = async function(userId, topicIds, action) {
 ////////////////////////////////////////////////////////////
 
 // Delete any existing notifications for topic
-exports.unsubscribeFromTopic = async function(userId, topicId) {
+export const unsubscribeFromTopic = async function(userId, topicId) {
     return Promise.all([
         pool.query(sql`
       DELETE FROM topic_subscriptions

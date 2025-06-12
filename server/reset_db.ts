@@ -1,14 +1,14 @@
 // Node deps
-const path = require('path')
-const fs = require('fs')
+import path from 'path'
+import fs from 'fs'
 // 3rd party
-const _ = require('lodash')
-const promiseMap = require('promise.map')
+import _ from 'lodash'
+import promiseMap from 'promise.map'
 // 1st party
 import { NODE_ENV, DATABASE_URL } from './config'
-const db = require('./db')
-const { pool } = require('./db/util')
-const { sql, _raw } = require('pg-extra')
+import * as db from './db'
+import { pool } from './db/util'
+import { _raw } from 'pg-extra'
 
 if (NODE_ENV !== 'development') {
     console.log('can only reset db in development')
@@ -26,12 +26,6 @@ function slurpSqlSync(filePath: string) {
     const relativePath = '../sql/' + filePath
     const fullPath = path.join(__dirname, relativePath)
     return fs.readFileSync(fullPath, 'utf8')
-}
-
-function timeout(ms: number) {
-    return new Promise(resolve => {
-        setTimeout(resolve, ms)
-    })
 }
 
 async function resetDb() {

@@ -1,15 +1,16 @@
-'use strict'
 // 3rd party
-var Router = require('@koa/router')
-var debug = require('debug')('app:routes:statuses')
+import Router from '@koa/router'
+// import createDebug from 'debug'
+// const debug = createDebug('app:routes:statuses')
 // 1st party
-var db = require('../db')
-var belt = require('../belt')
-var pre = require('../presenters')
+import * as db from '../db/index.js'
+import * as belt from '../belt.js'
+import * as pre from '../presenters.js'
+import { Context, Next } from 'koa'
 
 ////////////////////////////////////////////////////////////
 
-var router = new Router()
+const router = new Router()
 
 //
 // MIDDLEWARE
@@ -17,7 +18,7 @@ var router = new Router()
 
 // expects :status_id url param
 function loadStatus(key = 'status_id') {
-    return async (ctx, next) => {
+    return async (ctx: Context, next: Next) => {
         ctx.state.status = await db.findStatusById(ctx.params[key])
         ctx.assert(ctx.state.status, 404)
         pre.presentStatus(ctx.state.status)
@@ -31,7 +32,7 @@ function loadStatus(key = 'status_id') {
 //
 // Required params
 // - text: String
-router.post('/me/statuses', async ctx => {
+router.post('/me/statuses', async (ctx: Context) => {
     // Ensure user is authorized
     ctx.assertAuthorized(ctx.currUser, 'CREATE_USER_STATUS', ctx.currUser)
     // Validate params
@@ -53,7 +54,7 @@ router.post('/me/statuses', async ctx => {
 ////////////////////////////////////////////////////////////
 
 // Show all statuses
-router.get('/statuses', async ctx => {
+router.get('/statuses', async (ctx: Context) => {
     const statuses = await db.findAllStatuses()
     statuses.forEach(pre.presentStatus)
     await ctx.render('list_statuses', {
@@ -67,7 +68,7 @@ router.get('/statuses', async ctx => {
 // This is browser endpoint
 // TODO: remove /browser/ scope once i add /api/ scope to other endpoint
 // Sync with POST /api/statuses/:status_id/like
-router.post('/browser/statuses/:status_id/like', loadStatus(), async ctx => {
+router.post('/browser/statuses/:status_id/like', loadStatus(), async (ctx: Context) => {
     const status = ctx.state.status
     // Authorize user
     ctx.assertAuthorized(ctx.currUser, 'LIKE_STATUS', status)
@@ -98,7 +99,7 @@ router.post('/browser/statuses/:status_id/like', loadStatus(), async ctx => {
 // This is AJAX endpoint
 // TODO: scope to /api/statuses/...
 // Sync with POST /browser/statuses/:status_id/like
-router.post('/statuses/:status_id/like', loadStatus(), async ctx => {
+router.post('/statuses/:status_id/like', loadStatus(), async (ctx: Context) => {
     const status = ctx.state.status
     // Authorize user
     ctx.assertAuthorized(ctx.currUser, 'LIKE_STATUS', status)
@@ -118,7 +119,7 @@ router.post('/statuses/:status_id/like', loadStatus(), async ctx => {
 
 ////////////////////////////////////////////////////////////
 
-router.del('/statuses/:status_id', loadStatus(), async ctx => {
+router.del('/statuses/:status_id', loadStatus(), async (ctx: Context) => {
     const status = ctx.state.status
     // Ensure user is authorized to delete it
     ctx.assertAuthorized(ctx.currUser, 'DELETE_USER_STATUS', status)
@@ -131,7 +132,7 @@ router.del('/statuses/:status_id', loadStatus(), async ctx => {
 
 ////////////////////////////////////////////////////////////
 
-router.del('/me/current-status', async ctx => {
+router.del('/me/current-status', async (ctx: Context) => {
     // Ensure user is logged in
     ctx.assert(ctx.currUser, 403, 'You must log in to do that')
     await db.clearCurrentStatusForUserId(ctx.currUser.id)
@@ -141,4 +142,4 @@ router.del('/me/current-status', async ctx => {
 
 ////////////////////////////////////////////////////////////
 
-module.exports = router
+export default router

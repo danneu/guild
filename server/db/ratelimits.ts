@@ -1,11 +1,11 @@
 'use strict'
 // 3rd
-const assert = require('assert')
-const debug = require('debug')('db:ratelimits')
-const _ = require('lodash')
+import assert from 'assert'
+import createDebug from 'debug'; const debug = createDebug('db:ratelimits')
+import _ from 'lodash'
 // 1st
-const { pool } = require('./util')
-const { sql } = require('pg-extra')
+import { pool } from './util'
+import { sql } from 'pg-extra'
 
 // maxDate (Required Date): the maximum, most recent timestamp that the user
 // can have if they have a row in the table. i.e. if user can only post
@@ -13,7 +13,7 @@ const { sql } = require('pg-extra')
 //
 // If user is ratelimited, it throws the JSDate that the ratelimit expires
 // that can be shown to the user (e.g. try again in 24 seconds)
-exports.bump = async function(userId, ipAddress, maxDate) {
+export const bump = async function(userId, ipAddress, maxDate) {
     debug(
         '[bump] userId=%j, ipAddress=%j, maxDate=%j',
         userId,
@@ -45,8 +45,8 @@ exports.bump = async function(userId, ipAddress, maxDate) {
         const row = await client.one(sqls.recentRatelimit)
         // If it's too soon, throw the Date when ratelimit expires
         if (row && row.created_at > maxDate) {
-            const elapsed = new Date() - row.created_at // since ratelimit
-            const duration = new Date() - maxDate // ratelimit length
+            const elapsed = Date.now() - row.created_at.getTime() // since ratelimit
+            const duration = Date.now() - maxDate // ratelimit length
             const expires = new Date(Date.now() + duration - elapsed)
             throw expires
         }

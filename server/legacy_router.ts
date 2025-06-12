@@ -1,13 +1,15 @@
 'use strict'
 // Node
 // 3rd party
-var Router = require('@koa/router')
-var _ = require('lodash')
-var koaSend = require('koa-send')
-var debug = require('debug')('app:legacy_router.js')
+import Router from '@koa/router'
+import _ from 'lodash'
+import koaSend from 'koa-send'
+import { Context } from 'koa'
+// import createDebug from 'debug'
+// const debug = createDebug('app:legacy_router.js')
 // 1st party
 
-var router = new Router()
+const router = new Router()
 
 ////////////////////////////////////////////////////////////
 
@@ -15,13 +17,24 @@ var uidTable = {
     '2485': '/users/izaka-sazaka',
 }
 
-router.get('/member.php', async ctx => {
-    const redirectTo = uidTable[ctx.query.u]
-    ctx.assert(redirectTo, 404)
+router.get('/member.php', async (ctx: Context) => {
+    // handle format 1: member.php?u=2485
+    if (typeof ctx.query.u === 'string') {
+        const redirectTo = uidTable[ctx.query.u]
+        ctx.assert(redirectTo, 404)
 
-    ctx.status = 301
-    ctx.redirect(redirectTo)
+        ctx.status = 301
+        ctx.redirect(redirectTo)
+        return
+    } else if (Object.keys(ctx.query).includes('34089-Komamisa')) {
+        ctx.status = 301
+        ctx.redirect('/users/komamisa')
+        return
+    }
+
+    ctx.status = 404
 })
+
 
 ////////////////////////////////////////////////////////////
 
@@ -32,7 +45,7 @@ const fidTable = {
     '5': '/forums/33-off-topic-discussion',
 }
 
-router.get('/forumdisplay.php', async ctx => {
+router.get('/forumdisplay.php', async (ctx: Context) => {
     if (_.keys(ctx.query).includes('15-Casual-OOC')) {
         ctx.status = 301
         ctx.redirect('/forums/4-casual-roleplay')
@@ -75,13 +88,25 @@ const tidQueries = {
     '186461-Vampire-The-Masquerade-The-Final-Nights-Guide': true, // busted assets
 }
 
-router.get('/showthread.php', async ctx => {
+router.get('/showthread.php', async (ctx: Context) => {
     ctx.validateQuery('t')
 
-    let staticPath
-    if (tids[ctx.vals.t]) staticPath = ctx.vals.t
-    else if (tidQueries[Object.keys(ctx.query)[0]])
-        staticPath = Object.keys(ctx.query)[0]
+    let staticPath: string | undefined
+
+    // Check format 1: showthread.php?t=106673
+    if (ctx.query.t && tids[ctx.query.t as string]) {
+        staticPath = ctx.query.t as string
+    } 
+
+    // Check format 2: showthread.php?139029-Sobetsu-Cloaked-Rancor-OOC
+    else {
+        const queryKeys = Object.keys(ctx.query)
+        const firstKey = queryKeys[0]
+        
+        if (firstKey && tidQueries[firstKey as keyof typeof tidQueries]) {
+            staticPath = firstKey
+        }
+    }
 
     ctx.assert(staticPath, 404)
 
@@ -94,7 +119,7 @@ router.get('/showthread.php', async ctx => {
 ////////////////////////////////////////////////////////////
 
 // 301 Redirects
-;[
+;([
     ['/index.php', '/'],
     ['/members/drakell', '/users/drakel'],
     ['/memberlist.php', '/users'],
@@ -107,22 +132,13 @@ router.get('/showthread.php', async ctx => {
     ['/members/gamerdude369', '/users/gamerdude369'],
     ['/f9', '/forums/5-advanced-roleplay'],
     ['/f8/the-morlat-death-march-8', '/f9/the-morlat-death-march-8'],
-].forEach(([oldUrl, newUrl]) => {
-    router.get(oldUrl, async ctx => {
+] as const).forEach(([oldUrl, newUrl]) => {
+    router.get(oldUrl, async (ctx: Context) => {
         ctx.status = 301
         ctx.redirect(newUrl)
     })
 })
 
-router.get('member.php', async () => {
-    if (_.keys(ctx.query).includes('34089-Komamisa')) {
-        ctx.status = 301
-        ctx.redirect('/users/komamisa')
-        return
-    }
-
-    ctx.status = 404
-})
 
 // 410 scraper output (also checked the t=_ version of most of these
 // /showthread.php?153742
@@ -183,7 +199,7 @@ const rehosted = [
 ]
 
 rehosted.forEach(url => {
-    router.get(url, async ctx => {
+    router.get(url, async (ctx: Context) => {
         await koaSend(ctx, ctx.path + '.html', {
             root: 'legacy_html',
             maxage: 1000 * 60 * 60 * 24 * 365,
@@ -193,4 +209,4 @@ rehosted.forEach(url => {
 
 ////////////////////////////////////////////////////////////
 
-module.exports = router
+export default router

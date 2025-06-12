@@ -1,17 +1,20 @@
 'use strict'
 // 3rd
-const assert = require('assert')
-const Router = require('@koa/router')
-const debug = require('debug')('app:routes:index')
-const { sql, _raw } = require('pg-extra')
-const _ = require('lodash')
+import assert from 'assert'
+import Router from '@koa/router'
+// import createDebug from 'debug'
+// const debug = createDebug('app:routes:index')
+import { sql, _raw } from 'pg-extra'
+import _ from 'lodash'
+import nodeUrl from 'url'
 // 1st
-const config = require('../config')
-const cancan = require('../cancan')
-const db = require('../db')
-const cache2 = require('../cache2')
-const pre = require('../presenters')
-const { pool } = require('../db/util')
+import * as config from '../config'
+import * as cancan from '../cancan'
+import * as db from '../db'
+import cache2 from '../cache2'
+import * as pre from '../presenters'
+import { pool } from '../db/util.js'
+import { Context } from 'koa'
 
 ////////////////////////////////////////////////////////////
 
@@ -20,7 +23,7 @@ const router = new Router()
 ////////////////////////////////////////////////////////////
 
 // Depends on FAQ_POST_ID
-router.get('/faq', async ctx => {
+router.get('/faq', async (ctx: Context) => {
     const post = pre.presentPost(cache2.get('faq-post'))
 
     await ctx.render('faq', {
@@ -156,7 +159,7 @@ async function listRoleplays(logic, sort, selectedTagIds = [], beforeId) {
     )
 }
 
-router.get('/roleplays', async ctx => {
+router.get('/roleplays', async (ctx: Context) => {
     // TODO: MOve to cache2.once() and update on tag list edit
     const tagGroups = await db.findAllTagGroups()
 
@@ -198,7 +201,7 @@ router.get('/roleplays', async ctx => {
         : null
 
     const nextPageUrl = nextBeforeId
-        ? require('url').format({
+        ? nodeUrl.format({
               host: config.HOST,
               pathname: ctx.path,
               query: Object.assign({}, _.pickBy(ctx.query, Boolean), {
@@ -207,7 +210,7 @@ router.get('/roleplays', async ctx => {
           })
         : null
 
-    const firstPageUrl = require('url').format({
+    const firstPageUrl = nodeUrl.format({
         host: config.HOST,
         pathname: ctx.path,
         query: _.pickBy(
@@ -236,7 +239,7 @@ router.get('/roleplays', async ctx => {
 
 ////////////////////////////////////////////////////////////
 
-router.get('/posts/:id/revisions', async ctx => {
+router.get('/posts/:id/revisions', async (ctx: Context) => {
     const post = await db
         .findPostWithTopicAndForum(ctx.params.id)
         .then(pre.presentPost)
@@ -259,7 +262,7 @@ router.get('/posts/:id/revisions', async ctx => {
 
 ////////////////////////////////////////////////////////////
 
-router.get('/posts/:postId/revisions/:revId', async ctx => {
+router.get('/posts/:postId/revisions/:revId', async (ctx: Context) => {
     const revId = Number.parseInt(ctx.params.revId, 10)
     ctx.assert(!Number.isNaN(revId), 404)
 
@@ -288,7 +291,7 @@ router.get('/posts/:postId/revisions/:revId', async ctx => {
   `
 })
 
-router.get('/posts/:postId/revisions/:revId/raw', async ctx => {
+router.get('/posts/:postId/revisions/:revId/raw', async (ctx: Context) => {
     const revId = Number.parseInt(ctx.params.revId, 10)
     ctx.assert(!Number.isNaN(revId), 404)
 
@@ -308,7 +311,7 @@ router.get('/posts/:postId/revisions/:revId/raw', async ctx => {
   `
 })
 
-router.post('/posts/:postId/revisions/:revId/revert', async ctx => {
+router.post('/posts/:postId/revisions/:revId/revert', async (ctx: Context) => {
     const revId = Number.parseInt(ctx.params.revId, 10)
     ctx.assert(!Number.isNaN(revId), 404)
 
@@ -331,4 +334,4 @@ router.post('/posts/:postId/revisions/:revId/revert', async ctx => {
 
 ////////////////////////////////////////////////////////////
 
-module.exports = router
+export default router

@@ -1,13 +1,14 @@
 // 3rd
-const assert = require('assert')
+import assert from 'assert'
 // 1st
-const akismet = require('./akismet')
-const config = require('../../config')
-const { broadcastAutoNuke } = require('../discord')
-const db = require('../../db')
+import akismet from './akismet'
+import * as config from '../../config'
+import { broadcastAutoNuke } from '../discord'
+import * as db from '../../db'
+import { Context } from 'koa'
 
 // Returns { test: 'SUBSTRING' | 'AKISMET', isSpam: Boolean, info: ... }
-async function analyze(ctx, text) {
+async function analyze(ctx: Context, text) {
     // SUBSTRING check is too aggressive, too many false positives.
 
     // ;{
@@ -34,7 +35,7 @@ async function analyze(ctx, text) {
 }
 
 // Returns falsey if they are not a spammer
-async function process(ctx, markup, postId) {
+async function process(ctx: Context, markup, postId) {
     assert(ctx.currUser)
     assert(typeof markup === 'string')
     assert(Number.isInteger(postId))
@@ -70,9 +71,9 @@ async function process(ctx, markup, postId) {
     return result
 }
 
-module.exports = {
+export default {
     analyze,
-    process: async (ctx, markup, postId) => {
+    process: async (ctx: Context, markup: string, postId: number) => {
         return process(ctx, markup, postId)
             .then(result => {
                 if (result) {

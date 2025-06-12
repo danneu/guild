@@ -1,10 +1,11 @@
 // @ts-nocheck
 // 3rd
-const debug = require('debug')('app:cache2')
+import createDebug from 'debug'; 
+const debug = createDebug('app:cache2')
 // 1st
-const config = require('./config')
-const db = require('./db')
-const DiscordClient = require('./discord/client')
+import * as config from './config'
+import * as db from './db'
+import DiscordClient from './discord/client'
 
 ////////////////////////////////////////////////////////////
 
@@ -209,4 +210,4 @@ if (false && config.IS_DISCORD_CONFIGURED) {
 
 ////////////////////////////////////////////////////////////
 
-module.exports = cache.start()
+export default cache.start()

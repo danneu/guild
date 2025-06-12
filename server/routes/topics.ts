@@ -1,13 +1,15 @@
 'use strict'
 // 3rd
-const Router = require('@koa/router')
-const debug = require('debug')('app:routes:topics')
+import Router from '@koa/router'
+// import createDebug from 'debug'
+// const debug = createDebug('app:routes:topics')
 // 1st
-const cancan = require('../cancan')
-const db = require('../db')
-const pre = require('../presenters')
-const config = require('../config')
-const bbcode = require('../bbcode')
+// import * as cancan from '../cancan'
+import * as db from '../db'
+import * as pre from '../presenters'
+import * as config from '../config'
+import bbcode from '../bbcode'
+import { Context } from 'koa'
 
 ////////////////////////////////////////////////////////////
 
@@ -19,7 +21,7 @@ const router = new Router()
 //
 // Body:
 // - markup
-router.post('/topics/:topicId/:postType/0th', async ctx => {
+router.post('/topics/:topicId/:postType/0th', async (ctx: Context) => {
     const { postType } = ctx.params
     ctx.assert(['ic', 'ooc', 'char'].includes(postType), 404)
 
@@ -47,7 +49,7 @@ router.post('/topics/:topicId/:postType/0th', async ctx => {
 
     const redirectTo = `${topic.url}/${postType}`
 
-    const post = await db
+    await db
         .createPost({
             userId: ctx.currUser.id,
             ipAddress: ctx.ip,
@@ -78,4 +80,4 @@ router.post('/topics/:topicId/:postType/0th', async ctx => {
 
 ////////////////////////////////////////////////////////////
 
-module.exports = router
+export default router

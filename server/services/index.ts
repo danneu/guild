@@ -10,7 +10,10 @@
 // TODO: Move akismet spam-check here.
 //
 
-module.exports = {
-    discord: require('./discord'),
-    antispam: require('./antispam'),
+import * as discord from './discord'
+import antispam from './antispam'
+
+export default {
+    discord,
+    antispam,
 }

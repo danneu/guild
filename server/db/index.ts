@@ -1,17 +1,19 @@
 // 3rd party
-const _ = require('lodash')
-const assert = require('assert')
-const debug = require('debug')('app:db')
-const pgArray = require('postgres-array')
+import _ from 'lodash'
+import assert from 'assert'
+import createDebug from 'debug'; 
+const debug = createDebug('app:db')
+import pgArray from 'postgres-array'
 import { v7 as uuidv7 } from 'uuid'
 // 1st party
-const config = require('../config')
-const belt = require('../belt')
-const pre = require('../presenters')
+import * as config from '../config'
+import * as belt from '../belt'
+import * as pre from '../presenters'
 import { pool } from './util'
 import { PoolClient } from 'pg'
-const { sql } = require('pg-extra')
-const revs = require('./revs')
+import { sql } from 'pg-extra'
+import * as revs from './revs'
+import { Context } from 'koa';
 
 // If a client is not provided to fn as first argument,
 // we'll pass one into it.
@@ -29,7 +31,7 @@ const revs = require('./revs')
  * }
  * */
 
-function wrapOptionalClient(fn: (client: PoolClient, ...args: any[]) => Promise<any>) {
+function wrapOptionalClient(fn: (client: PoolClient, ...args: any[]) => Promise<any>): (...args: any[]) => Promise<any> {
     return async function() {
         const args = Array.prototype.slice.call(arguments, 0)
         if (belt.isDBClient(args[0])) {
@@ -42,21 +44,23 @@ function wrapOptionalClient(fn: (client: PoolClient, ...args: any[]) => Promise<
     }
 }
 
+// jun-12-2025: another bit of code archaelogy!
+//
 // Wraps generator function in one that prints out the execution time
 // when app is run in development mode.
-function wrapTimer(fn) {
-    if (config.NODE_ENV !== 'development') return fn
-    else
-        return function*() {
-            var start = Date.now()
-            var result = yield fn.apply(this, arguments)
-            var diff = Date.now() - start
-            debug('[%s] Executed in %sms', fn.name, diff)
-            return result
-        }
-}
+// function wrapTimer(fn) {
+//     if (config.NODE_ENV !== 'development') return fn
+//     else
+//         return function*() {
+//             var start = Date.now()
+//             var result = yield fn.apply(this, arguments)
+//             var diff = Date.now() - start
+//             debug('[%s] Executed in %sms', fn.name, diff)
+//             return result
+//         }
+// }
 
-exports.updatePostStatus = async function(postId, status) {
+export const updatePostStatus = async function(postId, status) {
     const STATUS_WHITELIST = ['hide', 'unhide']
     assert(STATUS_WHITELIST.includes(status))
 
@@ -80,7 +84,7 @@ exports.updatePostStatus = async function(postId, status) {
   `)
 }
 
-exports.updateTopicStatus = async function(topicId, status) {
+export const updateTopicStatus = async function(topicId, status) {
     const STATUS_WHITELIST = [
         'stick',
         'unstick',
@@ -131,7 +135,7 @@ exports.updateTopicStatus = async function(topicId, status) {
 // Same as findTopic but takes a userid so that it can return a topic
 // with an is_subscribed boolean for the user
 // Keep in sync with db.findTopicById
-exports.findTopicWithIsSubscribed = async function(userId, topicId) {
+export const findTopicWithIsSubscribed = async function(userId, topicId) {
     debug('[findTopicWithIsSubscribed] userId %s, topicId %s:', userId, topicId)
 
     return pool.one(sql`
@@ -214,7 +218,7 @@ exports.findTopicWithIsSubscribed = async function(userId, topicId) {
 
 ////////////////////////////////////////////////////////////
 
-exports.updateUserBio = async function(userId, bioMarkup, bioHtml) {
+export const updateUserBio = async function(userId, bioMarkup, bioHtml) {
     assert(_.isString(bioMarkup))
 
     return pool.one(sql`
@@ -227,7 +231,7 @@ exports.updateUserBio = async function(userId, bioMarkup, bioHtml) {
 
 ////////////////////////////////////////////////////////////
 
-exports.findTopic = async function(topicId) {
+export const findTopic = async function(topicId) {
     return pool.one(sql`
     SELECT
       t.*,
@@ -240,7 +244,7 @@ exports.findTopic = async function(topicId) {
 
 ////////////////////////////////////////////////////////////
 
-exports.deleteResetTokens = async function(userId) {
+export const deleteResetTokens = async function(userId) {
     assert(_.isNumber(userId))
 
     return pool.query(sql`
@@ -251,7 +255,7 @@ exports.deleteResetTokens = async function(userId) {
 
 ////////////////////////////////////////////////////////////
 
-exports.findLatestActiveResetToken = async function(userId) {
+export const findLatestActiveResetToken = async function(userId) {
     assert(_.isNumber(userId))
 
     return pool.one(sql`
@@ -265,7 +269,7 @@ exports.findLatestActiveResetToken = async function(userId) {
 
 ////////////////////////////////////////////////////////////
 
-exports.createResetToken = async function(userId) {
+export const createResetToken = async function(userId) {
     debug('[createResetToken] userId: ' + userId)
 
     const uuid = uuidv7()
@@ -279,7 +283,7 @@ exports.createResetToken = async function(userId) {
 
 ////////////////////////////////////////////////////////////
 
-exports.findUserById = exports.findUser = async function(id) {
+export const findUserById = async function(id) {
     return pool.one(sql`
     SELECT * FROM users WHERE id = ${id}
   `)
@@ -287,7 +291,7 @@ exports.findUserById = exports.findUser = async function(id) {
 
 ////////////////////////////////////////////////////////////
 
-exports.findUserBySlug = exports.getUserBySlug = async function(slug) {
+export const findUserBySlug = async function(slug) {
     debug(`[findUserBySlug] slug=%j`, slug)
     assert(_.isString(slug))
 
@@ -309,7 +313,7 @@ exports.findUserBySlug = exports.getUserBySlug = async function(slug) {
 ////////////////////////////////////////////////////////////
 
 // Only use this if you need ratings table, else use just findUserBySlug
-exports.findUserWithRatingsBySlug = async function(slug) {
+export const findUserWithRatingsBySlug = async function(slug) {
     debug(`[findUserWithRatingsBySlug] slug=%j`, slug)
     assert(typeof slug === 'string')
 
@@ -364,7 +368,7 @@ exports.findUserWithRatingsBySlug = async function(slug) {
 ////////////////////////////////////////////////////////////
 
 // Also tries historical unames
-exports.findUserByUnameOrEmail = async function(unameOrEmail) {
+export const findUserByUnameOrEmail = async function(unameOrEmail) {
     assert(_.isString(unameOrEmail))
 
     const slug = belt.slugifyUname(unameOrEmail)
@@ -386,7 +390,7 @@ exports.findUserByUnameOrEmail = async function(unameOrEmail) {
 ////////////////////////////////////////////////////////////
 
 // Note: Case-insensitive
-exports.findUserByEmail = async function(email) {
+export const findUserByEmail = async function(email) {
     debug('[findUserByEmail] email: ' + email)
 
     return pool.one(sql`
@@ -399,7 +403,7 @@ exports.findUserByEmail = async function(email) {
 ////////////////////////////////////////////////////////////
 
 // Note: Case-insensitive
-exports.findUserByUname = async function(uname) {
+export const findUserByUname = async function(uname) {
     debug('[findUserByUname] uname: ' + uname)
 
     const slug = belt.slugifyUname(uname)
@@ -414,7 +418,7 @@ exports.findUserByUname = async function(uname) {
 ////////////////////////////////////////////////////////////
 
 // `beforeId` is undefined or a number
-exports.findRecentPostsForUserId = async function(userId, beforeId) {
+export const findRecentPostsForUserId = async function(userId, beforeId) {
     assert(_.isNumber(beforeId) || _.isUndefined(beforeId))
 
     return pool.many(sql`
@@ -434,7 +438,7 @@ exports.findRecentPostsForUserId = async function(userId, beforeId) {
 ////////////////////////////////////////////////////////////
 
 // `beforeId` is undefined or a number
-exports.findRecentTopicsForUserId = async function(userId, beforeId) {
+export const findRecentTopicsForUserId = async function(userId, beforeId) {
     assert(_.isNumber(beforeId) || _.isUndefined(beforeId))
 
     return pool.many(sql`
@@ -458,7 +462,7 @@ exports.findRecentTopicsForUserId = async function(userId, beforeId) {
 
 ////////////////////////////////////////////////////////////
 
-exports.findUser = async function(userId) {
+export const _findUser = async function(userId) {
     debug('[findUser] userId: ' + userId)
 
     return pool.one(sql`
@@ -472,7 +476,7 @@ exports.findUser = async function(userId) {
 
 // Returns an array of Users
 // (Case insensitive uname lookup)
-exports.findUsersByUnames = async function(unames) {
+export const findUsersByUnames = async function(unames) {
     assert(_.isArray(unames))
     assert(_.every(unames, _.isString))
 
@@ -489,7 +493,7 @@ exports.findUsersByUnames = async function(unames) {
 
 // If toUsrIds is not given, then it's a self-convo
 // TODO: Wrap in transaction, Document the args of this fn
-exports.createConvo = function(args) {
+export const createConvo = function(args) {
     debug('[createConvo] args: ', args)
     assert(_.isNumber(args.userId))
     assert(_.isUndefined(args.toUserIds) || _.isArray(args.toUserIds))
@@ -547,7 +551,7 @@ exports.createConvo = function(args) {
 
 // Only returns user if reset token has not expired
 // so this can be used to verify tokens
-exports.findUserByResetToken = function(resetToken) {
+export const findUserByResetToken = function(resetToken) {
     // Short circuit if it's not even a UUID
     if (!belt.isValidUuid(resetToken)) {
         return
@@ -566,7 +570,7 @@ exports.findUserByResetToken = function(resetToken) {
 
 ////////////////////////////////////////////////////////////
 
-exports.findUserBySessionId = async function(sessionId) {
+export const findUserBySessionId = async function(sessionId) {
     assert(belt.isValidUuid(sessionId))
 
     const user = await pool.one(sql`
@@ -593,8 +597,8 @@ exports.findUserBySessionId = async function(sessionId) {
 
 ////////////////////////////////////////////////////////////
 
-exports.createSession = wrapOptionalClient(createSession)
-async function createSession(client, props) {
+export const createSession = wrapOptionalClient(_createSession)
+async function _createSession(client, props) {
     debug('[createSession] props: ', props)
     assert(belt.isDBClient(client))
     assert(_.isNumber(props.userId))
@@ -614,7 +618,7 @@ async function createSession(client, props) {
 ////////////////////////////////////////////////////////////
 
 // Sync with db.findTopicsWithHasPostedByForumId
-exports.findTopicsByForumId = async function(forumId, limit, offset) {
+export const findTopicsByForumId = async function(forumId, limit, offset) {
     debug(
         '[%s] forumId: %s, limit: %s, offset: %s',
         'findTopicsByForumId',
@@ -654,7 +658,7 @@ OFFSET ${offset}
 // Sync with db.findTopicsByForumId
 // Same as db.findTopicsByForumId except each forum has a has_posted boolean
 // depending on whether or not userId has posted in each topic
-exports.findTopicsWithHasPostedByForumId = async function(
+export const findTopicsWithHasPostedByForumId = async function(
     forumId,
     limit,
     offset,
@@ -706,7 +710,7 @@ OFFSET ${offset}
 
 ////////////////////////////////////////////////////////////
 
-exports.updateUserPassword = async function(userId, password) {
+export const updateUserPassword = async function(userId, password) {
     assert(_.isNumber(userId))
     assert(_.isString(password))
 
@@ -727,7 +731,7 @@ exports.updateUserPassword = async function(userId, password) {
 // Updating a post saves the update as a revision.
 //
 // reason is optional
-exports.updatePost = async function(userId, postId, markup, html, reason) {
+export const updatePost = async function(userId, postId, markup, html, reason) {
     assert(Number.isInteger(userId))
     assert(Number.isInteger(postId))
     assert(typeof markup === 'string')
@@ -757,7 +761,7 @@ exports.updatePost = async function(userId, postId, markup, html, reason) {
 ////////////////////////////////////////////////////////////
 
 // Keep updatePost and updatePm in sync
-exports.updatePm = async function(id, markup, html) {
+export const updatePm = async function(id, markup, html) {
     assert(_.isString(markup))
     assert(_.isString(html))
 
@@ -773,7 +777,7 @@ RETURNING *
 
 // Attaches topic and forum to post for authorization checks
 // See cancan.js 'READ_POST'
-exports.findPostWithTopicAndForum = async function(postId) {
+export const findPostWithTopicAndForum = async function(postId) {
     return pool.one(sql`
 SELECT
   p.*,
@@ -789,7 +793,7 @@ WHERE p.id = ${postId}
 ////////////////////////////////////////////////////////////
 
 // Keep findPost and findPm in sync
-exports.findPostById = exports.findPost = async function(postId) {
+export const findPostById = async function(postId) {
     return pool.one(sql`
 SELECT
   p.*,
@@ -805,7 +809,7 @@ WHERE p.id = ${postId}
 
 ////////////////////////////////////////////////////////////
 
-exports.findPmById = exports.findPm = async function findPm(id) {
+export const findPmById = async function findPm(id) {
     return pool.one(sql`
 SELECT
   pms.*,
@@ -818,7 +822,7 @@ WHERE pms.id = ${id}
 
 ////////////////////////////////////////////////////////////
 
-exports.findUsersContainingString = async function(searchTerm) {
+export const findUsersContainingString = async function(searchTerm) {
     // searchTerm is the term that the user searched for
     assert(_.isString(searchTerm) || _.isUndefined(searchTerm))
 
@@ -834,7 +838,7 @@ LIMIT ${config.USERS_PER_PAGE}::bigint
 ////////////////////////////////////////////////////////////
 
 // Ignore nuked users
-exports.paginateUsers = async function(beforeId = 1e9) {
+export const paginateUsers = async function(beforeId = 1e9) {
     return pool.many(sql`
     SELECT *
     FROM users
@@ -847,7 +851,7 @@ exports.paginateUsers = async function(beforeId = 1e9) {
 
 ////////////////////////////////////////////////////////////
 
-exports.findUsersContainingStringWithId = async function(searchTerm, beforeId) {
+export const findUsersContainingStringWithId = async function(searchTerm, beforeId) {
     // searchTerm is the term that the user searched for
     assert(_.isString(searchTerm) || _.isUndefined(searchTerm))
 
@@ -866,7 +870,7 @@ LIMIT ${config.USERS_PER_PAGE}::bigint
 
 ////////////////////////////////////////////////////////////
 
-exports.findPmsByConvoId = async function(convoId, page) {
+export const findPmsByConvoId = async function(convoId, page) {
     const fromIdx = (page - 1) * config.POSTS_PER_PAGE
     const toIdx = fromIdx + config.POSTS_PER_PAGE
 
@@ -884,7 +888,7 @@ ORDER BY pms.id
 
 ////////////////////////////////////////////////////////////
 
-exports.findPostsByTopicId = async function(topicId, postType, page) {
+export const findPostsByTopicId = async function(topicId, postType, page) {
     debug(
         '[findPostsByTopicId] topicId: %s, postType: %s, page',
         topicId,
@@ -985,7 +989,7 @@ exports.findPostsByTopicId = async function(topicId, postType, page) {
 
 // TODO: Order by
 // TODO: Pagination
-exports.findForumWithTopics = async function(forumId) {
+export const findForumWithTopics = async function(forumId) {
     const forum = await pool.one(sql`
     SELECT
       f.*,
@@ -1009,7 +1013,7 @@ exports.findForumWithTopics = async function(forumId) {
 ////////////////////////////////////////////////////////////
 
 // Keep findPostWithTopic and findPmWithConvo in sync
-exports.findPostWithTopic = async function(postId) {
+export const findPostWithTopic = async function(postId) {
     return pool.one(sql`
     SELECT
       p.*,
@@ -1024,7 +1028,7 @@ exports.findPostWithTopic = async function(postId) {
 ////////////////////////////////////////////////////////////
 
 // Keep findPostWithTopic and findPmWithConvo in sync
-exports.findPmWithConvo = async function(pmId) {
+export const findPmWithConvo = async function(pmId) {
     return pool.one(sql`
 SELECT
   pms.*,
@@ -1042,7 +1046,7 @@ GROUP BY pms.id, c.id
 ////////////////////////////////////////////////////////////
 
 // Returns created PM
-exports.createPm = async function(props) {
+export const createPm = async function(props) {
     assert(_.isNumber(props.userId))
     assert(props.convoId)
     assert(_.isString(props.markup))
@@ -1066,7 +1070,7 @@ exports.createPm = async function(props) {
 // - type        Required String, ic | ooc | char
 // - isRoleplay  Required Boolean
 // - idx         Undefined or -1 if it's the tab's wiki post
-exports.createPost = async function(args) {
+export const createPost = async function(args) {
     debug(`[createPost] args:`, args)
     assert(_.isNumber(args.userId))
     assert(_.isString(args.ipAddress))
@@ -1115,7 +1119,7 @@ exports.createPost = async function(args) {
 // - tagIds     Optional [Int]
 // - joinStatus Optional String (Required if roleplay)
 //
-exports.createTopic = async function(props) {
+export const createTopic = async function(props) {
     debug('[createTopic]', props)
     assert(_.isNumber(props.userId))
     assert(props.forumId)
@@ -1183,7 +1187,7 @@ exports.createTopic = async function(props) {
 // Generic user-update route. Intended to be paired with
 // the generic PUT /users/:userId route.
 // TODO: Use the knex updater instead
-exports.updateUser = async (userId, attrs) => {
+export const updateUser = async (userId, attrs) => {
     debug('[updateUser] attrs', attrs)
 
     return pool
@@ -1221,7 +1225,7 @@ exports.updateUser = async (userId, attrs) => {
 
 ////////////////////////////////////////////////////////////
 
-exports.updateUserRole = async function(userId, role) {
+export const updateUserRole = async function(userId, role) {
     return pool.one(sql`
     UPDATE users
     SET role = ${role}
@@ -1233,7 +1237,7 @@ exports.updateUserRole = async function(userId, role) {
 ////////////////////////////////////////////////////////////
 
 // @fast
-exports.findForumById = exports.findForum = async function(forumId) {
+export const findForumById = async function(forumId) {
     return pool.one(sql`
     SELECT
       f.*,
@@ -1247,7 +1251,7 @@ exports.findForumById = exports.findForum = async function(forumId) {
   `)
 }
 
-exports.findForum2 = async function(forumId) {
+export const findForum2 = async function(forumId) {
     assert(Number.isInteger(forumId))
 
     // - child_forums are a list of forums that point to this one
@@ -1282,7 +1286,7 @@ exports.findForum2 = async function(forumId) {
 
 // TODO: This should be moved to some admin namespace since
 // it includes the nuke info
-exports.findLatestUsers = async function(limit = 25) {
+export const findLatestUsers = async function(limit = 25) {
     debug(`[findLatestUsers]`)
     return pool.many(sql`
     SELECT
@@ -1307,7 +1311,7 @@ exports.findLatestUsers = async function(limit = 25) {
 ////////////////////////////////////////////////////////////
 
 // Also has cat.forums array
-exports.findModCategory = async function() {
+export const findModCategory = async function() {
     debug(`[findModCategory]`)
     const MOD_CATEGORY_ID = 4
     return pool.one(sql`
@@ -1320,7 +1324,7 @@ exports.findModCategory = async function() {
 ////////////////////////////////////////////////////////////
 
 // Only returns non-mod-forum categories
-exports.findCategories = async function() {
+export const findCategories = async function() {
     return pool.many(sql`
     SELECT c.*
     FROM categories c
@@ -1330,7 +1334,7 @@ exports.findCategories = async function() {
 
 ////////////////////////////////////////////////////////////
 
-exports.findCategoriesWithForums = async function() {
+export const findCategoriesWithForums = async function() {
     const categories = await pool.many(sql`
 SELECT
   c.*,
@@ -1402,7 +1406,7 @@ ORDER BY c.pos
 // - Use `createUser` if you only want to create a user.
 //
 // Throws: 'UNAME_TAKEN', 'EMAIL_TAKEN'
-exports.createUserWithSession = async function(props) {
+export const createUserWithSession = async function(props) {
     debug('[createUserWithSession] props: ', props)
     assert(_.isString(props.uname))
     assert(_.isString(props.ipAddress))
@@ -1468,7 +1472,7 @@ exports.createUserWithSession = async function(props) {
 
 ////////////////////////////////////////////////////////////
 
-exports.logoutSession = async function(userId, sessionId) {
+export const logoutSession = async function(userId, sessionId) {
     assert(_.isNumber(userId))
     assert(_.isString(sessionId) && belt.isValidUuid(sessionId))
 
@@ -1481,7 +1485,7 @@ exports.logoutSession = async function(userId, sessionId) {
 
 ////////////////////////////////////////////////////////////
 
-exports.findForums = async function(categoryIds) {
+export const findForums = async function(categoryIds) {
     debug(`[findForums] categoryIds=%j`, categoryIds)
     assert(_.isArray(categoryIds))
 
@@ -1506,7 +1510,7 @@ exports.findForums = async function(categoryIds) {
 // Stats
 
 // https://wiki.postgresql.org/wiki/Count_estimate
-exports.getApproxCount = async function(tableName) {
+export const getApproxCount = async function(tableName) {
     assert(_.isString(tableName))
     return pool
         .one(
@@ -1524,7 +1528,7 @@ exports.getApproxCount = async function(tableName) {
 ////////////////////////////////////////////////////////////
 
 // Ignore nuked users
-exports.getLatestUser = async function() {
+export const getLatestUser = async function() {
     return pool.one(sql`
     SELECT *
     FROM users
@@ -1537,7 +1541,7 @@ exports.getLatestUser = async function() {
 ////////////////////////////////////////////////////////////
 
 // Users online within the last X minutes
-exports.getOnlineUsers = async function() {
+export const getOnlineUsers = async function() {
     return pool.many(sql`
     SELECT *
     FROM users
@@ -1546,19 +1550,19 @@ exports.getOnlineUsers = async function() {
   `)
 }
 
-exports.getMaxTopicId = async function() {
+export const getMaxTopicId = async function() {
     return pool
         .one(sql`SELECT MAX(id) "max_id" FROM topics`)
         .then(row => row.max_id)
 }
 
-exports.getMaxPostId = async function() {
+export const getMaxPostId = async function() {
     return pool
         .one(sql`SELECT MAX(id) "max_id" FROM posts`)
         .then(row => row.max_id)
 }
 
-exports.getMaxUserId = async function() {
+export const getMaxUserId = async function() {
     return pool
         .one(sql`SELECT MAX(id) "max_id" FROM users`)
         .then(row => row.max_id)
@@ -1571,7 +1575,7 @@ const legacyCounts = {
     users: 44799,
 }
 
-exports.getStats = async function() {
+export const getStats = async function() {
     let [
         topicsCount,
         usersCount,
@@ -1579,11 +1583,11 @@ exports.getStats = async function() {
         latestUser,
         onlineUsers,
     ] = await Promise.all([
-        exports.getMaxTopicId(), //getApproxCount('topics'),
-        exports.getMaxUserId(), //getApproxCount('users'),
-        exports.getMaxPostId(), //getApproxCount('posts'),
-        exports.getLatestUser(),
-        exports.getOnlineUsers(),
+        getMaxTopicId(), //getApproxCount('topics'),
+        getMaxUserId(), //getApproxCount('users'),
+        getMaxPostId(), //getApproxCount('posts'),
+        getLatestUser(),
+        getOnlineUsers(),
     ])
 
     topicsCount += legacyCounts.topics
@@ -1593,13 +1597,13 @@ exports.getStats = async function() {
     return { topicsCount, usersCount, postsCount, latestUser, onlineUsers }
 }
 
-exports.deleteLegacySig = async function(userId) {
+export async function deleteLegacySig(userId: number) {
     return pool.query(sql`
     UPDATE users SET legacy_sig = NULL WHERE id = ${userId}
   `)
 }
 
-exports.findStaffUsers = async function() {
+export async function findStaffUsers() {
     return pool.many(sql`
     SELECT u.*
     FROM users u
@@ -1610,7 +1614,7 @@ exports.findStaffUsers = async function() {
 // sub notes have a meta that looks like {ic: true, ooc: true, char: true}
 // which indicates which postType the notification has accumulated new
 // posts for.
-exports.createSubNotification = async function(
+export const createSubNotification = async function(
     fromUserId,
     toUserId,
     topicId,
@@ -1637,8 +1641,11 @@ exports.createSubNotification = async function(
 }
 
 // Users receive this when someone starts a convo with them
-exports.createConvoNotification = wrapOptionalClient(createConvoNotification)
-async function createConvoNotification(client, opts) {
+export async function createConvoNotification(opts: {
+  from_user_id: number
+  to_user_id: number
+  convo_id: number
+}) {
     assert(_.isNumber(opts.from_user_id))
     assert(_.isNumber(opts.to_user_id))
     assert(opts.convo_id)
@@ -1657,7 +1664,7 @@ async function createConvoNotification(client, opts) {
 // Tries to create a convo notification.
 // If to_user_id already has a convo notification for this convo, then
 // increment the count
-exports.createPmNotification = async function(opts) {
+export const createPmNotification = async function(opts) {
     debug('[createPmNotification] opts: ', opts)
     assert(_.isNumber(opts.from_user_id))
     assert(_.isNumber(opts.to_user_id))
@@ -1674,7 +1681,7 @@ exports.createPmNotification = async function(opts) {
 }
 
 // type is 'REPLY_VM' or 'TOPLEVEL_VM'
-exports.createVmNotification = async function(data) {
+export const createVmNotification = async function(data) {
     assert(['REPLY_VM', 'TOPLEVEL_VM'].includes(data.type))
     assert(Number.isInteger(data.from_user_id))
     assert(Number.isInteger(data.to_user_id))
@@ -1690,7 +1697,7 @@ exports.createVmNotification = async function(data) {
 }
 
 // Pass in optional notification type to filter
-exports.findNotificationsForUserId = async function(toUserId, type) {
+export const findNotificationsForUserId = async function(toUserId, type) {
     assert(Number.isInteger(toUserId))
 
     return pool.many(
@@ -1703,7 +1710,7 @@ exports.findNotificationsForUserId = async function(toUserId, type) {
 }
 
 // Returns how many rows deleted
-exports.deleteConvoNotification = async function(toUserId, convoId) {
+export const deleteConvoNotification = async function(toUserId, convoId) {
     return pool
         .query(
             sql`
@@ -1717,7 +1724,7 @@ exports.deleteConvoNotification = async function(toUserId, convoId) {
 }
 
 // Returns how many rows deleted
-exports.deleteSubNotifications = async function(toUserId, topicIds) {
+export const deleteSubNotifications = async function(toUserId, topicIds) {
     assert(Number.isInteger(toUserId))
     assert(Array.isArray(topicIds))
     return pool
@@ -1734,7 +1741,7 @@ exports.deleteSubNotifications = async function(toUserId, topicIds) {
 
 // Deletes all rows in notifications table for user,
 // and also resets the counter caches
-exports.clearNotifications = async function(toUserId, notificationIds) {
+export const clearNotifications = async function(toUserId, notificationIds) {
     assert(Number.isInteger(toUserId))
     assert(Array.isArray(notificationIds))
 
@@ -1768,7 +1775,7 @@ exports.clearNotifications = async function(toUserId, notificationIds) {
   `)
 }
 
-exports.clearConvoNotifications = async function(toUserId) {
+export const clearConvoNotifications = async function(toUserId) {
     await pool.query(sql`
     DELETE FROM notifications
     WHERE to_user_id = ${toUserId} AND type = 'CONVO'
@@ -1786,7 +1793,7 @@ exports.clearConvoNotifications = async function(toUserId) {
 }
 
 // Returns [String]
-exports.findAllUnames = async function() {
+export const findAllUnames = async function() {
     return pool
         .many(
             sql`
@@ -1798,7 +1805,7 @@ exports.findAllUnames = async function() {
 
 ////////////////////////////////////////////////////////////
 
-exports.findRGNTopicForHomepage = async function(topic_id) {
+export const findRGNTopicForHomepage = async function(topic_id) {
     assert(topic_id)
 
     return pool.one(sql`
@@ -1818,7 +1825,7 @@ WHERE t.id = ${topic_id}
 ////////////////////////////////////////////////////////////
 
 // Keep in sync with findTopicWithHasSubscribed
-exports.findTopicById = async function(topicId) {
+export const findTopicById = async function(topicId) {
     debug(`[findTopicById] topicId=${topicId}`)
     assert(topicId)
 
@@ -1846,7 +1853,7 @@ GROUP BY t.id, f.id
 // - title Maybe String
 // - join-status Maybe (jump-in | apply | full)
 //
-exports.updateTopic = async function(topicId, props) {
+export const updateTopic = async function(topicId, props) {
     assert(topicId)
     assert(props)
 
@@ -1862,7 +1869,7 @@ exports.updateTopic = async function(topicId, props) {
 
 ////////////////////////////////////////////////////////////
 
-exports.createMentionNotification = async function({
+export const createMentionNotification = async function({
     from_user_id,
     to_user_id,
     post_id,
@@ -1883,7 +1890,7 @@ exports.createMentionNotification = async function({
 
 ////////////////////////////////////////////////////////////
 
-exports.parseAndCreateMentionNotifications = async function(props) {
+export const parseAndCreateMentionNotifications = async function(props) {
     debug('[parseAndCreateMentionNotifications] Started...')
     assert(props.fromUser.id)
     assert(props.fromUser.uname)
@@ -1899,11 +1906,11 @@ exports.parseAndCreateMentionNotifications = async function(props) {
     mentionedUnames = _.take(mentionedUnames, config.MENTIONS_PER_POST)
 
     // Ensure these are users
-    const mentionedUsers = await exports.findUsersByUnames(mentionedUnames)
+    const mentionedUsers = await findUsersByUnames(mentionedUnames)
 
     // Create the notifications in parallel
     const tasks = mentionedUsers.map(toUser => {
-        return exports.createMentionNotification({
+        return createMentionNotification({
             from_user_id: props.fromUser.id,
             to_user_id: toUser.id,
             post_id: props.post_id,
@@ -1916,7 +1923,7 @@ exports.parseAndCreateMentionNotifications = async function(props) {
 
 ////////////////////////////////////////////////////////////
 
-exports.createQuoteNotification = async function({
+export const createQuoteNotification = async function({
     from_user_id,
     to_user_id,
     topic_id,
@@ -1936,7 +1943,7 @@ exports.createQuoteNotification = async function({
 }
 
 // Keep in sync with db.parseAndCreateMentionNotifications
-exports.parseAndCreateQuoteNotifications = async function(props) {
+export const parseAndCreateQuoteNotifications = async function(props) {
     debug('[parseAndCreateQuoteNotifications] Started...')
     assert(props.fromUser.id)
     assert(props.fromUser.uname)
@@ -1953,12 +1960,12 @@ exports.parseAndCreateQuoteNotifications = async function(props) {
     mentionedUnames = _.take(mentionedUnames, config.QUOTES_PER_POST)
 
     // Ensure these are users
-    const mentionedUsers = await exports.findUsersByUnames(mentionedUnames)
+    const mentionedUsers = await findUsersByUnames(mentionedUnames)
 
     // Create the notifications in parallel
     return Promise.all(
         mentionedUsers.map(toUser => {
-            return exports.createQuoteNotification({
+            return createQuoteNotification({
                 from_user_id: props.fromUser.id,
                 to_user_id: toUser.id,
                 post_id: props.post_id,
@@ -1968,7 +1975,7 @@ exports.parseAndCreateQuoteNotifications = async function(props) {
     )
 }
 
-exports.findReceivedNotificationsForUserId = async function(toUserId) {
+export const findReceivedNotificationsForUserId = async function(toUserId) {
     return pool.many(sql`
 SELECT
   n.*,
@@ -2018,7 +2025,7 @@ LIMIT 50
 }
 
 // Returns how many rows deleted
-exports.deleteNotificationsForPostId = async function(toUserId, postId) {
+export const deleteNotificationsForPostId = async function(toUserId, postId) {
     debug(
         `[deleteNotificationsForPostId] toUserId=${toUserId}, postId=${postId}`
     )
@@ -2047,8 +2054,7 @@ exports.deleteNotificationsForPostId = async function(toUserId, postId) {
 // doesn't have to wait
 //
 // TODO: pass in currUser instead of ctx
-exports.upsertViewer = async function(ctx, forumId, topicId) {
-    assert(ctx)
+export async function upsertViewer(ctx: Context, forumId: number, topicId?: number) {
     assert(forumId)
 
     if (
@@ -2077,7 +2083,7 @@ exports.upsertViewer = async function(ctx, forumId, topicId) {
 }
 
 // Returns map of ForumId->Int
-exports.getForumViewerCounts = async function() {
+export async function getForumViewerCounts() {
     // Query returns { forum_id: Int, viewers_count: Int } for every forum
     const rows = await pool.many(sql`
 SELECT
@@ -2100,7 +2106,7 @@ GROUP BY f.id
 // Deletes viewers where viewed_at is older than 15 min ago
 // Run this in a cronjob
 // Returns Int of viewers deleted
-exports.clearExpiredViewers = async function() {
+export const clearExpiredViewers = async function() {
     debug('[clearExpiredViewers] Running')
 
     const count = await pool
@@ -2120,7 +2126,7 @@ exports.clearExpiredViewers = async function() {
 // Returns viewers as a map of { users: [Viewer], guests: [Viewer] }
 //
 // @fast
-exports.findViewersForTopicId = async function(topicId) {
+export const findViewersForTopicId = async function(topicId) {
     assert(topicId)
 
     const viewers = await pool.many(sql`
@@ -2139,7 +2145,7 @@ exports.findViewersForTopicId = async function(topicId) {
 // Returns viewers as a map of { users: [Viewer], guests: [Viewer] }
 //
 // @fast
-exports.findViewersForForumId = async function(forumId) {
+export const findViewersForForumId = async function(forumId) {
     assert(forumId)
 
     const viewers = await pool.many(sql`
@@ -2156,7 +2162,7 @@ exports.findViewersForForumId = async function(forumId) {
 }
 
 // leaveRedirect: Bool
-exports.moveTopic = async function(
+export const moveTopic = async function(
     topicId,
     fromForumId,
     toForumId,
@@ -2236,7 +2242,7 @@ exports.moveTopic = async function(
 // - type: like | laugh | thank
 //
 // If returns falsey, then rating already exists.
-exports.ratePost = async function(props) {
+export const ratePost = async function(props) {
     assert(props.post_id)
     assert(props.from_user_id)
     assert(props.from_user_uname)
@@ -2259,7 +2265,7 @@ exports.ratePost = async function(props) {
 
 ////////////////////////////////////////////////////////////
 
-exports.findLatestRatingForUserId = async function(userId) {
+export const findLatestRatingForUserId = async function(userId) {
     assert(userId)
 
     return pool.one(sql`
@@ -2273,7 +2279,7 @@ exports.findLatestRatingForUserId = async function(userId) {
 
 ////////////////////////////////////////////////////////////
 
-exports.findRatingByFromUserIdAndPostId = async function(
+export const findRatingByFromUserIdAndPostId = async function(
     from_user_id,
     post_id
 ) {
@@ -2288,7 +2294,7 @@ exports.findRatingByFromUserIdAndPostId = async function(
   `)
 }
 
-exports.deleteRatingByFromUserIdAndPostId = async function(
+export const deleteRatingByFromUserIdAndPostId = async function(
     from_user_id,
     post_id
 ) {
@@ -2302,7 +2308,7 @@ exports.deleteRatingByFromUserIdAndPostId = async function(
   `)
 }
 
-exports.deleteLegacyAvatar = async function(userId) {
+export const deleteLegacyAvatar = async function(userId) {
     return pool.one(sql`
     UPDATE users
     SET legacy_avatar_url = null
@@ -2311,7 +2317,7 @@ exports.deleteLegacyAvatar = async function(userId) {
   `)
 }
 
-exports.deleteAvatar = async function(userId) {
+export const deleteAvatar = async function(userId) {
     return pool.one(sql`
 UPDATE users
 SET legacy_avatar_url = null, avatar_url = ''
@@ -2328,7 +2334,7 @@ RETURNING *
 // - topic_id
 // - rating_type: Any rating_type enum
 // Returns created notification
-exports.createRatingNotification = async function(props) {
+export const createRatingNotification = async function(props) {
     assert(props.from_user_id)
     assert(props.to_user_id)
     assert(props.post_id)
@@ -2352,7 +2358,7 @@ RETURNING *
 // - logged on in the last year
 // - have at least one post
 // - are not nuked
-exports.findAllUnamesJson = async function() {
+export const findAllUnamesJson = async function() {
     return pool
         .one(
             sql`
@@ -2366,7 +2372,7 @@ exports.findAllUnamesJson = async function() {
         .then(row => row.unames)
 }
 
-exports.updateTopicCoGms = async function(topicId, userIds) {
+export const updateTopicCoGms = async function(topicId, userIds) {
     assert(topicId)
     assert(_.isArray(userIds))
 
@@ -2378,12 +2384,12 @@ exports.updateTopicCoGms = async function(topicId, userIds) {
   `)
 }
 
-exports.findAllTags = async function() {
+export const findAllTags = async function() {
     return pool.many(sql`SELECT * FROM tags`)
 }
 
 // Returns [TagGroup] where each group has [Tag] array bound to `tags` property
-exports.findAllTagGroups = async function() {
+export const findAllTagGroups = async function() {
     return pool.many(sql`
     SELECT
       *,
@@ -2394,7 +2400,7 @@ exports.findAllTagGroups = async function() {
 
 // topicId :: String | Int
 // tagIds :: [Int]
-exports.updateTopicTags = async function(topicId, tagIds) {
+export const updateTopicTags = async function(topicId, tagIds) {
     assert(topicId)
     assert(_.isArray(tagIds))
 
@@ -2418,7 +2424,7 @@ exports.updateTopicTags = async function(topicId, tagIds) {
 }
 
 // Returns latest 5 unhidden checks
-exports.findLatestChecks = async function() {
+export const findLatestChecks = async function() {
     const forumIds = [12, 38, 13, 14, 15, 16, 40, 43]
 
     return pool.many(sql`
@@ -2441,7 +2447,7 @@ exports.findLatestChecks = async function() {
 }
 
 // Returns latest 5 unhidden roleplays
-exports.findLatestRoleplays = async function() {
+export const findLatestRoleplays = async function() {
     const forumIds = [3, 4, 5, 6, 7, 39, 42]
     return pool.many(sql`
 SELECT
@@ -2462,7 +2468,7 @@ LIMIT 5
   `)
 }
 
-exports.findAllPublicTopicUrls = async function() {
+export const findAllPublicTopicUrls = async function() {
     return pool
         .many(
             sql`
@@ -2483,7 +2489,7 @@ exports.findAllPublicTopicUrls = async function() {
         })
 }
 
-exports.findPostsByIds = async function(ids) {
+export const findPostsByIds = async function(ids) {
     assert(_.isArray(ids))
     ids = ids.map(Number) // Ensure ids are numbers, not strings
 
@@ -2513,7 +2519,7 @@ exports.findPostsByIds = async function(ids) {
 
 ////////////////////////////////////////////////////////////
 
-exports.getUnamesMappedToIds = async function() {
+export async function getUnamesMappedToIds() {
     const rows = await pool.many(sql`
     SELECT uname, id FROM users
   `)
@@ -2530,7 +2536,7 @@ exports.getUnamesMappedToIds = async function() {
 ////////////////////////////////////////////////////////////
 
 // Trophies are returned newly-awarded first
-exports.findTrophiesForUserId = async function(user_id) {
+export async function findTrophiesForUserId(user_id: number) {
     return pool.many(sql`
 SELECT
   tu.is_anon,
@@ -2554,7 +2560,7 @@ ORDER BY tu.awarded_at DESC
 ////////////////////////////////////////////////////////////
 
 // Finds one trophy
-exports.findTrophyById = async function(trophy_id) {
+export async function findTrophyById(trophy_id: number) {
     return pool.one(sql`
     SELECT
       t.*,
@@ -2568,7 +2574,7 @@ exports.findTrophyById = async function(trophy_id) {
 
 ////////////////////////////////////////////////////////////
 
-exports.findTrophiesByGroupId = async function(group_id) {
+export const findTrophiesByGroupId = async function(group_id) {
     return pool.many(sql`
     SELECT *
     FROM trophies t
@@ -2579,7 +2585,7 @@ exports.findTrophiesByGroupId = async function(group_id) {
 
 ////////////////////////////////////////////////////////////
 
-exports.findTrophyGroups = async function() {
+export async function findTrophyGroups() {
     return pool.many(sql`
     SELECT *
     FROM trophy_groups
@@ -2589,7 +2595,7 @@ exports.findTrophyGroups = async function() {
 
 ////////////////////////////////////////////////////////////
 
-exports.findTrophyGroupById = async function(group_id) {
+export async function findTrophyGroupById(group_id: number) {
     return pool.one(sql`
     SELECT *
     FROM trophy_groups tg
@@ -2602,7 +2608,7 @@ exports.findTrophyGroupById = async function(group_id) {
 // title Required
 // description_markup Optional
 // description_html Optional
-exports.updateTrophyGroup = async function(id, title, desc_markup, desc_html) {
+export async function updateTrophyGroup(id: number, title: string, desc_markup: string, desc_html: string) {
     return pool.one(sql`
     UPDATE trophy_groups
     SET
@@ -2621,7 +2627,7 @@ exports.updateTrophyGroup = async function(id, title, desc_markup, desc_html) {
 // title Required
 // description_markup Optional
 // description_html Optional
-exports.updateTrophy = async function(id, title, desc_markup, desc_html) {
+export async function updateTrophy(id: number, title: string, desc_markup: string, desc_html: string) {
     assert(Number.isInteger(id))
 
     return pool.one(sql`
@@ -2641,10 +2647,10 @@ RETURNING *
 //
 // message_markup Optional
 // message_html Optional
-exports.updateTrophyUserBridge = async function(
-    id,
-    message_markup,
-    message_html
+export async function updateTrophyUserBridge(
+    id: number,
+    message_markup: string,
+    message_html: string
 ) {
     assert(Number.isInteger(id))
 
@@ -2660,7 +2666,7 @@ exports.updateTrophyUserBridge = async function(
 
 ////////////////////////////////////////////////////////////
 
-exports.deactivateCurrentTrophyForUserId = async function(user_id) {
+export const deactivateCurrentTrophyForUserId = async function(user_id) {
     assert(_.isNumber(user_id))
 
     return pool.one(sql`
@@ -2672,7 +2678,7 @@ exports.deactivateCurrentTrophyForUserId = async function(user_id) {
 
 ////////////////////////////////////////////////////////////
 
-exports.updateUserActiveTrophyId = async function(user_id, trophy_id) {
+export const updateUserActiveTrophyId = async function(user_id, trophy_id) {
     assert(_.isNumber(user_id))
     assert(_.isNumber(trophy_id))
 
@@ -2685,7 +2691,7 @@ exports.updateUserActiveTrophyId = async function(user_id, trophy_id) {
 
 ////////////////////////////////////////////////////////////
 
-exports.findTrophyUserBridgeById = async function(id) {
+export const findTrophyUserBridgeById = async function(id) {
     debug('[findTrophyUserBridgeById] id=%j', id)
     assert(id)
 
@@ -2706,7 +2712,7 @@ exports.findTrophyUserBridgeById = async function(id) {
 // Deprecated now that I've added a primary key serial to trophies_users.
 //
 // Instead, use db.findTrophyUserBridgeById(id)
-exports.findTrophyByIdAndUserId = async function(trophy_id, user_id) {
+export const findTrophyByIdAndUserId = async function(trophy_id, user_id) {
     assert(_.isNumber(user_id))
     assert(_.isNumber(trophy_id))
 
@@ -2722,7 +2728,7 @@ exports.findTrophyByIdAndUserId = async function(trophy_id, user_id) {
 
 ////////////////////////////////////////////////////////////
 
-exports.findWinnersForTrophyId = async function(trophy_id) {
+export const findWinnersForTrophyId = async function(trophy_id) {
     return pool.many(sql`
     SELECT
       tu.is_anon,
@@ -2746,7 +2752,7 @@ exports.findWinnersForTrophyId = async function(trophy_id) {
 // description_markup and _html are optional
 //
 // Returns created trophy group
-exports.createTrophyGroup = async function(
+export const createTrophyGroup = async function(
     title,
     description_markup,
     description_html
@@ -2765,7 +2771,7 @@ RETURNING *
 ////////////////////////////////////////////////////////////
 
 // props must have user_id (Int), text (String), html (String) properties
-exports.createStatus = async function({ user_id, html, text }) {
+export const createStatus = async function({ user_id, html, text }) {
     assert(Number.isInteger(user_id))
     assert(typeof text === 'string')
     assert(typeof html === 'string')
@@ -2780,7 +2786,7 @@ exports.createStatus = async function({ user_id, html, text }) {
 ////////////////////////////////////////////////////////////
 
 // @fast
-exports.findLatestStatusesForUserId = async function(user_id) {
+export const findLatestStatusesForUserId = async function(user_id) {
     return pool.many(sql`
     SELECT *
     FROM statuses
@@ -2792,7 +2798,7 @@ exports.findLatestStatusesForUserId = async function(user_id) {
 
 ////////////////////////////////////////////////////////////
 
-exports.findStatusById = async function(id) {
+export const findStatusById = async function(id) {
     return pool.one(sql`
     SELECT
       us.*,
@@ -2805,7 +2811,7 @@ exports.findStatusById = async function(id) {
 
 ////////////////////////////////////////////////////////////
 
-exports.deleteStatusById = async function(id) {
+export const deleteStatusById = async function(id) {
     return pool.query(sql`
     DELETE FROM statuses
     WHERE id = ${id}
@@ -2814,7 +2820,7 @@ exports.deleteStatusById = async function(id) {
 
 ////////////////////////////////////////////////////////////
 
-exports.findLatestStatuses = async function() {
+export const findLatestStatuses = async function() {
     return pool.many(sql`
     SELECT
       us.*,
@@ -2829,7 +2835,7 @@ exports.findLatestStatuses = async function() {
 
 ////////////////////////////////////////////////////////////
 
-exports.clearCurrentStatusForUserId = async function(user_id) {
+export const clearCurrentStatusForUserId = async function(user_id) {
     assert(user_id)
 
     return pool.query(sql`
@@ -2841,7 +2847,7 @@ WHERE id = ${user_id}
 
 ////////////////////////////////////////////////////////////
 
-exports.findAllStatuses = async function() {
+export const findAllStatuses = async function() {
     // This query was hilariously slow. But I hate the rewrite
     // below. Is there a better way?
     //
@@ -2892,7 +2898,7 @@ ORDER BY s.created_at DESC
     return statuses
 }
 
-exports.likeStatus = async function({ user_id, status_id }) {
+export const likeStatus = async function({ user_id, status_id }) {
     assert(Number.isInteger(user_id))
     assert(Number.isInteger(status_id))
 
@@ -2924,7 +2930,7 @@ exports.likeStatus = async function({ user_id, status_id }) {
 ////////////////////////////////////////////////////////////
 
 // Returns created_at Date OR null for user_id
-exports.latestStatusLikeAt = async function(user_id) {
+export const latestStatusLikeAt = async function(user_id) {
     assert(user_id)
 
     const row = await pool.one(sql`
@@ -2938,7 +2944,7 @@ exports.latestStatusLikeAt = async function(user_id) {
 
 ////////////////////////////////////////////////////////////
 
-exports.updateTopicWatermark = async function(props) {
+export const updateTopicWatermark = async function(props) {
     debug('[updateTopicWatermark] props:', props)
     assert(props.topic_id)
     assert(props.user_id)
@@ -2960,7 +2966,8 @@ exports.updateTopicWatermark = async function(props) {
 
 ////////////////////////////////////////////////////////////
 
-exports.findFirstUnreadPostId = async function({
+// FIXME: This was redeclared further down.
+export const _findFirstUnreadPostId = async function({
     topic_id,
     post_type,
     user_id,
@@ -2998,7 +3005,7 @@ exports.findFirstUnreadPostId = async function({
 
 ////////////////////////////////////////////////////////////
 
-exports.findFirstUnreadPostId = async function({
+export const findFirstUnreadPostId = async function({
     topic_id,
     post_type,
     user_id,
@@ -3045,7 +3052,7 @@ WHERE
     return row && row.post_id
 }
 
-exports.deleteNotificationForUserIdAndId = async function(userId, id) {
+export const deleteNotificationForUserIdAndId = async function(userId, id) {
     debug(`[deleteNotificationsForUserIdAndId] userId=${userId}, id=${id}`)
 
     assert(Number.isInteger(userId))
@@ -3058,7 +3065,7 @@ exports.deleteNotificationForUserIdAndId = async function(userId, id) {
   `)
 }
 
-exports.findNotificationById = async function(id) {
+export const findNotificationById = async function(id) {
     debug(`[findNotification] id=${id}`)
     return pool.one(sql`
     SELECT *
@@ -3071,7 +3078,7 @@ exports.findNotificationById = async function(id) {
 
 // Returns the current feedback topic only if:
 // - User has not already replied to it (or clicked ignore)
-exports.findUnackedFeedbackTopic = function(feedback_topic_id, user_id) {
+export const findUnackedFeedbackTopic = function(feedback_topic_id, user_id) {
     assert(_.isNumber(feedback_topic_id))
     assert(_.isNumber(user_id))
 
@@ -3091,7 +3098,7 @@ exports.findUnackedFeedbackTopic = function(feedback_topic_id, user_id) {
 
 ////////////////////////////////////////////////////////////
 
-exports.findFeedbackTopicById = async function(ftopic_id) {
+export const findFeedbackTopicById = async function(ftopic_id) {
     assert(_.isNumber(ftopic_id))
 
     return pool.one(sql`
@@ -3103,7 +3110,7 @@ exports.findFeedbackTopicById = async function(ftopic_id) {
 
 ////////////////////////////////////////////////////////////
 
-exports.findFeedbackRepliesByTopicId = async function(ftopic_id) {
+export const findFeedbackRepliesByTopicId = async function(ftopic_id) {
     assert(_.isNumber(ftopic_id))
 
     return pool.many(sql`
@@ -3119,7 +3126,7 @@ exports.findFeedbackRepliesByTopicId = async function(ftopic_id) {
 
 ////////////////////////////////////////////////////////////
 
-exports.insertReplyToUnackedFeedbackTopic = async function(
+export const insertReplyToUnackedFeedbackTopic = async function(
     feedback_topic_id,
     user_id,
     text,
@@ -3139,7 +3146,7 @@ exports.insertReplyToUnackedFeedbackTopic = async function(
 ////////////////////////////////////////////////////////////
 
 // Defaults to the most active 10 friends
-exports.findFriendshipsForUserId = async function(user_id, limit = 100) {
+export const findFriendshipsForUserId = async function(user_id, limit = 100) {
     assert(_.isNumber(user_id))
 
     return pool.many(sql`
@@ -3169,7 +3176,7 @@ LIMIT ${limit}
 // @fast
 //
 // TODO: add is_mutual
-exports.findFriendshipBetween = async function(from_id, to_id) {
+export const findFriendshipBetween = async function(from_id, to_id) {
     return pool.one(sql`
     SELECT friendships
     FROM friendships
@@ -3179,7 +3186,7 @@ exports.findFriendshipBetween = async function(from_id, to_id) {
 
 ////////////////////////////////////////////////////////////
 
-exports.createFriendship = async function(from_id, to_id) {
+export async function createFriendship(from_id: number, to_id: number) {
     assert(_.isNumber(from_id))
     assert(_.isNumber(to_id))
 
@@ -3193,7 +3200,7 @@ exports.createFriendship = async function(from_id, to_id) {
         )
         .then(row => row!.count)
 
-    if (count <= 100) {
+    if (count >= 100) {
         throw 'TOO_MANY_FRIENDS'
     }
 
@@ -3214,7 +3221,7 @@ exports.createFriendship = async function(from_id, to_id) {
         })
 }
 
-exports.deleteFriendship = async function(from_id, to_id) {
+export const deleteFriendship = async function(from_id, to_id) {
     assert(_.isNumber(from_id))
     assert(_.isNumber(to_id))
 
@@ -3228,7 +3235,7 @@ exports.deleteFriendship = async function(from_id, to_id) {
 
 // Returns array of all unique user IDs that have posted a VM
 // in a thread, given the root VM ID of that thread
-exports.getVmThreadUserIds = async function(parentVmId) {
+export const getVmThreadUserIds = async function(parentVmId) {
     assert(Number.isInteger(parentVmId))
 
     return pool
@@ -3250,7 +3257,7 @@ exports.getVmThreadUserIds = async function(parentVmId) {
 // - html
 // Optional
 // - parent_vm_id: Int - Only present if this VM is a reply to a toplevel VM
-exports.createVm = async function(data) {
+export const createVm = async function(data) {
     assert(Number.isInteger(data.from_user_id))
     assert(Number.isInteger(data.to_user_id))
     assert(_.isString(data.markup))
@@ -3264,7 +3271,7 @@ RETURNING *
   `)
 }
 
-exports.findLatestVMsForUserId = async function(user_id) {
+export const findLatestVMsForUserId = async function(user_id) {
     assert(Number.isInteger(user_id))
 
     // Created index for this: create index vms_apple ON vms (to_user_id, parent_vm_id)
@@ -3302,7 +3309,7 @@ LIMIT 30
   `)
 }
 
-exports.clearVmNotification = async function(to_user_id, vm_id) {
+export const clearVmNotification = async function(to_user_id, vm_id) {
     assert(Number.isInteger(to_user_id))
     assert(Number.isInteger(vm_id))
 
@@ -3315,14 +3322,14 @@ exports.clearVmNotification = async function(to_user_id, vm_id) {
 ////////////////////////////////////////////////////////////
 // current_sidebar_contests
 
-exports.clearCurrentSidebarContest = async function() {
+export const clearCurrentSidebarContest = async function() {
     return pool.query(sql`
     UPDATE current_sidebar_contests
     SET is_current = false
   `)
 }
 
-exports.updateCurrentSidebarContest = async function(id, data) {
+export const updateCurrentSidebarContest = async function(id, data) {
     assert(Number.isInteger(id))
     assert(_.isString(data.title) || _.isUndefined(data.title))
     assert(_.isString(data.topic_url) || _.isUndefined(data.topic_url))
@@ -3346,7 +3353,7 @@ exports.updateCurrentSidebarContest = async function(id, data) {
   `)
 }
 
-exports.insertCurrentSidebarContest = async function(data) {
+export const insertCurrentSidebarContest = async function(data) {
     assert(_.isString(data.title))
     assert(_.isString(data.topic_url))
     assert(_.isString(data.deadline))
@@ -3364,7 +3371,7 @@ exports.insertCurrentSidebarContest = async function(data) {
 }
 
 // Returns object or undefined
-exports.getCurrentSidebarContest = async function() {
+export const getCurrentSidebarContest = async function() {
     return pool.one(sql`
     SELECT *
     FROM current_sidebar_contests
@@ -3376,7 +3383,7 @@ exports.getCurrentSidebarContest = async function() {
 
 ////////////////////////////////////////////////////////////
 
-exports.updateConvoFolder = async function(userId, convoId, folder) {
+export const updateConvoFolder = async function(userId, convoId, folder) {
     assert(Number.isInteger(userId))
     assert(convoId)
     assert(_.isString(folder))
@@ -3397,7 +3404,7 @@ exports.updateConvoFolder = async function(userId, convoId, folder) {
 
 // Remember to also approve an unnuked user. Didn't do it
 // here because i don't currently pass in unnuker_id
-exports.unnukeUser = async function(userId) {
+export const unnukeUser = async function(userId) {
     assert(Number.isInteger(userId))
     const sqls = {
         unbanUser: sql`
@@ -3429,7 +3436,7 @@ exports.unnukeUser = async function(userId) {
 //
 // Takes an object to prevent mistakes.
 // { spambot: UserId, nuker: UserId  }
-exports.nukeUser = async function({ spambot, nuker }) {
+export const nukeUser = async function({ spambot, nuker }) {
     assert(Number.isInteger(spambot))
     assert(Number.isInteger(nuker))
 
@@ -3495,7 +3502,7 @@ exports.nukeUser = async function({ spambot, nuker }) {
 ////////////////////////////////////////////////////////////
 
 // Delete topic ban for given topic+user combo
-exports.deleteUserTopicBan = async (topicId, userId) => {
+export const deleteUserTopicBan = async (topicId, userId) => {
     assert(Number.isInteger(topicId))
     assert(Number.isInteger(userId))
 
@@ -3506,7 +3513,7 @@ exports.deleteUserTopicBan = async (topicId, userId) => {
   `)
 }
 
-exports.deleteTopicBan = async banId => {
+export const deleteTopicBan = async banId => {
     assert(Number.isInteger(banId))
 
     return pool.query(sql`
@@ -3515,7 +3522,7 @@ exports.deleteTopicBan = async banId => {
   `)
 }
 
-exports.getTopicBan = async banId => {
+export const getTopicBan = async banId => {
     assert(Number.isInteger(banId))
 
     return pool.one(sql`
@@ -3538,7 +3545,7 @@ exports.getTopicBan = async banId => {
   `)
 }
 
-exports.insertTopicBan = async (topicId, gmId, bannedId) => {
+export const insertTopicBan = async (topicId, gmId, bannedId) => {
     assert(Number.isInteger(topicId))
     assert(Number.isInteger(gmId))
     assert(Number.isInteger(bannedId))
@@ -3558,7 +3565,7 @@ exports.insertTopicBan = async (topicId, gmId, bannedId) => {
         })
 }
 
-exports.listTopicBans = async topicId => {
+export const listTopicBans = async topicId => {
     assert(Number.isInteger(topicId))
 
     return pool.many(sql`
@@ -3581,7 +3588,7 @@ exports.listTopicBans = async topicId => {
   `)
 }
 
-exports.allForumMods = async () => {
+export const allForumMods = async () => {
     return pool.many(sql`
     SELECT
       fm.forum_id,
@@ -3599,18 +3606,26 @@ exports.allForumMods = async () => {
 
 // Re-exports
 
-exports.keyvals = require('./keyvals')
-exports.ratelimits = require('./ratelimits')
-exports.images = require('./images')
-exports.dice = require('./dice')
-exports.profileViews = require('./profile-views')
-exports.users = require('./users')
-exports.chat = require('./chat')
-exports.subscriptions = require('./subscriptions')
-exports.vms = require('./vms')
-exports.convos = require('./convos')
-exports.tags = require('./tags')
-exports.revs = require('./revs')
-exports.unames = require('./unames')
-exports.hits = require('./hits')
-exports.admin = require('./admin')
+export * as keyvals from './keyvals'
+export * as ratelimits from './ratelimits'
+export * as images from './images'
+export * as dice from './dice'
+export * as profileViews from './profile-views'
+// Function aliases
+export const findUser = findUserById
+export const getUserBySlug = findUserBySlug
+export const findPost = findPostById
+export const findPm = findPmById
+export const findForum = findForumById
+
+// Sub-modules
+export * as users from './users'
+export * as chat from './chat'
+export * as subscriptions from './subscriptions'
+export * as vms from './vms'
+export * as convos from './convos'
+export * as tags from './tags'
+export * as revs from './revs'
+export * as unames from './unames'
+export * as hits from './hits'
+export * as admin from './admin'

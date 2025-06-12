@@ -1,15 +1,14 @@
 'use strict'
 // 3rd
-const assert = require('assert')
-const Router = require('@koa/router')
-const debug = require('debug')('app:routes:dice')
+import Router from '@koa/router'
 // 1st
-const db = require('../db')
-const pre = require('../presenters')
+import * as db from '../db'
+import * as pre from '../presenters'
+import { Context } from 'koa'
 
 // HELPERS
 
-async function loadCampaign(ctx, next) {
+async function loadCampaign(ctx: Context, next) {
     const campaign = await db.dice.getCampaign(ctx.params.campaign_id)
     ctx.assert(campaign, 404)
     pre.presentCampaign(campaign)
@@ -17,7 +16,7 @@ async function loadCampaign(ctx, next) {
     return next()
 }
 
-async function loadRoll(ctx, next) {
+async function loadRoll(ctx: Context, next) {
     const roll = await db.dice.getRoll(ctx.params.roll_id)
     ctx.assert(roll, 404)
     pre.presentRoll(roll)
@@ -31,10 +30,10 @@ const router = new Router()
 
 // List all dice campaigns/rolls
 //
-router.get('/campaigns', async ctx => {
+router.get('/campaigns', async (ctx: Context) => {
     const campaigns = await db.dice.listCampaignsByActivity()
     campaigns.forEach(pre.presentCampaign)
-    let myCampaigns = []
+    let myCampaigns: any[] = []
     if (ctx.currUser) {
         myCampaigns = await db.dice.getCampaignsForUser(ctx.currUser.id)
         myCampaigns.forEach(pre.presentCampaign)
@@ -50,7 +49,7 @@ router.get('/campaigns', async ctx => {
 
 // Create campaign
 //
-router.post('/campaigns', async ctx => {
+router.post('/campaigns', async (ctx: Context) => {
     ctx.assertAuthorized(ctx.currUser, 'CREATE_CAMPAIGN')
     // VALIDATE
     ctx
@@ -77,7 +76,7 @@ router.post('/campaigns', async ctx => {
 
 // Show campaign
 //
-router.get('/campaigns/:campaign_id', loadCampaign, async ctx => {
+router.get('/campaigns/:campaign_id', loadCampaign, async (ctx: Context) => {
     ctx.assertAuthorized(ctx.currUser, 'READ_CAMPAIGN', ctx.state.campaign)
     // LOAD
     const rolls = await db.dice.getCampaignRolls(ctx.state.campaign.id)
@@ -95,7 +94,7 @@ router.get('/campaigns/:campaign_id', loadCampaign, async ctx => {
 
 // Create roll
 //
-router.post('/campaigns/:campaign_id/rolls', loadCampaign, async ctx => {
+router.post('/campaigns/:campaign_id/rolls', loadCampaign, async (ctx: Context) => {
     // AUTHZ
     ctx.assertAuthorized(ctx.currUser, 'CREATE_ROLL', ctx.state.campaign)
     // VALIDATE
@@ -130,7 +129,7 @@ router.post('/campaigns/:campaign_id/rolls', loadCampaign, async ctx => {
 
 // Show roll
 //
-router.get('/rolls/:roll_id', loadRoll, async ctx => {
+router.get('/rolls/:roll_id', loadRoll, async (ctx: Context) => {
     await ctx.render('dice/show_roll', {
         ctx,
         campaign: ctx.state.roll.campaign,
@@ -140,7 +139,7 @@ router.get('/rolls/:roll_id', loadRoll, async ctx => {
 
 // Update campaign
 //
-router.put('/campaigns/:campaign_id', loadCampaign, async ctx => {
+router.put('/campaigns/:campaign_id', loadCampaign, async (ctx: Context) => {
     // AUTHZ
     ctx.assertAuthorized(ctx.currUser, 'UPDATE_CAMPAIGN', ctx.state.campaign)
     // VALIDATE
@@ -167,4 +166,4 @@ router.put('/campaigns/:campaign_id', loadCampaign, async ctx => {
 
 ////////////////////////////////////////////////////////////
 
-module.exports = router
+export default router

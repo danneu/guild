@@ -1,12 +1,12 @@
 // 3rd
-const assert = require('assert')
-const { sql } = require('pg-extra')
+import assert from 'assert'
+import { sql } from 'pg-extra'
 // 1st
-const { pool } = require('./util')
+import { pool } from './util'
 
 ////////////////////////////////////////////////////////////
 
-exports.getTag = async id => {
+export const getTag = async id => {
     assert(Number.isInteger(id))
 
     return pool.one(sql`
@@ -18,7 +18,7 @@ exports.getTag = async id => {
 
 ////////////////////////////////////////////////////////////
 
-exports.getGroup = async id => {
+export const getGroup = async id => {
     return pool
         .one(
             sql`
@@ -39,7 +39,7 @@ exports.getGroup = async id => {
         })
 }
 
-exports.listGroups = async () => {
+export const listGroups = async () => {
     return pool
         .many(
             sql`
@@ -63,7 +63,7 @@ exports.listGroups = async () => {
 
 ////////////////////////////////////////////////////////////
 
-exports.insertTagGroup = async title => {
+export const insertTagGroup = async title => {
     return pool.one(sql`
     INSERT INTO tag_groups (title)
     VALUES (${title})
@@ -73,7 +73,7 @@ exports.insertTagGroup = async title => {
 
 ////////////////////////////////////////////////////////////
 
-exports.insertTag = async (groupId, title, desc) => {
+export const insertTag = async (groupId, title, desc) => {
     assert(Number.isInteger(groupId))
     assert(typeof title === 'string')
 
@@ -86,7 +86,7 @@ exports.insertTag = async (groupId, title, desc) => {
 
 ////////////////////////////////////////////////////////////
 
-exports.moveTag = async (tagId, toGroupId) => {
+export const moveTag = async (tagId, toGroupId) => {
     assert(Number.isInteger(tagId))
     assert(Number.isInteger(toGroupId))
 

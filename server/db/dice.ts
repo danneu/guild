@@ -1,14 +1,14 @@
-'use strict'
 // 3rd
-const debug = require('debug')('app:db:dice')
-const assert = require('assert')
+// import createDebug from 'debug'; 
+// const debug = createDebug('app:db:dice')
+import assert from 'assert'
 // 1st
-const bbcode = require('../bbcode')
-const dice = require('../dice')
-const { pool } = require('./util')
-const { sql } = require('pg-extra')
+import bbcode from '../bbcode'
+import * as dice from '../dice'
+import { pool } from './util'
+import { sql } from 'pg-extra'
 
-exports.getCampaign = async function(campaignId) {
+export const getCampaign = async function(campaignId) {
     return pool.one(sql`
     SELECT
       c.*,
@@ -19,7 +19,7 @@ exports.getCampaign = async function(campaignId) {
   `)
 }
 
-exports.listCampaignsByActivity = async function() {
+export const listCampaignsByActivity = async function() {
     return pool.many(sql`
     SELECT
       c.*,
@@ -34,7 +34,7 @@ exports.listCampaignsByActivity = async function() {
 }
 
 // Ordered by newest first
-exports.getCampaignsForUser = async function(userId) {
+export const getCampaignsForUser = async function(userId) {
     assert(userId)
     return pool.many(sql`
     SELECT
@@ -50,7 +50,7 @@ exports.getCampaignsForUser = async function(userId) {
   `)
 }
 
-exports.getCampaignRolls = async function(campaignId) {
+export const getCampaignRolls = async function(campaignId) {
     assert(campaignId)
     return pool.many(sql`
     SELECT
@@ -65,7 +65,7 @@ exports.getCampaignRolls = async function(campaignId) {
 }
 
 // markup is optional
-exports.updateCampaign = async function(campaignId, title, markup) {
+export const updateCampaign = async function(campaignId, title, markup) {
     assert(Number.isInteger(campaignId))
     assert(typeof title === 'string')
     let html
@@ -82,7 +82,7 @@ exports.updateCampaign = async function(campaignId, title, markup) {
 }
 
 // markup is optional
-exports.insertCampaign = async function(userId, title, markup) {
+export const insertCampaign = async function(userId, title, markup) {
     assert(Number.isInteger(userId))
     assert(typeof title === 'string')
     let html
@@ -97,7 +97,7 @@ exports.insertCampaign = async function(userId, title, markup) {
 }
 
 // note is optional
-exports.insertRoll = async function(userId, campaignId, syntax, note) {
+export const insertRoll = async function(userId, campaignId, syntax, note) {
     assert(Number.isInteger(userId))
     assert(Number.isInteger(campaignId))
     assert(typeof syntax === 'string')
@@ -123,7 +123,7 @@ exports.insertRoll = async function(userId, campaignId, syntax, note) {
     })
 }
 
-exports.getRoll = async function(rollId) {
+export const getRoll = async function(rollId) {
     assert(rollId)
     return pool.one(sql`
     SELECT

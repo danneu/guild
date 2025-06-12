@@ -1,11 +1,11 @@
-'use strict'
 // 3rd
-const Router = require('@koa/router')
-const debug = require('debug')('app:routes:admin')
+import Router from '@koa/router'
+// import createDebug from 'debug'
+// const debug = createDebug('app:routes:admin')
 // 1st
-const cancan = require('../cancan')
-const db = require('../db')
-const pre = require('../presenters')
+import * as db from '../db'
+import * as pre from '../presenters'
+import { Context } from 'koa'
 
 ////////////////////////////////////////////////////////////
 
@@ -13,7 +13,7 @@ const router = new Router()
 
 ////////////////////////////////////////////////////////////
 
-router.post('/admin/users/merge', async ctx => {
+router.post('/admin/users/merge', async (ctx: Context) => {
     ctx.assert(ctx.currUser && ctx.currUser.role === 'admin')
     ctx
         .validateBody('main-slug')
@@ -62,4 +62,4 @@ router.post('/admin/users/merge', async ctx => {
 
 ////////////////////////////////////////////////////////////
 
-module.exports = router
+export default router

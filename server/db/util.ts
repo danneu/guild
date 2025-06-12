@@ -1,8 +1,8 @@
 import { QueryConfig, QueryResult, QueryResultRow } from "pg"
 
 import pg from 'pg'
-const config = require('../config')
-const belt = require('../belt')
+import * as config from '../config'
+import * as belt from '../belt'
 import assert from 'assert'
 import { readFileSync } from 'fs'
 import path from 'path'
@@ -100,12 +100,12 @@ pg.Client.prototype.one = function<T extends QueryResultRow = any>(
   return (this as pg.Client).query<T>(queryTextOrConfig, values).then(maybeOneRow);
 };
 
-function getClient() {
+export function getClient() {
     return new pg.Client(connectionConfig)
 }
 
 // TODO: Get rid of db/index.js' wrapOptionalClient and use this
-function wrapOptionalClient(fn: any) {
+export function wrapOptionalClient(fn: any) {
     return async function() {
         const args = Array.prototype.slice.call(arguments, 0)
         if (belt.isDBClient(args[0])) {
@@ -118,7 +118,7 @@ function wrapOptionalClient(fn: any) {
     }
 }
 
-module.exports = { pool, getClient, wrapOptionalClient }
+export default { pool, getClient, wrapOptionalClient }
 
 // TODO: retry logic, explain error (deadlock, etc)
 export async function withPgPoolTransaction<T>(

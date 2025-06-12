@@ -1,23 +1,23 @@
-'use strict'
 // 3rd party
-var Router = require('@koa/router')
-var _ = require('lodash')
-var debug = require('debug')('app:routes:convos')
-var bouncer = require('koa-bouncer')
-const promiseMap = require('promise.map')
+import Router from '@koa/router'
+import _ from 'lodash'
+// import createDebug from 'debug'
+// const debug = createDebug('app:routes:convos')
+import bouncer from 'koa-bouncer'
+import promiseMap from 'promise.map'
 // 1st party
-var db = require('../db')
-var belt = require('../belt')
-var pre = require('../presenters')
-var config = require('../config')
-var cancan = require('../cancan')
-var avatar = require('../avatar')
-var bbcode = require('../bbcode')
-var paginate = require('../paginate')
-const emailer2 = require('../emailer2')
-const eflags  = require('../eflags')
+import * as db from '../db/index.js'
+import * as belt from '../belt.js'
+import * as pre from '../presenters.js'
+import * as config from '../config.js'
+import * as cancan from '../cancan.js'
+const bbcode = require('../bbcode.js')
+import * as paginate from '../paginate.js'
+import * as emailer2 from '../emailer2'
+import * as eflags from '../eflags.js'
+import { Context } from 'koa'
 
-var router = new Router()
+const router = new Router()
 
 ////////////////////////////////////////////////////////////
 
@@ -28,7 +28,7 @@ var router = new Router()
 // - 'title'
 // - 'markup'
 //
-router.post('/convos', async ctx => {
+router.post('/convos', async (ctx: Context) => {
     if (!config.IS_PM_SYSTEM_ONLINE) {
         ctx.body = 'PM system currently disabled'
         return
@@ -183,7 +183,7 @@ Manage notifications: ${config.HOST}/me/edit#email
 // New Convo
 //
 // TODO: Implement typeahead
-router.get('/convos/new', async ctx => {
+router.get('/convos/new', async (ctx: Context) => {
     if (!config.IS_PM_SYSTEM_ONLINE) {
         ctx.body = 'PM system currently disabled'
         return
@@ -205,7 +205,7 @@ router.get('/convos/new', async ctx => {
 // Body params
 // - markup
 //
-router.post('/convos/:convoId/pms', async ctx => {
+router.post('/convos/:convoId/pms', async (ctx: Context) => {
     if (!config.IS_PM_SYSTEM_ONLINE) {
         ctx.body = 'PM system currently disabled'
         return
@@ -269,7 +269,7 @@ router.post('/convos/:convoId/pms', async ctx => {
 ////////////////////////////////////////////////////////////
 
 // Empty trash folder
-router.delete('/me/convos/trash', async ctx => {
+router.delete('/me/convos/trash', async (ctx: Context) => {
     ctx.assert(ctx.currUser, 404)
 
     await db.convos.deleteTrash(ctx.currUser.id)
@@ -282,7 +282,7 @@ router.delete('/me/convos/trash', async ctx => {
 // Delete convo
 //
 // Body: { ids: [Int] }
-router.delete('/me/convos', async ctx => {
+router.delete('/me/convos', async (ctx: Context) => {
     const ids = ctx
         .validateBody('ids')
         .toArray()
@@ -308,7 +308,7 @@ router.delete('/me/convos', async ctx => {
 //
 // Delete convo
 //
-router.delete('/convos/:convoId', async ctx => {
+router.delete('/convos/:convoId', async (ctx: Context) => {
     const { convoId } = ctx.params
     const convo = await db.convos.getConvo(convoId).then(pre.presentConvo)
     ctx.assert(convo, 404)
@@ -325,7 +325,7 @@ router.delete('/convos/:convoId', async ctx => {
 //
 // Show convo
 //
-router.get('/convos/:convoId', async ctx => {
+router.get('/convos/:convoId', async (ctx: Context) => {
     var convoId = ctx.params.convoId
 
     if (!config.IS_PM_SYSTEM_ONLINE) {
@@ -393,7 +393,7 @@ router.get('/convos/:convoId', async ctx => {
 ////////////////////////////////////////////////////////////
 
 function showConvosHandler(folder) {
-    return async function _showConvosHandler(ctx) {
+    return async function _showConvosHandler(ctx: Context) {
         if (!config.IS_PM_SYSTEM_ONLINE) {
             ctx.body = 'PM system currently disabled'
             return
@@ -460,7 +460,7 @@ router.get('/me/convos/star', showConvosHandler('STAR'))
 router.get('/me/convos/archive', showConvosHandler('ARCHIVE'))
 router.get('/me/convos/trash', showConvosHandler('TRASH'))
 
-router.put('/convos/:convoId/folder', async ctx => {
+router.put('/convos/:convoId/folder', async (ctx: Context) => {
     var folder = ctx.request.body.folder
     ctx.assert(['INBOX', 'STAR', 'ARCHIVE', 'TRASH'].includes(folder), 400)
 
@@ -476,7 +476,7 @@ router.put('/convos/:convoId/folder', async ctx => {
 
 ////////////////////////////////////////////////////////////
 
-router.post('/me/convos/undelete-all', async ctx => {
+router.post('/me/convos/undelete-all', async (ctx: Context) => {
     ctx.assert(ctx.currUser, 404)
 
     await db.convos.undeleteAllConvos(ctx.currUser.id)
@@ -488,7 +488,7 @@ router.post('/me/convos/undelete-all', async ctx => {
 ////////////////////////////////////////////////////////////
 
 // body: { ids: [Int], folder: String }
-router.post('/me/convos/move', async ctx => {
+router.post('/me/convos/move', async (ctx: Context) => {
     const { folder } = ctx.request.body
     ctx.assert(['INBOX', 'STAR', 'ARCHIVE', 'TRASH'].includes(folder), 400)
 
@@ -520,4 +520,4 @@ router.post('/me/convos/move', async ctx => {
 
 ////////////////////////////////////////////////////////////
 
-module.exports = router
+export default router

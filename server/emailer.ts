@@ -4,9 +4,10 @@ import ses from 'nodemailer-ses-transport'
 import assert from 'assert'
 import _ from 'lodash'
 import nunjucks from 'nunjucks'
-const debug = require('debug')('app:emailer')
+import createDebug from 'debug'
+const debug = createDebug('app:emailer')
 // 1st party
-const belt = require('./belt')
+import * as belt from './belt'
 import * as config from './config'
 
 function getTransporter() {

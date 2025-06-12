@@ -9,7 +9,6 @@ import * as config from '../config'
 export async function checkComment({
     userIp,
     userAgent,
-    referrer,
     commentType,
     commentAuthor,
     commentAuthorEmail,
@@ -17,7 +16,6 @@ export async function checkComment({
 }: {
     userIp: string
     userAgent: string
-    referrer: string
     commentType: string
     commentAuthor: string
     commentAuthorEmail: string

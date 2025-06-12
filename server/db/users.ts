@@ -1,30 +1,31 @@
-'use strict'
 // 3rd
-const debug = require('debug')('app:db:dice')
-const assert = require('assert')
-const knex = require('knex')({ client: 'pg' })
-const _ = require('lodash')
+// import createDebug from 'debug'
+// const debug = createDebug('app:db:dice')
+import assert from 'assert'
+import Knex from 'knex'
+const knex = Knex({ client: 'pg' })
+import _ from 'lodash'
 // 1st
-const { pool } = require('./util')
-const { sql } = require('pg-extra')
+import { pool } from './util.js'
+import { sql } from 'pg-extra'
 
 // Note: The db/*.js files are an ongoing effort to
 // split apart the db/index.js monolith.
 
 ////////////////////////////////////////////////////////////
 
-exports.getUserByEmail = async (email) => {
+export const getUserByEmail = async (email) => {
     const str = knex('users')
         .where('email', email)
         .first()
         .toString()
-    const result = await pool._query(str)
+    const result = await pool.query(str)
     return result.rows[0]
 }
 
 // Generalized update function that takes an object of
 // field/values to be updated.
-exports.updateUser = async function(userId, fields) {
+export const updateUser = async function(userId, fields) {
     assert(Number.isInteger(userId))
     assert(_.isPlainObject(fields))
     // Validate fields
@@ -39,12 +40,12 @@ exports.updateUser = async function(userId, fields) {
         .where({ id: userId })
         .update(fields)
         .toString()
-    return pool._query(str)
+    return pool.query(str)
 }
 
 ////////////////////////////////////////////////////////////
 
-exports.unapproveUser = async userId => {
+export const unapproveUser = async userId => {
     assert(Number.isInteger(userId))
 
     return pool.query(sql`
@@ -57,7 +58,7 @@ exports.unapproveUser = async userId => {
 
 ////////////////////////////////////////////////////////////
 
-exports.approveUser = async ({ approvedBy, targetUser }) => {
+export const approveUser = async ({ approvedBy, targetUser }) => {
     assert(Number.isInteger(approvedBy))
     assert(Number.isInteger(targetUser))
 

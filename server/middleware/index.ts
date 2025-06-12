@@ -1,22 +1,18 @@
-'use strict'
-// Node
-const util = require('util')
 // 3rd party
-const debug = require('debug')('app:middleware')
-const _ = require('lodash')
-const assert = require('assert')
-const bouncer = require('koa-bouncer')
+// import createDebug from 'debug'
+// const debug = createDebug('app:middleware')
+import _ from 'lodash'
+import assert from 'assert'
 // 1st party
-const db = require('../db')
-const pre = require('../presenters')
-const belt = require('../belt')
-const config = require('../config')
-const checkCloudflareTurnstile = require('./cloudflare-turnstile')
+import * as db from '../db'
+import * as pre from '../presenters'
+import * as belt from '../belt'
+import { Context, Next } from 'koa'
 
 // Assoc ctx.currUser if the sessionId cookie (UUIDv4 String)
 // is an active session.
-exports.currUser = function() {
-    return async (ctx, next) => {
+export const currUser = function() {
+    return async (ctx: Context, next: Next) => {
         const sessionId = ctx.cookies.get('sessionId')
         // Skip if no session id
         if (!sessionId) return next()
@@ -32,14 +28,14 @@ exports.currUser = function() {
 
 // Expose req.flash (getter) and res.flash = _ (setter)
 // Flash data persists in user's sessions until the next ~successful response
-exports.flash = function(cookieName = 'flash') {
-    return async (ctx, next) => {
+export const flash = function(cookieName = 'flash') {
+    return async (ctx: Context, next: Next) => {
         let data = {}
 
         if (ctx.cookies.get(cookieName)) {
             try {
                 data = JSON.parse(
-                    decodeURIComponent(ctx.cookies.get(cookieName))
+                    decodeURIComponent(ctx.cookies.get(cookieName) ?? '')
                 )
             } catch (err) {
                 // If cookie had a value but was not JSON, then trash the cookie
@@ -103,9 +99,9 @@ function postCountToMaxDate(postCount) {
 // Date -> String
 //
 // 'in 1 minute and 13 seconds'
-function waitLength(tilDate) {
+function waitLength(tilDate: Date) {
     // diff is in seconds
-    const diff = Math.max(0, Math.ceil((tilDate - new Date()) / 1000))
+    const diff = Math.max(0, Math.ceil((tilDate.getTime() - Date.now()) / 1000))
     const mins = Math.floor(diff / 60)
     const secs = diff % 60
     let output = ''
@@ -116,8 +112,8 @@ function waitLength(tilDate) {
     return output
 }
 
-exports.ratelimit = function() {
-    return async (ctx, next) => {
+export const ratelimit = function() {
+    return async (ctx: Context, next: Next) => {
         ctx.assert(ctx.currUser, 401, 'You must be logged in')
         const maxDate = postCountToMaxDate(ctx.currUser.posts_count)
         try {
@@ -126,7 +122,7 @@ exports.ratelimit = function() {
             if (_.isDate(err)) {
                 const msg = `Ratelimited! Since you are a new member, you must wait
           ${waitLength(
-              err
+              err as Date
           )} longer before posting. The ratelimit goes away as you
           make more posts.
         `
@@ -139,17 +135,17 @@ exports.ratelimit = function() {
     }
 }
 
-exports.methodOverride = function(
+export const methodOverride = function(
     { bodyKey, headerKey } = {
         bodyKey: '_method',
         headerKey: 'x-http-method-override',
     }
 ) {
-    return async (ctx, next) => {
-        if (ctx.request.body && ctx.request.body[bodyKey]) {
+    return async (ctx: Context, next: Next) => {
+        if (ctx.request.body && typeof ctx.request.body[bodyKey] === 'string') {
             ctx.method = ctx.request.body[bodyKey].toUpperCase()
             delete ctx.request.body[bodyKey]
-        } else if (ctx.request.headers[headerKey]) {
+        } else if (typeof ctx.request.headers[headerKey] === 'string') {
             ctx.method = ctx.request.headers[headerKey].toUpperCase()
         }
 

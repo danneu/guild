@@ -1,5 +1,5 @@
 // https://discordapp.com/developers/docs/topics/permissions
-module.exports = {
+export default {
     MANAGE_CHANNELS: 0x00000010,
     MANAGE_GUILD: 0x00000020,
     MANAGE_MESSAGES: 0x00002000,

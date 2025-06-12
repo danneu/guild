@@ -1,26 +1,27 @@
 // Node
-const util = require('util')
-const { URL } = require('url')
-const crypto = require('crypto')
+import { URL } from 'url'
+import crypto from 'crypto'
 // 3rd party
-const debug = require('debug')('app:belt')
-const assert = require('assert')
-const bcrypt = require('bcryptjs')
-const _ = require('lodash')
-const Autolinker = require('autolinker')
+import createDebug from 'debug'
+const debug = createDebug('app:belt')
+import assert from 'assert'
+import bcrypt from 'bcryptjs'
+import _ from 'lodash'
+import Autolinker from 'autolinker'
 // 1st party
-const config = require('./config')
+import * as config from './config'
 
 ////
 //// This module is a general utility-belt of functions.
 //// Somewhat of a junk drawer.
 ////
 
-exports.dateToSeconds = function(date) {
+export const dateToSeconds = function(date) {
     return Math.floor(date.getTime() / 1000)
 }
 
-function dateToUTC(date) {
+// Not sure what I was doing here.
+function dateToUTC(date: Date) {
     return new Date(
         date.getUTCFullYear(),
         date.getUTCMonth(),
@@ -31,62 +32,90 @@ function dateToUTC(date) {
     )
 }
 
-// @ts-ignore
-Date.prototype.toUTCDate = function() {
-    return dateToUTC(this)
+// Not sure what I was doing here.
+export function getUTCDate(date: Date): Date {
+    return dateToUTC(date)
 }
 
-exports.isNewerThan = function(nowDate, opts) {
+export const isNewerThan = function(nowDate: Date, opts) {
     assert(nowDate instanceof Date)
-    var result =
-        nowDate.toUTCDate() > exports.pastDate(new Date(), opts).toUTCDate()
-    return result
+    return nowDate > pastDate(new Date(), opts)
 }
 
-exports.isOlderThan = function(nowDate, opts) {
+export const isOlderThan = function(nowDate: Date, opts) {
     assert(nowDate instanceof Date)
-    var result =
-        nowDate.toUTCDate() < exports.pastDate(new Date(), opts).toUTCDate()
-    return result
+    return nowDate < pastDate(new Date(), opts)
 }
 
-exports.pastDate = function(nowDate, opts) {
-    if (!opts) {
-        opts = nowDate
+type TimeSpan = {
+    years?: number
+    months?: number
+    days?: number
+    hours?: number
+    minutes?: number
+    seconds?: number
+    milliseconds?: number
+}
+
+export function pastDate(opts: TimeSpan): Date
+export function pastDate(nowDate: Date, opts: TimeSpan): Date
+
+export function pastDate(nowDateOrOpts: Date | TimeSpan, opts?: TimeSpan): Date {
+    let nowDate: Date
+    let span: TimeSpan
+
+    if (opts === undefined) {
+        // First overload: pastDate(opts)
         nowDate = new Date()
+        span = nowDateOrOpts as TimeSpan
+    } else {
+        // Second overload: pastDate(nowDate, opts)
+        nowDate = nowDateOrOpts as Date
+        span = opts
     }
 
     return new Date(
         nowDate.getTime() -
-            ((opts.years || 0) * 1000 * 60 * 60 * 24 * 365 +
-                (opts.months || 0) * 1000 * 60 * 60 * 24 * 30 +
-                (opts.days || 0) * 1000 * 60 * 60 * 24 +
-                (opts.hours || 0) * 1000 * 60 * 60 +
-                (opts.minutes || 0) * 1000 * 60 +
-                (opts.seconds || 0) * 1000 +
-                (opts.milliseconds || 0))
+            ((span.years || 0) * 1000 * 60 * 60 * 24 * 365 +
+                (span.months || 0) * 1000 * 60 * 60 * 24 * 30 +
+                (span.days || 0) * 1000 * 60 * 60 * 24 +
+                (span.hours || 0) * 1000 * 60 * 60 +
+                (span.minutes || 0) * 1000 * 60 +
+                (span.seconds || 0) * 1000 +
+                (span.milliseconds || 0))
     )
 }
 
-exports.futureDate = function(nowDate, opts) {
-    if (!opts) {
-        opts = nowDate
+export function futureDate(opts: TimeSpan): Date
+export function futureDate(nowDate: Date, opts: TimeSpan): Date
+
+export function futureDate(nowDateOrOpts: Date | TimeSpan, opts?: TimeSpan): Date {
+    let nowDate: Date
+    let span: TimeSpan
+
+    if (opts === undefined) {
+        // First overload: futureDate(opts)
         nowDate = new Date()
+        span = nowDateOrOpts as TimeSpan
+    } else {
+        // Second overload: futureDate(nowDate, opts)
+        nowDate = nowDateOrOpts as Date
+        span = opts
     }
 
     return new Date(
         nowDate.getTime() +
-            (opts.years || 0) * 1000 * 60 * 60 * 24 * 365 +
-            (opts.months || 0) * 1000 * 60 * 60 * 24 * 30 +
-            (opts.days || 0) * 1000 * 60 * 60 * 24 +
-            (opts.hours || 0) * 1000 * 60 * 60 +
-            (opts.minutes || 0) * 1000 * 60 +
-            (opts.seconds || 0) * 1000 +
-            (opts.milliseconds || 0)
+            (span.years || 0) * 1000 * 60 * 60 * 24 * 365 +
+            (span.months || 0) * 1000 * 60 * 60 * 24 * 30 +
+            (span.days || 0) * 1000 * 60 * 60 * 24 +
+            (span.hours || 0) * 1000 * 60 * 60 +
+            (span.minutes || 0) * 1000 * 60 +
+            (span.seconds || 0) * 1000 +
+            (span.milliseconds || 0)
     )
 }
 
-exports.md5 = function(s) {
+export const md5 = function(s) {
     return crypto
         .createHash('md5')
         .update(s)
@@ -95,7 +124,7 @@ exports.md5 = function(s) {
 
 // {{ 'firetruck'|truncate(5) }}  -> 'firet...'
 // {{ 'firetruck'|truncate(6) }}  -> 'firetruck'
-exports.makeTruncate = function(suffix) {
+export const makeTruncate = function(suffix) {
     return function(str, n) {
         if (!str) return str
         suffix = suffix || ''
@@ -106,15 +135,15 @@ exports.makeTruncate = function(suffix) {
     }
 }
 
-exports.truncate = exports.makeTruncate('...')
+export const truncate = makeTruncate('...')
 
 // Logging helper
-exports.truncateStringVals = function(obj) {
+export const truncateStringVals = function(obj) {
     var out = {}
     for (var k in obj) {
         if (obj.hasOwnProperty(k)) {
             var v = obj[k]
-            if (_.isString(v)) out[k] = exports.truncate(v, 100)
+            if (_.isString(v)) out[k] = truncate(v, 100)
             else out[k] = v
         }
     }
@@ -126,7 +155,7 @@ exports.truncateStringVals = function(obj) {
 
 // errObj is the this.errors object from koa-validate
 // Maybe Object -> Maybe [String]
-exports.extractErrors = function(errObj) {
+export const extractErrors = function(errObj) {
     return (
         errObj &&
         _.chain(errObj)
@@ -139,27 +168,27 @@ exports.extractErrors = function(errObj) {
 }
 
 // Maybe Object -> Maybe String
-exports.joinErrors = function(errObj) {
-    return errObj && exports.extractErrors(errObj).join(', ')
+export const joinErrors = function(errObj) {
+    return errObj && extractErrors(errObj).join(', ')
 }
 
 ////////////////////////////////////////////////////////////
 // Authentication
 ////////////////////////////////////////////////////////////
 
-exports.hashPassword = password => {
+export const hashPassword = password => {
     return bcrypt.hash(password, 10)
 }
 
 // String -> String -> Bool
-exports.checkPassword = (password, digest) => {
+export const checkPassword = (password, digest) => {
     return bcrypt.compare(password, digest)
 }
 
 ////////////////////////////////////////////////////////////
 
 // String -> Bool
-exports.isValidUuid = (() => {
+export const isValidUuid = (() => {
     const re = /^[a-f0-9]{8}\-[a-f0-9]{4}\-[a-f0-9]{4}\-[a-f0-9]{4}\-[a-f0-9]{12}$/i
     return (uuid) => {
         if (typeof uuid !== 'string') return false
@@ -176,7 +205,7 @@ exports.isValidUuid = (() => {
 // This function is for use in routes to calculate currPage (Int) and
 // totalPages (Int) for use in the view-layer's paginate.render macro
 // to generate prev/next button for arbitrary collections.
-exports.calcPager = function(pageParam, perPage, totalItems) {
+export const calcPager = function(pageParam, perPage, totalItems) {
     assert(_.isNumber(totalItems))
     assert(_.isNumber(perPage))
     pageParam = pageParam || 1
@@ -200,12 +229,12 @@ exports.calcPager = function(pageParam, perPage, totalItems) {
 }
 
 // Returns a number >= 1
-exports.calcTotalPostPages = function(totalItems) {
+export const calcTotalPostPages = function(totalItems) {
     return Math.max(1, Math.ceil(totalItems / config.POSTS_PER_PAGE))
 }
 
 // FIXME: This is a sloppy was to see if an object is a pg client
-exports.isDBClient = function(obj) {
+export const isDBClient = function(obj) {
     var keys = Object.keys(obj)
 
     return (
@@ -217,7 +246,7 @@ exports.isDBClient = function(obj) {
     )
 }
 
-exports.slugifyUname = function(uname) {
+export const slugifyUname = function(uname) {
     var slug = uname
         .trim()
         .toLowerCase()
@@ -227,9 +256,9 @@ exports.slugifyUname = function(uname) {
 }
 
 var MAX_SLUG_LENGTH = 80
-var slugify = (exports.slugify = function() {
+export const slugify = function(...args: (string | number)[]) {
     // Slugifies one string
-    function slugifyString(x) {
+    function slugifyString(x: string) {
         return (
             x
                 .toString()
@@ -248,29 +277,26 @@ var slugify = (exports.slugify = function() {
         )
     }
 
-    var args = Array.prototype.slice.call(arguments, 0)
 
     return slugifyString(
         args
-            .map(function(x) {
-                return x.toString()
-            })
+            .map(x => String(x))
             .join('-')
             .slice(0, MAX_SLUG_LENGTH)
     )
-})
+}
 
 // Returns Int | null
-var extractId = (exports.extractId = function(slug) {
+export const extractId = function(slug) {
     var n = parseInt(slug, 10)
     return _.isNaN(n) ? null : n
-})
+}
 
 ////////////////////////////////////////////////////////////
 
 // Returns Array of uniq lowecase unames that were quote-mentioned in the string
 // A [@Mention] is only extracted if it's not nested inside a quote.
-exports.extractMentions = function(str, unameToReject) {
+export const extractMentions = function(str, unameToReject) {
     var start = Date.now()
     debug('[extractMentions]')
     var unames: Record<string, boolean> = {}
@@ -321,7 +347,7 @@ exports.extractMentions = function(str, unameToReject) {
 // Returns array of uniq lowercase unames that were quote-mentioned
 // i.e. [quote=@some user]
 // Only top-level quote-mentions considered
-exports.extractQuoteMentions = function(str, unameToReject) {
+export const extractQuoteMentions = function(str, unameToReject) {
     var start = Date.now()
     debug('[extractQuoteMentions]')
     var unames: Record<string, boolean> = {}
@@ -371,7 +397,7 @@ exports.extractQuoteMentions = function(str, unameToReject) {
     return ret
 }
 
-exports.frequencies = function(objs, prop) {
+export const frequencies = function(objs, prop) {
     return _.chain(objs)
         .groupBy(prop)
         .toPairs()
@@ -385,7 +411,7 @@ exports.frequencies = function(objs, prop) {
 }
 
 // expandJoinStatus('full') => 'Roleplay is not accepting new players'
-exports.expandJoinStatus = function(status) {
+export const expandJoinStatus = function(status) {
     switch (status) {
         case 'jump-in':
             return 'Players can join and begin posting IC without GM approval'
@@ -398,7 +424,7 @@ exports.expandJoinStatus = function(status) {
     }
 }
 
-exports.mapMethod = function mapMethod(items, method) {
+export const mapMethod = function mapMethod(items, method) {
     return items.map(function(item) {
         return item[method]()
     })
@@ -412,12 +438,12 @@ exports.mapMethod = function mapMethod(items, method) {
 //
 //    ordinalize(1) -> '1st'
 //    ordinalize(12) -> '12th'
-exports.ordinalize = function(n) {
+export const ordinalize = function(n) {
     assert(Number.isInteger(n))
-    return n.toString() + exports.getOrdinalSuffix(n)
+    return n.toString() + getOrdinalSuffix(n)
 }
 
-exports.getOrdinalSuffix = function(n) {
+export const getOrdinalSuffix = function(n) {
     assert(Number.isInteger(n))
     return Math.floor(n / 10) === 1
         ? 'th'
@@ -432,7 +458,7 @@ exports.getOrdinalSuffix = function(n) {
 // At least keep this all sync'd up.
 // TODO: Allow me to pass in `opts` obj that's merge with
 // my default opts.
-exports.autolink = function(text) {
+export const autolink = function(text) {
     return Autolinker.link(text, {
         stripPrefix: true,
         newWindow: true,
@@ -445,7 +471,7 @@ exports.autolink = function(text) {
 }
 
 // String -> String
-exports.escapeHtml = function(unsafe) {
+export const escapeHtml = function(unsafe) {
     return unsafe
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -471,12 +497,12 @@ exports.escapeHtml = function(unsafe) {
 // Update: Don't think I actually need this. Reverted login back from
 // using cookieDate. Will get feedback from user having problems.
 //
-exports.cookieDate = function(date) {
+export function cookieDate(date: Date) {
     var padNum = function(n) {
         return n < 10 ? '0' + n : n
     }
 
-    var days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    // var days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     var months = [
         'Jan',
         'Feb',
@@ -522,7 +548,7 @@ exports.cookieDate = function(date) {
 //
 //     presentUserRole('conmod') => 'Contest Mod'
 //
-exports.presentUserRole = function(role) {
+export const presentUserRole = function(role) {
     assert(_.isString(role))
 
     switch (role) {
@@ -542,7 +568,7 @@ exports.presentUserRole = function(role) {
 }
 
 // Helper function for formatting chat messages for the log.txt
-exports.formatChatDate = (() => {
+export const formatChatDate = (() => {
     const monthNames = [
         'Jan',
         'Feb',
@@ -578,11 +604,11 @@ exports.formatChatDate = (() => {
 
 ////////////////////////////////////////////////////////////
 
-exports.timeout = function(ms) {
+export const timeout = function(ms) {
     return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-exports.daysAgo = function(date) {
+export const daysAgo = function(date) {
     return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24))
 }
 
@@ -592,7 +618,7 @@ exports.daysAgo = function(date) {
 // mergeQuery('google.com?foo=bar', { foo: null }) -> google.com
 //
 // null or undefined values are deleted from query map
-exports.mergeQuery = function(href, obj) {
+export const mergeQuery = function(href, obj) {
     const url = new URL(href)
     Object.keys(obj).forEach(k => {
         if (typeof obj[k] === 'undefined' || obj[k] === null) {
@@ -607,7 +633,7 @@ exports.mergeQuery = function(href, obj) {
 ////////////////////////////////////////////////////////////
 
 // Returns true if user has logged in 0-12 hrs ago
-exports.withinGhostRange = (() => {
+export const withinGhostRange = (() => {
     const hours24 = 1000 * 60 * 60 * 24
 
     return function(lastOnlineAt) {

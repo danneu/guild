@@ -3,26 +3,26 @@
 import checkCloudflareTurnstile from '../middleware/cloudflare-turnstile'
 
 // Node
-const util = require('util')
+import util from 'util'
 // 3rd party
-const Router = require('@koa/router')
-const _ = require('lodash')
-const debug = require('debug')('app:routes:users')
-const assert = require('assert')
+import Router from '@koa/router'
+import _ from 'lodash'
+import createDebug from 'debug'
+const debug = createDebug('app:routes:users')
+import assert from 'assert'
 // 1st party
-const db = require('../db')
-const belt = require('../belt')
-const pre = require('../presenters')
-const config = require('../config')
-const cancan = require('../cancan')
+import * as db from '../db'
+import * as belt from '../belt'
+import * as pre from '../presenters'
+import * as config from '../config'
+import * as cancan from '../cancan'
 import * as avatar from '../avatar'
-const bbcode = require('../bbcode')
-const services = require('../services')
-const {
-    discord: { broadcastManualNuke, broadcastManualUnnuke, broadcastBioUpdate },
-} = require('../services')
-const cache2 = require('../cache2')
-const ipintel = require('../services/ipintel')
+import bbcode from '../bbcode'
+import services from '../services'
+import { broadcastManualNuke, broadcastManualUnnuke, broadcastBioUpdate } from '../services/discord'
+import cache2 from '../cache2'
+import ipintel from '../services/ipintel'
+import { Context, Next } from 'koa'
 
 const router = new Router()
 
@@ -39,7 +39,7 @@ function loadUserFromSlug(key: string, redirectTemplate: string | undefined = un
         assert(redirectTemplate.includes('<>'))
     }
 
-    return async (ctx, next) => {
+    return async (ctx: Context, next: Next) => {
         const slug = ctx.params[key]
         ctx.assert(slug, 404)
 
@@ -62,25 +62,26 @@ function loadUserFromSlug(key: string, redirectTemplate: string | undefined = un
 
 // Show user alternate accounts
 //
-router.get('/users/:slug/alts', loadUserFromSlug('slug'), async ctx => {
-    return ctx.body = 'temp disabled'
+router.get('/users/:slug/alts', loadUserFromSlug('slug'), async (ctx: Context) => {
+    ctx.body = 'temp disabled'
+    return
 
-    ctx.assert(ctx.currUser && cancan.isStaffRole(ctx.currUser.role), 403)
+    // ctx.assert(ctx.currUser && cancan.isStaffRole(ctx.currUser.role), 403)
 
-    const { user } = ctx.state
+    // const { user } = ctx.state
 
-    const alts = await db.hits.findAltsFromUserId(user.id)
+    // const alts = await db.hits.findAltsFromUserId(user.id)
 
-    // TODO: Make presenter
-    alts.forEach(alt => {
-        pre.presentUser(alt.user)
-    })
+    // // TODO: Make presenter
+    // alts.forEach(alt => {
+    //     pre.presentUser(alt.user)
+    // })
 
-    await ctx.render('list_user_alts', {
-        ctx,
-        alts,
-        user,
-    })
+    // await ctx.render('list_user_alts', {
+    //     ctx,
+    //     alts,
+    //     user,
+    // })
 })
 
 ////////////////////////////////////////////////////////////
@@ -92,7 +93,7 @@ router.get('/users/:slug/alts', loadUserFromSlug('slug'), async ctx => {
 router.get(
     '/users/:slug/edit',
     loadUserFromSlug('slug', '/users/<>/edit'),
-    async ctx => {
+    async (ctx: Context) => {
         const { user } = ctx.state
         ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER', user)
 
@@ -121,7 +122,7 @@ router.get(
 //
 // Body:
 // - uname
-router.post('/users/:slug/unames', async ctx => {
+router.post('/users/:slug/unames', async (ctx: Context) => {
     ctx.assert(ctx.currUser, 404)
     let user = await db.findUserBySlug(ctx.params.slug).then(pre.presentUser)
     ctx.assert(user, 404)
@@ -190,7 +191,7 @@ router.post('/users/:slug/unames', async ctx => {
 // - cf-turnstile-response
 //
 // @koa2
-router.post('/users', checkCloudflareTurnstile, async ctx => {
+router.post('/users', checkCloudflareTurnstile, async (ctx: Context) => {
     if (!await db.keyvals.getValueByKey('REGISTRATION_ENABLED')) {
         return ctx.redirect('/register')
     }
@@ -317,7 +318,7 @@ router.post('/users', checkCloudflareTurnstile, async ctx => {
 // Update user role
 //
 // @koa2
-router.put('/users/:slug/role', async ctx => {
+router.put('/users/:slug/role', async (ctx: Context) => {
     ctx
         .validateBody('role')
         .isIn(
@@ -357,7 +358,7 @@ router.put('/users/:slug/role', async ctx => {
 ////////////////////////////////////////////////////////////
 
 // Delete legacy sig
-router.delete('/users/:slug/legacy-sig', async ctx => {
+router.delete('/users/:slug/legacy-sig', async (ctx: Context) => {
     const user = await db.findUserBySlug(ctx.params.slug)
     ctx.assert(user, 404)
     ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER', user)
@@ -373,7 +374,7 @@ router.delete('/users/:slug/legacy-sig', async ctx => {
 // - markup: String
 //
 // @koa2
-router.put('/api/users/:id/bio', async ctx => {
+router.put('/api/users/:id/bio', async (ctx: Context) => {
     // Validation markup
     ctx
         .validateBody('markup')
@@ -441,7 +442,7 @@ router.put('/api/users/:id/bio', async ctx => {
 // - force-device-width
 //
 // @koa2
-router.put('/users/:slug', async ctx => {
+router.put('/users/:slug', async (ctx: Context) => {
     debug('BEFORE', ctx.request.body)
 
     ctx
@@ -566,7 +567,7 @@ router.put('/users/:slug', async ctx => {
 //
 // Search users
 // checked
-router.get('/users', async ctx => {
+router.get('/users', async (ctx: Context) => {
     ctx.assertAuthorized(ctx.currUser, 'READ_USER_LIST')
 
     // undefined || String
@@ -588,7 +589,7 @@ router.get('/users', async ctx => {
    *   return;
    * }
    */
-    var usersList = []
+    var usersList: any[] = []
     if (ctx.query['before-id']) {
         if (ctx.query['text']) {
             usersList = await db.findUsersContainingStringWithId(
@@ -629,7 +630,7 @@ router.get('/users', async ctx => {
 // We want to redirect those URLs to /users/some-username
 // The purpose of this effort is to not break old URLs, but rather
 // redirect them to the new URLs
-router.get('/users/:userIdOrSlug', async ctx => {
+router.get('/users/:userIdOrSlug', async (ctx: Context) => {
     // If param is all numbers, then assume it's a user-id.
     // Note: There are some users in the database with only digits in their name
     // which is not possible anymore since unames require at least one a-z letter.
@@ -767,7 +768,7 @@ router.get('/users/:userIdOrSlug', async ctx => {
 // Show user trophies
 //
 // TODO: Sync up with regular show-user route
-router.get('/users/:slug/trophies', async ctx => {
+router.get('/users/:slug/trophies', async (ctx: Context) => {
     const user = await db
         .findUserWithRatingsBySlug(ctx.params.slug)
         .then(pre.presentUser)
@@ -814,7 +815,7 @@ router.get('/users/:slug/trophies', async ctx => {
 //
 // This route is for use on the /me/notifications page since it
 // will clear the notification for this VM
-router.get('/me/vms/:id', async ctx => {
+router.get('/me/vms/:id', async (ctx: Context) => {
     ctx.assert(ctx.currUser && ctx.currUser.role !== 'banned')
 
     ctx.validateParam('id').toInt()
@@ -826,7 +827,7 @@ router.get('/me/vms/:id', async ctx => {
 ////////////////////////////////////////////////////////////
 
 // Delete VM
-router.delete('/vms/:id', async ctx => {
+router.delete('/vms/:id', async (ctx: Context) => {
     ctx.validateParam('id').toInt()
     const vm = await db.vms.getVmById(ctx.vals.id).then(pre.presentVm)
     ctx.assert(vm, 404)
@@ -851,7 +852,7 @@ router.delete('/vms/:id', async ctx => {
 // Show user visitor messages
 //
 // TODO: Sync up with regular show-user route
-router.get('/users/:slug/vms', async ctx => {
+router.get('/users/:slug/vms', async (ctx: Context) => {
     const user = await db
         .findUserWithRatingsBySlug(ctx.params.slug)
         .then(pre.presentUser)
@@ -880,7 +881,7 @@ router.get('/users/:slug/vms', async ctx => {
 // Create VM
 //
 //
-router.post('/users/:slug/vms', async ctx => {
+router.post('/users/:slug/vms', async (ctx: Context) => {
     ctx.assertAuthorized(ctx.currUser, 'CREATE_VM')
 
     // Load user
@@ -955,7 +956,7 @@ router.post('/users/:slug/vms', async ctx => {
 //
 // Show user recent topics
 //
-router.get('/users/:slug/recent-topics', async ctx => {
+router.get('/users/:slug/recent-topics', async (ctx: Context) => {
     // Load user
     var user
     if (
@@ -1000,24 +1001,24 @@ router.get('/users/:slug/recent-topics', async ctx => {
 //
 // Delete user
 //
-router.delete('/users/:id', async ctx => {
-    var user = await db.findUser(ctx.params.id)
-    ctx.assert(user, 404)
-    ctx.assertAuthorized(ctx.currUser, 'DELETE_USER', user)
-    await db.deleteUser(ctx.params.id)
+// router.delete('/users/:id', async (ctx: Context) => {
+//     var user = await db.findUser(ctx.params.id)
+//     ctx.assert(user, 404)
+//     ctx.assertAuthorized(ctx.currUser, 'DELETE_USER', user)
+//     await db.deleteUser(ctx.params.id)
 
-    ctx.flash = {
-        message: [
-            'success',
-            util.format(
-                'User deleted along with %d posts and %d PMs',
-                user.posts_count,
-                user.pms_count
-            ),
-        ],
-    }
-    ctx.response.redirect('/')
-})
+//     ctx.flash = {
+//         message: [
+//             'success',
+//             util.format(
+//                 'User deleted along with %d posts and %d PMs',
+//                 user.posts_count,
+//                 user.pms_count
+//             ),
+//         ],
+//     }
+//     ctx.response.redirect('/')
+// })
 
 // Params
 // - submit: 'save' | 'delete'
@@ -1026,7 +1027,8 @@ router.delete('/users/:id', async ctx => {
 //     - path
 //
 // @koa2
-router.post('/users/:slug/avatar', async ctx => {
+// TODO: Put the multipart middleware only on specific routes like this one
+router.post('/users/:slug/avatar', async (ctx: Context) => {
     // Ensure user exists
     const user = await db.findUserBySlug(ctx.params.slug).then(pre.presentUser)
     ctx.assert(user, 404)
@@ -1051,12 +1053,14 @@ router.post('/users/:slug/avatar', async ctx => {
     )
 
     ctx.assert(
+        // @ts-ignore
         ctx.request.files.avatar.size > 0,
         400,
         'Must choose an avatar to upload'
     )
     // TODO: Do a real check. This just looks at mime type
     ctx.assert(
+        // @ts-ignore
         ['image/jpeg', 'image/gif', 'image/png'].includes(ctx.request.files.avatar.mimetype),
         400,
         'Must be a jpeg, gif, or png'
@@ -1064,6 +1068,7 @@ router.post('/users/:slug/avatar', async ctx => {
 
     // Process avatar, upload to S3, and get the S3 url
     var avatarUrl = await avatar.handleAvatarTransformAndUpload(
+        // @ts-ignore
         ctx.request.files.avatar.filepath
     )
 
@@ -1083,7 +1088,7 @@ router.post('/users/:slug/avatar', async ctx => {
 // - gender: '' | 'MALE' | 'FEMALE'
 //
 // @koa2
-router.post('/users/:slug/gender', loadUserFromSlug('slug'), async ctx => {
+router.post('/users/:slug/gender', loadUserFromSlug('slug'), async (ctx: Context) => {
     ctx.assertAuthorized(ctx.currUser, 'UPDATE_USER', ctx.state.user)
     ctx
         .validateBody('gender')
@@ -1098,7 +1103,7 @@ router.post('/users/:slug/gender', loadUserFromSlug('slug'), async ctx => {
 ////////////////////////////////////////////////////////////
 
 // if ?override=true, don't do thw twoWeek check
-router.post('/users/:slug/nuke', async ctx => {
+router.post('/users/:slug/nuke', async (ctx: Context) => {
     var user = await db.findUserBySlug(ctx.params.slug)
     ctx.assert(user, 404)
     pre.presentUser(user)
@@ -1143,7 +1148,7 @@ router.post('/users/:slug/nuke', async ctx => {
 
 ////////////////////////////////////////////////////////////
 
-router.post('/users/:slug/unnuke', async ctx => {
+router.post('/users/:slug/unnuke', async (ctx: Context) => {
     ctx.assert(ctx.currUser, 404)
     const user = await db.findUserBySlug(ctx.params.slug).then(pre.presentUser)
     ctx.assert(user, 404)
@@ -1169,4 +1174,4 @@ router.post('/users/:slug/unnuke', async ctx => {
 
 ////////////////////////////////////////////////////////////
 
-module.exports = router
+export default router

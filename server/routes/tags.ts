@@ -1,15 +1,16 @@
 // 3rd
-const Router = require('@koa/router')
+import Router from '@koa/router'
 // 1st
-const db = require('../db')
-const pre = require('../presenters')
+import * as db from '../db'
+import * as pre from '../presenters'
+import { Context, Next } from 'koa'
 
 const router = new Router()
 
 ////////////////////////////////////////////////////////////
 
 // Only admin can manage tags until I improve the form
-router.use(async (ctx, next) => {
+router.use(async (ctx: Context, next: Next) => {
     ctx.assert(ctx.currUser, 404)
     ctx.assert(ctx.currUser.role === 'admin', 404)
     return next()
@@ -17,7 +18,7 @@ router.use(async (ctx, next) => {
 
 ////////////////////////////////////////////////////////////
 
-router.get('/tag-groups', async ctx => {
+router.get('/tag-groups', async (ctx: Context) => {
     const groups = (await db.tags.listGroups()).map(pre.presentTagGroup)
 
     await ctx.render('tags/list_tag_groups', {
@@ -31,13 +32,13 @@ router.get('/tag-groups', async ctx => {
 // Create tag group
 //
 // body: { title: String }
-router.post('/tag-groups', async ctx => {
+router.post('/tag-groups', async (ctx: Context) => {
     ctx
         .validateBody('title')
         .isString()
         .isLength(1, 32)
 
-    const group = await db.tags.insertTagGroup(ctx.vals.title)
+    await db.tags.insertTagGroup(ctx.vals.title)
 
     ctx.flash = { message: ['success', 'Tag group created'] }
     ctx.redirect('/tag-groups')
@@ -47,7 +48,7 @@ router.post('/tag-groups', async ctx => {
 
 // Insert tag
 //
-router.post('/tag-groups/:id/tags', async ctx => {
+router.post('/tag-groups/:id/tags', async (ctx: Context) => {
     ctx.validateParam('id').toInt()
 
     const group = await db.tags.getGroup(ctx.vals.id)
@@ -65,7 +66,8 @@ router.post('/tag-groups/:id/tags', async ctx => {
         .tap(s => s.trim())
         .isLength(1, 140)
 
-    const tag = await db.tags.insertTag(group.id, ctx.vals.title, ctx.vals.desc)
+    const _tag = await db.tags.insertTag(group.id, ctx.vals.title, ctx.vals.desc)
+    void _tag
 
     ctx.flash = { message: ['success', 'Tag created'] }
     ctx.redirect('/tag-groups')
@@ -74,7 +76,7 @@ router.post('/tag-groups/:id/tags', async ctx => {
 ////////////////////////////////////////////////////////////
 
 // Body { tag_group_id: Int }
-router.post('/tags/:id/move', async ctx => {
+router.post('/tags/:id/move', async (ctx: Context) => {
     ctx.validateParam('id').toInt()
 
     const tag = await db.tags.getTag(ctx.vals.id)
@@ -97,4 +99,4 @@ router.post('/tags/:id/move', async ctx => {
 
 ////////////////////////////////////////////////////////////
 
-module.exports = router
+export default router

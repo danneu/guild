@@ -1,13 +1,13 @@
-'use strict'
 // 3rd
-const Router = require('@koa/router')
-const _ = require('lodash')
-const debug = require('debug')('app:routes:subscriptions')
+import Router from '@koa/router'
+import _ from 'lodash'
+// import createDebug from 'debug'
+// const debug = createDebug('app:routes:subscriptions')
 // 1st
-const cancan = require('../cancan')
-const db = require('../db')
-const pre = require('../presenters')
-const belt = require('../belt')
+import * as db from '../db'
+import * as pre from '../presenters'
+import * as belt from '../belt'
+import { Context } from 'koa'
 
 ////////////////////////////////////////////////////////////
 
@@ -18,7 +18,7 @@ const router = new Router()
 //
 // Show subscriptions (unarchived)
 //
-router.get('/me/subscriptions', async ctx => {
+router.get('/me/subscriptions', async (ctx: Context) => {
     ctx.assert(ctx.currUser, 404)
     const [topics, subNotes] = await Promise.all([
         db.subscriptions
@@ -50,7 +50,7 @@ router.get('/me/subscriptions', async ctx => {
     })
 })
 
-router.get('/me/subscriptions/archive', async ctx => {
+router.get('/me/subscriptions/archive', async (ctx: Context) => {
     ctx.assert(ctx.currUser, 404)
     const topics = (await db.subscriptions.findSubscribedTopicsForUserId(
         ctx.currUser.id,
@@ -75,7 +75,7 @@ router.get('/me/subscriptions/archive', async ctx => {
 //
 // Body params:
 // - topic-id
-router.post('/me/subscriptions', async ctx => {
+router.post('/me/subscriptions', async (ctx: Context) => {
     ctx.assert(ctx.currUser, 404)
 
     // Ensure user doesn't have 200 subscriptions
@@ -100,13 +100,13 @@ router.post('/me/subscriptions', async ctx => {
         return ctx.response.redirect(topic.url)
     }
     const redirectTo = ctx.query.redirectTo || '/me/subscriptions'
-    ctx.response.redirect(redirectTo)
+    ctx.response.redirect(redirectTo as string)
 })
 
 //
 // Remove subcription
 //
-router.delete('/me/subscriptions/:topicSlug', async ctx => {
+router.delete('/me/subscriptions/:topicSlug', async (ctx: Context) => {
     const topicId = belt.extractId(ctx.params.topicSlug)
     ctx.assert(topicId, 404)
     ctx.assert(ctx.currUser, 404)
@@ -120,7 +120,7 @@ router.delete('/me/subscriptions/:topicSlug', async ctx => {
     }
     ctx.flash = { message: ['success', 'Successfully unsubscribed'] }
     const redirectTo = ctx.query.redirectTo || '/me/subscriptions'
-    ctx.response.redirect(redirectTo)
+    ctx.response.redirect(redirectTo as string)
 })
 
 ////////////////////////////////////////////////////////////
@@ -131,7 +131,7 @@ router.delete('/me/subscriptions/:topicSlug', async ctx => {
 // Body:
 // - ids: Array<Int>
 // - action: 'unsub' | 'archive' | 'unarchive'
-router.post('/me/subscriptions/mass-action', async ctx => {
+router.post('/me/subscriptions/mass-action', async (ctx: Context) => {
     ctx.assert(ctx.currUser, 404, 'Must be logged in')
 
     const action = ctx
@@ -168,4 +168,4 @@ router.post('/me/subscriptions/mass-action', async ctx => {
 
 ////////////////////////////////////////////////////////////
 
-module.exports = router
+export default router

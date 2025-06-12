@@ -1,12 +1,12 @@
 
-const Router = require('@koa/router')
-const {currUser} = require('../middleware')
-const db = require('../db')
-const assert = require('assert')
-const belt = require('../belt')
-const crypto = require('crypto')
-const config = require('../config')
-const { SESClient, SendEmailCommand } = require("@aws-sdk/client-ses");
+import Router from '@koa/router'
+import * as db from '../db'
+import assert from 'assert'
+import * as belt from '../belt'
+import crypto from 'crypto'
+import * as config from '../config'
+import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses'
+import { Context } from 'koa'
 
 const router = new Router()
 
@@ -20,7 +20,7 @@ function createToken(secret, email) {
 
 // For UX, this is clickable from anywhere. You don't need to ensure you're opening it in the browser
 // that you're logged into the guild on. Not sure of the security implications of that tho.
-router.get('/verify-email', async ctx => {
+router.get('/verify-email', async (ctx: Context) => {
     // User doesn't have to be logged in
     const { token, email } = ctx.request.query
     ctx.assert(typeof token === 'string', 400, 'expected token field')
@@ -63,13 +63,13 @@ router.get('/verify-email', async ctx => {
 const sent = new Map()
 
 // Generates an email verification token AND sends verification email.
-router.post('/api/verify-email', async ctx => {
+router.post('/api/verify-email', async (ctx: Context) => {
     ctx.assert(ctx.currUser, 404)
 
     const prev = sent.get(ctx.currUser.id)
     if (!prev || belt.isOlderThan(prev, { seconds: 60 })) {
         const token = createToken(config.SECRET, ctx.currUser.email)
-        const messageId = await sendEmail(ctx.currUser.uname, ctx.currUser.email, token)
+        await sendEmail(ctx.currUser.uname, ctx.currUser.email, token)
         sent.set(ctx.currUser.id, new Date())
         ctx.status = 201
         return
@@ -131,4 +131,4 @@ If you weren't expecting this email, you can safely delete it. It's possible tha
 }
 
 
-module.exports = router
+export default router
