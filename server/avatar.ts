@@ -1,145 +1,111 @@
-// Node
-const path = require('path')
-const nodeFs = require('fs')
-const crypto = require('crypto')
 // 3rd party
-const { assert } = require('./util')
-const gm = require('gm').subClass({ imageMagick: true })
-const debug = require('debug')('app:avatar')
-const Uploader = require('s3-streaming-upload').Uploader
-const uuidGen = require('uuid')
+import sharp from 'sharp'
+import { PassThrough, Readable } from 'stream'
+import { v7 as uuidv7 } from 'uuid'
+import { S3Client } from '@aws-sdk/client-s3';
+import { Upload } from '@aws-sdk/lib-storage';
 // 1st party
-var config = require('./config')
+import * as config from './config'
 
-//
-// FIXME: This file needs to be cleaned up
-//
-
-const getFormat = fullInPath => {
-    return new Promise((resolve, reject) => {
-        gm(fullInPath).format((err, val) => {
-            if (err) return reject(err)
-            return resolve(val)
-        })
-    })
-}
-
-const identify = fullInPath => {
-    return new Promise((resolve, reject) => {
-        gm(fullInPath).identify((err, val) => {
-            if (err) return reject(err)
-            return resolve(val)
-        })
-    })
-}
-
-// Returns promise that resolves to hex hash string for given readable stream
-const calcStreamHash = inStream => {
-    return new Promise((resolve, reject) => {
-        const hash = crypto.createHash('sha1')
-        hash.setEncoding('hex')
-
-        inStream.on('end', () => {
-            hash.end()
-            debug('hash end')
-            return resolve(hash.read())
-        })
-
-        inStream.on('error', ex => {
-            debug('hash error')
-            return reject(ex)
-        })
-
-        inStream.pipe(hash)
-    })
-}
-
-exports.handleAvatar = async (userId, fullInPath) => {
-    // Returns an object with these useful keys (among others):
-    // - format: 'GIF'
-    // - size: { width: 130, height: 133 }
-    // - 'Mime type': 'image/gif'
-    const data = await identify(fullInPath)
-    debug('size: ', data['size'])
-    const format = data['format'].toLowerCase()
-    // data['Mime type'] is never set on the Heroku dyno, only exists locally...
-    let mime = data['Mime type'] || `image/${format}`
-
-    // Gif mime is array on my computer, tho it worked on Heroku
-    // without this bit...
-    if (Array.isArray(mime)) {
-        mime = mime[0]
-        assert(typeof mime === 'string')
+// Uploads s3 avatars, returns url of the large avatar.
+export const handleAvatarTransformAndUpload = async (fullInPath: string): Promise<string> => {
+    if (!config.AWS_KEY || !config.AWS_SECRET) {
+        throw new Error('Avatar upload not configured')
     }
 
-    const uuid = uuidGen.v7()
-    const folderName =
-        config.NODE_ENV === 'production' ? 'production' : 'development'
+    const uuid = uuidv7()
+    const folderName = config.NODE_ENV === 'production' ? 'production' : 'development';
+    
+    // Create S3 client
+    const s3Client = new S3Client({
+        region: 'us-east-1',
+        credentials: {
+            accessKeyId: config.AWS_KEY,
+            secretAccessKey: config.AWS_SECRET,
+        },
+    });
 
-    const promise1 = new Promise((resolve, reject) => {
-        const objectName = `${folderName}/${uuid}.${format}`
+    // Helper function to upload a stream to S3
+    const uploadToS3 = async (
+        stream: Readable,
+        objectName: string
+    ): Promise<string> => {
+        const upload = new Upload({
+            client: s3Client,
+            params: {
+                Bucket: config.S3_AVATAR_BUCKET,
+                Key: objectName,
+                Body: stream,
+                ContentType: 'image/avif',
+                CacheControl: 'max-age=31536000', // 1 year
+            },
+            partSize: 1024 * 1024 * 5, // 5MB parts
+            queueSize: 4,
+        });
 
-        gm(nodeFs.createReadStream(fullInPath))
-            // width, height, modifier
-            // '>' = only resize if image exceeds dimensions
-            // http://www.imagemagick.org/script/command-line-processing.php#geometry
-            .resize(300, 400, '>')
-            .strip() // Remove all metadata
-            .stream(format, (err, processedImageReadStream) => {
-                if (err) return reject(err)
-                var uploader = new Uploader({
-                    stream: processedImageReadStream,
-                    accessKey: config.AWS_KEY,
-                    secretKey: config.AWS_SECRET,
-                    bucket: config.S3_AVATAR_BUCKET,
-                    objectName: objectName,
-                    objectParams: {
-                        ContentType: mime,
-                        CacheControl: 'max-age=31536000', // 1 year
-                    },
-                })
-                uploader.send((err, data) => {
-                    if (err) return reject(err)
-                    const avatarUrl = data.Location
-                    return resolve(avatarUrl)
-                })
-            })
-    })
+        const result = await upload.done();
+        // https://avatars.roleplayerguild.com/{production|development}/{uuid}.avif
+        const s3url = new URL(result.Location!)
+        const guildurl = new URL('https://avatars.roleplayerguild.com')
+        guildurl.pathname = s3url.pathname
+        return guildurl.toString()
+    };
 
-    const promise2 = new Promise((resolve, reject) => {
-        const objectName = `${folderName}/32/${uuid}.${format}`
+    // Read the image into a buffer first (more efficient for multiple operations)
+    const imageBuffer = await sharp(fullInPath).toBuffer();
 
-        gm(fullInPath + '[0]')
-            // width, height, modifier
-            // '>' = only resize if image exceeds dimensions
-            // http://www.imagemagick.org/script/command-line-processing.php#geometry
-            .resize(32, 32, '>')
-            .strip() // Remove all metadata
-            .stream(format, (err, processedImageReadStream) => {
-                if (err) return reject(err)
-                var uploader = new Uploader({
-                    stream: processedImageReadStream,
-                    accessKey: config.AWS_KEY,
-                    secretKey: config.AWS_SECRET,
-                    bucket: config.S3_AVATAR_BUCKET,
-                    objectName: objectName,
-                    objectParams: {
-                        ContentType: mime,
-                        CacheControl: 'max-age=31536000', // 1 year
-                    },
-                })
-                uploader.send((err, data) => {
-                    if (err) return reject(err)
-                    const avatarUrl = data.Location
-                    return resolve(avatarUrl)
-                })
-            })
-    })
+    // Create resize operations from the buffer
+    const normalPromise = sharp(imageBuffer)
+        .resize({
+            width: 300,
+            height: 400,
+            fit: 'inside',
+            withoutEnlargement: true,
+        })
+        .avif({
+            quality: 80,
+            effort: 4,
+        })
+        .toBuffer()
+        .then(buffer => {
+            const stream = new PassThrough();
+            stream.end(buffer);
+            return uploadToS3(stream, `${folderName}/${uuid}.avif`);
+        });
 
-    // Return the large avatar url
-    return Promise.all([promise1, promise2]).then(([avatarUrl]) => avatarUrl)
-}
+    const smallPromise = sharp(imageBuffer)
+        .resize({
+            width: 32,
+            height: 32,
+            fit: 'inside',
+            withoutEnlargement: true,
+        })
+        .avif({
+            quality: 80,
+            effort: 4,
+        })
+        .toBuffer()
+        .then(buffer => {
+            const stream = new PassThrough();
+            stream.end(buffer);
+            return uploadToS3(stream, `${folderName}/32/${uuid}.avif`);
+        });
 
+    // Upload both sizes in parallel
+    const [normalUrl] = await Promise.all([normalPromise, smallPromise]);
+
+    console.log('normalUrl', normalUrl)
+    const url = new URL(normalUrl)
+    console.log('url', url)
+
+    // Return the large avatar URL (matching original behavior)
+    return normalUrl;
+};
+
+//// jun 11 2025 - found this bit of archeology commented out at the bottom of the file.
+//// gonna keep it here as a reminder for how much the ecosystem has changed since i 
+//// started this project.
+//
 // function* run() {
 //   var format = yield getFormat(path.resolve('avatar.jpg'));
 //   debug('format: ', format);
