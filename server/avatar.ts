@@ -1,11 +1,9 @@
 // 3rd party
 import sharp from 'sharp'
-import { PassThrough, Readable } from 'stream'
-import { v7 as uuidv7 } from 'uuid'
-import { S3Client } from '@aws-sdk/client-s3';
-import { Upload } from '@aws-sdk/lib-storage';
 // 1st party
 import * as config from './config'
+import { uploadToS3 } from './s3';
+import { v7 as uuidv7 } from 'uuid'
 
 // Uploads s3 avatars, returns url of the large avatar.
 export const handleAvatarTransformAndUpload = async (fullInPath: string): Promise<string> => {
@@ -13,46 +11,11 @@ export const handleAvatarTransformAndUpload = async (fullInPath: string): Promis
         throw new Error('Avatar upload not configured')
     }
 
-    const uuid = uuidv7()
-    const folderName = config.NODE_ENV === 'production' ? 'production' : 'development';
-    
-    // Create S3 client
-    const s3Client = new S3Client({
-        region: 'us-east-1',
-        credentials: {
-            accessKeyId: config.AWS_KEY,
-            secretAccessKey: config.AWS_SECRET,
-        },
-    });
-
-    // Helper function to upload a stream to S3
-    const uploadToS3 = async (
-        stream: Readable,
-        objectName: string
-    ): Promise<string> => {
-        const upload = new Upload({
-            client: s3Client,
-            params: {
-                Bucket: config.S3_AVATAR_BUCKET,
-                Key: objectName,
-                Body: stream,
-                ContentType: 'image/avif',
-                CacheControl: 'max-age=31536000', // 1 year
-            },
-            partSize: 1024 * 1024 * 5, // 5MB parts
-            queueSize: 4,
-        });
-
-        const result = await upload.done();
-        // https://avatars.roleplayerguild.com/{production|development}/{uuid}.avif
-        const s3url = new URL(result.Location!)
-        const guildurl = new URL('https://avatars.roleplayerguild.com')
-        guildurl.pathname = s3url.pathname
-        return guildurl.toString()
-    };
-
     // Read the image into a buffer first (more efficient for multiple operations)
     const imageBuffer = await sharp(fullInPath).toBuffer();
+
+    // both images share a uuid
+    const uuid = uuidv7()
 
     // Create resize operations from the buffer
     const normalPromise = sharp(imageBuffer)
@@ -68,15 +31,20 @@ export const handleAvatarTransformAndUpload = async (fullInPath: string): Promis
         })
         .toBuffer()
         .then(buffer => {
-            const stream = new PassThrough();
-            stream.end(buffer);
-            return uploadToS3(stream, `${folderName}/${uuid}.avif`);
+            return uploadToS3({
+                type: 'avatar',
+                uuid,
+                buffer,
+                contentType: 'image/avif',
+                size: 'normal',
+            });
         });
 
     const smallPromise = sharp(imageBuffer)
+    // they will be displayed as 32x32
         .resize({
-            width: 32,
-            height: 32,
+            width: 64,
+            height: 64,
             fit: 'inside',
             withoutEnlargement: true,
         })
@@ -86,20 +54,20 @@ export const handleAvatarTransformAndUpload = async (fullInPath: string): Promis
         })
         .toBuffer()
         .then(buffer => {
-            const stream = new PassThrough();
-            stream.end(buffer);
-            return uploadToS3(stream, `${folderName}/32/${uuid}.avif`);
+            return uploadToS3({
+                type: 'avatar',
+                uuid,
+                buffer,
+                contentType: 'image/avif',
+                size: 'small',
+            });
         });
 
     // Upload both sizes in parallel
-    const [normalUrl] = await Promise.all([normalPromise, smallPromise]);
-
-    console.log('normalUrl', normalUrl)
-    const url = new URL(normalUrl)
-    console.log('url', url)
+    const [normalResult] = await Promise.all([normalPromise, smallPromise]);
 
     // Return the large avatar URL (matching original behavior)
-    return normalUrl;
+    return normalResult.publicUrl;
 };
 
 //// jun 11 2025 - found this bit of archeology commented out at the bottom of the file.

@@ -2,7 +2,6 @@
 // 3rd
 const debug = require('debug')('app:db:images')
 const assert = require('assert')
-const uuidGen = require('uuid')
 const knex = require('knex')({ client: 'pg' })
 const _ = require('lodash')
 // 1st
@@ -107,7 +106,7 @@ exports.insertImage = async function(
     assert(Number.isInteger(userId))
     assert(Number.isInteger(albumId))
     assert(typeof src === 'string')
-    assert(['image/jpeg', 'image/gif', 'image/png'].indexOf(mime) > -1)
+    assert(['image/jpeg', 'image/gif', 'image/png', 'image/avif'].indexOf(mime) > -1)
     return pool.query(sql`
     INSERT INTO images (id, album_id, user_id, src, mime, description)
     VALUES (${imageId}, ${albumId}, ${userId}, ${src}, ${mime}, ${description})
@@ -164,5 +163,5 @@ exports.updateAlbum = async function(albumId, fields) {
         .where({ id: albumId })
         .update(fields)
         .toString()
-    return pool._query(str)
+    return pool.query(str)
 }

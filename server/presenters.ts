@@ -301,18 +301,18 @@ exports.presentImage = function(x) {
 
     exports.presentUser(x.user)
 
-    const ext = (() => {
-        switch (x.mime) {
-            case 'image/jpeg':
-                return 'jpg'
-            case 'image/gif':
-                return 'gif'
-            case 'image/png':
-                return 'png'
-        }
-    })()
-    x.url = x.user.url + `/images/${x.id}`
-    x.src = 'https://' + nodeUrl.parse(x.src).pathname.slice(1)
+    // Legacy image url: https://s3.amazonaws.com/img.roleplayerguild.com/prod/users/0001999e-ac95-468b-a526-0fd8ffc8591b.png
+    // New image url: https://img.roleplayerguild.com/prod/users/0001999e-ac95-468b-a526-0fd8ffc8591b.avif
+
+    const url = new URL(x.src)
+    if (url.hostname === 's3.amazonaws.com') {
+        // Legacy image url needs to be transformed
+        x.src = 'https://' + url.pathname.slice(1)
+    } else {
+        // New url is already correct
+        x.src = url.toString()
+    }
+
     return x
 }
 

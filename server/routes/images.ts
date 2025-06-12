@@ -1,19 +1,12 @@
-'use strict'
-// Node
-const fs = require('fs')
-// 3rd
-const fsp = require('fs/promises')
-const assert = require('assert')
 const Router = require('@koa/router')
-const debug = require('debug')('app:routes:images')
-const gm = require('gm').subClass({ imageMagick: true })
-const uuidGen = require('uuid')
-const { S3Client, PutObjectCommand, } = require("@aws-sdk/client-s3");
+import sharp from 'sharp'
+import { uploadToS3 } from '../s3'
+import { v7 as uuidv7 } from 'uuid'
 // 1st
 const belt = require('../belt')
 const db = require('../db')
 const pre = require('../presenters')
-const config = require('../config')
+import * as config from '../config'
 
 const router = new Router()
 
@@ -47,22 +40,8 @@ async function loadAlbum(ctx, next) {
 
 ////////////////////////////////////////////////////////////
 
-// ImageMagick identify object -> Mimetype string
-function identifyToMime(data) {
-    if (data['Mime type']) {
-        return data['Mime type']
-    }
-    switch (data.format) {
-        case 'GIF':
-            return 'image/gif'
-        case 'JPEG':
-            return 'image/jpeg'
-        case 'PNG':
-            return 'image/png'
-    }
-}
 
-function extToMime(ext) {
+function extToMime(ext: string): string | null {
     switch (ext) {
         case 'gif':
             return 'image/gif'
@@ -70,21 +49,16 @@ function extToMime(ext) {
             return 'image/jpeg'
         case 'png':
             return 'image/png'
+        case 'avif':
+            return 'image/avif'
+        default:
+            return null
     }
 }
 
-function mimeToExt(mime) {
-    switch (mime) {
-        case 'image/gif':
-            return 'gif'
-        case 'image/jpeg':
-            return 'jpg'
-        case 'image/png':
-            return 'png'
-    }
-}
-
+// TODO: What is this for?
 router.get('/images/:image_id.:ext', loadImage, async ctx => {
+    ctx.assert(extToMime(ctx.params.ext), 404)
     ctx.assert(extToMime(ctx.params.ext) === ctx.state.image.mime, 404)
     ctx.set('Cache-Control', 'max-age=31556926')
     ctx.type = ctx.state.image.mime
@@ -123,45 +97,6 @@ router.get('/users/:user_slug/images', loadUser, async ctx => {
 ////////////////////////////////////////////////////////////
 // Upload
 
-function identify(path) {
-    return new Promise(function(resolve, reject) {
-        gm(path).identify(function(err, val) {
-            if (err) return reject(err)
-            return resolve(val)
-        })
-    })
-}
-
-// String -> Buffer
-function readPath(path) {
-    return new Promise(function(resolve, reject) {
-        fs.readFile(path, function(err, buf) {
-            if (err) return reject(err)
-            return resolve(buf)
-        })
-    })
-}
-
-// returns promise that resolves into s3 url of uploaded image
-async function uploadImage(key, path, mime) {
-    assert(typeof key === 'string')
-    assert(typeof path === 'string')
-    assert(typeof mime === 'string')
-    const body = await  fsp.readFile(path, { encoding: null })
-    const data = {
-        Key: key,
-        Bucket: config.S3_IMAGE_BUCKET,
-        Body: body,
-        ContentType: mime,
-        CacheControl: 'max-age=31536000', // 1 year
-    }
-    const command = new PutObjectCommand(data)
-    const client = new S3Client({ region: 'us-east-1' })
-    const response = await client.send(command)
-    const url = `https://s3.amazonaws.com/${config.S3_IMAGE_BUCKET}/${key}`
-    return url
-}
-
 router.post('/users/:user_slug/images', loadUser, async ctx => {
     if (!config.S3_IMAGE_BUCKET) {
         return (ctx.body =
@@ -184,35 +119,48 @@ router.post('/users/:user_slug/images', loadUser, async ctx => {
     const upload = ctx.request.files.image
     ctx.assert(Number.isInteger(upload.size), 400, 'upload.size must be integer')
     ctx.assert(typeof upload.filepath === 'string', 400, 'upload.filepath must be string')
-    // ensure max upload size
-    if (upload.size > 2e6) {
+    // ensure max upload size of 40 MB
+    if (upload.size > 40e6) {
         ctx.flash = {
             message: [
                 'danger',
-                `Image cannot exceed 2 MB. Max: 2,000,000. Yours: ${
+                `Image cannot exceed 40 MB. Max: 40,000,000. Yours: ${
                     upload.size
                 }`,
             ],
         }
         return ctx.redirect('back')
     }
+
+    const uuid = uuidv7()
+
+    const imageResult = await sharp(upload.filepath)
+        .avif({
+            quality: 80,
+            effort: 4,
+        })
+        .toBuffer()
+        .then(buffer => {
+            return uploadToS3({
+                uuid,
+                type: 'album_image',
+                buffer,
+                contentType: 'image/avif',
+            });
+        });
+
+
+    // TODO: What happens when we try to upload a non-image file?
+
     // { 'Mime type': 'image/jpeg' OR 'format': 'JPEG' }
-    const data = await identify(upload.filepath)
-    const mime = identifyToMime(data)
-    if (!mime || ['image/jpeg', 'image/png', 'image/gif'].indexOf(mime) < 0) {
-        ctx.flash = {
-            message: ['danger', 'Invalid image format. Must be jpg, gif, png.'],
-        }
-        return ctx.redirect('back')
-    }
-
-    // UPLOAD
-
-    const uuid = uuidGen.v7()
-    const envFolder = config.NODE_ENV === 'production' ? 'prod' : 'dev'
-    const s3Key = `${envFolder}/users/${uuid}.${mimeToExt(mime)}`
-    const url = await uploadImage(s3Key, upload.filepath, mime)
-    console.log('url: : :', url)
+    // const data = await identify(upload.filepath)
+    // const mime = identifyToMime(data)
+    // if (!mime || ['image/jpeg', 'image/png', 'image/gif'].indexOf(mime) < 0) {
+    //     ctx.flash = {
+    //         message: ['danger', 'Invalid image format. Must be jpg, gif, png.'],
+    //     }
+    //     return ctx.redirect('back')
+    // }
 
     // INSERT
 
@@ -220,8 +168,8 @@ router.post('/users/:user_slug/images', loadUser, async ctx => {
         uuid,
         album.id,
         ctx.state.user.id,
-        url,
-        mime,
+        imageResult.publicUrl,
+        'image/avif',
         description
     )
 
