@@ -1,3 +1,4 @@
+// @ts-nocheck
 /* GRAMMAR (Reminder: don't use advanced JS features since it must work in browser)
 Root =
   (DiceRoll / Constant)*

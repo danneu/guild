@@ -1,21 +1,15 @@
-'use strict'
-/*jshint -W002 */
-// Node deps
-const path = require('path')
-const util = require('util')
 // 3rd party
 const _ = require('lodash')
 const { assert } = require('../util')
 const debug = require('debug')('app:db')
 const pgArray = require('postgres-array')
-const promiseMap = require('promise.map')
-const genUuid = require('uuid')
+import { v7 as uuidv7 } from 'uuid'
 // 1st party
 const config = require('../config')
 const belt = require('../belt')
 const pre = require('../presenters')
-// const { pool } = require('./util')
-import { pool } from './util.ts'
+import { pool } from './util'
+import { PoolClient } from 'pg'
 const { sql } = require('pg-extra')
 const revs = require('./revs')
 
@@ -35,7 +29,7 @@ const revs = require('./revs')
  * }
  * */
 
-function wrapOptionalClient(fn) {
+function wrapOptionalClient(fn: (client: PoolClient, ...args: any[]) => Promise<any>) {
     return async function() {
         const args = Array.prototype.slice.call(arguments, 0)
         if (belt.isDBClient(args[0])) {
@@ -274,7 +268,7 @@ exports.findLatestActiveResetToken = async function(userId) {
 exports.createResetToken = async function(userId) {
     debug('[createResetToken] userId: ' + userId)
 
-    const uuid = genUuid.v7()
+    const uuid = uuidv7()
 
     return pool.one(sql`
     INSERT INTO reset_tokens (user_id, token)
@@ -607,7 +601,7 @@ async function createSession(client, props) {
     assert(_.isString(props.ipAddress))
     assert(_.isString(props.interval))
 
-    const uuid = genUuid.v7()
+    const uuid = uuidv7()
 
     return client.one(sql`
     INSERT INTO sessions (user_id, id, ip_address, expired_at)
@@ -1440,7 +1434,7 @@ exports.createUserWithSession = async function(props) {
         RETURNING *
       `)
         } catch (err) {
-            if (err.code === '23505') {
+            if (err instanceof Error && 'code' in err && err.code === '23505') {
                 if (/unique_username/.test(err.toString())) throw 'UNAME_TAKEN'
                 else if (/unique_slug/.test(err.toString())) throw 'UNAME_TAKEN'
                 else if (/unique_email/.test(err.toString()))
@@ -1455,7 +1449,7 @@ exports.createUserWithSession = async function(props) {
         VALUES (${user.id}, ${user.uname}, ${user.slug})
       `)
         } catch (err) {
-            if (err.code === '23505') {
+            if (err instanceof Error && 'code' in err && err.code === '23505') {
                 if (/unique_unrecyclable_slug/.test(err.toString()))
                     throw 'UNAME_TAKEN'
             }
@@ -2109,7 +2103,7 @@ GROUP BY f.id
 exports.clearExpiredViewers = async function() {
     debug('[clearExpiredViewers] Running')
 
-    const rowCount = await pool
+    const count = await pool
         .query(
             sql`
     DELETE FROM viewers
@@ -2118,7 +2112,7 @@ exports.clearExpiredViewers = async function() {
         )
         .then(result => result.rowCount)
 
-    debug('[clearExpiredViewers] Deleted views: ' + rowCount)
+    debug('[clearExpiredViewers] Deleted views: ' + count)
 
     return count
 }
@@ -2507,7 +2501,7 @@ exports.findPostsByIds = async function(ids) {
   `)
 
     // Reorder posts by the order of ids passed in
-    const out = []
+    const out: any[] = []
 
     ids.forEach(id => {
         const row = rows.find(row => row.id === id)
@@ -3190,15 +3184,14 @@ exports.createFriendship = async function(from_id, to_id) {
     assert(_.isNumber(to_id))
 
     // Note: race condition
-    const count = pool
-        .one(
+    const count = await pool.one<{ count: number }>(
             sql`
     SELECT COUNT(*) "count"
     FROM friendships
     WHERE from_user_id = ${from_id}
   `
         )
-        .then(row => row.count)
+        .then(row => row!.count)
 
     if (count <= 100) {
         throw 'TOO_MANY_FRIENDS'

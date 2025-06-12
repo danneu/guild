@@ -1,6 +1,6 @@
 'use strict'
 // 3rd
-const uuid = require('uuid')
+import { v7 as uuidv7 } from 'uuid'
 const debug = require('debug')('app:middleware:track')
 // 1st
 const db = require('../db')
@@ -9,7 +9,7 @@ const config = require('../config')
 
 module.exports = ({ cookieKey = 't', interval = 5000 } = {}) => {
     debug('initializing track middleware')
-    let queue = []
+    let queue: any[] = []
 
     const clearQueue = () => {
         if (queue.length === 0) {
@@ -50,7 +50,7 @@ module.exports = ({ cookieKey = 't', interval = 5000 } = {}) => {
         if (isValidUuid(ctx.cookies.get(cookieKey))) {
             track = ctx.cookies.get(cookieKey)
         } else {
-            track = uuid.v7()
+            track = uuidv7()
             ctx.cookies.set(cookieKey, track, {
                 expires: futureDate({ years: 1 }),
             })

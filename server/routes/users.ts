@@ -14,9 +14,8 @@ const db = require('../db')
 const belt = require('../belt')
 const pre = require('../presenters')
 const config = require('../config')
-const welcomePm = require('../welcome_pm')
 const cancan = require('../cancan')
-const avatar = require('../avatar')
+import * as avatar from '../avatar'
 const bbcode = require('../bbcode')
 const services = require('../services')
 const {
@@ -33,7 +32,7 @@ const router = new Router()
 // redirectTemplate looks like /users/<>/edit
 // if redirectTemplate is not given, we will not redirect
 // on slug mismatch
-function loadUserFromSlug(key, redirectTemplate) {
+function loadUserFromSlug(key: string, redirectTemplate: string | undefined = undefined) {
     assert(typeof key === 'string')
     if (redirectTemplate) {
         assert(typeof redirectTemplate === 'string')
@@ -1064,8 +1063,7 @@ router.post('/users/:slug/avatar', async ctx => {
     )
 
     // Process avatar, upload to S3, and get the S3 url
-    var avatarUrl = await avatar.handleAvatar(
-        user.id,
+    var avatarUrl = await avatar.handleAvatarTransformAndUpload(
         ctx.request.files.avatar.filepath
     )
 

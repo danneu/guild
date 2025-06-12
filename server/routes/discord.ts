@@ -2,7 +2,7 @@
 // 3rd
 const Router = require('@koa/router')
 const SimpleOauth2 = require('simple-oauth2')
-const uuid = require('uuid')
+import { v7 as uuidv7 } from 'uuid'
 const debug = require('debug')('app:routes:discord')
 const { assert } = require('../util')
 // 1st
@@ -64,7 +64,7 @@ const discord = new DiscordClient({ botToken: config.DISCORD_BOT_TOKEN })
 ////////////////////////////////////////////////////////////
 
 router.get('/discord', async ctx => {
-    const state = uuid.v7()
+    const state = uuidv7()
     const authzUri = oauth2.authorizationCode.authorizeURL({
         redirect_uri,
         state,
@@ -131,14 +131,14 @@ router.get('/discord/callback', async ctx => {
     const roleMap = await discord
         .listRoles(config.DISCORD_GUILD_ID)
         .then(roles => {
-            const mapping = {}
+            const mapping: Record<string, string> = {}
             roles.forEach(role => {
                 mapping[role.name] = role.id
             })
             return mapping
         })
 
-    let roles = []
+    let roles: string[] = []
     if (['smod', 'admin'].includes(ctx.currUser.role)) {
         roles = [roleMap['Admin'], roleMap['Staff']]
     } else if (['conmod', 'arenamod', 'mod'].includes(ctx.currUser.role)) {
@@ -166,7 +166,7 @@ router.get('/discord/callback', async ctx => {
                 }
             )
         } catch (err) { 
-            if (err.status === 403) {
+            if (err instanceof Error && 'status' in err && err.status === 403) {
                 // Missing permissions, but just go ahead instead of bailing
                 console.log('TODO: modifyGuildMember 403 Forbidden (missing permissions)')
             } else {

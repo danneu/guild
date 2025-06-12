@@ -1,8 +1,5 @@
-// Node
-const { URL } = require('url')
 // 3rd
 const { assert } = require('../../util')
-const fetch = require('node-fetch')
 // 1st
 const { broadcastIpAddressAutoNuke } = require('../discord')
 const { timeout } = require('../../belt')
@@ -47,7 +44,7 @@ class IntelClient {
         let body
 
         try {
-            body = await fetch(url).then(res => res.json())
+            body = await fetch(url).then((res) => res.json())
         } catch (err) {
             console.error(`[ipintel] Error fetching "${url}":`, err)
             return 'API_ERROR'

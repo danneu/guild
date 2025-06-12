@@ -22,7 +22,7 @@ const connectionConfig: pg.ClientConfig = {
 
 // This is the connection pool the rest of our db namespace
 // should import and use
-const pool = new pg.Pool(connectionConfig)
+export const pool = new pg.Pool(connectionConfig)
 
 
 // These versions work with both datablan/pg and pg's query results.
@@ -60,6 +60,13 @@ declare module 'pg' {
   }
   
   interface Client {
+    one<T extends QueryResultRow = any>(
+      queryTextOrConfig: string | QueryConfig<any[]>,
+      values?: any[]
+    ): Promise<T | undefined>;
+  }
+
+  interface PoolClient {
     one<T extends QueryResultRow = any>(
       queryTextOrConfig: string | QueryConfig<any[]>,
       values?: any[]

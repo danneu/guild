@@ -1,5 +1,3 @@
-'use strict'
-
 // Should also work in the browser
 
 var defaults = {
@@ -68,5 +66,6 @@ if (typeof module !== 'undefined') {
     module.exports = make
 } else {
     // expose instant to browser
+    // @ts-ignore
     window.ago = make()
 }

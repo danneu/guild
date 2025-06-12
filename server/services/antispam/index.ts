@@ -1,12 +1,10 @@
 // 3rd
 const { assert } = require('../../util')
 // 1st
-const substring = require('./substring')
 const akismet = require('./akismet')
 const config = require('../../config')
 const { broadcastAutoNuke } = require('../discord')
 const db = require('../../db')
-const emailer = require('../../emailer')
 
 // Returns { test: 'SUBSTRING' | 'AKISMET', isSpam: Boolean, info: ... }
 async function analyze(ctx, text) {
