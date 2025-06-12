@@ -1,21 +1,28 @@
-'use strict'
 // 3rd
-const { assert } = require('../util')
-const fetch = require('node-fetch')
-const debug = require('debug')('app:client:index')
-const promiseMap = require('promise.map')
+// import { assert } from '../util'
+import assert from 'assert'
+import fetch from 'node-fetch'
+import promiseMap from 'promise.map'
 
 class ResponseNotOkError extends Error {
-    constructor(message, details = {}) {
+    status: number
+    bodyText: string
+    constructor(message: string, details: { status: number, bodyText: string }) {
         super(message);
         this.name = 'ResponseNotOkError';
-        this.details = details;
+        this.status = details.status;
+        this.bodyText = details.bodyText;
         // Capture stack trace, excluding the constructor call from it
         Error.captureStackTrace(this, this.constructor);
     }
 }
 
-class Client {
+export default class Client {
+    botToken: string
+    userAgent: string
+    apiVersion: number
+    baseUrl: string
+
     constructor({
         botToken,
         userAgent = 'GuildBot (roleplayerguild.com, 0.0.1)',
@@ -30,7 +37,7 @@ class Client {
         this.baseUrl = `https://discord.com/api/v${this.apiVersion}`
     }
 
-    async request(method, path, { headers: extraHeaders, body }) {
+    async request(method: string, path: string, { headers: extraHeaders, body }: { headers: Record<string, string>, body: any }) {
         assert(['GET', 'POST', 'DELETE', 'PUT', 'PATCH'].includes(method))
         assert(typeof path === 'string')
         assert(path.startsWith('/'))
@@ -76,14 +83,14 @@ class Client {
         }
     }
 
-    async botRequest(method, url, body) {
+    async botRequest(method: string, url: string, body: any | undefined = undefined) {
         return this.request(method, url, {
             headers: { Authorization: `Bot ${this.botToken}` },
             body,
         })
     }
 
-    async userRequest(token, method, url, body) {
+    async userRequest(token: string, method: string, url: string, body: any | undefined = undefined) {
         return this.request(method, url, {
             headers: { Authorization: `Bearer ${token}` },
             body,
@@ -135,7 +142,7 @@ class Client {
         return this.botRequest('PATCH', url, body)
     }
 
-    async deleteRole(guildId, roleid) {
+    async deleteRole(guildId, roleId) {
         assert(typeof guildId === 'string')
         assert(typeof roleId === 'string')
         const url = `/guilds/${guildId}/roles/${
@@ -257,4 +264,3 @@ class Client {
     }
 }
 
-module.exports = Client
