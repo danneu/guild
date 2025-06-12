@@ -1,12 +1,12 @@
 // 3rd
-const assert = require('assert')
+import assert from 'assert'
 // 1st
-const config = require('../config')
+import * as config from '../config'
 
 ////////////////////////////////////////////////////////////
 
 // Returns Promise<boolean>
-exports.checkComment = async function({
+export async function checkComment({
     userIp,
     userAgent,
     referrer,
@@ -14,6 +14,14 @@ exports.checkComment = async function({
     commentAuthor,
     commentAuthorEmail,
     commentContent,
+}: {
+    userIp: string
+    userAgent: string
+    referrer: string
+    commentType: string
+    commentAuthor: string
+    commentAuthorEmail: string
+    commentContent: string
 }) {
     if (!config.AKISMET_KEY) {
         throw new Error('[checkComment] AKISMET_KEY must be set')
