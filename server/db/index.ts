@@ -1,6 +1,6 @@
 // 3rd party
 const _ = require('lodash')
-const { assert } = require('../util')
+const assert = require('assert')
 const debug = require('debug')('app:db')
 const pgArray = require('postgres-array')
 import { v7 as uuidv7 } from 'uuid'
@@ -33,7 +33,7 @@ function wrapOptionalClient(fn: (client: PoolClient, ...args: any[]) => Promise<
     return async function() {
         const args = Array.prototype.slice.call(arguments, 0)
         if (belt.isDBClient(args[0])) {
-            return fn.apply(null, args)
+            return fn.apply(null, args as [PoolClient, ...any[]])
         } else {
             return pool.withTransaction(async client => {
                 return fn.apply(null, [client, ...args])

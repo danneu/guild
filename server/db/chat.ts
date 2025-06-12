@@ -1,6 +1,6 @@
 'use strict'
 // 3rd
-const { assert } = require('../util')
+const assert = require('assert')
 // 1st
 const { pool } = require('./util')
 const { sql } = require('pg-extra')

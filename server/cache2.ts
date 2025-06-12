@@ -1,4 +1,4 @@
-'use strict'
+// @ts-nocheck
 // 3rd
 const debug = require('debug')('app:cache2')
 // 1st

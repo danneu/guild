@@ -1,7 +1,7 @@
 'use strict'
 // 3rd
 const debug = require('debug')('app:db:dice')
-const { assert } = require('../util')
+const assert = require('assert')
 const knex = require('knex')({ client: 'pg' })
 const _ = require('lodash')
 // 1st

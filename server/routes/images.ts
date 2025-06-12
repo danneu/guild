@@ -3,7 +3,7 @@
 const fs = require('fs')
 // 3rd
 const fsp = require('fs/promises')
-const { assert } = require('../util')
+const assert = require('assert')
 const Router = require('@koa/router')
 const debug = require('debug')('app:routes:images')
 const gm = require('gm').subClass({ imageMagick: true })

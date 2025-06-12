@@ -1,3 +1,5 @@
+import 'dotenv/config'
+
 export const PORT = parseInt(process.env.PORT || '3000', 10)
 // Format: postgres://<user>:<pass>@<host>:<port>/<dbname>
 export const DATABASE_URL =

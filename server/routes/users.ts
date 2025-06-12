@@ -8,7 +8,7 @@ const util = require('util')
 const Router = require('@koa/router')
 const _ = require('lodash')
 const debug = require('debug')('app:routes:users')
-const { assert } = require('../util')
+const assert = require('assert')
 // 1st party
 const db = require('../db')
 const belt = require('../belt')

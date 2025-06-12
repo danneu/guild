@@ -3,7 +3,7 @@ import { QueryConfig, QueryResult, QueryResultRow } from "pg"
 import pg from 'pg'
 const config = require('../config')
 const belt = require('../belt')
-import { assert } from '../util.js'
+import assert from 'assert'
 import { readFileSync } from 'fs'
 import path from 'path'
 

@@ -61,14 +61,14 @@ const util = require('util')
 // 3rd party
 const _ = require('lodash')
 const debug = require('debug')('app:index')
-const { assert } = require('./util')
+const assert = require('assert')
 const promiseMap = require('promise.map')
 // 1st party
 const db = require('./db')
 const pre = require('./presenters')
 const middleware = require('./middleware')
 const cancan = require('./cancan')
-const emailer = require('./emailer')
+import * as emailer from './emailer'
 const cache = require('./cache')
 const belt = require('./belt')
 const bbcode = require('./bbcode')
@@ -112,7 +112,7 @@ const dist = (() => {
     let body
     try {
         body = fs.readFileSync(manifestPath, 'utf8')
-    } catch (err) {
+    } catch (err: any) {
         if (err.code === 'ENOENT') {
             console.log(
                 'assets not compiled (dist/rev-manifest.json not found)',
@@ -314,7 +314,7 @@ app.use(bouncer.middleware())
 app.use(async (ctx, next) => {
     try {
         await next()
-    } catch (ex) {
+    } catch (ex: any) {
         // Catch any ZodErrors that bubble up and return a flash message
         if (ex instanceof z.ZodError) {
             // Adding the path is nice if I forget to set a message: `Required (username)`
@@ -470,7 +470,7 @@ router.post('/posts/:postId/rate', async (ctx) => {
             .trim()
             .isIn(['like', 'laugh', 'thank'], 'Invalid type')
         ctx.validateBody('post_id').toInt('Invalid post_id')
-    } catch (ex) {
+    } catch (ex: any) {
         if (ex instanceof bouncer.ValidationError) {
             ctx.throw(ex.message, 400)
         }
@@ -666,13 +666,13 @@ router.get('/', async (ctx) => {
     }
 
     // Get users friends for the sidebar
-    const friendships = { count: 0, ghosts: [], nonghosts: [] }
+    const friendships = { count: 0, ghosts: [] as any[], nonghosts: [] as any[] }
     if (ctx.currUser) {
         const rows = (
             await db.findFriendshipsForUserId(ctx.currUser.id, 10)
         ).map(pre.presentFriendship)
 
-        rows.forEach((row) => {
+        rows.forEach((row: any) => {
             friendships.count += 1
             if (
                 row.to_user.is_ghost &&
@@ -1904,7 +1904,7 @@ router.put('/topics/:slug/edit', async (ctx) => {
                 .defaultTo(topic.join_status)
                 .isIn(['jump-in', 'apply', 'full'], 'Invalid join-status')
         }
-    } catch (ex) {
+    } catch (ex: any) {
         if (ex instanceof bouncer.ValidationError) {
             ctx.flash = {
                 message: ['danger', ex.message],

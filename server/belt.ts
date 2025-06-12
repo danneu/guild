@@ -4,7 +4,7 @@ const { URL } = require('url')
 const crypto = require('crypto')
 // 3rd party
 const debug = require('debug')('app:belt')
-const { assert } = require('./util')
+const assert = require('assert')
 const bcrypt = require('bcryptjs')
 const _ = require('lodash')
 const Autolinker = require('autolinker')
@@ -31,6 +31,7 @@ function dateToUTC(date) {
     )
 }
 
+// @ts-ignore
 Date.prototype.toUTCDate = function() {
     return dateToUTC(this)
 }
@@ -160,7 +161,7 @@ exports.checkPassword = (password, digest) => {
 // String -> Bool
 exports.isValidUuid = (() => {
     const re = /^[a-f0-9]{8}\-[a-f0-9]{4}\-[a-f0-9]{4}\-[a-f0-9]{4}\-[a-f0-9]{12}$/i
-    return uuid => {
+    return (uuid) => {
         if (typeof uuid !== 'string') return false
         return re.test(uuid)
     }
@@ -272,9 +273,9 @@ var extractId = (exports.extractId = function(slug) {
 exports.extractMentions = function(str, unameToReject) {
     var start = Date.now()
     debug('[extractMentions]')
-    var unames = {}
+    var unames: Record<string, boolean> = {}
     var re = /\[(quote)[^\]]*\]|\[(\/quote)\]|\[@([a-z0-9_\- ]+)\]/gi
-    var quoteStack = []
+    var quoteStack: string[] = []
 
     // Stop matching if we've hit notification limit for the post
     var limitRemaining = config.MENTIONS_PER_POST
@@ -323,9 +324,9 @@ exports.extractMentions = function(str, unameToReject) {
 exports.extractQuoteMentions = function(str, unameToReject) {
     var start = Date.now()
     debug('[extractQuoteMentions]')
-    var unames = {}
+    var unames: Record<string, boolean> = {}
     var re = /\[(quote)=?@?([a-z0-9_\- ]+)\]|\[(\/quote)\]/gi
-    var quoteStack = []
+    var quoteStack: string[] = []
 
     // Stop matching if we've hit notification limit for the post
     var limitRemaining = config.MENTIONS_PER_POST

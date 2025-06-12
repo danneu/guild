@@ -217,7 +217,7 @@ router.post('/convos/:convoId/pms', async ctx => {
         ctx
             .validateBody('markup')
             .isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH)
-    } catch (ex) {
+    } catch (ex: any) {
         if (ex instanceof bouncer.ValidationError) {
             ctx.flash = {
                 message: ['danger', ex.message],

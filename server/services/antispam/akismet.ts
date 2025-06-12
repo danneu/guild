@@ -1,5 +1,5 @@
 // 3rd
-const { assert } = require('../../util')
+const assert = require('assert')
 // 1st
 const belt = require('../../belt')
 const akismet = require('../../akismet')

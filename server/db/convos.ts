@@ -1,5 +1,5 @@
 // 3rd
-const { assert } = require('../util')
+const assert = require('assert')
 const _ = require('lodash')
 const debug = require('debug')('app:db:convos')
 // 1st

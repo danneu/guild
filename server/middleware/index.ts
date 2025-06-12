@@ -4,7 +4,7 @@ const util = require('util')
 // 3rd party
 const debug = require('debug')('app:middleware')
 const _ = require('lodash')
-const { assert } = require('../util')
+const assert = require('assert')
 const bouncer = require('koa-bouncer')
 // 1st party
 const db = require('../db')
