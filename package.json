@@ -11,7 +11,7 @@
         "pm2-soft": "pm2 reload ecosystem.config.js --env production --update-env",
         "pm2-hard": "pm2 kill && pm2 start ecosystem.config.js --env production --update-env",
         "docker:build": "docker build -t guild .",
-        "docker:run": "docker run -p 3000:3000 guild",
+        "docker:run": "docker run -p 3000:3000 --env-file .env guild",
         "deploy": "npm version patch -m '%s [deploy]' && git push origin --follow-tags"
     },
     "main": "server/index.ts",
