@@ -7,7 +7,6 @@ var RegexTrie = require('regex-trie')
 var debug = require('debug')('app:cache')
 var assert = require('better-assert')
 const { sql } = require('pg-extra')
-const fetch = require('node-fetch')
 // 1st party
 const IntervalCache = require('../lib/interval-cache')
 var db = require('./db')

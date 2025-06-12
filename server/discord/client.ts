@@ -1,7 +1,6 @@
 // 3rd
 // import { assert } from '../util'
 import assert from 'assert'
-import fetch from 'node-fetch'
 import promiseMap from 'promise.map'
 
 class ResponseNotOkError extends Error {
