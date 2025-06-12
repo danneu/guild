@@ -1,4 +1,4 @@
-// Should also work in the browser
+// Should also work in the browser - needs to be .js 
 
 var defaults = {
     prefixFromNow: 'in',
