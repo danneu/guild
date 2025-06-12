@@ -12,7 +12,7 @@ primary_region = "dfw"
   PORT = "3000"
   NODE_ENV = "production"
   # Only non-sensitive config vars
-  ENABLE_ADS="true"
+  # ENABLE_ADS="true"
   FAQ_POST_ID="4301082"
   MIN_TOPIC_TITLE_LENGTH = "3"
   MAX_TOPIC_TITLE_LENGTH = "150"
