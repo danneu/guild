@@ -1,14 +1,13 @@
-'use strict'
 // 3rd party
-const nodemailer = require('nodemailer')
-const ses = require('nodemailer-ses-transport')
-const { assert } = require('./util')
-const _ = require('lodash')
-const nunjucks = require('nunjucks')
+import nodemailer from 'nodemailer'
+import ses from 'nodemailer-ses-transport'
+import assert from 'assert'
+import _ from 'lodash'
+import nunjucks from 'nunjucks'
 const debug = require('debug')('app:emailer')
 // 1st party
 const belt = require('./belt')
-const config = require('./config')
+import * as config from './config'
 
 function getTransporter() {
     assert(config.AWS_KEY, 'AWS_KEY must be set to send emails')
@@ -38,15 +37,13 @@ var templates = {
 
 const FROM = 'Mahz <mahz@roleplayerguild.com>'
 
-exports.sendResetTokenEmail = function(toUname, toEmail, token) {
+export async function sendResetTokenEmail(toUname: string, toEmail: string, token: string): Promise<void> {
     debug('[sendResetTokenEmail]')
     assert(config.HOST, 'HOST must be set to send emails')
     assert(_.isString(toUname))
     assert(_.isString(toEmail))
     assert(belt.isValidUuid(token))
-    var transporter = getTransporter()
-    //var result = yield transporter._sendMailPromise({
-    return getTransporter()
+    await getTransporter()
         .sendMail({
             from: FROM,
             to: toEmail,
@@ -64,7 +61,7 @@ exports.sendResetTokenEmail = function(toUname, toEmail, token) {
 }
 
 // Return promise
-exports.sendAutoNukeEmail = (() => {
+export const sendAutoNukeEmail = (() => {
     const template = nunjucks.compile(`
     <p>
       Akismet detected spammer:
