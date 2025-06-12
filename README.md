@@ -3,37 +3,42 @@
 
 An ancient forum somehow still running in production.
 
+- Started as a vBulletin forum in 2006 when I was 17
+- Unfortunately deleted in 2010 (Guildfall)
+- Written from scratch with Clojure and Datomic in 2010 (don't ask)
+- Ported to Node.js and Postgres starting in 2015 (ongoing infiniwork)
+
 ## Setup and Install
 
 The Guild is a Node.js app that talks to a Postgres database.
 
 - Install the latest stable version of Node.
+- Download the repository and install its dependencies:
 
-- The Guild depends on the `plv8` Postgres extension. This extension can sometimes fail to build, so the binary can be found here: https://github.com/plv8/plv8/issues/220
-
-Archive Link: https://web.archive.org/web/20200604033753/https://github.com/plv8/plv8/issues/220
-
-- Download the repository and enter the directory that it created:
-
-        git clone git@github.com:danneu/guild.git
-        cd guild
-
-- Enter the `guild` directory and install its dependencies:
-
-        npm install
+  ```sh
+  git clone git@github.com:danneu/guild.git
+  cd guild
+  npm install
+  ```
 
 - Launch Postgres (by default it will run on `http://localhost:5432`) and create an empty database named `guild`.
 
-        createdb guild
+  ```sh
+  createdb guild
+  ```
 
 - The Guild comes with a command that rebuilds the database with tables and fills them with some data to play with:
 
-        npm run reset-db
+  ```sh
+  npm run reset-db
+  ```
 
 - Now you can launch the server:
 
-        npm start
-        > Listening on http://localhost:3000
+  ```sh
+  npm start
+  > Listening on port 3000
+  ```
 
 ## Building js/css assets
 
@@ -42,9 +47,9 @@ The guild uses [gulp](https://gulpjs.com) to build assets into the folder `./dis
 ```
 dist/
     fonts/
-    all-155a92ba49.js
-    all-bfacf3040f.css
-    rev-manifest.json
+        all-155a92ba49.js
+        all-bfacf3040f.css
+        rev-manifest.json
 ```
 
 You can run the task with:
