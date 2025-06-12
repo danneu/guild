@@ -463,7 +463,6 @@ export const autolink = function(text) {
         stripPrefix: true,
         newWindow: true,
         truncate: 30,
-        twitter: false,
         email: false,
         phone: false,
         hashtag: false,
