@@ -97,7 +97,7 @@ export const sendAutoNukeEmail = (() => {
                 from: FROM,
                 to: 'danrodneu@gmail.com',
                 subject: `Guild Auto-Nuke: ${slug}`,
-                html: template.render({ userUrl, slug, markup }),
+                html: template.render({ userUrl: userUrl.toString(), slug, markup }),
             })
             .catch(err => {
                 console.error(`Failed to send auto-nuke email`, err)
