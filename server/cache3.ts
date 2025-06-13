@@ -97,7 +97,7 @@ const cache = createIntervalCache({
   },
 
   "faq-post": {
-    enabled: config.FAQ_POST_ID,
+    enabled: !!config.FAQ_POST_ID,
     initialValue: null,
     interval: 1000 * 60 * 60,
     fetch: async () => {
@@ -106,7 +106,7 @@ const cache = createIntervalCache({
   },
 
   "welcome-post": {
-    enabled: config.WELCOME_POST_ID,
+    enabled: !!config.WELCOME_POST_ID,
     initialValue: null,
     interval: Infinity,
     fetch: async () => {

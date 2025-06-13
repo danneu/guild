@@ -14,7 +14,7 @@ export class IntervalCacheError extends Error {
 }
 
 type CacheConfig<T> = {
-  enabled?: boolean | any; // Falsy values disable updates
+  enabled: boolean;
   initialValue: T;
   interval: number;
   fetch: () => Promise<T>;
@@ -58,7 +58,7 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
     cache.set(key, {
       value: keyConfig.initialValue,
       lastUpdated: 0,
-      updateRequested: keyConfig.enabled !== false, // Only request if enabled
+      updateRequested: keyConfig.enabled, // Only request if enabled
       updating: false,
     });
   }
@@ -76,7 +76,7 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
       if (!entry || entry.updating) continue;
 
       // Skip if disabled
-      if (!keyConfig.enabled && keyConfig.enabled !== undefined) continue;
+      if (!keyConfig.enabled) continue;
 
       const timeSinceUpdate = now - entry.lastUpdated;
       const shouldUpdate =
@@ -132,7 +132,7 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
         [keyof T, CacheConfig<any>]
       >) {
         // Skip if disabled
-        if (!keyConfig.enabled && keyConfig.enabled !== undefined) continue;
+        if (!keyConfig.enabled) continue;
 
         const entry = cache.get(key);
         if (!entry) continue;
@@ -198,7 +198,7 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
     }
 
     // Skip if disabled (but allow force update to work for testing)
-    if (!keyConfig.enabled && keyConfig.enabled !== undefined) {
+    if (!keyConfig.enabled) {
       console.warn(
         `Cache key '${String(key)}' is disabled but forceUpdate was called`,
       );

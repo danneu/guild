@@ -14,11 +14,13 @@ describe("createIntervalCache", () => {
   it("initializes with provided initial values", () => {
     const cache = createIntervalCache({
       users: {
+        enabled: true,
         initialValue: [{ id: 1, name: "Alice" }],
         interval: 5000,
         fetch: async () => [{ id: 1, name: "Alice Updated" }],
       },
       settings: {
+        enabled: true,
         initialValue: { theme: "dark" },
         interval: 10000,
         fetch: async () => ({ theme: "light" }),
@@ -77,6 +79,7 @@ describe("createIntervalCache", () => {
 
     const cache = createIntervalCache({
       data: {
+        enabled: true,
         initialValue: "initial",
         interval: 1000,
         fetch: async () => {
@@ -153,6 +156,7 @@ describe("createIntervalCache", () => {
   it("set() updates value immediately", () => {
     const cache = createIntervalCache({
       data: {
+        enabled: true,
         initialValue: "initial",
         interval: 5000,
         fetch: async () => "fetched",
@@ -183,6 +187,7 @@ describe("createIntervalCache", () => {
     const cache = createIntervalCache(
       {
         counter: {
+          enabled: true,
           initialValue: 0,
           interval: 5000,
           fetch: async () => {
@@ -210,6 +215,7 @@ describe("createIntervalCache", () => {
     const cache = createIntervalCache(
       {
         data: {
+          enabled: true,
           initialValue: "initial",
           interval: 2000,
           fetch: async () => `update-${++fetchCount}`,
@@ -240,6 +246,7 @@ describe("createIntervalCache", () => {
     const cache = createIntervalCache(
       {
         data: {
+          enabled: true,
           initialValue: "initial",
           interval: 2000,
           fetch: async () => `update-${++fetchCount}`,
@@ -291,6 +298,7 @@ describe("createIntervalCache", () => {
     const cache = createIntervalCache(
       {
         data: {
+          enabled: true,
           initialValue: "initial",
           interval: 5000,
           fetch: async () => "updated",
@@ -323,6 +331,7 @@ describe("createIntervalCache", () => {
     const cache = createIntervalCache(
       {
         data: {
+          enabled: true,
           initialValue: "initial",
           interval: 100,
           fetch: async () => {
@@ -359,6 +368,7 @@ describe("createIntervalCache", () => {
   it("throws error when accessing non-existent key", () => {
     const cache = createIntervalCache({
       data: {
+        enabled: true,
         initialValue: "value",
         interval: 1000,
         fetch: async () => "updated",
@@ -389,6 +399,7 @@ describe("createIntervalCache", () => {
     const cache = createIntervalCache(
       {
         data: {
+          enabled: true,
           initialValue: "initial",
           interval: 1000,
           fetch: async () => `update-${++fetchCount}`,
@@ -424,6 +435,7 @@ describe("createIntervalCache", () => {
     
     const cache = createIntervalCache({
       failing: {
+        enabled: true,
         initialValue: "initial",
         interval: 1000,
         fetch: async () => {
@@ -431,6 +443,7 @@ describe("createIntervalCache", () => {
         },
       },
       working: {
+        enabled: true,
         initialValue: "initial", 
         interval: 1000,
         fetch: async () => "success",
@@ -462,6 +475,7 @@ describe("createIntervalCache", () => {
 
     const cache = createIntervalCache({
       data: {
+        enabled: true,
         initialValue: "initial",
         interval: 100,
         fetch: async () => {
@@ -505,6 +519,7 @@ describe("createIntervalCache", () => {
 
     const cache = createIntervalCache({
       data: {
+        enabled: true,
         initialValue: "initial",
         interval: 1000,
         fetch: async () => {
@@ -537,6 +552,7 @@ describe("createIntervalCache", () => {
 
     const cache = createIntervalCache({
       data: {
+        enabled: true,
         initialValue: "initial",
         interval: 1000,
         fetch: async () => {
