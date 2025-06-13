@@ -1,35 +1,45 @@
 // 3rd
-import assert from 'assert'
-// import createDebug from 'debug'; 
+import assert from "assert";
+// import createDebug from 'debug';
 // const debug = createDebug('app:db:subscriptions')
 // 1st
-import { pool } from './util'
-import * as db from '.'
+import { pool } from "./util";
+import * as db from ".";
 
 ////////////////////////////////////////////////////////////
 
 // Gets non-archived subs
-export const listActiveSubscribersForTopic = async function(topicId) {
-    assert(Number.isInteger(topicId))
+export const listActiveSubscribersForTopic = async function (topicId) {
+  assert(Number.isInteger(topicId));
 
-    return pool.query(`
+  return pool
+    .query(
+      `
     SELECT
       u.id
     FROM users u
     JOIN topic_subscriptions ts ON u.id = ts.user_id
     WHERE ts.topic_id = $1
       AND ts.is_archived = false
-  `, [topicId]).then(res => res.rows)
-}
+  `,
+      [topicId],
+    )
+    .then((res) => res.rows);
+};
 
 ////////////////////////////////////////////////////////////
 
 // Sort them by latest_posts first
-export const findSubscribedTopicsForUserId = async function(userId, isArchived) {
-    assert(Number.isInteger(userId))
-    assert(typeof isArchived === 'boolean')
+export const findSubscribedTopicsForUserId = async function (
+  userId,
+  isArchived,
+) {
+  assert(Number.isInteger(userId));
+  assert(typeof isArchived === "boolean");
 
-    return pool.query(`
+  return pool
+    .query(
+      `
 SELECT
   t.*,
   json_build_object(
@@ -118,74 +128,92 @@ JOIN forums f ON t.forum_id = f.id
 WHERE ts.user_id = $1
   AND is_archived = $2
 ORDER BY t.latest_post_id DESC
-  `, [userId, isArchived]).then(res => res.rows)
-}
+  `,
+      [userId, isArchived],
+    )
+    .then((res) => res.rows);
+};
 
 ////////////////////////////////////////////////////////////
 
 // Do nothing if subscription already exists
-export const subscribeToTopic = async function(userId, topicId) {
-    assert(userId)
-    assert(topicId)
-    return pool.query(`
+export const subscribeToTopic = async function (userId, topicId) {
+  assert(userId);
+  assert(topicId);
+  return pool.query(
+    `
     INSERT INTO topic_subscriptions (user_id, topic_id)
     VALUES ($1, $2)
     ON CONFLICT (user_id, topic_id) DO NOTHING
-  `, [userId, topicId])
-}
+  `,
+    [userId, topicId],
+  );
+};
 
 ////////////////////////////////////////////////////////////
 
 // unsub/archive should delete any existing notifications
-export const massUpdate = async function(userId, topicIds, action) {
-    assert(['unsub', 'archive', 'unarchive'].includes(action))
+export const massUpdate = async function (userId, topicIds, action) {
+  assert(["unsub", "archive", "unarchive"].includes(action));
 
-    if (action === 'archive') {
-        return Promise.all([
-            pool.query(`
+  if (action === "archive") {
+    return Promise.all([
+      pool.query(
+        `
         UPDATE topic_subscriptions
         SET is_archived = true
         WHERE topic_id = ANY ($1)
           AND user_id = $2
         RETURNING *
-      `, [topicIds, userId]),
-            db.deleteSubNotifications(userId, topicIds),
-        ])
-    }
+      `,
+        [topicIds, userId],
+      ),
+      db.deleteSubNotifications(userId, topicIds),
+    ]);
+  }
 
-    if (action === 'unsub') {
-        return Promise.all([
-            pool.query(`
+  if (action === "unsub") {
+    return Promise.all([
+      pool.query(
+        `
         DELETE FROM topic_subscriptions
         WHERE topic_id = ANY ($1)
           AND user_id = $2
-      `, [topicIds, userId]),
-            db.deleteSubNotifications(userId, topicIds),
-        ])
-    }
+      `,
+        [topicIds, userId],
+      ),
+      db.deleteSubNotifications(userId, topicIds),
+    ]);
+  }
 
-    if (action === 'unarchive') {
-        return pool.query(`
+  if (action === "unarchive") {
+    return pool.query(
+      `
       UPDATE topic_subscriptions
       SET is_archived = false
       WHERE topic_id = ANY ($1)
         AND user_id = $2
       RETURNING *
-    `, [topicIds, userId])
-    }
+    `,
+      [topicIds, userId],
+    );
+  }
 
-    assert(false)
-}
+  assert(false);
+};
 
 ////////////////////////////////////////////////////////////
 
 // Delete any existing notifications for topic
-export const unsubscribeFromTopic = async function(userId, topicId) {
-    return Promise.all([
-        pool.query(`
+export const unsubscribeFromTopic = async function (userId, topicId) {
+  return Promise.all([
+    pool.query(
+      `
       DELETE FROM topic_subscriptions
       WHERE user_id = $1 AND topic_id = $2
-    `, [userId, topicId]),
-        db.deleteSubNotifications(userId, [topicId]),
-    ])
-}
+    `,
+      [userId, topicId],
+    ),
+    db.deleteSubNotifications(userId, [topicId]),
+  ]);
+};

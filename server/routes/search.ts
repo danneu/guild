@@ -1,19 +1,19 @@
-'use strict'
+"use strict";
 // 3rd
-import Router from '@koa/router'
-import Knex from 'knex'
-const knex = Knex({ client: 'pg' })
-import createDebug from 'debug'
-const debug = createDebug('app:search')
+import Router from "@koa/router";
+import Knex from "knex";
+const knex = Knex({ client: "pg" });
+import createDebug from "debug";
+const debug = createDebug("app:search");
 // 1st
-import { pool } from '../db/util.js'
-import cache from '../cache'
-import * as pre from '../presenters'
-import { Context } from 'koa'
+import { pool } from "../db/util.js";
+import cache from "../cache";
+import * as pre from "../presenters";
+import { Context } from "koa";
 
 ////////////////////////////////////////////////////////////
 
-const router = new Router()
+const router = new Router();
 
 ////////////////////////////////////////////////////////////
 
@@ -28,193 +28,180 @@ const router = new Router()
 //
 // TODO: Remove the old CloudSearch cruft from search_results.html and anywhere
 // else in the codebase.
-router.get('/search', async (ctx: Context) => {
-    // Must be logged in to search
-    if (!ctx.currUser) {
-        ctx.flash = { message: ['danger', 'You must be logged in to search'] }
-        ctx.redirect('/')
-        return
-    }
+router.get("/search", async (ctx: Context) => {
+  // Must be logged in to search
+  if (!ctx.currUser) {
+    ctx.flash = { message: ["danger", "You must be logged in to search"] };
+    ctx.redirect("/");
+    return;
+  }
 
-    ctx.set('X-Robots-Tag', 'noindex')
+  ctx.set("X-Robots-Tag", "noindex");
 
-    // TODO: Stop hard-coding lexus lounge authorization
-    // Ignore lexus-lounge and test categories
-    const publicCategories = cache.get('categories').filter(c => {
-        return c.id !== 4 && c.id !== 5
+  // TODO: Stop hard-coding lexus lounge authorization
+  // Ignore lexus-lounge and test categories
+  const publicCategories = cache.get("categories").filter((c) => {
+    return c.id !== 4 && c.id !== 5;
+  });
+
+  const perPage = 50;
+
+  const page = ctx
+    .validateQuery("page")
+    .defaultTo(1)
+    .toInt()
+    .tap((n) => Math.max(n, 0))
+    .tap((n) => Math.min(n, 1000 / perPage))
+    .val();
+
+  // If no search query, then short-circuit the DB hit
+  if (Object.keys(ctx.query).length === 0) {
+    await ctx.render("search_results", {
+      ctx,
+      posts: [],
+      className: "search",
+      searchParams: {},
+      reactData: {
+        searchParams: {},
+        categories: publicCategories,
+      },
+    });
+    return;
+  }
+
+  const term = ctx.validateQuery("term").optional().toString().trim().val();
+
+  const topicId = ctx.validateQuery("topic_id").optional().toInt().val();
+
+  // TODO: Filter out lexus-lounge forums
+  const forumIds = ctx
+    .validateQuery("forum_ids")
+    .optional()
+    .toArray()
+    .toInts()
+    .val();
+
+  const unamesToIds = cache.get("unames->ids");
+
+  const unames = ctx
+    .validateQuery("unames")
+    .optional()
+    .toArray()
+    .uniq()
+    // Remove unames that are not in our system
+    .tap((unames) => {
+      return unames.filter((uname) => unamesToIds[uname.toLowerCase()]);
     })
+    .val();
 
-    const perPage = 50
+  const userIds =
+    unames && unames.length > 0
+      ? unames.map((uname) => unamesToIds[uname.toLowerCase()])
+      : undefined;
 
-    const page = ctx
-        .validateQuery('page')
-        .defaultTo(1)
-        .toInt()
-        .tap(n => Math.max(n, 0))
-        .tap(n => Math.min(n, 1000 / perPage))
-        .val()
+  const postTypes = ctx.validateQuery("post_types").optional().toArray().val();
 
-    // If no search query, then short-circuit the DB hit
-    if (Object.keys(ctx.query).length === 0) {
-        await ctx.render('search_results', {
-            ctx,
-            posts: [],
-            className: 'search',
-            searchParams: {},
-            reactData: {
-                searchParams: {},
-                categories: publicCategories,
-            },
-        })
-        return
-    }
+  // Now we build the query
 
-    const term = ctx
-        .validateQuery('term')
-        .optional()
-        .toString()
-        .trim()
-        .val()
+  const subquery = knex("posts")
+    .select("posts.*")
+    .select(knex.raw('to_json(users.*) "user"'))
+    .select(knex.raw('to_json(topics.*) "topic"'))
+    .select(knex.raw('to_json(forums.*) "forum"'))
+    .innerJoin("users", "users.id", "posts.user_id")
+    .innerJoin("topics", "topics.id", "posts.topic_id")
+    .innerJoin("forums", "forums.id", "topics.forum_id")
+    .where("posts.is_hidden", false)
+    .whereNotNull("posts.markup")
+    .limit(1000);
 
-    const topicId = ctx
-        .validateQuery('topic_id')
-        .optional()
-        .toInt()
-        .val()
+  if (term) {
+    subquery.whereRaw(
+      `to_tsvector('english', posts.markup) @@ plainto_tsquery('english', ?)`,
+      [term],
+    );
+  } else {
+    subquery.orderBy("posts.id", "desc");
+  }
 
-    // TODO: Filter out lexus-lounge forums
-    const forumIds = ctx
-        .validateQuery('forum_ids')
-        .optional()
-        .toArray()
-        .toInts()
-        .val()
+  // Extra filters
 
-    const unamesToIds = cache.get('unames->ids')
+  if (topicId) {
+    console.log({ topicId });
+    subquery.where("posts.topic_id", topicId);
+  }
 
-    const unames = ctx
-        .validateQuery('unames')
-        .optional()
-        .toArray()
-        .uniq()
-        // Remove unames that are not in our system
-        .tap(unames => {
-            return unames.filter(uname => unamesToIds[uname.toLowerCase()])
-        })
-        .val()
+  // If post_type (array) is given
+  if (postTypes) {
+    console.log({ postTypes });
+    subquery.whereIn("posts.type", postTypes);
+  }
 
-    const userIds =
-        unames && unames.length > 0
-            ? unames.map(uname => unamesToIds[uname.toLowerCase()])
-            : undefined
+  if (forumIds) {
+    console.log({ forumIds });
+    subquery.whereIn("topics.forum_id", forumIds);
+  }
 
-    const postTypes = ctx
-        .validateQuery('post_types')
-        .optional()
-        .toArray()
-        .val()
+  if (userIds) {
+    console.log({ userIds });
+    subquery.whereIn("posts.user_id", userIds);
+  }
 
-    // Now we build the query
+  const query = knex
+    .select("x.*")
+    .from(subquery.as("x"))
+    .limit(perPage)
+    .offset((page - 1) * perPage);
 
-    const subquery = knex('posts')
-        .select('posts.*')
-        .select(knex.raw('to_json(users.*) "user"'))
-        .select(knex.raw('to_json(topics.*) "topic"'))
-        .select(knex.raw('to_json(forums.*) "forum"'))
-        .innerJoin('users', 'users.id', 'posts.user_id')
-        .innerJoin('topics', 'topics.id', 'posts.topic_id')
-        .innerJoin('forums', 'forums.id', 'topics.forum_id')
-        .where('posts.is_hidden', false)
-        .whereNotNull('posts.markup')
-        .limit(1000)
+  if (term) {
+    query
+      .select(
+        knex.raw(
+          `ts_rank(to_tsvector('english', x.markup), plainto_tsquery('english', ?)) "rank"`,
+          [term],
+        ),
+      )
+      .select(
+        knex.raw(
+          `ts_headline('english', x.markup, plainto_tsquery('english', ?)) "highlight"`,
+          [term],
+        ),
+      )
+      .orderBy("rank", "desc");
+  } else {
+    // query.orderBy('x.id', 'desc')
+  }
 
-    if (term) {
-        subquery.whereRaw(
-            `to_tsvector('english', posts.markup) @@ plainto_tsquery('english', ?)`,
-            [term]
-        )
-    } else {
-        subquery.orderBy('posts.id', 'desc')
-    }
+  debug(query.toString());
 
-    // Extra filters
+  const posts = await pool
+    .query(query.toString())
+    .then((res) => res.rows.map((x) => pre.presentPost(x)));
 
-    if (topicId) {
-        console.log({ topicId })
-        subquery.where('posts.topic_id', topicId)
-    }
+  ctx.set("X-Robots-Tag", "noindex");
 
-    // If post_type (array) is given
-    if (postTypes) {
-        console.log({ postTypes })
-        subquery.whereIn('posts.type', postTypes)
-    }
+  const params = {
+    unames,
+    term,
+    topic_id: topicId,
+    forum_ids: forumIds,
+    post_types: postTypes,
+  };
 
-    if (forumIds) {
-        console.log({ forumIds })
-        subquery.whereIn('topics.forum_id', forumIds)
-    }
-
-    if (userIds) {
-        console.log({ userIds })
-        subquery.whereIn('posts.user_id', userIds)
-    }
-
-    const query = knex
-        .select('x.*')
-        .from(subquery.as('x'))
-        .limit(perPage)
-        .offset((page - 1) * perPage)
-
-    if (term) {
-        query
-            .select(
-                knex.raw(
-                    `ts_rank(to_tsvector('english', x.markup), plainto_tsquery('english', ?)) "rank"`,
-                    [term]
-                )
-            )
-            .select(
-                knex.raw(
-                    `ts_headline('english', x.markup, plainto_tsquery('english', ?)) "highlight"`,
-                    [term]
-                )
-            )
-            .orderBy('rank', 'desc')
-    } else {
-        // query.orderBy('x.id', 'desc')
-    }
-
-    debug(query.toString())
-
-    const posts = await pool
-        .query(query.toString())
-        .then(res => res.rows.map(x => pre.presentPost(x)))
-
-    ctx.set('X-Robots-Tag', 'noindex')
-
-    const params = {
-        unames,
-        term,
-        topic_id: topicId,
-        forum_ids: forumIds,
-        post_types: postTypes,
-    }
-
-    await ctx.render('search_results', {
-        ctx,
-        posts,
-        page,
-        perPage,
-        className: 'search',
-        searchParams: params,
-        reactData: {
-            searchParams: params,
-            categories: publicCategories,
-        },
-    })
-})
+  await ctx.render("search_results", {
+    ctx,
+    posts,
+    page,
+    perPage,
+    className: "search",
+    searchParams: params,
+    reactData: {
+      searchParams: params,
+      categories: publicCategories,
+    },
+  });
+});
 
 ////////////////////////////////////////////////////////////
 
-export default router
+export default router;

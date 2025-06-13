@@ -10,10 +10,10 @@
 // TODO: Move akismet spam-check here.
 //
 
-import * as discord from './discord'
-import antispam from './antispam'
+import * as discord from "./discord";
+import antispam from "./antispam";
 
 export default {
-    discord,
-    antispam,
-}
+  discord,
+  antispam,
+};

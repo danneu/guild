@@ -1,8 +1,8 @@
-'use strict'
+"use strict";
 // 3rd party
 // ...
 // 1st party
-import bbcode from './bbcode'
+import bbcode from "./bbcode";
 
 // Markup and HTML for the welcome/introductory PM
 const markup = `
@@ -20,11 +20,11 @@ We hope you enjoy your stay at the Roleplayer Guild. :sun
 
 Yours sincerely,
 The Roleplayer Guild Staff
-`
+`;
 
-const html = bbcode(markup)
+const html = bbcode(markup);
 
 export default {
-    markup,
-    html,
-}
+  markup,
+  html,
+};

@@ -85,9 +85,9 @@ export async function uploadToS3(
       // https://img.roleplayerguild.com/{prod|dev}/users/{uuid}.avif
       console.log("s3Url", s3Url);
       const guildUrl = new URL("https://img.roleplayerguild.com");
-      console.log("guildUrl before", guildUrl)
+      console.log("guildUrl before", guildUrl);
       guildUrl.pathname = s3Url.pathname;
-      console.log('guildUrl after', guildUrl)
+      console.log("guildUrl after", guildUrl);
       publicUrl = guildUrl.toString();
       break;
     }

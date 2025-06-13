@@ -1,44 +1,45 @@
-'use strict'
+"use strict";
 // 3rd
-import assert from 'assert'
-import Knex from 'knex'
-const knex = Knex({ client: 'pg' })
-import createDebug from 'debug'; const debug = createDebug('app:db:hits')
+import assert from "assert";
+import Knex from "knex";
+const knex = Knex({ client: "pg" });
+import createDebug from "debug";
+const debug = createDebug("app:db:hits");
 // 1st
-import { pool } from './util'
-import { isValidUuid } from '../belt'
+import { pool } from "./util";
+import { isValidUuid } from "../belt";
 
 ////////////////////////////////////////////////////////////
 
 // hits is array of {user_id, ip_address, track}
-export const insertHits = async hits => {
-    debug('[insertHits] hits: %j', hits)
+export const insertHits = async (hits) => {
+  debug("[insertHits] hits: %j", hits);
 
-    hits.forEach(hit => {
-        assert(Number.isInteger(hit.user_id))
-        assert(typeof hit.ip_address === 'string')
-        assert(isValidUuid(hit.track))
-    })
+  hits.forEach((hit) => {
+    assert(Number.isInteger(hit.user_id));
+    assert(typeof hit.ip_address === "string");
+    assert(isValidUuid(hit.track));
+  });
 
-    const string = knex('hits')
-        .insert(hits)
-        .toString()
+  const string = knex("hits").insert(hits).toString();
 
-    return pool.query(string)
-}
+  return pool.query(string);
+};
 
 ////////////////////////////////////////////////////////////
 
 // TODO: Search within last 30 days or so.
 export const findAltsFromRequest = async (ipAddress, track) => {
-    debug(`[findAltsFromRequest] ipAddress=%j track=%j`, ipAddress, track)
-    assert(typeof ipAddress === 'string')
-    assert(isValidUuid(track))
+  debug(`[findAltsFromRequest] ipAddress=%j track=%j`, ipAddress, track);
+  assert(typeof ipAddress === "string");
+  assert(isValidUuid(track));
 
-    // NOTE: The CASE expressions try to match TRACK first since it's
-    // the best alt-account indicator.
+  // NOTE: The CASE expressions try to match TRACK first since it's
+  // the best alt-account indicator.
 
-    const rows = await pool.query(`
+  const rows = await pool
+    .query(
+      `
     WITH RECURSIVE sub1 (user_id, ip_address, track, created_at, match) AS (
       SELECT
         user_id, ip_address, track, created_at,
@@ -72,24 +73,27 @@ export const findAltsFromRequest = async (ipAddress, track) => {
       (SELECT to_json(users.*) FROM users WHERE id = sub1.user_id) "user"
     FROM sub1
     GROUP BY sub1.user_id, sub1.match
-  `, [track, ipAddress]).then(res => res.rows)
+  `,
+      [track, ipAddress],
+    )
+    .then((res) => res.rows);
 
-    // mapping of user_id -> {user: {...}, matches: {'TRACK': Date, 'IP_ADDRESS': Date, ...]}
-    const map = {}
+  // mapping of user_id -> {user: {...}, matches: {'TRACK': Date, 'IP_ADDRESS': Date, ...]}
+  const map = {};
 
-    rows.forEach(row => {
-        if (map[row.user.id]) {
-            map[row.user.id].matches[row.match] = row.latest_match_at
-        } else {
-            map[row.user.id] = {
-                matches: { [row.match]: row.latest_match_at },
-                user: row.user,
-            }
-        }
-    })
+  rows.forEach((row) => {
+    if (map[row.user.id]) {
+      map[row.user.id].matches[row.match] = row.latest_match_at;
+    } else {
+      map[row.user.id] = {
+        matches: { [row.match]: row.latest_match_at },
+        user: row.user,
+      };
+    }
+  });
 
-    return Object.values(map)
-}
+  return Object.values(map);
+};
 
 // FIXME: I wrote findAltsFromRequest first and then realized I wanted
 // a lookup that starts with a userId so I copy and pasted it into this
@@ -100,14 +104,16 @@ export const findAltsFromRequest = async (ipAddress, track) => {
 // TODO: Search within last 30 days or so.
 //
 // http://sqlfiddle.com/#!17/e3e74/1/0
-export const findAltsFromUserId = async userId => {
-    debug(`[findAltsFromUserId] userId=%j`, userId)
-    assert(Number.isInteger(userId))
+export const findAltsFromUserId = async (userId) => {
+  debug(`[findAltsFromUserId] userId=%j`, userId);
+  assert(Number.isInteger(userId));
 
-    // NOTE: The CASE expressions try to match TRACK first since it's
-    // the best alt-account indicator.
+  // NOTE: The CASE expressions try to match TRACK first since it's
+  // the best alt-account indicator.
 
-    const rows = await pool.query(`
+  const rows = await pool
+    .query(
+      `
     WITH RECURSIVE tracks AS (
       -- Get all tracks for the init case
       SELECT DISTINCT track FROM hits WHERE user_id = $1
@@ -173,21 +179,25 @@ export const findAltsFromUserId = async userId => {
     WHERE user_id != $1
     GROUP BY sub1.user_id, sub1.match
     ORDER BY sub1.user_id DESC
-  `, [userId]).then(res => res.rows)
+  `,
+      [userId],
+    )
+    .then((res) => res.rows);
 
-    // mapping of user_id -> {user: {...}, matches: {'TRACK': Date, 'IP_ADDRESS': Date, ...]}
-    const map: Record<string, { matches: Record<string, Date>, user: any }> = Object.create(null)
+  // mapping of user_id -> {user: {...}, matches: {'TRACK': Date, 'IP_ADDRESS': Date, ...]}
+  const map: Record<string, { matches: Record<string, Date>; user: any }> =
+    Object.create(null);
 
-    rows.forEach(row => {
-        if (map[row.user.uname]) {
-            map[row.user.uname]!.matches[row.match] = row.latest_match_at
-        } else {
-            map[row.user.uname] = {
-                matches: { [row.match]: row.latest_match_at },
-                user: row.user,
-            }
-        }
-    })
+  rows.forEach((row) => {
+    if (map[row.user.uname]) {
+      map[row.user.uname]!.matches[row.match] = row.latest_match_at;
+    } else {
+      map[row.user.uname] = {
+        matches: { [row.match]: row.latest_match_at },
+        user: row.user,
+      };
+    }
+  });
 
-    return Object.values(map)
-}
+  return Object.values(map);
+};

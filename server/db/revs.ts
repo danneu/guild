@@ -1,20 +1,28 @@
 // 3rd
-import assert from 'assert'
+import assert from "assert";
 // 1st
-import { pool, maybeOneRow } from './util'
-import pg from 'pg'
+import { pool, maybeOneRow } from "./util";
+import pg from "pg";
 
 ////////////////////////////////////////////////////////////
 
 // Reason is optional
-export async function insertPostRev(client: pg.PoolClient, userId: number, postId: number, markup: string, html: string, reason?: string) {
-        assert(Number.isInteger(userId))
-        assert(Number.isInteger(postId))
-        assert(typeof markup === 'string')
-        assert(typeof html === 'string')
-        assert(!reason || typeof reason === 'string')
+export async function insertPostRev(
+  client: pg.PoolClient,
+  userId: number,
+  postId: number,
+  markup: string,
+  html: string,
+  reason?: string,
+) {
+  assert(Number.isInteger(userId));
+  assert(Number.isInteger(postId));
+  assert(typeof markup === "string");
+  assert(typeof html === "string");
+  assert(!reason || typeof reason === "string");
 
-        return client.query(`
+  return client.query(
+    `
     INSERT INTO post_revs (user_id, post_id, markup, html, length, reason)
     VALUES (
       $1,
@@ -24,17 +32,24 @@ export async function insertPostRev(client: pg.PoolClient, userId: number, postI
       $5,
       $6
     )
-  `, [userId, postId, markup, html, Buffer.byteLength(markup), reason])
-    }
+  `,
+    [userId, postId, markup, html, Buffer.byteLength(markup), reason],
+  );
+}
 
-export async function revertPostRev(userId: number, postId: number, revId: number) {
-    assert(Number.isInteger(userId))
-    assert(Number.isInteger(postId))
-    assert(Number.isInteger(revId))
+export async function revertPostRev(
+  userId: number,
+  postId: number,
+  revId: number,
+) {
+  assert(Number.isInteger(userId));
+  assert(Number.isInteger(postId));
+  assert(Number.isInteger(revId));
 
-    const reason = `Reverted to revision ${revId}`
+  const reason = `Reverted to revision ${revId}`;
 
-    return pool.query(`
+  return pool.query(
+    `
     WITH rev AS (
       INSERT INTO post_revs (user_id, post_id, markup, html, length, reason)
       SELECT
@@ -54,33 +69,40 @@ export async function revertPostRev(userId: number, postId: number, revId: numbe
       , updated_at = NOW()
     FROM rev
     WHERE posts.id = $2
-  `, [userId, postId, reason, revId])
+  `,
+    [userId, postId, reason, revId],
+  );
 }
 
 ////////////////////////////////////////////////////////////
 
 export async function getPostRevMarkup(postId: number, revId: number) {
-    assert(Number.isInteger(postId))
-    assert(Number.isInteger(revId))
+  assert(Number.isInteger(postId));
+  assert(Number.isInteger(revId));
 
-    return pool
-        .query(`
+  return pool
+    .query(
+      `
     SELECT markup
     FROM post_revs
     WHERE post_id = $1
       AND id = $2
-  `, [postId, revId])
-        .then(maybeOneRow)
-        .then(row => {
-            return row && row.markup
-        })
+  `,
+      [postId, revId],
+    )
+    .then(maybeOneRow)
+    .then((row) => {
+      return row && row.markup;
+    });
 }
 
 export async function getPostRev(postId: number, revId: number) {
-    assert(Number.isInteger(postId))
-    assert(Number.isInteger(revId))
+  assert(Number.isInteger(postId));
+  assert(Number.isInteger(revId));
 
-    return pool.query(`
+  return pool
+    .query(
+      `
     SELECT
       post_revs.id,
       post_revs.post_id,
@@ -95,15 +117,20 @@ export async function getPostRev(postId: number, revId: number) {
     JOIN users u ON u.id = post_revs.user_id
     WHERE post_revs.post_id = $1
       AND post_revs.id = $2
-  `, [postId, revId]).then(maybeOneRow)
+  `,
+      [postId, revId],
+    )
+    .then(maybeOneRow);
 }
 
 ////////////////////////////////////////////////////////////
 
 export async function listPostRevs(postId: number) {
-    assert(Number.isInteger(postId))
+  assert(Number.isInteger(postId));
 
-    return pool.query(`
+  return pool
+    .query(
+      `
     SELECT
       post_revs.id,
       post_revs.post_id,
@@ -120,7 +147,10 @@ export async function listPostRevs(postId: number) {
     WHERE post_revs.post_id = $1
     ORDER BY post_revs.id DESC
     LIMIT 25
-  `, [postId]).then(res => res.rows)
+  `,
+      [postId],
+    )
+    .then((res) => res.rows);
 }
 
 ////////////////////////////////////////////////////////////

@@ -1,9 +1,9 @@
-'use strict'
+"use strict";
 // 3rd party
-import _ from 'lodash'
+import _ from "lodash";
 // import createDebug from 'debug'
 // const debug = createDebug('app:validation')
-import { Validator } from 'koa-bouncer'
+import { Validator } from "koa-bouncer";
 // 1st party
 
 ////////////////////////////////////////////////////////////
@@ -25,7 +25,7 @@ import { Validator } from 'koa-bouncer'
 // Custom koa-validate validators //////////////////////////
 ////////////////////////////////////////////////////////////
 
-Validator.addMethod('notEq', function(otherVal, tip) {
-    this.checkPred(val => val !== otherVal, tip)
-    return this
-})
+Validator.addMethod("notEq", function (otherVal, tip) {
+  this.checkPred((val) => val !== otherVal, tip);
+  return this;
+});

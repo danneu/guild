@@ -204,4 +204,4 @@ function createRouter() {
   return router;
 }
 
-export default createRouter()
+export default createRouter();
