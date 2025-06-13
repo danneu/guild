@@ -27,6 +27,7 @@ const cache = new IntervalCache()
     async () => {
       const trie = new RegexTrie();
       const unames = await db.findAllUnames();
+      console.log(`[cache] Building regex trie from ${unames.length} unames`);
       trie.add(unames.map((uname) => uname.toLowerCase()));
       return trie;
     },
