@@ -22,7 +22,7 @@ function copyFonts() {
 
 function copyVendorDeps() {
   return Promise.all([
-    src("node_modules/autolinker/dist/").pipe(
+    src("node_modules/autolinker/dist/*.js").pipe(
       dest("public/vendor/autolinker/dist/"),
     ),
     src("node_modules/lodash/lodash.min.js").pipe(dest("public/vendor/")),
