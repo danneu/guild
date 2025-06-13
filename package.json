@@ -3,6 +3,8 @@
   "version": "0.0.16",
   "private": true,
   "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
     "check": "tsc --noEmit",
     "build": "gulp && ls -lah dist",
     "start": "tsx ./server",
@@ -88,6 +90,7 @@
     "gulp-uglify": "^3.0.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.8.3",
-    "vinyl-paths": "^5.0.0"
+    "vinyl-paths": "^5.0.0",
+    "vitest": "^3.2.3"
   }
 }
