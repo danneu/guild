@@ -4,7 +4,7 @@ import util from "util";
 import _ from "lodash";
 import createDebug from "debug";
 const debug = createDebug("app:cancan");
-import assert from "better-assert";
+import assert from "node:assert";
 // 1st
 import * as config from "./config";
 
