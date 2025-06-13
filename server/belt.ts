@@ -16,7 +16,7 @@ import * as config from './config'
 //// Somewhat of a junk drawer.
 ////
 
-export const dateToSeconds = function(date) {
+export function dateToSeconds(date: Date): number {
     return Math.floor(date.getTime() / 1000)
 }
 
@@ -37,17 +37,17 @@ export function getUTCDate(date: Date): Date {
     return dateToUTC(date)
 }
 
-export const isNewerThan = function(nowDate: Date, opts) {
+export function isNewerThan(nowDate: Date, opts: TimeSpan): boolean {
     assert(nowDate instanceof Date)
     return nowDate > pastDate(new Date(), opts)
 }
 
-export const isOlderThan = function(nowDate: Date, opts) {
+export function isOlderThan(nowDate: Date, opts: TimeSpan): boolean {
     assert(nowDate instanceof Date)
     return nowDate < pastDate(new Date(), opts)
 }
 
-type TimeSpan = {
+export type TimeSpan = {
     years?: number
     months?: number
     days?: number
@@ -69,7 +69,6 @@ function timespanToMilliseconds(span: TimeSpan): number {
 
 export function pastDate(opts: TimeSpan): Date
 export function pastDate(nowDate: Date, opts: TimeSpan): Date
-
 export function pastDate(nowDateOrOpts: Date | TimeSpan, opts?: TimeSpan): Date {
     let nowDate: Date
     let span: TimeSpan
@@ -91,7 +90,6 @@ export function pastDate(nowDateOrOpts: Date | TimeSpan, opts?: TimeSpan): Date 
 
 export function futureDate(opts: TimeSpan): Date
 export function futureDate(nowDate: Date, opts: TimeSpan): Date
-
 export function futureDate(nowDateOrOpts: Date | TimeSpan, opts?: TimeSpan): Date {
     let nowDate: Date
     let span: TimeSpan
