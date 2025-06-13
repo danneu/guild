@@ -7,14 +7,14 @@ export type Uploadable =
       uuid: string;
       type: "avatar";
       buffer: Buffer;
-      contentType: "image/avif";
+      contentType: "image/webp";
       size: "normal" | "small";
     }
   | {
       uuid: string;
       type: "album_image";
       buffer: Buffer;
-      contentType: "image/avif";
+      contentType: "image/webp";
     };
 
 export type UploadResult = {
@@ -31,6 +31,11 @@ export async function uploadToS3(
     );
   }
 
+  const ext = uploadable.contentType.split("/")[1];
+  if (!ext) {
+    throw new Error(`Unsupported content type: ${uploadable.contentType}`);
+  }
+
   const client = new S3Client({
     region: "us-east-1",
     credentials: {
@@ -43,12 +48,12 @@ export async function uploadToS3(
   switch (uploadable.type) {
     case "album_image": {
       const envFolder = config.NODE_ENV === "production" ? "prod" : "dev";
-      const Key = `${envFolder}/users/${uploadable.uuid}.avif`;
+      const Key = `${envFolder}/users/${uploadable.uuid}.${ext}`;
       params = {
         Bucket: config.S3_IMAGE_BUCKET,
         Key,
         Body: uploadable.buffer,
-        ContentType: "image/avif",
+        ContentType: uploadable.contentType,
         CacheControl: "max-age=31536000", // 1 year
       };
       break;
@@ -58,13 +63,13 @@ export async function uploadToS3(
         config.NODE_ENV === "production" ? "production" : "development";
       const Key =
         uploadable.size === "normal"
-          ? `${folderName}/${uploadable.uuid}.avif`
-          : `${folderName}/32/${uploadable.uuid}.avif`;
+          ? `${folderName}/${uploadable.uuid}.${ext}`
+          : `${folderName}/32/${uploadable.uuid}.${ext}`;
       params = {
         Bucket: config.S3_AVATAR_BUCKET,
         Key,
         Body: uploadable.buffer,
-        ContentType: "image/avif",
+        ContentType: uploadable.contentType,
         CacheControl: "max-age=31536000", // 1 year
       };
       break;

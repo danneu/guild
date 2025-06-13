@@ -6,6 +6,7 @@ import { uploadToS3 } from "./s3";
 import { v7 as uuidv7 } from "uuid";
 
 // Uploads s3 avatars, returns url of the large avatar.
+// Converts all images to webp
 export const handleAvatarTransformAndUpload = async (
   fullInPath: string,
 ): Promise<string> => {
@@ -13,62 +14,53 @@ export const handleAvatarTransformAndUpload = async (
     throw new Error("Avatar upload not configured");
   }
 
-  // Read the image into a buffer first (more efficient for multiple operations)
-  const imageBuffer = await sharp(fullInPath).toBuffer();
+  // Get metadata to check for animation
+  const metadata = await sharp(fullInPath).metadata();
+  const isAnimated = !!(metadata.pages && metadata.pages > 1);
 
-  // both images share a uuid
   const uuid = uuidv7();
 
-  // Create resize operations from the buffer
-  const normalPromise = sharp(imageBuffer)
-    .resize({
-      width: 300,
-      height: 400,
-      fit: "inside",
-      withoutEnlargement: true,
+  // Create resize operations
+  const createResizedImage = async (
+    width: number,
+    height: number,
+    size: "normal" | "small",
+  ) => {
+    const buffer = await sharp(fullInPath, {
+      animated: isAnimated, // Preserve animation if present
     })
-    .avif({
-      quality: 80,
-      effort: 4,
-    })
-    .toBuffer()
-    .then((buffer) => {
-      return uploadToS3({
-        type: "avatar",
-        uuid,
-        buffer,
-        contentType: "image/avif",
-        size: "normal",
-      });
-    });
+      .resize({
+        width,
+        height,
+        // keep aspect ratio, don't crop, don't stretch
+        fit: "inside",
+        // don't enlarge images smaller than the target resize
+        withoutEnlargement: true,
+      })
+      .webp({
+        quality: 80,
+        effort: 4, // 0-6, higher = better compression but slower
+        // Additional options for better results:
+        nearLossless: false, // Set true for higher quality at larger size
+        smartSubsample: true, // Better color subsampling
+      })
+      .toBuffer();
 
-  const smallPromise = sharp(imageBuffer)
-    // they will be displayed as 32x32
-    .resize({
-      width: 64,
-      height: 64,
-      fit: "inside",
-      withoutEnlargement: true,
-    })
-    .avif({
-      quality: 80,
-      effort: 4,
-    })
-    .toBuffer()
-    .then((buffer) => {
-      return uploadToS3({
-        type: "avatar",
-        uuid,
-        buffer,
-        contentType: "image/avif",
-        size: "small",
-      });
+    return uploadToS3({
+      type: "avatar",
+      uuid,
+      buffer,
+      contentType: "image/webp",
+      size,
     });
+  };
 
   // Upload both sizes in parallel
-  const [normalResult] = await Promise.all([normalPromise, smallPromise]);
+  const [normalResult] = await Promise.all([
+    createResizedImage(300, 400, "normal"),
+    createResizedImage(64, 64, "small"),
+  ]);
 
-  // Return the large avatar URL (matching original behavior)
   return normalResult.publicUrl;
 };
 

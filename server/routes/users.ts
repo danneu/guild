@@ -1049,19 +1049,23 @@ router.post("/users/:slug/avatar", async (ctx: Context) => {
   ctx.assert(ctx.request.files.avatar, 400, "Must choose an avatar to upload");
 
   ctx.assert(
-    // @ts-ignore
+    !Array.isArray(ctx.request.files.avatar),
+    400,
+    "avatar must be a single file",
+  );
+
+  ctx.assert(
     ctx.request.files.avatar.size > 0,
     400,
     "Must choose an avatar to upload",
   );
-  // TODO: Do a real check. This just looks at mime type
+
+  // TODO: Pretty sure the handleAvatarTransformAndUpload fn does a magic bytes check?
+  // But we can pre-verify for better a error message
   ctx.assert(
-    // @ts-ignore
-    ["image/jpeg", "image/gif", "image/png"].includes(
-      ctx.request.files.avatar.mimetype,
-    ),
+    (ctx.request.files.avatar.mimetype ?? "").startsWith("image/"),
     400,
-    "Must be a jpeg, gif, or png",
+    "Must be an image",
   );
 
   // Process avatar, upload to S3, and get the S3 url

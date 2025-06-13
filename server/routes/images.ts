@@ -120,25 +120,24 @@ router.post("/users/:user_slug/images", loadUser, async (ctx: Context) => {
   // files
   ctx.assert(ctx.request.files, 400, "no files provided");
   ctx.assert(ctx.request.files.image, 400, 'no file with key "image" provided');
+  ctx.assert(
+    !Array.isArray(ctx.request.files.image),
+    400,
+    "image must be a single file",
+  );
   const upload = ctx.request.files.image;
-  // @ts-ignore
   ctx.assert(Number.isInteger(upload.size), 400, "upload.size must be integer");
-  // @ts-ignore
   ctx.assert(
     typeof upload.filepath === "string",
     400,
     "upload.filepath must be string",
   );
   // ensure max upload size of 40 MB
-  // @ts-ignore
   if (upload.size > 40e6) {
     ctx.flash = {
       message: [
         "danger",
-        `Image cannot exceed 40 MB. Max: 40,000,000. Yours: ${
-          // @ts-ignore
-          upload.size
-        }`,
+        `Image cannot exceed 40 MB. Max: 40,000,000. Yours: ${upload.size}`,
       ],
     };
     return ctx.redirect("back");
@@ -146,7 +145,6 @@ router.post("/users/:user_slug/images", loadUser, async (ctx: Context) => {
 
   const uuid = uuidv7();
 
-  // @ts-ignore
   const imageResult = await sharp(upload.filepath)
     .avif({
       quality: 80,
@@ -158,7 +156,7 @@ router.post("/users/:user_slug/images", loadUser, async (ctx: Context) => {
         uuid,
         type: "album_image",
         buffer,
-        contentType: "image/avif",
+        contentType: "image/webp",
       });
     });
 
