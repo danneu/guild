@@ -80,7 +80,7 @@
     "@types/react": "^19.1.7",
     "@types/react-dom": "^19.1.6",
     "@types/vinyl-paths": "^5.0.0",
-    "del": "^7.1.0",
+    "del": "^8.0.0",
     "gulp": "^5.0.1",
     "gulp-clean": "^0.4.0",
     "gulp-concat": "^2.4.3",
