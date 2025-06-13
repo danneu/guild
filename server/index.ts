@@ -2839,6 +2839,9 @@ app.use(router.routes());
 cache3.on("error", (err) => {
   console.error("cache3 error", err);
 });
+// cache3.on("update", (event) => {
+//   console.log("cache3 update", event.key);
+// });
 cache3.start();
 
 app.listen(config.PORT, () => {
