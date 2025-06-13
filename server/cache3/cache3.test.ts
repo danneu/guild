@@ -897,4 +897,46 @@ describe("createIntervalCache", () => {
 
     consoleSpy.mockRestore();
   });
+
+  it("robust updateRequested logic works correctly", async () => {
+    let fetchCount = 0;
+    const cache = createIntervalCache({
+      data: {
+        enabled: true,
+        initialValue: "initial",
+        interval: 1000,
+        fetch: async () => `update-${++fetchCount}`,
+      },
+    }, { loopInterval: 100 });
+
+    // Start cache
+    cache.start();
+    
+    // Check initial state - should start with updateRequested = true for enabled entries
+    let entry = cache.getEntry("data");
+    ok(entry?.updateRequested, "Should start with updateRequested = true for enabled entries");
+    
+    // Wait for initial update
+    await vi.advanceTimersByTimeAsync(150);
+    
+    entry = cache.getEntry("data");
+    deepEqual(entry?.updateRequested, false, "Should clear updateRequested after update");
+    ok(fetchCount >= 1, "Should have fetched at least once");
+    
+    // Manually test the two-step logic by checking auto-request behavior
+    // Wait for enough time that interval should trigger auto-request
+    await vi.advanceTimersByTimeAsync(1050); // Just over the 1000ms interval
+    
+    entry = cache.getEntry("data");
+    // At this point, either updateRequested should be true (auto-requested)
+    // OR the update should have already happened (which would clear it again)
+    
+    // Verify that at least we get recurring updates
+    const initialCount = fetchCount;
+    await vi.advanceTimersByTimeAsync(1100); // Wait for another interval
+    
+    ok(fetchCount > initialCount, "Should have additional updates from auto-request logic");
+    
+    cache.stop();
+  });
 });

@@ -105,26 +105,57 @@ export function createIntervalCache<T extends CacheConfigMap>(
    * Emits error events for failed updates but continues processing other entries.
    */
   async function updateLoop() {
+    debugLog("updateLoop called");
     if (!running) return;
 
     const now = Date.now();
 
     for (const [key, keyConfig] of Object.entries(config)) {
       const entry = cache.get(key);
-      if (!entry || entry.updating) continue;
+      // console.log(`[updateLoop] ${key} entry`);
+      // console.dir(entry, { depth: null });
+      if (!entry || entry.updating) {
+        if (key === "categories") {
+          debugLog(
+            "skipping categories because there's no entry or it's updating",
+          );
+        }
+        continue;
+      }
 
       // Skip if disabled
-      if (!keyConfig.enabled) continue;
+      if (!keyConfig.enabled) {
+        if (key === "categories") {
+          debugLog("skipping categories because it's disabled");
+        }
+        continue;
+      }
 
       // Skip if still in backoff period
-      if (now < entry.backoffUntil) continue;
+      if (now < entry.backoffUntil) {
+        if (key === "categories") {
+          debugLog("skipping categories because it's in backoff period");
+        }
+        continue;
+      }
 
       const timeSinceUpdate = now - entry.lastUpdated;
-      const shouldUpdate =
-        entry.updateRequested && timeSinceUpdate >= keyConfig.interval;
+      
+      // Step 1: Auto-request updates when interval has passed
+      if (timeSinceUpdate >= keyConfig.interval) {
+        entry.updateRequested = true;
+      }
+      
+      // Step 2: Gate updates on both conditions
+      const shouldUpdate = entry.updateRequested && timeSinceUpdate >= keyConfig.interval;
+
+      if (key === "categories") {
+        debugLog(
+          `[updateLoop] ${key} shouldUpdate: ${shouldUpdate}, timeSinceUpdate: ${timeSinceUpdate}, interval: ${keyConfig.interval}`,
+        );
+      }
 
       if (shouldUpdate) {
-        debugLog(`Updating key '${String(key)}'`);
         entry.updating = true;
         entry.updateRequested = false;
 
