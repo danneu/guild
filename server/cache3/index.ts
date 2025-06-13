@@ -232,15 +232,17 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
 
   /**
    * Forces an immediate update of a cache entry, bypassing interval timing.
+   * Returns the fetched value, or undefined if the key doesn't exist or fetch fails.
    * Primarily intended for testing, but can be used to force refresh critical data.
    * Works even on disabled cache entries (with a warning).
    * Emits error events if the fetch operation fails.
    */
-  async function forceUpdate<K extends keyof T>(key: K): Promise<void> {
+  async function forceUpdate<K extends keyof T>(key: K): Promise<T[K]["value"] | undefined> {
     const keyConfig = config[key];
     const entry = cache.get(key);
     if (!keyConfig || !entry) {
-      throw new Error(`Cache key '${String(key)}' not found`);
+      console.warn(`Cache key '${String(key)}' not found`);
+      return undefined;
     }
 
     // Skip if disabled (but allow force update to work for testing)
@@ -255,6 +257,7 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
       entry.value = newValue;
       entry.lastUpdated = Date.now();
       entry.updateRequested = false;
+      return newValue;
     } catch (error) {
       const cacheError = new IntervalCacheError(
         `Error updating cache for key ${String(key)}: ${error instanceof Error ? error.message : error}`,
@@ -263,6 +266,7 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
       cacheError.cause = error;
       console.error(`Error updating cache for key ${String(key)}:`, error);
       emitter.emit("error", cacheError);
+      return undefined;
     }
   }
 

@@ -187,7 +187,7 @@ describe("createIntervalCache", () => {
     cache.stop();
   });
 
-  it("forceUpdate() updates immediately", async () => {
+  it("forceUpdate() updates immediately and returns the fetched value", async () => {
     let fetchCount = 0;
     const cache = createIntervalCache(
       {
@@ -205,11 +205,13 @@ describe("createIntervalCache", () => {
     ); // Very slow loop to prevent automatic updates
 
     // Force update immediately
-    await cache.forceUpdate("counter");
+    const result1 = await cache.forceUpdate("counter");
+    deepEqual(result1, 1);
     deepEqual(cache.get("counter"), 1);
 
     // Another forced update
-    await cache.forceUpdate("counter");
+    const result2 = await cache.forceUpdate("counter");
+    deepEqual(result2, 2);
     deepEqual(cache.get("counter"), 2);
 
     cache.stop();
@@ -524,7 +526,7 @@ describe("createIntervalCache", () => {
     cache.stop();
   });
 
-  it("emits error events during forceUpdate failures", async () => {
+  it("emits error events during forceUpdate failures and returns undefined", async () => {
     const errorEvents: IntervalCacheError[] = [];
 
     const cache = createIntervalCache({
@@ -542,7 +544,10 @@ describe("createIntervalCache", () => {
       errorEvents.push(error);
     });
 
-    await cache.forceUpdate("data");
+    const result = await cache.forceUpdate("data");
+
+    // Should return undefined on error
+    deepEqual(result, undefined);
 
     // Should have received one error event
     deepEqual(errorEvents.length, 1);
@@ -575,11 +580,35 @@ describe("createIntervalCache", () => {
       errorEvents.push(error);
     });
 
-    await cache.forceUpdate("data");
+    const result = await cache.forceUpdate("data");
 
+    deepEqual(result, undefined);
     deepEqual(errorEvents.length, 1);
     deepEqual(errorEvents[0].cause, originalError);
 
     cache.stop();
+  });
+
+  it("forceUpdate() warns and returns undefined for non-existent keys", async () => {
+    const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    
+    const cache = createIntervalCache({
+      data: {
+        enabled: true,
+        initialValue: "value",
+        interval: 1000,
+        fetch: async () => "updated",
+      },
+    });
+
+    // @ts-expect-error - Testing invalid key
+    const result = await cache.forceUpdate("nonexistent");
+    
+    deepEqual(result, undefined);
+    ok(consoleSpy.mock.calls.length > 0);
+    ok(consoleSpy.mock.calls[0][0].includes("Cache key 'nonexistent' not found"));
+
+    cache.stop();
+    consoleSpy.mockRestore();
   });
 });
