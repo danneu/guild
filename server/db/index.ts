@@ -1671,7 +1671,7 @@ export async function findNotificationsForUserId(toUserId: number, type?: string
 }
 
 // Returns how many rows deleted
-export async function deleteConvoNotification(toUserId: number, convoId: number) {
+export async function deleteConvoNotification(toUserId: number, convoId: number): Promise<number> {
     return pool
         .query(`
     DELETE FROM notifications
@@ -1679,11 +1679,11 @@ export async function deleteConvoNotification(toUserId: number, convoId: number)
       AND to_user_id = $1
       AND convo_id = $2
   `, [toUserId, convoId])
-        .then(result => result.rowCount)
+        .then(result => result.rowCount ?? 0)
 }
 
 // Returns how many rows deleted
-export async function deleteSubNotifications(toUserId: number, topicIds: number[]) {
+export async function deleteSubNotifications(toUserId: number, topicIds: number[]): Promise<number> {
     assert(Number.isInteger(toUserId))
     assert(Array.isArray(topicIds))
     return pool
@@ -1693,7 +1693,7 @@ export async function deleteSubNotifications(toUserId: number, topicIds: number[
       AND to_user_id = $1
       AND topic_id = ANY ($2)
   `, [toUserId, topicIds])
-        .then(result => result.rowCount)
+        .then(result => result.rowCount ?? 0)
 }
 
 // Deletes all rows in notifications table for user,
@@ -2000,7 +2000,7 @@ LIMIT 50
 }
 
 // Returns how many rows deleted
-export const deleteNotificationsForPostId = async function(toUserId, postId) {
+export const deleteNotificationsForPostId = async function(toUserId: number, postId: number): Promise<number> {
     debug(
         `[deleteNotificationsForPostId] toUserId=${toUserId}, postId=${postId}`
     )
@@ -2013,7 +2013,7 @@ export const deleteNotificationsForPostId = async function(toUserId, postId) {
     WHERE to_user_id = $1
       AND post_id = $2
   `, [toUserId, postId])
-        .then(result => result.rowCount)
+        .then(result => result.rowCount ?? 0)
 }
 
 // Viewer tracker /////////////////////////////////////////////////
