@@ -861,16 +861,16 @@ describe("createIntervalCache", () => {
 
     // Verify debug logs were called
     ok(consoleSpy.mock.calls.some(call => 
-      call[0] === "[IntervalCache]" && call[1].includes("Starting cache")
+      call[0] === "[IntervalCache debug]" && call[1].includes("Starting cache")
     ));
     ok(consoleSpy.mock.calls.some(call => 
-      call[0] === "[IntervalCache]" && call[1].includes("Requesting update")
+      call[0] === "[IntervalCache debug]" && call[1].includes("Requesting update")
     ));
     ok(consoleSpy.mock.calls.some(call => 
-      call[0] === "[IntervalCache]" && call[1].includes("Manually setting value")
+      call[0] === "[IntervalCache debug]" && call[1].includes("Manually setting value")
     ));
     ok(consoleSpy.mock.calls.some(call => 
-      call[0] === "[IntervalCache]" && call[1].includes("Stopping cache")
+      call[0] === "[IntervalCache debug]" && call[1].includes("Stopping cache")
     ));
 
     consoleSpy.mockRestore();
@@ -893,7 +893,7 @@ describe("createIntervalCache", () => {
     cache.stop();
 
     // Should not have any debug logs (only warn/error logs allowed)
-    ok(!consoleSpy.mock.calls.some(call => call[0] === "[IntervalCache]"));
+    ok(!consoleSpy.mock.calls.some(call => call[0] === "[IntervalCache debug]"));
 
     consoleSpy.mockRestore();
   });

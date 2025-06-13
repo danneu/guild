@@ -20,9 +20,7 @@ export type CacheConfig<T> = {
   fetch: () => Promise<T>;
 };
 
-export type CacheConfigMap<T extends Record<string, { value: any }>> = {
-  [K in keyof T]: CacheConfig<T[K]["value"]>;
-};
+export type CacheConfigMap = Record<string, CacheConfig<any>>;
 
 type CacheEntry<T> = {
   value: T;
@@ -51,8 +49,8 @@ const defaultOptions: CacheOptions = {
   },
 };
 
-export function createIntervalCache<T extends Record<string, { value: any }>>(
-  config: CacheConfigMap<T>,
+export function createIntervalCache<T extends CacheConfigMap>(
+  config: T,
   options: CacheOptions = defaultOptions,
 ) {
   const {
@@ -79,9 +77,7 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
   };
 
   // Initialize cache with all keys
-  for (const [key, keyConfig] of Object.entries(config) as Array<
-    [keyof T, CacheConfig<any>]
-  >) {
+  for (const [key, keyConfig] of Object.entries(config)) {
     // Validate and normalize interval - minimum 1000ms unless Infinity
     if (keyConfig.interval !== Infinity && keyConfig.interval < 1000) {
       console.warn(
@@ -113,9 +109,7 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
 
     const now = Date.now();
 
-    for (const [key, keyConfig] of Object.entries(config) as Array<
-      [keyof T, CacheConfig<any>]
-    >) {
+    for (const [key, keyConfig] of Object.entries(config)) {
       const entry = cache.get(key);
       if (!entry || entry.updating) continue;
 
@@ -173,11 +167,13 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
    * Returns the value instantly without any async operations.
    * Returns undefined and logs a warning if the key doesn't exist in the cache.
    */
-  function get<K extends keyof T>(key: K): T[K]["value"] | undefined {
+  function get<K extends keyof T>(
+    key: K,
+  ): T[K] extends CacheConfig<infer V> ? V : never {
     const entry = cache.get(key);
     if (!entry) {
       console.warn(`Cache key '${String(key)}' not found`);
-      return undefined;
+      return undefined as any;
     }
     return entry.value;
   }
@@ -187,7 +183,10 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
    * Updates the lastUpdated timestamp and clears any pending update requests.
    * This bypasses the normal fetch mechanism and update intervals.
    */
-  function set<K extends keyof T>(key: K, value: T[K]["value"]): void {
+  function set<K extends keyof T>(
+    key: K,
+    value: T[K] extends CacheConfig<infer V> ? V : never,
+  ): void {
     const entry = cache.get(key);
     if (!entry) {
       throw new Error(`Cache key '${String(key)}' not found`);
@@ -250,12 +249,12 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
    */
   async function forceUpdate<K extends keyof T>(
     key: K,
-  ): Promise<T[K]["value"] | undefined> {
+  ): Promise<T[K] extends CacheConfig<infer V> ? V : never> {
     const keyConfig = config[key];
     const entry = cache.get(key);
     if (!keyConfig || !entry) {
       console.warn(`Cache key '${String(key)}' not found`);
-      return undefined;
+      return undefined as any;
     }
 
     // Skip if disabled (but allow force update to work for testing)
@@ -297,7 +296,7 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
         error,
       );
       emitter.emit("error", cacheError);
-      return undefined;
+      return undefined as any;
     }
   }
 
