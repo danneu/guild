@@ -33,7 +33,7 @@ describe("createIntervalCache", () => {
     cache.stop();
   });
 
-  it("start() populates all enabled keys before starting intervals", async () => {
+  it("start() attempts to populate enabled keys and starts intervals", async () => {
     let usersFetchCount = 0;
     let settingsFetchCount = 0;
 
@@ -62,8 +62,11 @@ describe("createIntervalCache", () => {
     deepEqual(cache.get("users"), []);
     deepEqual(cache.get("settings"), { theme: "dark" });
 
-    // Start should populate enabled keys
-    await cache.start();
+    // Start should begin population attempts (synchronous call)
+    cache.start();
+
+    // Give time for async population to complete
+    await vi.waitFor(() => usersFetchCount > 0, { timeout: 100 });
 
     // Users should be populated, settings should remain initial
     deepEqual(cache.get("users"), [{ id: 1, name: "User 1" }]);
@@ -74,8 +77,9 @@ describe("createIntervalCache", () => {
     cache.stop();
   });
 
-  it("start() throws when population fails", async () => {
+  it("start() doesn't throw when population fails and emits error events", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const errorEvents: IntervalCacheError[] = [];
 
     const cache = createIntervalCache({
       data: {
@@ -88,16 +92,21 @@ describe("createIntervalCache", () => {
       },
     });
 
-    try {
-      await cache.start();
-      throw new Error("Should have thrown");
-    } catch (error: any) {
-      ok(error.message.includes("Failed to populate cache entries"));
-    }
+    cache.on('error', (error: IntervalCacheError) => {
+      errorEvents.push(error);
+    });
+
+    // start() should not throw
+    cache.start();
+
+    // Wait for error event to be emitted
+    await vi.waitFor(() => errorEvents.length > 0, { timeout: 100 });
 
     // Should still have initial value after failed population
     deepEqual(cache.get("data"), "initial");
     ok(consoleSpy.mock.calls.length > 0);
+    deepEqual(errorEvents.length, 1);
+    deepEqual(errorEvents[0].key, "data");
 
     cache.stop();
     consoleSpy.mockRestore();
@@ -132,7 +141,10 @@ describe("createIntervalCache", () => {
     );
 
     // Start the cache (this will populate enabled keys)
-    await cache.start();
+    cache.start();
+    
+    // Wait for population to complete
+    await vi.waitFor(() => enabledFetchCount > 0, { timeout: 100 });
 
     // Enabled key should be populated
     deepEqual(cache.get("enabled"), "enabled-1");
@@ -232,7 +244,10 @@ describe("createIntervalCache", () => {
     ); // Fast loop for testing
 
     // Start the cache (populates initially)
-    await cache.start();
+    cache.start();
+    
+    // Wait for initial population
+    await vi.waitFor(() => fetchCount > 0, { timeout: 100 });
     deepEqual(cache.get("data"), "update-1");
 
     // Request update immediately after - should not update (interval not passed)
@@ -263,7 +278,10 @@ describe("createIntervalCache", () => {
     );
 
     // Start the cache (populates initially)
-    await cache.start();
+    cache.start();
+    
+    // Wait for initial population
+    await vi.waitFor(() => fetchCount > 0, { timeout: 100 });
     deepEqual(cache.get("data"), "update-1");
 
     // Request another update
@@ -417,8 +435,10 @@ describe("createIntervalCache", () => {
     );
 
     // Start and initial update
-    await cache.start();
-    ok(fetchCount > 0);
+    cache.start();
+    
+    // Wait for initial population
+    await vi.waitFor(() => fetchCount > 0, { timeout: 100 });
     const valueAfterStart = cache.get("data");
 
     // Stop the cache

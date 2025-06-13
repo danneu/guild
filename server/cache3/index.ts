@@ -142,68 +142,47 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
   }
 
   /**
-   * Starts the cache system by populating all enabled cache entries, then begins the update loop.
-   * Fails fast - if any cache entry fails to populate initially, the entire start() call fails.
-   * This prevents server startup when critical cache data can't be loaded.
-   * Only starts the background update intervals after successful population.
+   * Starts the cache system by attempting to populate all enabled cache entries, then begins the update loop.
+   * Does not throw on population failures - the cache starts with initialValues and emits error events for failed populations.
+   * This allows the cache to start partially populated, which is the whole point of having initialValues.
+   * Always starts the background update intervals regardless of population success/failure.
    */
-  async function start(): Promise<void> {
-    try {
-      // Populate all enabled cache entries first
-      const populatePromises: Promise<void>[] = [];
+  function start(): void {
+    // Start the update loop immediately
+    running = true;
+    intervalId = setInterval(updateLoop, loopInterval);
 
-      for (const [key, keyConfig] of Object.entries(config) as Array<
-        [keyof T, CacheConfig<any>]
-      >) {
-        // Skip if disabled
-        if (!keyConfig.enabled) continue;
+    // Attempt to populate all enabled cache entries (fire and forget)
+    for (const [key, keyConfig] of Object.entries(config) as Array<
+      [keyof T, CacheConfig<any>]
+    >) {
+      // Skip if disabled
+      if (!keyConfig.enabled) continue;
 
-        const entry = cache.get(key);
-        if (!entry) continue;
+      const entry = cache.get(key);
+      if (!entry) continue;
 
-        populatePromises.push(
-          (async () => {
-            try {
-              const newValue = await keyConfig.fetch();
-              entry.value = newValue;
-              entry.lastUpdated = Date.now();
-              entry.updateRequested = false;
-            } catch (error) {
-              const cacheError = new IntervalCacheError(
-                `Error populating cache for key ${String(key)}: ${error instanceof Error ? error.message : error}`,
-                String(key),
-              );
-              cacheError.cause = error;
-              console.error(
-                `Error populating cache for key ${String(key)}:`,
-                error,
-              );
-              emitter.emit("error", cacheError);
-              throw cacheError; // Rethrow the error to propagate it
-            }
-          })(),
-        );
-      }
-
-      // Wait for all initial populations to complete
-      try {
-        await Promise.all(populatePromises);
-      } catch (error) {
-        console.error(
-          "cache3 could not start due to population errors:",
-          error,
-        );
-        throw new Error(
-          "Failed to populate cache entries. Server start aborted.",
-        );
-      }
-
-      // Now start the update loop
-      running = true;
-      intervalId = setInterval(updateLoop, loopInterval);
-    } catch (error) {
-      console.error("cache3 could not start:", error);
-      throw error;
+      // Populate asynchronously without blocking start()
+      (async () => {
+        try {
+          const newValue = await keyConfig.fetch();
+          entry.value = newValue;
+          entry.lastUpdated = Date.now();
+          entry.updateRequested = false;
+        } catch (error) {
+          const cacheError = new IntervalCacheError(
+            `Error populating cache for key ${String(key)}: ${error instanceof Error ? error.message : error}`,
+            String(key),
+          );
+          cacheError.cause = error;
+          console.error(
+            `Error populating cache for key ${String(key)}:`,
+            error,
+          );
+          emitter.emit("error", cacheError);
+          // Don't throw - just emit the error and continue
+        }
+      })();
     }
   }
 
