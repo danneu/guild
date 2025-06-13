@@ -2008,7 +2008,7 @@ router.get("/topics/:slug/:postType", async (ctx: Context) => {
   ctx
     .validateQuery("page")
     .optional()
-    .tap((s) => s.replace(/,/g, ""))
+    .tap((s) => (typeof s === "string" ? s.replace(/,/g, "") : s))
     .toInt();
   const topicId = belt.extractId(ctx.params.slug);
   ctx.assert(topicId, 404);
