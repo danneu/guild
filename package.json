@@ -57,7 +57,7 @@
         "pg-extra": "^3.0.0",
         "postgres-array": "3.0.4",
         "prettier": "^3.5.3",
-        "promise.map": "0.0.2",
+        "promise.map": "^1.1.2",
         "react": "^19.1.0",
         "react-dom": "^19.1.0",
         "regex-trie": "1.0.4",

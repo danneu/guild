@@ -1,7 +1,4 @@
-// 3rd
-// import { assert } from '../util'
 import assert from 'assert'
-import promiseMap from 'promise.map'
 
 class ResponseNotOkError extends Error {
     status: number
@@ -116,13 +113,9 @@ export default class Client {
         assert(typeof guildId === 'string')
         assert(Array.isArray(roles))
         const url = `/guilds/${guildId}/roles`
-        return promiseMap(
-            roles,
-            role => {
-                return this.botRequest('POST', url, role)
-            },
-            1
-        )
+        for (const role of roles) {
+            await this.botRequest('POST', url, role)
+        }
     }
 
     async listRoles(guildId) {
