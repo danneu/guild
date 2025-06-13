@@ -21,12 +21,10 @@ function copyFonts() {
 }
 
 function copyVendorDeps() {
-  return Promise.all([
-    src("node_modules/autolinker/dist/*.js").pipe(
-      dest("public/vendor/autolinker/dist/"),
-    ),
-    src("node_modules/lodash/lodash.min.js").pipe(dest("public/vendor/")),
-  ]);
+  return src([
+    "node_modules/autolinker/dist/autolinker.min.js",
+    "node_modules/lodash/lodash.min.js",
+  ]).pipe(dest("public/vendor/"));
 }
 
 function copyServerFiles() {
@@ -62,7 +60,7 @@ function buildJs() {
     "public/vendor/bootstrap/js/bootstrap.js",
     // 'public/vendor/js/bootstrap.js',
     // Symlinked to node_modules/autolinker
-    "public/vendor/autolinker/dist/autolinker.js",
+    "public/vendor/autolinker/dist/autolinker.min.js",
     "public/vendor/xbbcode/xbbcode/bbcode.js", // Copied from server/bbcode.js
     // Don't bundle typeahead since it's just used on edit_topic.js right now
     // 'public/vendor/typeahead/typeahead.bundle.js',
