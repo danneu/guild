@@ -133,52 +133,32 @@ export const makeTruncate = function (suffix) {
 export const truncate = makeTruncate("...");
 
 // Logging helper
-export const truncateStringVals = function (obj) {
-  var out = {};
+export function truncateStringVals(obj: Record<string, string | number>) {
+  var out = Object.create(null);
   for (var k in obj) {
     if (obj.hasOwnProperty(k)) {
       var v = obj[k];
-      if (_.isString(v)) out[k] = truncate(v, 100);
+      if (typeof v === "string") out[k] = truncate(v, 100);
       else out[k] = v;
     }
   }
   return out;
-};
-
-/// Convenience functions for working with the this.errors
-/// object provided by koa-validate
-
-// errObj is the this.errors object from koa-validate
-// Maybe Object -> Maybe [String]
-export const extractErrors = function (errObj) {
-  return (
-    errObj &&
-    _.chain(errObj)
-      .map(_.values)
-      .map(function (s) {
-        return s.join(", ");
-      })
-      .value()
-  );
-};
-
-// Maybe Object -> Maybe String
-export const joinErrors = function (errObj) {
-  return errObj && extractErrors(errObj).join(", ");
-};
+}
 
 ////////////////////////////////////////////////////////////
 // Authentication
 ////////////////////////////////////////////////////////////
 
-export const hashPassword = (password: string) => {
+export function hashPassword(password: string) {
   return bcrypt.hash(password, 10);
-};
+}
 
 // String -> String -> Bool
-export const checkPassword = (password, digest) => {
+//
+// TODO: Man, digiest should be bytea in the db
+export function checkPassword(password: string, digest: string) {
   return bcrypt.compare(password, digest);
-};
+}
 
 ////////////////////////////////////////////////////////////
 
