@@ -15,7 +15,7 @@ COPY . .
 # Build assets
 RUN pnpm run build
 
-# Clean dev dependencies and reinstall production only
+# Remove dev dependencies https://pnpm.io/cli/prune
 RUN pnpm prune --prod
 
 ENV NODE_ENV=production
