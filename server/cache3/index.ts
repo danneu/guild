@@ -53,13 +53,13 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
   config: CacheConfigMap<T>,
   options: CacheOptions = defaultOptions,
 ) {
-  const { 
+  const {
     loopInterval = defaultOptions.loopInterval,
-    backoff = defaultOptions.backoff 
+    backoff = defaultOptions.backoff,
   } = options;
-  const { 
+  const {
     maxBackoffMs = defaultOptions.backoff!.maxBackoffMs!,
-    multiplier = defaultOptions.backoff!.multiplier! 
+    multiplier = defaultOptions.backoff!.multiplier!,
   } = backoff || {};
   const cache = new Map<keyof T, CacheEntry<any>>();
   let running = false; // Don't start running until start() is called
@@ -74,7 +74,9 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
   >) {
     // Validate and normalize interval - minimum 1000ms unless Infinity
     if (keyConfig.interval !== Infinity && keyConfig.interval < 1000) {
-      console.warn(`Cache key '${String(key)}' interval ${keyConfig.interval}ms is too short, defaulting to 1000ms`);
+      console.warn(
+        `Cache key '${String(key)}' interval ${keyConfig.interval}ms is too short, defaulting to 1000ms`,
+      );
       keyConfig.interval = 1000;
     }
 
@@ -133,7 +135,7 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
           entry.failureCount++;
           const backoffMs = Math.min(
             Math.pow(multiplier, entry.failureCount - 1) * 1000,
-            maxBackoffMs
+            maxBackoffMs,
           );
           entry.backoffUntil = Date.now() + backoffMs;
 
@@ -144,7 +146,7 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
           cacheError.cause = error;
           console.error(
             `Error updating cache for key ${String(key)} (attempt ${entry.failureCount}, backing off ${backoffMs}ms):`,
-            error
+            error,
           );
           emitter.emit("error", cacheError);
         } finally {
@@ -181,9 +183,7 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
     entry.value = value;
     entry.lastUpdated = Date.now();
     entry.updateRequested = false; // Clear any pending update request
-    // Reset backoff state when manually setting value
-    entry.failureCount = 0;
-    entry.backoffUntil = 0;
+    // Do NOT reset backoff state - backoff is for fetch() failures, not manual sets
   }
 
   /**
@@ -249,19 +249,21 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
 
     try {
       const newValue = await keyConfig.fetch();
-      entry.value = newValue;
-      entry.lastUpdated = Date.now();
-      entry.updateRequested = false;
-      // Reset failure count on success
-      entry.failureCount = 0;
-      entry.backoffUntil = 0;
+      Object.assign(entry, {
+        value: newValue,
+        lastUpdated: Date.now(),
+        updateRequested: false,
+        // Reset failure count on success
+        failureCount: 0,
+        backoffUntil: 0,
+      });
       return newValue;
     } catch (error) {
       // Increment failure count and calculate backoff for forceUpdate too
       entry.failureCount++;
       const backoffMs = Math.min(
         Math.pow(multiplier, entry.failureCount - 1) * 1000,
-        maxBackoffMs
+        maxBackoffMs,
       );
       entry.backoffUntil = Date.now() + backoffMs;
 
@@ -272,7 +274,7 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
       cacheError.cause = error;
       console.error(
         `Error force updating cache for key ${String(key)} (attempt ${entry.failureCount}, backing off ${backoffMs}ms):`,
-        error
+        error,
       );
       emitter.emit("error", cacheError);
       return undefined;

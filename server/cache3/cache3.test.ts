@@ -811,7 +811,7 @@ describe("createIntervalCache", () => {
     cache.stop();
   });
 
-  it("resets backoff state when manually setting values", () => {
+  it("preserves backoff state when manually setting values", () => {
     const cache = createIntervalCache({
       data: {
         enabled: true,
@@ -828,12 +828,14 @@ describe("createIntervalCache", () => {
       entry.backoffUntil = Date.now() + 10000;
     }
 
-    // Manual set should reset backoff state
+    const originalBackoffUntil = entry?.backoffUntil || 0;
+
+    // Manual set should NOT reset backoff state
     cache.set("data", "manually set");
     
     const updatedEntry = cache.getEntry("data");
-    deepEqual(updatedEntry?.failureCount, 0);
-    deepEqual(updatedEntry?.backoffUntil, 0);
+    deepEqual(updatedEntry?.failureCount, 5); // Should remain unchanged
+    deepEqual(updatedEntry?.backoffUntil, originalBackoffUntil); // Should remain unchanged
     deepEqual(updatedEntry?.value, "manually set");
 
     cache.stop();

@@ -20,3 +20,4 @@ The purpose of the cache is:
 - cache.start() starts the update loop. accessing cache.get(key) before start() is safe since it will just return the initialValue.
 - cache.stop() should stop the update loop but not clear the cache.
 - exponential backoff per key, per error.
+  - manually calling cache.set(key, value) should not reset backoff since backoff means the fetch() fn is failing.
