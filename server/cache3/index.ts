@@ -63,7 +63,14 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
     });
   }
 
-  // Main update loop
+  /**
+   * Main background update loop that runs on the specified interval.
+   * Checks each enabled cache entry to see if it needs updating based on:
+   * - Whether an update was requested via requestUpdate()
+   * - Whether enough time has passed since the last update (respects interval timing)
+   * - Whether the entry is currently being updated (prevents concurrent updates)
+   * Emits error events for failed updates but continues processing other entries.
+   */
   async function updateLoop() {
     if (!running) return;
 
@@ -105,14 +112,25 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
     }
   }
 
-  function get<K extends keyof T>(key: K): T[K]["value"] {
+  /**
+   * Retrieves the current cached value for a given key.
+   * Returns the value instantly without any async operations.
+   * Returns undefined and logs a warning if the key doesn't exist in the cache.
+   */
+  function get<K extends keyof T>(key: K): T[K]["value"] | undefined {
     const entry = cache.get(key);
     if (!entry) {
-      throw new Error(`Cache key '${String(key)}' not found`);
+      console.warn(`Cache key '${String(key)}' not found`);
+      return undefined;
     }
     return entry.value;
   }
 
+  /**
+   * Immediately updates a cache entry with a new value.
+   * Updates the lastUpdated timestamp and clears any pending update requests.
+   * This bypasses the normal fetch mechanism and update intervals.
+   */
   function set<K extends keyof T>(key: K, value: T[K]["value"]): void {
     const entry = cache.get(key);
     if (!entry) {
@@ -123,6 +141,12 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
     entry.updateRequested = false; // Clear any pending update request
   }
 
+  /**
+   * Starts the cache system by populating all enabled cache entries, then begins the update loop.
+   * Fails fast - if any cache entry fails to populate initially, the entire start() call fails.
+   * This prevents server startup when critical cache data can't be loaded.
+   * Only starts the background update intervals after successful population.
+   */
   async function start(): Promise<void> {
     try {
       // Populate all enabled cache entries first
@@ -178,6 +202,11 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
     }
   }
 
+  /**
+   * Stops the cache system by halting the update loop and clearing all cached data.
+   * After calling stop(), all cache entries are removed and get() calls will throw errors.
+   * Used for cleanup when shutting down the application.
+   */
   function stop() {
     running = false;
     if (intervalId) {
@@ -187,6 +216,12 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
     cache.clear();
   }
 
+  /**
+   * Requests that a cache entry be updated during the next update cycle.
+   * Does not trigger an immediate update - respects the configured interval timing.
+   * Multiple calls to requestUpdate() for the same key have no additional effect.
+   * The update will only occur if enough time has passed since the last update.
+   */
   function requestUpdate<K extends keyof T>(key: K): void {
     const entry = cache.get(key);
     if (!entry) {
@@ -195,7 +230,12 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
     entry.updateRequested = true;
   }
 
-  // Force immediate update (for testing)
+  /**
+   * Forces an immediate update of a cache entry, bypassing interval timing.
+   * Primarily intended for testing, but can be used to force refresh critical data.
+   * Works even on disabled cache entries (with a warning).
+   * Emits error events if the fetch operation fails.
+   */
   async function forceUpdate<K extends keyof T>(key: K): Promise<void> {
     const keyConfig = config[key];
     const entry = cache.get(key);
@@ -226,7 +266,11 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
     }
   }
 
-  // Expose internals for testing
+  /**
+   * Exposes the internal cache entry metadata for testing and debugging.
+   * Returns an object with value, lastUpdated timestamp, updateRequested flag, and updating flag.
+   * Primarily intended for testing to verify cache behavior and timing.
+   */
   function getEntry<K extends keyof T>(key: K) {
     return cache.get(key);
   }
