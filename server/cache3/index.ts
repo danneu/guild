@@ -55,6 +55,12 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
   for (const [key, keyConfig] of Object.entries(config) as Array<
     [keyof T, CacheConfig<any>]
   >) {
+    // Validate and normalize interval - minimum 1000ms unless Infinity
+    if (keyConfig.interval !== Infinity && keyConfig.interval < 1000) {
+      console.warn(`Cache key '${String(key)}' interval ${keyConfig.interval}ms is too short, defaulting to 1000ms`);
+      keyConfig.interval = 1000;
+    }
+
     cache.set(key, {
       value: keyConfig.initialValue,
       lastUpdated: 0,

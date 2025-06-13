@@ -526,7 +526,7 @@ describe("createIntervalCache", () => {
       data: {
         enabled: true,
         initialValue: "initial",
-        interval: 100,
+        interval: 1000, // Use valid interval
         fetch: async () => {
           if (shouldFail) {
             throw new Error("Update failed");
@@ -543,7 +543,7 @@ describe("createIntervalCache", () => {
     cache.start();
     
     // Wait for updateLoop to run once successfully  
-    await vi.advanceTimersByTimeAsync(150);
+    await vi.advanceTimersByTimeAsync(1100);
     deepEqual(cache.get("data"), "success");
     deepEqual(errorEvents.length, 0);
 
@@ -551,8 +551,8 @@ describe("createIntervalCache", () => {
     shouldFail = true;
     cache.requestUpdate("data");
 
-    // Wait for the update to be attempted
-    await vi.advanceTimersByTimeAsync(150);
+    // Wait for the update to be attempted (interval + loop time)
+    await vi.advanceTimersByTimeAsync(1100);
 
     // Should have received an error event
     deepEqual(errorEvents.length, 1);
@@ -647,6 +647,46 @@ describe("createIntervalCache", () => {
     deepEqual(result, undefined);
     ok(consoleSpy.mock.calls.length > 0);
     ok(consoleSpy.mock.calls[0][0].includes("Cache key 'nonexistent' not found"));
+
+    cache.stop();
+    consoleSpy.mockRestore();
+  });
+
+  it("validates and normalizes cache entry intervals", () => {
+    const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    
+    const cache = createIntervalCache({
+      tooShort: {
+        enabled: true,
+        initialValue: "value1",
+        interval: 500, // Too short, should be normalized to 1000
+        fetch: async () => "updated1",
+      },
+      justRight: {
+        enabled: true,
+        initialValue: "value2", 
+        interval: 1000, // Just right
+        fetch: async () => "updated2",
+      },
+      runOnce: {
+        enabled: true,
+        initialValue: "value3",
+        interval: Infinity, // Should be allowed
+        fetch: async () => "updated3",
+      },
+      veryShort: {
+        enabled: true,
+        initialValue: "value4",
+        interval: 100, // Very short, should be normalized
+        fetch: async () => "updated4",
+      },
+    });
+
+    // Should have warned about short intervals
+    ok(consoleSpy.mock.calls.length >= 2);
+    ok(consoleSpy.mock.calls.some(call => call[0].includes("tooShort")));
+    ok(consoleSpy.mock.calls.some(call => call[0].includes("veryShort")));
+    ok(consoleSpy.mock.calls.some(call => call[0].includes("defaulting to 1000ms")));
 
     cache.stop();
     consoleSpy.mockRestore();
