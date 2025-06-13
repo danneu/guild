@@ -840,4 +840,61 @@ describe("createIntervalCache", () => {
 
     cache.stop();
   });
+
+  it("debug option enables verbose logging", () => {
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    
+    const cache = createIntervalCache({
+      data: {
+        enabled: true,
+        initialValue: "initial",
+        interval: 1000,
+        fetch: async () => "updated",
+      },
+    }, { debug: true });
+
+    // These operations should generate debug logs
+    cache.start();
+    cache.requestUpdate("data");
+    cache.set("data", "manually set");
+    cache.stop();
+
+    // Verify debug logs were called
+    ok(consoleSpy.mock.calls.some(call => 
+      call[0] === "[IntervalCache]" && call[1].includes("Starting cache")
+    ));
+    ok(consoleSpy.mock.calls.some(call => 
+      call[0] === "[IntervalCache]" && call[1].includes("Requesting update")
+    ));
+    ok(consoleSpy.mock.calls.some(call => 
+      call[0] === "[IntervalCache]" && call[1].includes("Manually setting value")
+    ));
+    ok(consoleSpy.mock.calls.some(call => 
+      call[0] === "[IntervalCache]" && call[1].includes("Stopping cache")
+    ));
+
+    consoleSpy.mockRestore();
+  });
+
+  it("debug disabled by default produces no debug logs", () => {
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    
+    const cache = createIntervalCache({
+      data: {
+        enabled: true,
+        initialValue: "initial",
+        interval: 1000,
+        fetch: async () => "updated",
+      },
+    }); // No debug option = default false
+
+    cache.start();
+    cache.set("data", "manually set");
+    cache.stop();
+
+    // Should not have any debug logs (only warn/error logs allowed)
+    ok(!consoleSpy.mock.calls.some(call => call[0] === "[IntervalCache]"));
+
+    consoleSpy.mockRestore();
+  });
 });

@@ -35,6 +35,7 @@ type CacheEntry<T> = {
 
 export type CacheOptions = {
   loopInterval?: number;
+  debug?: boolean;
   backoff?: {
     maxBackoffMs?: number;
     multiplier?: number;
@@ -43,6 +44,7 @@ export type CacheOptions = {
 
 const defaultOptions: CacheOptions = {
   loopInterval: 1000,
+  debug: false,
   backoff: {
     maxBackoffMs: 60000, // 1 minute
     multiplier: 2,
@@ -55,6 +57,7 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
 ) {
   const {
     loopInterval = defaultOptions.loopInterval,
+    debug = defaultOptions.debug,
     backoff = defaultOptions.backoff,
   } = options;
   const {
@@ -67,6 +70,13 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
   const emitter = new EventEmitter();
   // Prevent throwing errors when no listeners are attached
   emitter.on("error", () => {});
+
+  // Debug logging helper
+  const debugLog = (...args: any[]) => {
+    if (debug) {
+      console.log("[IntervalCache debug]", ...args);
+    }
+  };
 
   // Initialize cache with all keys
   for (const [key, keyConfig] of Object.entries(config) as Array<
@@ -120,6 +130,7 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
         entry.updateRequested && timeSinceUpdate >= keyConfig.interval;
 
       if (shouldUpdate) {
+        debugLog(`Updating key '${String(key)}'`);
         entry.updating = true;
         entry.updateRequested = false;
 
@@ -130,6 +141,7 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
           // Reset failure count on success
           entry.failureCount = 0;
           entry.backoffUntil = 0;
+          debugLog(`Successfully updated key '${String(key)}'`);
         } catch (error) {
           // Increment failure count and calculate backoff
           entry.failureCount++;
@@ -180,6 +192,7 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
     if (!entry) {
       throw new Error(`Cache key '${String(key)}' not found`);
     }
+    debugLog(`Manually setting value for key '${String(key)}'`);
     entry.value = value;
     entry.lastUpdated = Date.now();
     entry.updateRequested = false; // Clear any pending update request
@@ -192,6 +205,9 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
    * Simple and synchronous - just starts the interval timer.
    */
   function start(): void {
+    debugLog(
+      `Starting cache with ${Object.keys(config).length} keys, loopInterval: ${loopInterval}ms`,
+    );
     running = true;
     intervalId = setInterval(updateLoop, loopInterval);
   }
@@ -202,6 +218,7 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
    * Use this to pause automatic updates without losing cached values.
    */
   function stop() {
+    debugLog("Stopping cache");
     running = false;
     if (intervalId) {
       clearInterval(intervalId);
@@ -220,6 +237,7 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
     if (!entry) {
       throw new Error(`Cache key '${String(key)}' not found`);
     }
+    debugLog(`Requesting update for key '${String(key)}'`);
     entry.updateRequested = true;
   }
 
@@ -248,6 +266,7 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
     }
 
     try {
+      debugLog(`Force updating key '${String(key)}'`);
       const newValue = await keyConfig.fetch();
       Object.assign(entry, {
         value: newValue,
@@ -257,6 +276,7 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
         failureCount: 0,
         backoffUntil: 0,
       });
+      debugLog(`Successfully force updated key '${String(key)}'`);
       return newValue;
     } catch (error) {
       // Increment failure count and calculate backoff for forceUpdate too
