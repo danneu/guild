@@ -485,7 +485,7 @@ router.delete("/topics/:topicSlug/co-gms/:userSlug", async (ctx: Context) => {
 
 router.get("/unames.json", async (ctx: Context) => {
   ctx.type = "application/json";
-  ctx.body = await db.findAllUnamesJson();
+  ctx.body = JSON.stringify(Array.from(cache3.get("uname-set")));
 });
 
 // Required body params:

@@ -266,6 +266,12 @@ router.post("/users", checkCloudflareTurnstile, async (ctx: Context) => {
 
   pre.presentUser(user);
 
+  // Update uname-set cache
+  cache3.set(
+    "uname-set",
+    cache3.get("uname-set").add(user.uname.toLowerCase()),
+  );
+
   if (errMessage) {
     ctx.flash = {
       message: ["danger", errMessage],

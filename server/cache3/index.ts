@@ -24,17 +24,29 @@ export type CacheEvents<T extends CacheConfigMap> = {
 
 // Type-safe EventEmitter interface
 interface TypedEventEmitter<T extends CacheConfigMap> {
-  on<K extends keyof CacheEvents<T>>(event: K, listener: CacheEvents<T>[K]): void;
-  off<K extends keyof CacheEvents<T>>(event: K, listener: CacheEvents<T>[K]): void;
-  once<K extends keyof CacheEvents<T>>(event: K, listener: CacheEvents<T>[K]): void;
-  emit<K extends keyof CacheEvents<T>>(event: K, ...args: Parameters<CacheEvents<T>[K]>): boolean;
+  on<K extends keyof CacheEvents<T>>(
+    event: K,
+    listener: CacheEvents<T>[K],
+  ): void;
+  off<K extends keyof CacheEvents<T>>(
+    event: K,
+    listener: CacheEvents<T>[K],
+  ): void;
+  once<K extends keyof CacheEvents<T>>(
+    event: K,
+    listener: CacheEvents<T>[K],
+  ): void;
+  emit<K extends keyof CacheEvents<T>>(
+    event: K,
+    ...args: Parameters<CacheEvents<T>[K]>
+  ): boolean;
 }
 
 export type CacheConfig<T> = {
   enabled: boolean;
   initialValue: T;
   interval: number;
-  fetch: () => Promise<T>;
+  fetch: (prevValue: T) => Promise<T>;
 };
 
 export type CacheConfigMap = Record<string, CacheConfig<any>>;
@@ -155,19 +167,19 @@ export function createIntervalCache<T extends CacheConfigMap>(
       }
 
       // Update if requested and not already updating
-      if (entry.updateRequested && !entry.updating) {
+      if (entry.updateRequested) {
         entry.updating = true;
         entry.updateRequested = false;
 
         try {
-          const newValue = await keyConfig.fetch();
+          const newValue = await keyConfig.fetch(entry.value);
           entry.value = newValue;
           entry.lastUpdated = Date.now();
           // Reset failure count on success
           entry.failureCount = 0;
           entry.backoffUntil = 0;
           debugLog(`Successfully updated key '${String(key)}'`);
-          
+
           // Emit update event
           emitter.emit("update", { key, value: newValue });
         } catch (error) {
@@ -300,7 +312,7 @@ export function createIntervalCache<T extends CacheConfigMap>(
 
     try {
       debugLog(`Force updating key '${String(key)}'`);
-      const newValue = await keyConfig.fetch();
+      const newValue = await keyConfig.fetch(entry.value);
       Object.assign(entry, {
         value: newValue,
         lastUpdated: Date.now(),
@@ -310,10 +322,10 @@ export function createIntervalCache<T extends CacheConfigMap>(
         backoffUntil: 0,
       });
       debugLog(`Successfully force updated key '${String(key)}'`);
-      
+
       // Emit update event
       emitter.emit("update", { key, value: newValue });
-      
+
       return newValue;
     } catch (error) {
       // Increment failure count and calculate backoff for forceUpdate too

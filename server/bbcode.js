@@ -173,8 +173,8 @@ function replaceMentions(text) {
       return '<a class="bb-mention" href="' + path + '">@' + uname + "</a>";
     } else {
       // If we're on the server, then only render anchor if uname exists in DB.
-      var trie = cache3.get("uname-regex-trie");
-      if (trie.contains(uname.toLowerCase())) {
+      var unameSet = cache3.get("uname-set");
+      if (unameSet.has(uname.toLowerCase())) {
         return '<a class="bb-mention" href="' + path + '">@' + uname + "</a>";
       } else {
         return "[@" + uname + "]";

@@ -17,13 +17,13 @@ describe("createIntervalCache", () => {
         enabled: true,
         initialValue: [{ id: 1, name: "Alice" }],
         interval: 5000,
-        fetch: async () => [{ id: 1, name: "Alice Updated" }],
+        fetch: async (prevValue) => [{ id: 1, name: "Alice Updated" }],
       },
       settings: {
         enabled: true,
         initialValue: { theme: "dark" },
         interval: 10000,
-        fetch: async () => ({ theme: "light" }),
+        fetch: async (prevValue) => ({ theme: "light" }),
       },
     });
 
@@ -42,7 +42,7 @@ describe("createIntervalCache", () => {
         enabled: true,
         initialValue: [],
         interval: 100, // Short interval for testing
-        fetch: async () => {
+        fetch: async (prevValue) => {
           usersFetchCount++;
           return [{ id: usersFetchCount, name: `User ${usersFetchCount}` }];
         },
@@ -51,7 +51,7 @@ describe("createIntervalCache", () => {
         enabled: false, // This should not be populated
         initialValue: { theme: "dark" },
         interval: 100,
-        fetch: async () => {
+        fetch: async (prevValue) => {
           settingsFetchCount++;
           return { theme: "light" };
         },
@@ -86,7 +86,7 @@ describe("createIntervalCache", () => {
         enabled: true,
         initialValue: "initial",
         interval: 100,
-        fetch: async () => {
+        fetch: async (prevValue) => {
           throw new Error("Update failed");
         },
       },
@@ -122,19 +122,19 @@ describe("createIntervalCache", () => {
           enabled: true,
           initialValue: "initial",
           interval: 1000, // Longer interval to avoid interference
-          fetch: async () => `enabled-${++enabledFetchCount}`,
+          fetch: async (prevValue) => `enabled-${++enabledFetchCount}`,
         },
         disabled: {
           enabled: false,
           initialValue: "initial",
           interval: 100,
-          fetch: async () => `disabled-${++disabledFetchCount}`,
+          fetch: async (prevValue) => `disabled-${++disabledFetchCount}`,
         },
         conditional: {
           enabled: 0, // Falsy but not undefined
           initialValue: "initial",
           interval: 100,
-          fetch: async () => "should-not-fetch",
+          fetch: async (prevValue) => "should-not-fetch",
         },
       },
       { loopInterval: 50 },
@@ -180,7 +180,7 @@ describe("createIntervalCache", () => {
         enabled: true,
         initialValue: "initial",
         interval: 5000,
-        fetch: async () => "fetched",
+        fetch: async (prevValue) => "fetched",
       },
     });
 
@@ -211,7 +211,7 @@ describe("createIntervalCache", () => {
           enabled: true,
           initialValue: 0,
           interval: 5000,
-          fetch: async () => {
+          fetch: async (prevValue) => {
             fetchCount++;
             return fetchCount;
           },
@@ -241,7 +241,7 @@ describe("createIntervalCache", () => {
           enabled: true,
           initialValue: "initial",
           interval: 2000,
-          fetch: async () => `update-${++fetchCount}`,
+          fetch: async (prevValue) => `update-${++fetchCount}`,
         },
       },
       { loopInterval: 100 },
@@ -275,7 +275,7 @@ describe("createIntervalCache", () => {
           enabled: true,
           initialValue: "initial",
           interval: 2000,
-          fetch: async () => `update-${++fetchCount}`,
+          fetch: async (prevValue) => `update-${++fetchCount}`,
         },
       },
       { loopInterval: 100 },
@@ -310,7 +310,7 @@ describe("createIntervalCache", () => {
       data: {
         initialValue: "initial",
         interval: 1000,
-        fetch: async () => {
+        fetch: async (prevValue) => {
           throw new Error("Fetch failed");
         },
       },
@@ -331,7 +331,7 @@ describe("createIntervalCache", () => {
           enabled: true,
           initialValue: "initial",
           interval: 5000,
-          fetch: async () => "updated",
+          fetch: async (prevValue) => "updated",
         },
       },
       { loopInterval: 10000 },
@@ -364,7 +364,7 @@ describe("createIntervalCache", () => {
           enabled: true,
           initialValue: "initial",
           interval: 100,
-          fetch: async () => {
+          fetch: async (prevValue) => {
             activeUpdates++;
             ok(activeUpdates <= 1, "Multiple updates running concurrently");
             // Use vi.waitFor instead of raw setTimeout to work better with fake timers
@@ -407,7 +407,7 @@ describe("createIntervalCache", () => {
         enabled: true,
         initialValue: "value",
         interval: 1000,
-        fetch: async () => "updated",
+        fetch: async (prevValue) => "updated",
       },
     });
 
@@ -437,7 +437,7 @@ describe("createIntervalCache", () => {
           enabled: true,
           initialValue: "initial",
           interval: 1000,
-          fetch: async () => `update-${++fetchCount}`,
+          fetch: async (prevValue) => `update-${++fetchCount}`,
         },
       },
       { loopInterval: 100 },
@@ -483,7 +483,7 @@ describe("createIntervalCache", () => {
         enabled: true,
         initialValue: "initial",
         interval: 100,
-        fetch: async () => {
+        fetch: async (prevValue) => {
           throw new Error("Update failed");
         },
       },
@@ -491,7 +491,7 @@ describe("createIntervalCache", () => {
         enabled: true,
         initialValue: "initial", 
         interval: 100,
-        fetch: async () => "success",
+        fetch: async (prevValue) => "success",
       },
     }, { loopInterval: 50 });
 
@@ -527,7 +527,7 @@ describe("createIntervalCache", () => {
         enabled: true,
         initialValue: "initial",
         interval: 1000, // Use valid interval
-        fetch: async () => {
+        fetch: async (prevValue) => {
           if (shouldFail) {
             throw new Error("Update failed");
           }
@@ -574,7 +574,7 @@ describe("createIntervalCache", () => {
         enabled: true,
         initialValue: "initial",
         interval: 1000,
-        fetch: async () => {
+        fetch: async (prevValue) => {
           throw new Error("Force update failed");
         },
       },
@@ -610,7 +610,7 @@ describe("createIntervalCache", () => {
         enabled: true,
         initialValue: "initial",
         interval: 1000,
-        fetch: async () => {
+        fetch: async (prevValue) => {
           throw originalError;
         },
       },
@@ -637,7 +637,7 @@ describe("createIntervalCache", () => {
         enabled: true,
         initialValue: "value",
         interval: 1000,
-        fetch: async () => "updated",
+        fetch: async (prevValue) => "updated",
       },
     });
 
@@ -660,25 +660,25 @@ describe("createIntervalCache", () => {
         enabled: true,
         initialValue: "value1",
         interval: 500, // Too short, should be normalized to 1000
-        fetch: async () => "updated1",
+        fetch: async (prevValue) => "updated1",
       },
       justRight: {
         enabled: true,
         initialValue: "value2", 
         interval: 1000, // Just right
-        fetch: async () => "updated2",
+        fetch: async (prevValue) => "updated2",
       },
       runOnce: {
         enabled: true,
         initialValue: "value3",
         interval: Infinity, // Should be allowed
-        fetch: async () => "updated3",
+        fetch: async (prevValue) => "updated3",
       },
       veryShort: {
         enabled: true,
         initialValue: "value4",
         interval: 100, // Very short, should be normalized
-        fetch: async () => "updated4",
+        fetch: async (prevValue) => "updated4",
       },
     });
 
@@ -700,7 +700,7 @@ describe("createIntervalCache", () => {
         enabled: true,
         initialValue: "initial",
         interval: 1000,
-        fetch: async () => {
+        fetch: async (prevValue) => {
           throw new Error("Always fails");
         },
       },
@@ -740,7 +740,7 @@ describe("createIntervalCache", () => {
         enabled: true,
         initialValue: "initial",
         interval: 1000,
-        fetch: async () => {
+        fetch: async (prevValue) => {
           throw new Error("Always fails");
         },
       },
@@ -774,7 +774,7 @@ describe("createIntervalCache", () => {
         enabled: true,
         initialValue: "initial",
         interval: 1000,
-        fetch: async () => {
+        fetch: async (prevValue) => {
           if (shouldFail) {
             throw new Error("Failure");
           }
@@ -817,7 +817,7 @@ describe("createIntervalCache", () => {
         enabled: true,
         initialValue: "initial",
         interval: 1000,
-        fetch: async () => { throw new Error("Always fails"); },
+        fetch: async (prevValue) => { throw new Error("Always fails"); },
       },
     });
 
@@ -849,7 +849,7 @@ describe("createIntervalCache", () => {
         enabled: true,
         initialValue: "initial",
         interval: 1000,
-        fetch: async () => "updated",
+        fetch: async (prevValue) => "updated",
       },
     }, { debug: true });
 
@@ -884,7 +884,7 @@ describe("createIntervalCache", () => {
         enabled: true,
         initialValue: "initial",
         interval: 1000,
-        fetch: async () => "updated",
+        fetch: async (prevValue) => "updated",
       },
     }); // No debug option = default false
 
@@ -905,7 +905,7 @@ describe("createIntervalCache", () => {
         enabled: true,
         initialValue: "initial",
         interval: 1000,
-        fetch: async () => `update-${++fetchCount}`,
+        fetch: async (prevValue) => `update-${++fetchCount}`,
       },
     }, { loopInterval: 100 });
 
@@ -949,13 +949,13 @@ describe("createIntervalCache", () => {
         enabled: true,
         initialValue: "initial",
         interval: 1000,
-        fetch: async () => `updated-${Date.now()}`,
+        fetch: async (prevValue) => `updated-${Date.now()}`,
       },
       counter: {
         enabled: true,
         initialValue: 0,
         interval: 1000,
-        fetch: async () => 42,
+        fetch: async (prevValue) => 42,
       },
     }, { loopInterval: 100 });
 
@@ -992,7 +992,7 @@ describe("createIntervalCache", () => {
         enabled: true,
         initialValue: "initial",
         interval: 1000,
-        fetch: async () => {
+        fetch: async (prevValue) => {
           throw new Error("Test error");
         },
       },
@@ -1017,19 +1017,19 @@ describe("createIntervalCache", () => {
         enabled: true,
         initialValue: "value1",
         interval: 5000,
-        fetch: async () => "updated1",
+        fetch: async (prevValue) => "updated1",
       },
       key2: {
         enabled: true,
         initialValue: "value2", 
         interval: 5000,
-        fetch: async () => "updated2",
+        fetch: async (prevValue) => "updated2",
       },
       key3: {
         enabled: true,
         initialValue: "value3",
         interval: 5000,
-        fetch: async () => "updated3",
+        fetch: async (prevValue) => "updated3",
       },
     });
 

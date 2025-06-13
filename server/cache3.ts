@@ -1,7 +1,6 @@
 import { createIntervalCache } from "./cache3/index";
 import * as config from "./config";
 import * as db from "./db";
-import RegexTrie from "regex-trie";
 import * as pre from "./presenters";
 
 const cache = createIntervalCache({
@@ -9,7 +8,7 @@ const cache = createIntervalCache({
     enabled: true,
     initialValue: [],
     interval: 1000 * 60 * 5, // 5 minutes
-    fetch: db.findStaffUsers,
+    fetch: () => db.findStaffUsers(),
   },
 
   stats: {
@@ -22,18 +21,24 @@ const cache = createIntervalCache({
       onlineUsers: [],
     },
     interval: 1000 * 60, // 60 seconds
-    fetch: db.getStats,
+    fetch: () => db.getStats(),
   },
 
-  "uname-regex-trie": {
+  // This must be updated manually on user change (register, nuke)
+  //
+  // TODO:
+  //
+  // - [x]: register
+  // - [ ]: nuke
+  "uname-set": {
     enabled: true,
-    initialValue: new RegexTrie(),
-    interval: 1000 * 60 * 5, // 5 minutes
+    initialValue: new Set(),
+    // interval: 1000 * 60 * 5, // 5 minutes
+    interval: Infinity,
     fetch: async () => {
-      const trie = new RegexTrie();
-      const unames = await db.findAllUnames();
-      trie.add(unames.map((uname) => uname.toLowerCase()));
-      return trie;
+      const unames = await db.findAllActiveUnames();
+      console.log("unames", unames);
+      return new Set(unames.map((uname) => uname.toLowerCase()));
     },
   },
 
@@ -41,7 +46,7 @@ const cache = createIntervalCache({
     enabled: true,
     initialValue: {},
     interval: 1000 * 10, // 10 seconds
-    fetch: db.getForumViewerCounts,
+    fetch: () => db.getForumViewerCounts(),
   },
 
   categories: {
@@ -58,35 +63,35 @@ const cache = createIntervalCache({
     enabled: true,
     initialValue: [],
     interval: 1000 * 15, // 15 seconds
-    fetch: db.findLatestChecks,
+    fetch: () => db.findLatestChecks(),
   },
 
   "latest-roleplays": {
     enabled: true,
     initialValue: [],
     interval: 1000 * 15, // 15 seconds
-    fetch: db.findLatestRoleplays,
+    fetch: () => db.findLatestRoleplays(),
   },
 
   "latest-statuses": {
     enabled: true,
     initialValue: [],
     interval: 1000 * 15, // 15 seconds
-    fetch: db.findLatestStatuses,
+    fetch: () => db.findLatestStatuses(),
   },
 
   "unames->ids": {
     enabled: true,
     initialValue: {},
     interval: 1000 * 60 * 60, // 60 minutes
-    fetch: db.getUnamesMappedToIds,
+    fetch: () => db.getUnamesMappedToIds(),
   },
 
   "current-sidebar-contest": {
     enabled: true,
     initialValue: null,
     interval: 1000 * 45, // 45 seconds
-    fetch: db.getCurrentSidebarContest,
+    fetch: () => db.getCurrentSidebarContest(),
   },
 
   "latest-rpgn-topic": {
@@ -192,7 +197,7 @@ const cache = createIntervalCache({
     enabled: true,
     initialValue: [],
     interval: 1000 * 60 * 10, // 10 minutes
-    fetch: db.findAllTagGroups,
+    fetch: () => db.findAllTagGroups(),
   },
 });
 

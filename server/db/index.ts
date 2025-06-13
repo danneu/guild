@@ -2139,23 +2139,27 @@ export async function clearConvoNotifications(toUserId: number) {
   );
 }
 
-// Returns [String]
-// Keep in sync with findAllUnamesJson - really they should reuse the same logic
-// Used for building the server regex-trie of names
-export async function findAllUnames() {
-  //   return pool
-  //       .query(`
-  //   SELECT uname FROM users ORDER BY uname
-  // `)
-  //       .then(res => res.rows.map(row => row.uname))
+////////////////////////////////////////////////////////////
 
+// Returns [String]
+// Stored in cache3.uname-set
+//
+// A user is active enough to be in this list if:
+// - has at least one post/PM or joined in the last month
+// - isn't nuked
+// - has logged on in the last year
+export async function findAllActiveUnames() {
   // pms_count starts at 1 due to welcome message
   return pool
     .query<{ uname: string }>(
       `
     SELECT uname
     FROM users
-    WHERE (posts_count > 0 OR pms_count > 1)
+    WHERE (
+        posts_count > 0
+        OR pms_count > 1
+        OR created_at > NOW() - '1 month'::interval
+      )
       AND is_nuked = false
       AND last_online_at > NOW() - '1 year'::interval
   `,
@@ -2840,27 +2844,6 @@ RETURNING *
     )
     .then(maybeOneRow);
 };
-
-// -> JSONString
-//
-// Only gets users that:
-// - logged on in the last year
-// - have at least one post
-// - are not nuked
-export async function findAllUnamesJson() {
-  return pool
-    .query(
-      `
-    SELECT json_agg(uname) unames
-    FROM users
-    WHERE posts_count > 0
-      AND is_nuked = false
-      AND last_online_at > NOW() - '1 year'::interval
-  `,
-    )
-    .then(maybeOneRow)
-    .then((row) => row.unames);
-}
 
 export const updateTopicCoGms = async function (topicId, userIds) {
   assert(topicId);
