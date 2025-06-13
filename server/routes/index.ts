@@ -13,7 +13,6 @@ import * as cancan from '../cancan'
 import * as db from '../db'
 import cache2 from '../cache2'
 import * as pre from '../presenters'
-// import { sql, _raw } from 'pg-extra'
 import { pool } from '../db/util.js'
 import { Context } from 'koa'
 
