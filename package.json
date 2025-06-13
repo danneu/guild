@@ -1,6 +1,6 @@
 {
   "name": "guild",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "private": true,
   "scripts": {
     "check": "tsc --noEmit",
@@ -12,13 +12,13 @@
     "docker:build": "docker build -t guild .",
     "docker:run": "docker run -p 3000:3000 --env-file .env guild",
     "// ==================": "prod ==================================",
-    "deploy:_prod": "npm version patch -m '%s [deploy]' && git push origin --follow-tags",
-    "logs:_prod": "fly logs --app rpguild",
-    "ssh:_prod": "fly ssh console --app rpguild",
+    "production:deploy": "npm version patch -m '%s [deploy]' && git push origin --follow-tags",
+    "production:logs": "fly logs --app rpguild",
+    "production:ssh": "fly ssh console --app rpguild",
     "// ===================": "staging ==================================",
-    "deploy:staging": "fly deploy --config fly.staging.toml --app rpguild-staging",
-    "logs:staging": "fly logs --app rpguild-staging",
-    "ssh:staging": "fly ssh console --app rpguild-staging"
+    "staging:deploy": "fly deploy --config fly.staging.toml --app rpguild-staging",
+    "staging:logs": "fly logs --app rpguild-staging",
+    "staging:ssh": "fly ssh console --app rpguild-staging"
   },
   "main": "server/index.ts",
   "repository": {
