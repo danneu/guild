@@ -155,13 +155,19 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
                 error,
               );
               emitter.emit("error", cacheError);
+              throw cacheError; // Rethrow the error to propagate it
             }
           })(),
         );
       }
 
       // Wait for all initial populations to complete
-      await Promise.all(populatePromises);
+      try {
+        await Promise.all(populatePromises);
+      } catch (error) {
+        console.error("cache3 could not start due to population errors:", error);
+        throw new Error("Failed to populate cache entries. Server start aborted.");
+      }
 
       // Now start the update loop
       running = true;

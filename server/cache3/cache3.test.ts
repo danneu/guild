@@ -74,7 +74,7 @@ describe("createIntervalCache", () => {
     cache.stop();
   });
 
-  it("start() handles fetch errors during population", async () => {
+  it("start() throws when population fails", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     const cache = createIntervalCache({
@@ -88,7 +88,12 @@ describe("createIntervalCache", () => {
       },
     });
 
-    await cache.start();
+    try {
+      await cache.start();
+      throw new Error("Should have thrown");
+    } catch (error: any) {
+      ok(error.message.includes("Failed to populate cache entries"));
+    }
 
     // Should still have initial value after failed population
     deepEqual(cache.get("data"), "initial");
@@ -454,7 +459,12 @@ describe("createIntervalCache", () => {
       errorEvents.push(error);
     });
 
-    await cache.start();
+    try {
+      await cache.start();
+      throw new Error("Should have thrown");
+    } catch (error: any) {
+      ok(error.message.includes("Failed to populate cache entries"));
+    }
 
     // Should have received one error event
     deepEqual(errorEvents.length, 1);
@@ -462,9 +472,9 @@ describe("createIntervalCache", () => {
     deepEqual(errorEvents[0].key, "failing");
     ok(errorEvents[0].message.includes("Population failed"));
 
-    // Working key should still be populated
-    deepEqual(cache.get("working"), "success");
+    // Failing key should retain initial value, working key may have succeeded before failure
     deepEqual(cache.get("failing"), "initial"); // Should retain initial value
+    // Working key might be populated if it completed before the failure occurred
 
     cache.stop();
   });
