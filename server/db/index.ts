@@ -1881,7 +1881,7 @@ const legacyCounts = {
   users: 44799,
 };
 
-export const getStats = async function () {
+export async function getStats() {
   let [topicsCount, usersCount, postsCount, latestUser, onlineUsers] =
     await Promise.all([
       getMaxTopicId(), //getApproxCount('topics'),
@@ -1896,7 +1896,7 @@ export const getStats = async function () {
   postsCount += legacyCounts.posts;
 
   return { topicsCount, usersCount, postsCount, latestUser, onlineUsers };
-};
+}
 
 export async function deleteLegacySig(userId: number) {
   return pool.query(
@@ -2884,7 +2884,7 @@ export const findAllTags = async function () {
 };
 
 // Returns [TagGroup] where each group has [Tag] array bound to `tags` property
-export const findAllTagGroups = async function () {
+export async function findAllTagGroups(): Promise<unknown[]> {
   return pool
     .query(
       `
@@ -2895,7 +2895,7 @@ export const findAllTagGroups = async function () {
   `,
     )
     .then((res) => res.rows);
-};
+}
 
 // topicId :: String | Int
 // tagIds :: [Int]
@@ -2929,7 +2929,7 @@ export const updateTopicTags = async function (topicId, tagIds) {
 };
 
 // Returns latest 5 unhidden checks
-export const findLatestChecks = async function () {
+export async function findLatestChecks() {
   const forumIds = [12, 38, 13, 14, 15, 16, 40, 43];
 
   return pool
@@ -2954,10 +2954,10 @@ export const findLatestChecks = async function () {
       [forumIds],
     )
     .then((res) => res.rows);
-};
+}
 
 // Returns latest 5 unhidden roleplays
-export const findLatestRoleplays = async function () {
+export async function findLatestRoleplays() {
   const forumIds = [3, 4, 5, 6, 7, 39, 42];
   return pool
     .query(
@@ -2981,7 +2981,7 @@ LIMIT 5
       [forumIds],
     )
     .then((res) => res.rows);
-};
+}
 
 export const findAllPublicTopicUrls = async function () {
   return pool
@@ -3395,7 +3395,7 @@ export const createStatus = async function ({ user_id, html, text }) {
 ////////////////////////////////////////////////////////////
 
 // @fast
-export const findLatestStatusesForUserId = async function (user_id) {
+export async function findLatestStatusesForUserId(user_id: number) {
   return pool
     .query(
       `
@@ -3408,7 +3408,7 @@ export const findLatestStatusesForUserId = async function (user_id) {
       [user_id],
     )
     .then((res) => res.rows);
-};
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -3442,7 +3442,7 @@ export const deleteStatusById = async function (id) {
 
 ////////////////////////////////////////////////////////////
 
-export const findLatestStatuses = async function () {
+export async function findLatestStatuses() {
   return pool
     .query(
       `
@@ -3457,7 +3457,7 @@ export const findLatestStatuses = async function () {
   `,
     )
     .then((res) => res.rows);
-};
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -4128,7 +4128,7 @@ export const insertCurrentSidebarContest = async function (data) {
 };
 
 // Returns object or undefined
-export const getCurrentSidebarContest = async function () {
+export async function getCurrentSidebarContest() {
   return pool
     .query(
       `
@@ -4140,7 +4140,7 @@ export const getCurrentSidebarContest = async function () {
   `,
     )
     .then(maybeOneRow);
-};
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -4372,7 +4372,16 @@ export const listTopicBans = async (topicId) => {
     .then((res) => res.rows);
 };
 
-export const allForumMods = async () => {
+export async function allForumMods(): Promise<
+  Array<{
+    forum_id: number;
+    user: {
+      id: number;
+      uname: string;
+      slug: string;
+    };
+  }>
+> {
   return pool
     .query(
       `
@@ -4388,7 +4397,7 @@ export const allForumMods = async () => {
   `,
     )
     .then((res) => res.rows);
-};
+}
 
 ////////////////////////////////////////////////////////////
 

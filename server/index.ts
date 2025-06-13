@@ -93,13 +93,13 @@ import * as pre from "./presenters";
 import * as middleware from "./middleware";
 import * as cancan from "./cancan";
 import * as emailer from "./emailer";
-import cache from "./cache";
+// import cache from "./cache";
 import * as belt from "./belt";
 import bbcode from "./bbcode";
 import bouncer from "koa-bouncer";
 import "./validation"; // Load after koa-bouncer
 import services from "./services";
-import cache2 from "./cache2";
+import cache3 from "./cache3";
 import makeAgo from "./ago";
 import protectCsrf from "./middleware/protect-csrf";
 import { pool } from "./db/util";
@@ -169,7 +169,7 @@ app.use(async (ctx: Context, next: Next) => {
 // TODO: use nunjucks instead of MW
 app.use(async (ctx: Context, next: Next) => {
   ctx.config = config;
-  ctx.cache = cache;
+  ctx.cache = cache3;
   return next();
 });
 
@@ -236,8 +236,7 @@ const nunjucksOptions = {
     Math,
     Date,
     Object,
-    cache,
-    cache2,
+    cache3,
     ago: makeAgo(),
     currYear: () => new Date().getFullYear(),
   },
@@ -634,7 +633,7 @@ router.get("/register", async (ctx: Context) => {
 // Homepage
 //
 router.get("/", async (ctx: Context) => {
-  const categories = cache.get("categories");
+  const categories = cache3.get("categories");
 
   // We don't show the mod forum on the homepage.
   // Nasty, but just delete it for now
@@ -644,7 +643,7 @@ router.get("/", async (ctx: Context) => {
   const allForums = _.flatten(categories.map((c) => c.forums));
 
   // Assoc forum viewCount from cache
-  var viewerCounts = cache.get("forum-viewer-counts");
+  var viewerCounts = cache3.get("forum-viewer-counts");
   allForums.forEach((forum) => {
     forum.viewerCount = viewerCounts[forum.id];
   });
@@ -671,13 +670,11 @@ router.get("/", async (ctx: Context) => {
   });
 
   // Get stats
-  var stats = cache.get("stats");
+  var stats = cache3.get("stats");
   stats.onlineUsers.forEach(pre.presentUser);
   pre.presentUser(stats.latestUser);
 
-  var latest_rpgn_topic =
-    cache.get("latest-rpgn-topic") &&
-    pre.presentTopic(cache.get("latest-rpgn-topic"));
+  var latest_rpgn_topic = pre.presentTopic(cache3.get("latest-rpgn-topic"));
 
   // The unacknowledged feedback_topic for the current user
   // Will be undefined if we have nothing to show the user.
@@ -725,10 +722,10 @@ router.get("/", async (ctx: Context) => {
     ftopic,
     friendships,
     // For sidebar
-    latestChecks: cache.get("latest-checks").map(pre.presentTopic),
-    latestRoleplays: cache.get("latest-roleplays").map(pre.presentTopic),
-    latestStatuses: cache.get("latest-statuses").map(pre.presentStatus),
-    currentContest: cache.get("current-sidebar-contest"),
+    latestChecks: cache3.get("latest-checks").map(pre.presentTopic),
+    latestRoleplays: cache3.get("latest-roleplays").map(pre.presentTopic),
+    latestStatuses: cache3.get("latest-statuses").map(pre.presentStatus),
+    currentContest: cache3.get("current-sidebar-contest"),
   });
 });
 
@@ -1002,7 +999,7 @@ router.get("/forums/:forumSlug", async (ctx: Context) => {
   var forum = await db.findForum2(forumId).then(pre.presentForum);
   ctx.assert(forum, 404);
 
-  forum.mods = cache2.get("forum-mods")[forum.id] || [];
+  forum.mods = cache3.get("forum-mods")[forum.id] || [];
   pre.presentForum(forum);
 
   // Redirect to canonical slug
@@ -1087,7 +1084,7 @@ router.post(
     var postType = ctx.vals["post-type"];
     var topic = await db.findTopic(topicId);
     ctx.assert(topic, 404);
-    topic.mods = cache2.get("forum-mods")[topic.forum_id] || [];
+    topic.mods = cache3.get("forum-mods")[topic.forum_id] || [];
     ctx.assertAuthorized(ctx.currUser, "CREATE_POST", topic);
 
     // If non-rp forum, then the post must be 'ooc' type
@@ -1485,11 +1482,11 @@ router.put("/posts/:id", async (ctx: Context) => {
 
   // If it's the FAQ post, refresh cache
   if (post.id === config.FAQ_POST_ID) {
-    cache2.refresh("faq-post");
+    cache3.requestUpdate("faq-post");
   }
 
   if (post.id === config.WELCOME_POST_ID) {
-    cache2.refresh("welcome-post");
+    cache3.requestUpdate("welcome-post");
   }
 
   // Check if post is spam after response is sent
@@ -1593,11 +1590,11 @@ router.put("/api/posts/:id", async (ctx: Context) => {
 
   // If it's the FAQ post, refresh cache
   if (post.id === config.FAQ_POST_ID) {
-    cache2.refresh("faq-post");
+    cache3.requestUpdate("faq-post");
   }
 
   if (post.id === config.WELCOME_POST_ID) {
-    cache2.refresh("welcome-post");
+    cache3.requestUpdate("welcome-post");
   }
 
   // TODO: Submit to spam service like PUT /posts/:id
@@ -1654,7 +1651,7 @@ router.put("/topics/:topicSlug/status", async (ctx: Context) => {
   var status = ctx.request.body.status;
   ctx.assert(STATUS_WHITELIST.includes(status), 400, "Invalid status");
   var topic = await db.findTopic(topicId);
-  topic.mods = cache2.get("forum-mods")[topic.forum_id] || [];
+  topic.mods = cache3.get("forum-mods")[topic.forum_id] || [];
   ctx.assert(topic, 404);
   var action = status.toUpperCase() + "_TOPIC";
   ctx.assertAuthorized(ctx.currUser, action, topic);
@@ -2071,7 +2068,7 @@ router.get("/topics/:slug/:postType", async (ctx: Context) => {
     zeroth = pre.presentPost(posts.shift());
   }
 
-  topic.mods = cache2.get("forum-mods")[topic.forum_id] || [];
+  topic.mods = cache3.get("forum-mods")[topic.forum_id] || [];
 
   if (ctx.currUser) {
     posts.forEach((post) => {
@@ -2133,7 +2130,7 @@ router.get("/topics/:slug/:postType", async (ctx: Context) => {
         topic.title +
         (page > 1 ? " (Page " + page + ")" : "")
       : topic.title,
-    categories: cache.get("categories"),
+    categories: cache3.get("categories"),
     zeroth,
     className: "show-topic",
     // Pagination
@@ -2211,7 +2208,7 @@ router.get("/topics/:slug", async (ctx: Context) => {
 // Staff list
 //
 router.get("/staff", async (ctx: Context) => {
-  const users = cache.get("staff").map(pre.presentUser);
+  const users = cache3.get("staff").map(pre.presentUser);
 
   await ctx.render("staff", {
     ctx,
@@ -2839,6 +2836,11 @@ guildbot.connect().catch((err) => console.error("guildbot error", err));
 /// /////////////////////////////////////////////////////////
 
 app.use(router.routes());
+
+cache3.on("error", (err) => {
+  console.error("cache3 error", err);
+});
+cache3.start();
 
 app.listen(config.PORT, () => {
   console.log("Listening on", config.PORT);

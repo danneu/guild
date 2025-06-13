@@ -17,6 +17,7 @@ import * as pre from "../presenters";
 import * as config from "../config";
 import * as cancan from "../cancan";
 import * as avatar from "../avatar";
+import cache3 from "../cache3";
 import bbcode from "../bbcode";
 import services from "../services";
 import {
@@ -24,7 +25,6 @@ import {
   broadcastManualUnnuke,
   broadcastBioUpdate,
 } from "../services/discord";
-import cache2 from "../cache2";
 import ipintel from "../services/ipintel";
 import { Context, Next } from "koa";
 
@@ -281,7 +281,7 @@ router.post("/users", checkCloudflareTurnstile, async (ctx: Context) => {
 
   // Send user the introductory PM
   // quirk: welcome-post can point to a post that has no html/markup if the post is ancient
-  const welcomePost = cache2.get("welcome-post");
+  const welcomePost = cache3.get("welcome-post");
   if (
     config.STAFF_REPRESENTATIVE_ID &&
     welcomePost &&

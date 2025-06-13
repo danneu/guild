@@ -11,7 +11,7 @@ import nodeUrl from "url";
 import * as config from "../config";
 import * as cancan from "../cancan";
 import * as db from "../db";
-import cache2 from "../cache2";
+import cache3 from "../cache3";
 import * as pre from "../presenters";
 import { pool } from "../db/util.js";
 import { Context } from "koa";
@@ -28,7 +28,7 @@ const router = new Router();
 
 // Depends on FAQ_POST_ID
 router.get("/faq", async (ctx: Context) => {
-  const post = pre.presentPost(cache2.get("faq-post"));
+  const post = pre.presentPost(cache3.get("faq-post"));
 
   await ctx.render("faq", {
     ctx,
@@ -255,8 +255,7 @@ async function listRoleplays(
 }
 
 router.get("/roleplays", async (ctx: Context) => {
-  // TODO: MOve to cache2.once() and update on tag list edit
-  const tagGroups = await db.findAllTagGroups();
+  const tagGroups = cache3.get("tag-groups");
 
   // Should always be array. Empty array means all tags (no tag filter).
   const selectedTagIds = ctx
