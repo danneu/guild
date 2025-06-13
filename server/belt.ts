@@ -242,8 +242,8 @@ export const isDBClient = function(obj) {
     )
 }
 
-export const slugifyUname = function(uname) {
-    var slug = uname
+export function slugifyUname(uname: string): string {
+    const slug = uname
         .trim()
         .toLowerCase()
         .replace(/ /g, '-')
@@ -296,7 +296,7 @@ export function extractId(slug: string): number | null {
 export const extractMentions = function(str, unameToReject) {
     var start = Date.now()
     debug('[extractMentions]')
-    var unames: Record<string, boolean> = {}
+    var unames: Record<string, boolean> = Object.create(null)
     var re = /\[(quote)[^\]]*\]|\[(\/quote)\]|\[@([a-z0-9_\- ]+)\]/gi
     var quoteStack: string[] = []
 

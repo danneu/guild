@@ -176,11 +176,11 @@ export const findAltsFromUserId = async userId => {
   `, [userId]).then(res => res.rows)
 
     // mapping of user_id -> {user: {...}, matches: {'TRACK': Date, 'IP_ADDRESS': Date, ...]}
-    const map = {}
+    const map: Record<string, { matches: Record<string, Date>, user: any }> = Object.create(null)
 
     rows.forEach(row => {
         if (map[row.user.uname]) {
-            map[row.user.uname].matches[row.match] = row.latest_match_at
+            map[row.user.uname]!.matches[row.match] = row.latest_match_at
         } else {
             map[row.user.uname] = {
                 matches: { [row.match]: row.latest_match_at },
