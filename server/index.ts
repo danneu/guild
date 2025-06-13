@@ -93,7 +93,6 @@ import * as pre from "./presenters";
 import * as middleware from "./middleware";
 import * as cancan from "./cancan";
 import * as emailer from "./emailer";
-// import cache from "./cache";
 import * as belt from "./belt";
 import bbcode from "./bbcode";
 import bouncer from "koa-bouncer";

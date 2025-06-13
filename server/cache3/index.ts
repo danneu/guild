@@ -13,6 +13,23 @@ export class IntervalCacheError extends Error {
   }
 }
 
+// Type-safe event definitions
+export type CacheEvents<T extends CacheConfigMap> = {
+  error: (error: IntervalCacheError) => void;
+  update: (event: {
+    key: keyof T;
+    value: any; // Will be properly typed at usage
+  }) => void;
+};
+
+// Type-safe EventEmitter interface
+interface TypedEventEmitter<T extends CacheConfigMap> {
+  on<K extends keyof CacheEvents<T>>(event: K, listener: CacheEvents<T>[K]): void;
+  off<K extends keyof CacheEvents<T>>(event: K, listener: CacheEvents<T>[K]): void;
+  once<K extends keyof CacheEvents<T>>(event: K, listener: CacheEvents<T>[K]): void;
+  emit<K extends keyof CacheEvents<T>>(event: K, ...args: Parameters<CacheEvents<T>[K]>): boolean;
+}
+
 export type CacheConfig<T> = {
   enabled: boolean;
   initialValue: T;
@@ -65,7 +82,7 @@ export function createIntervalCache<T extends CacheConfigMap>(
   const cache = new Map<keyof T, CacheEntry<any>>();
   let running = false; // Don't start running until start() is called
   let intervalId: NodeJS.Timeout | null = null;
-  const emitter = new EventEmitter();
+  const emitter = new EventEmitter() as EventEmitter & TypedEventEmitter<T>;
   // Prevent throwing errors when no listeners are attached
   emitter.on("error", () => {});
 
@@ -105,8 +122,10 @@ export function createIntervalCache<T extends CacheConfigMap>(
    * Emits error events for failed updates but continues processing other entries.
    */
   async function updateLoop() {
-    debugLog("updateLoop called");
-    if (!running) return;
+    // Don't update while stopped
+    if (!running) {
+      return;
+    }
 
     const now = Date.now();
 
@@ -135,7 +154,8 @@ export function createIntervalCache<T extends CacheConfigMap>(
         entry.updateRequested = true;
       }
 
-      if (entry.updateRequested) {
+      // Update if requested and not already updating
+      if (entry.updateRequested && !entry.updating) {
         entry.updating = true;
         entry.updateRequested = false;
 
@@ -147,6 +167,9 @@ export function createIntervalCache<T extends CacheConfigMap>(
           entry.failureCount = 0;
           entry.backoffUntil = 0;
           debugLog(`Successfully updated key '${String(key)}'`);
+          
+          // Emit update event
+          emitter.emit("update", { key, value: newValue });
         } catch (error) {
           // Increment failure count and calculate backoff
           entry.failureCount++;
@@ -287,6 +310,10 @@ export function createIntervalCache<T extends CacheConfigMap>(
         backoffUntil: 0,
       });
       debugLog(`Successfully force updated key '${String(key)}'`);
+      
+      // Emit update event
+      emitter.emit("update", { key, value: newValue });
+      
       return newValue;
     } catch (error) {
       // Increment failure count and calculate backoff for forceUpdate too
@@ -328,9 +355,9 @@ export function createIntervalCache<T extends CacheConfigMap>(
     requestUpdate,
     forceUpdate, // For testing
     getEntry, // For testing
-    on: emitter.on.bind(emitter),
-    off: emitter.off.bind(emitter),
-    once: emitter.once.bind(emitter),
-    emit: emitter.emit.bind(emitter),
+    on: emitter.on.bind(emitter) as TypedEventEmitter<T>["on"],
+    off: emitter.off.bind(emitter) as TypedEventEmitter<T>["off"],
+    once: emitter.once.bind(emitter) as TypedEventEmitter<T>["once"],
+    emit: emitter.emit.bind(emitter) as TypedEventEmitter<T>["emit"],
   };
 }
