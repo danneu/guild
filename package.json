@@ -60,7 +60,7 @@
     "react-dom": "^19.1.0",
     "regex-trie": "1.0.4",
     "sharp": "^0.34.2",
-    "simple-oauth2": "^1.2.0",
+    "simple-oauth2": "^5.1.0",
     "tsafe": "^1.8.5",
     "tsx": "^4.20.3",
     "uuid": "^11.1.0",
