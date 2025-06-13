@@ -4,8 +4,7 @@ import _ from 'lodash'
 import createDebug from 'debug'; const debug = createDebug('app:db:convos')
 // 1st
 import * as config from '../config'
-import { pool } from './util'
-import { sql } from 'pg-extra'
+import { pool, maybeOneRow } from './util'
 
 ////////////////////////////////////////////////////////////
 
@@ -18,7 +17,7 @@ export const getConvos = async ids => {
     debug('[getConvos] ids=%j', ids)
     assert(Array.isArray(ids))
 
-    return pool.many(sql`
+    return pool.query(`
     SELECT
       c.*,
       to_json(u1.*) "user",
@@ -28,9 +27,9 @@ export const getConvos = async ids => {
     JOIN convos_participants cp ON c.id = cp.convo_id AND deleted_at IS NULL
     JOIN users u1 ON c.user_id = u1.id
     JOIN users u2 ON cp.user_id = u2.id
-    WHERE c.id = ANY (${ids}::int[])
+    WHERE c.id = ANY ($1::int[])
     GROUP BY c.id, u1.id
-  `)
+  `, [ids]).then(res => res.rows)
 }
 
 ////////////////////////////////////////////////////////////
@@ -48,7 +47,7 @@ export async function deleteTrash(userId: number) {
             .then(res => res.rows.map(row => row.convo_id))
 
         if (convoIds.length > 0) {
-          await client.query(sql`
+          await client.query(`
             DELETE FROM notifications
             WHERE to_user_id = $1
               AND convo_id = ANY ($2)
@@ -59,59 +58,59 @@ export async function deleteTrash(userId: number) {
 
 ////////////////////////////////////////////////////////////
 
-export const deleteConvos = async (userId, convoIds) => {
+export async function deleteConvos(userId: number, convoIds: number[]) {
     debug(`[deleteConvos] userId=%j, convoIds=%j`, userId, convoIds)
     assert(Number.isInteger(userId))
     assert(Array.isArray(convoIds))
 
-    return pool.query(sql`
+    return pool.query(`
     UPDATE convos_participants
     SET deleted_at = NOW()
-    WHERE user_id = ${userId}
-      AND convo_id = ANY (${convoIds}::int[])
-  `)
+    WHERE user_id = $1
+      AND convo_id = ANY ($2::int[])
+  `, [userId, convoIds])
 }
 
 ////////////////////////////////////////////////////////////
 
-export const getConvoParticipantsWithNotifications = async function(userId) {
+export async function getConvoParticipantsWithNotifications(userId: number) {
     assert(Number.isInteger(userId))
-    return pool.many(sql`
+    return pool.query(`
     select cp.*
     from convos_participants cp
-    join notifications n ON cp.convo_id = n.convo_id AND cp.user_id = ${userId}
+    join notifications n ON cp.convo_id = n.convo_id AND cp.user_id = $1
     join users u on n.to_user_id = u.id
-    where u.id = ${userId}
-  `)
+    where u.id = $1
+  `, [userId]).then(res => res.rows)
 }
 
 ////////////////////////////////////////////////////////////
 
-export const getConvoFolderCounts = async function(userId) {
+export async function getConvoFolderCounts(userId: number) {
     assert(Number.isInteger(userId))
 
-    return pool.one(sql`
+    return pool.query(`
     SELECT
       COUNT(*) FILTER (WHERE folder = 'INBOX') "inbox_count",
       COUNT(*) FILTER (WHERE folder = 'STAR') "star_count",
       COUNT(*) FILTER (WHERE folder = 'ARCHIVE') "archive_count",
       COUNT(*) FILTER (WHERE folder = 'TRASH') "trash_count"
     FROM convos_participants
-    WHERE user_id = ${userId}
+    WHERE user_id = $1
       AND deleted_at IS NULL
-  `)
+  `, [userId]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
 
-export const findConvosInvolvingUserId = async function(userId, folder, page) {
+export async function findConvosInvolvingUserId(userId: number, folder: string, page: number) {
     assert(_.isNumber(page))
     assert(['INBOX', 'STAR', 'ARCHIVE', 'TRASH'].includes(folder))
 
     const offset = config.CONVOS_PER_PAGE * (page - 1)
     const limit = config.CONVOS_PER_PAGE
 
-    const rows = await pool.many(sql`
+    const rows = await pool.query(`
 SELECT
   c.id,
   c.title,
@@ -138,12 +137,12 @@ WHERE c.id IN (
     SELECT cp.convo_id
     FROM convos_participants cp
   )
-  AND (cp2.folder = ${folder} AND cp2.user_id = ${userId})
+  AND (cp2.folder = $1 AND cp2.user_id = $2)
 GROUP BY c.id, u1.id, pms.id, u3.id, cp2.folder
 ORDER BY c.latest_pm_id DESC
-OFFSET ${offset}
-LIMIT ${limit}
-  `)
+OFFSET $3
+LIMIT $4
+  `, [folder, userId, offset, limit]).then(res => res.rows)
 
     return rows.map(row => {
         row.user = {
@@ -182,34 +181,33 @@ LIMIT ${limit}
 
 ////////////////////////////////////////////////////////////
 
-export const findParticipantIds = async function(convoId) {
+export async function findParticipantIds(convoId: number) {
     return pool
-        .many(
-            sql`
+        .query(`
     SELECT user_id
     FROM convos_participants
-    WHERE convo_id = ${convoId}
+    WHERE convo_id = $1
       AND deleted_at IS NULL
-  `
-        )
+  `, [convoId])
+        .then(res => res.rows)
         .then(xs => xs.map(x => x.user_id))
 }
 
 ////////////////////////////////////////////////////////////
 
-export const undeleteAllConvos = async userId => {
+export async function undeleteAllConvos(userId: number) {
     assert(Number.isInteger(userId))
 
-    return pool.query(sql`
+    return pool.query(`
     UPDATE convos_participants
     SET deleted_at = NULL
-    WHERE user_id = ${userId}
-  `)
+    WHERE user_id = $1
+  `, [userId])
 }
 
 ////////////////////////////////////////////////////////////
 
-export const moveConvos = async (userId, convoIds, folder) => {
+export async function moveConvos(userId: number, convoIds: number[], folder: string) {
     debug(
         `[moveConvos] userId=%j, folder=%j, convoIds=%j`,
         userId,
@@ -220,10 +218,10 @@ export const moveConvos = async (userId, convoIds, folder) => {
     assert(typeof folder === 'string')
     assert(Array.isArray(convoIds))
 
-    return pool.query(sql`
+    return pool.query(`
     UPDATE convos_participants
-    SET folder = ${folder}
-    WHERE user_id = ${userId}
-      AND convo_id = ANY (${convoIds}::int[])
-  `)
+    SET folder = $1
+    WHERE user_id = $2
+      AND convo_id = ANY ($3::int[])
+  `, [folder, userId, convoIds])
 }

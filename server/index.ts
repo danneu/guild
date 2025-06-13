@@ -102,6 +102,7 @@ import services from './services'
 import cache2 from './cache2'
 import makeAgo from './ago'
 import protectCsrf from './middleware/protect-csrf'
+import { pool } from './db/util'
 
 app.use(middleware.methodOverride())
 
@@ -429,6 +430,7 @@ router.get('/me/edit', async (ctx: Context) => {
 
 router.post('/topics/:topicSlug/co-gms', async (ctx: Context) => {
     var topicId = belt.extractId(ctx.params.topicSlug)
+    ctx.assert(topicId, 404)
     var topic = await db.findTopicById(topicId).then(pre.presentTopic)
     ctx.assert(topic, 404)
     ctx.assertAuthorized(ctx.currUser, 'UPDATE_TOPIC_CO_GMS', topic)
@@ -464,6 +466,7 @@ router.post('/topics/:topicSlug/co-gms', async (ctx: Context) => {
 
 router.delete('/topics/:topicSlug/co-gms/:userSlug', async (ctx: Context) => {
     var topicId = belt.extractId(ctx.params.topicSlug)
+    ctx.assert(topicId, 404)
     var topic = await db.findTopicById(topicId).then(pre.presentTopic)
     ctx.assert(topic, 404)
     ctx.assertAuthorized(ctx.currUser, 'UPDATE_TOPIC_CO_GMS', topic)
@@ -590,7 +593,7 @@ router.post('/sessions', async (ctx: Context) => {
     )
 
     // User authenticated
-    var session = await db.createSession({
+    var session = await db.createSession(pool, {
         userId: user.id,
         ipAddress: ctx.request.ip,
         interval: ctx.vals['remember-me'] ? '1 year' : '2 weeks',
@@ -872,7 +875,7 @@ router.post('/reset-password', async (ctx: Context) => {
 
     // Log the user in
     var interval = rememberMe ? '1 year' : '1 day'
-    var session = await db.createSession({
+    var session = await db.createSession(pool, {
         userId: user.id,
         ipAddress: ctx.request.ip,
         interval: interval,
@@ -1811,6 +1814,7 @@ router.get('/pms/:id', async (ctx: Context) => {
 // Body { uname: String }
 router.post('/topics/:slug/bans', async (ctx: Context) => {
     const topicId = belt.extractId(ctx.params.slug)
+    ctx.assert(topicId, 404)
     const topic = await db.findTopicById(topicId).then(pre.presentTopic)
     ctx.assert(topic, 404)
     ctx.assertAuthorized(ctx.currUser, 'UPDATE_TOPIC', topic)
@@ -2264,6 +2268,7 @@ router.get('/me/notifications', async (ctx: Context) => {
 //
 router.post('/topics/:slug/move', async (ctx: Context) => {
     const topicId = belt.extractId(ctx.params.slug)
+    ctx.assert(topicId, 404)
     let topic = await db.findTopicById(topicId).then(pre.presentTopic)
     ctx.assert(topic, 404)
     ctx.assertAuthorized(ctx.currUser, 'MOVE_TOPIC', topic)

@@ -1,23 +1,22 @@
 'use strict'
 // 3rd
 import assert from 'assert'
-import { sql } from 'pg-extra'
 import createDebug from 'debug'; const debug = createDebug('app:db:unames')
 // 1st
-import { pool } from './util'
+import { pool, maybeOneRow } from './util'
 import * as belt from '../belt'
 
 ////////////////////////////////////////////////////////////
 
 export const lastUnameChange = async function(userId) {
-    return pool.one(sql`
+    return pool.query(`
     SELECT *
     FROM unames
-    WHERE user_id = ${userId}
+    WHERE user_id = $1
       AND recycle = false
     ORDER BY id DESC
     LIMIT 1
-  `)
+  `, [userId]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -25,7 +24,7 @@ export const lastUnameChange = async function(userId) {
 // Get all username changes for a given user. Will return at least one username (their initial username).
 export const userUnameHistory = async function(userId) {
     assert(Number.isInteger(userId))
-    return pool.many(sql`
+    return pool.query(`
     SELECT
       h.*,
       CASE WHEN u2 IS NULL THEN NULL
@@ -39,13 +38,13 @@ export const userUnameHistory = async function(userId) {
       END "changed_by"
     FROM unames h
     LEFT OUTER JOIN users u2 ON h.changed_by_id = u2.id
-    WHERE h.user_id = ${userId}
+    WHERE h.user_id = $1
     ORDER BY h.id DESC
-    `)
+    `, [userId]).then(res => res.rows)
 }
 
 export const latestUnameChanges = async function(limit = 10) {
-    return pool.many(sql`
+    return pool.query(`
     SELECT
       h.*,
       json_build_object(
@@ -79,8 +78,8 @@ export const latestUnameChanges = async function(limit = 10) {
     LEFT OUTER JOIN users u2 ON h.changed_by_id = u2.id
     WHERE changed_by_id IS NOT NULL
     ORDER BY h.id DESC
-    LIMIT ${limit}
-  `)
+    LIMIT $1
+  `, [limit]).then(res => res.rows)
 }
 
 ////////////////////////////////////////////////////////////
@@ -102,17 +101,15 @@ export const changeUname = async function({
 
     return pool.withTransaction(async client => {
         await client
-            .query(
-                sql`
+            .query(`
       INSERT INTO unames (user_id, changed_by_id, uname, slug)
       VALUES (
-        ${userId},
-        ${changedById},
-        ${newUname},
-        ${belt.slugifyUname(newUname)}
+        $1,
+        $2,
+        $3,
+        $4
       )
-    `
-            )
+    `, [userId, changedById, newUname, belt.slugifyUname(newUname)])
             .catch(err => {
                 if (err.code === '23505') {
                     if (/unique_unrecyclable_slug/.test(err.toString()))
@@ -123,21 +120,21 @@ export const changeUname = async function({
 
         // Update previous uname change
         if (recycle) {
-            await client.query(sql`
+            await client.query(`
         UPDATE unames
         SET recycle = true
-        WHERE user_id = ${userId}
-          AND slug = ${belt.slugifyUname(oldUname)}
-      `)
+        WHERE user_id = $1
+          AND slug = $2
+      `, [userId, belt.slugifyUname(oldUname)])
         }
 
-        return client.one(sql`
+        return client.query(`
       UPDATE users
-      SET uname = ${newUname},
-          slug = ${belt.slugifyUname(newUname)}
-      WHERE id = ${userId}
+      SET uname = $1,
+          slug = $2
+      WHERE id = $3
       RETURNING *
-    `)
+    `, [newUname, belt.slugifyUname(newUname), userId]).then(maybeOneRow)
     })
 }
 

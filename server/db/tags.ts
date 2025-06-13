@@ -1,36 +1,34 @@
 // 3rd
 import assert from 'assert'
-import { sql } from 'pg-extra'
 // 1st
-import { pool } from './util'
+import { pool, maybeOneRow } from './util'
 
 ////////////////////////////////////////////////////////////
 
 export const getTag = async id => {
     assert(Number.isInteger(id))
 
-    return pool.one(sql`
+    return pool.query(`
     SELECT *
     FROM tags
-    WHERE id = ${id}
-  `)
+    WHERE id = $1
+  `, [id]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
 
 export const getGroup = async id => {
     return pool
-        .one(
-            sql`
+        .query(`
     SELECT
       tg.*,
       json_agg(tags.*) tags
     FROM tag_groups tg
     LEFT JOIN tags ON tags.tag_group_id = tg.id
-    WHERE tg.id = ${id}
+    WHERE tg.id = $1
     GROUP BY tg.id
-  `
-        )
+  `, [id])
+        .then(maybeOneRow)
         .then(x => {
             if (!x) return null
             // Turn [null] into [] if no tags
@@ -41,8 +39,7 @@ export const getGroup = async id => {
 
 export const listGroups = async () => {
     return pool
-        .many(
-            sql`
+        .query(`
     SELECT
       tg.*,
       json_agg(tags.*) tags
@@ -50,8 +47,8 @@ export const listGroups = async () => {
     LEFT JOIN tags ON tags.tag_group_id = tg.id
     GROUP BY tg.id
     ORDER BY tg.id
-  `
-        )
+  `)
+        .then(res => res.rows)
         .then(xs =>
             xs.map(x => {
                 // Turn [null] into [] if no tags
@@ -64,11 +61,11 @@ export const listGroups = async () => {
 ////////////////////////////////////////////////////////////
 
 export const insertTagGroup = async title => {
-    return pool.one(sql`
+    return pool.query(`
     INSERT INTO tag_groups (title)
-    VALUES (${title})
+    VALUES ($1)
     RETURNING *
-  `)
+  `, [title]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -77,11 +74,11 @@ export const insertTag = async (groupId, title, desc) => {
     assert(Number.isInteger(groupId))
     assert(typeof title === 'string')
 
-    return pool.one(sql`
+    return pool.query(`
     INSERT INTO tags (tag_group_id, title, description)
-    VALUES (${groupId}, ${title}, ${desc})
+    VALUES ($1, $2, $3)
     RETURNING *
-  `)
+  `, [groupId, title, desc]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -90,9 +87,9 @@ export const moveTag = async (tagId, toGroupId) => {
     assert(Number.isInteger(tagId))
     assert(Number.isInteger(toGroupId))
 
-    return pool.one(sql`
+    return pool.query(`
     UPDATE tags
-    SET tag_group_id = ${toGroupId}
-    WHERE id = ${tagId}
-  `)
+    SET tag_group_id = $1
+    WHERE id = $2
+  `, [toGroupId, tagId]).then(maybeOneRow)
 }

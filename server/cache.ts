@@ -105,12 +105,13 @@ const cache = new IntervalCache()
         []
     )
 
-if (config.LATEST_RPGN_TOPIC_ID) {
+if (typeof config.LATEST_RPGN_TOPIC_ID === 'number') {
+    const id = config.LATEST_RPGN_TOPIC_ID
     cache.every(
         'latest-rpgn-topic',
         1000 * 60,
         () => {
-            return db.findRGNTopicForHomepage(config.LATEST_RPGN_TOPIC_ID)
+            return db.findRGNTopicForHomepage(id)
         },
         null
     )

@@ -28,9 +28,9 @@ export const currUser = function() {
 
 // Expose req.flash (getter) and res.flash = _ (setter)
 // Flash data persists in user's sessions until the next ~successful response
-export const flash = function(cookieName = 'flash') {
+export function flash(cookieName = 'flash') {
     return async (ctx: Context, next: Next) => {
-        let data = {}
+        let data = Object.create(null)
 
         if (ctx.cookies.get(cookieName)) {
             try {

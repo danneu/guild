@@ -3,24 +3,23 @@
 import assert from 'assert'
 import createDebug from 'debug'; const debug = createDebug('app:db:keyvals')
 // 1st
-import { pool } from './util'
-import { sql } from 'pg-extra'
+import { pool, maybeOneRow } from './util'
 import * as pre from '../presenters'
 
-export const deleteKey = async key => {
+export async function deleteKey(key: string) {
     assert(typeof key === 'string')
 
-    return pool.query(sql`
+    return pool.query(`
     DELETE FROM keyvals
-    WHERE key = ${key}
-  `)
+    WHERE key = $1
+  `, [key])
 }
 
 // String -> keyvals record object
-export const getRowByKey = async function(key) {
+export async function getRowByKey(key: string) {
     debug(`[getRowByKey] key=${key}`)
     assert(typeof key === 'string')
-    const row = await pool.one(sql`
+    const row = await pool.query(`
     SELECT
       *,
       json_build_object(
@@ -29,8 +28,8 @@ export const getRowByKey = async function(key) {
       ) "updated_by"
     FROM keyvals
     LEFT OUTER JOIN users ON keyvals.updated_by_id = users.id
-    WHERE key = ${key}
-  `)
+    WHERE key = $1
+  `, [key]).then(maybeOneRow)
 
     pre.presentKeyval(row)
 
@@ -38,14 +37,14 @@ export const getRowByKey = async function(key) {
 }
 
 // String -> Undefined | JSValue
-export const getValueByKey = async function(key) {
+export async function getValueByKey(key: string) {
     assert(typeof key === 'string')
     const row = await getRowByKey(key)
     return row && row.value
 }
 
 // updatedById (Optional Int): user_id that's updating the row
-export const setKey = async function(key, value, updatedById) {
+export async function setKey(key: string, value: any, updatedById: number) {
     debug('[setKey] key=%j, value=%j, updatedById=%j', key, value, updatedById)
     assert(typeof key === 'string')
 
@@ -53,13 +52,13 @@ export const setKey = async function(key, value, updatedById) {
         value = JSON.stringify(value)
     }
 
-    return pool.query(sql`
+    return pool.query(`
     INSERT INTO keyvals (key, value, updated_at, updated_by_id)
-    VALUES (${key}, ${value}, NOW(), ${updatedById})
+    VALUES ($1, $2, NOW(), $3)
     ON CONFLICT (key) DO UPDATE
-    SET value = ${value},
+    SET value = $2,
         updated_at = NOW(),
-        updated_by_id = ${updatedById}
-    WHERE keyvals.key = ${key}
-  `)
+        updated_by_id = $3
+    WHERE keyvals.key = $1
+  `, [key, value, updatedById])
 }

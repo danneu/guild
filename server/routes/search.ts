@@ -3,7 +3,6 @@
 import Router from '@koa/router'
 import Knex from 'knex'
 const knex = Knex({ client: 'pg' })
-import { _raw } from 'pg-extra'
 import createDebug from 'debug'
 const debug = createDebug('app:search')
 // 1st
@@ -189,8 +188,8 @@ router.get('/search', async (ctx: Context) => {
     debug(query.toString())
 
     const posts = await pool
-        .many(_raw`${query.toString()}`)
-        .then(xs => xs.map(x => pre.presentPost(x)))
+        .query(query.toString())
+        .then(res => res.rows.map(x => pre.presentPost(x)))
 
     ctx.set('X-Robots-Tag', 'noindex')
 

@@ -57,6 +57,16 @@ type TimeSpan = {
     milliseconds?: number
 }
 
+function timespanToMilliseconds(span: TimeSpan): number {
+    return ((span.years || 0) * 1000 * 60 * 60 * 24 * 365 +
+            (span.months || 0) * 1000 * 60 * 60 * 24 * 30 +
+            (span.days || 0) * 1000 * 60 * 60 * 24 +
+            (span.hours || 0) * 1000 * 60 * 60 +
+            (span.minutes || 0) * 1000 * 60 +
+            (span.seconds || 0) * 1000 +
+            (span.milliseconds || 0))
+}
+
 export function pastDate(opts: TimeSpan): Date
 export function pastDate(nowDate: Date, opts: TimeSpan): Date
 
@@ -75,14 +85,7 @@ export function pastDate(nowDateOrOpts: Date | TimeSpan, opts?: TimeSpan): Date 
     }
 
     return new Date(
-        nowDate.getTime() -
-            ((span.years || 0) * 1000 * 60 * 60 * 24 * 365 +
-                (span.months || 0) * 1000 * 60 * 60 * 24 * 30 +
-                (span.days || 0) * 1000 * 60 * 60 * 24 +
-                (span.hours || 0) * 1000 * 60 * 60 +
-                (span.minutes || 0) * 1000 * 60 +
-                (span.seconds || 0) * 1000 +
-                (span.milliseconds || 0))
+        nowDate.getTime() - timespanToMilliseconds(span)
     )
 }
 
@@ -104,14 +107,7 @@ export function futureDate(nowDateOrOpts: Date | TimeSpan, opts?: TimeSpan): Dat
     }
 
     return new Date(
-        nowDate.getTime() +
-            (span.years || 0) * 1000 * 60 * 60 * 24 * 365 +
-            (span.months || 0) * 1000 * 60 * 60 * 24 * 30 +
-            (span.days || 0) * 1000 * 60 * 60 * 24 +
-            (span.hours || 0) * 1000 * 60 * 60 +
-            (span.minutes || 0) * 1000 * 60 +
-            (span.seconds || 0) * 1000 +
-            (span.milliseconds || 0)
+        nowDate.getTime() + timespanToMilliseconds(span)
     )
 }
 
@@ -176,7 +172,7 @@ export const joinErrors = function(errObj) {
 // Authentication
 ////////////////////////////////////////////////////////////
 
-export const hashPassword = password => {
+export const hashPassword = (password: string) => {
     return bcrypt.hash(password, 10)
 }
 
@@ -246,8 +242,8 @@ export const isDBClient = function(obj) {
     )
 }
 
-export const slugifyUname = function(uname) {
-    var slug = uname
+export function slugifyUname(uname: string): string {
+    const slug = uname
         .trim()
         .toLowerCase()
         .replace(/ /g, '-')
@@ -286,10 +282,11 @@ export const slugify = function(...args: (string | number)[]) {
     )
 }
 
+// This relies on parseInt("123-a-b-c") parse 123
 // Returns Int | null
-export const extractId = function(slug) {
-    var n = parseInt(slug, 10)
-    return _.isNaN(n) ? null : n
+export function extractId(slug: string): number | null {
+    const n = parseInt(slug, 10)
+    return isNaN(n) ? null : n
 }
 
 ////////////////////////////////////////////////////////////
@@ -299,7 +296,7 @@ export const extractId = function(slug) {
 export const extractMentions = function(str, unameToReject) {
     var start = Date.now()
     debug('[extractMentions]')
-    var unames: Record<string, boolean> = {}
+    var unames: Record<string, boolean> = Object.create(null)
     var re = /\[(quote)[^\]]*\]|\[(\/quote)\]|\[@([a-z0-9_\- ]+)\]/gi
     var quoteStack: string[] = []
 
