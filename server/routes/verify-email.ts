@@ -5,7 +5,7 @@ import assert from 'assert'
 import * as belt from '../belt'
 import crypto from 'crypto'
 import * as config from '../config'
-import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses'
+import * as emailer from '../emailer'
 import { Context } from 'koa'
 
 const router = new Router()
@@ -69,7 +69,11 @@ router.post('/api/verify-email', async (ctx: Context) => {
     const prev = sent.get(ctx.currUser.id)
     if (!prev || belt.isOlderThan(prev, { seconds: 60 })) {
         const token = createToken(config.SECRET, ctx.currUser.email)
-        await sendEmail(ctx.currUser.uname, ctx.currUser.email, token)
+        await emailer.sendEmailVerificationLinkEmail({
+            toUname: ctx.currUser.uname,
+            toEmail: ctx.currUser.email,
+            token,
+        })
         sent.set(ctx.currUser.id, new Date())
         ctx.status = 201
         return
@@ -77,58 +81,5 @@ router.post('/api/verify-email', async (ctx: Context) => {
 
     ctx.status = 429
 })
-
-function rfc2047Encode(str) {
-    const encodedWords = str.split(' ').map(word => {
-      if (/[\x00-\x7F]+/.test(word)) {
-        return word;
-      } else {
-        return '=?UTF-8?B?' +
-          Buffer.from(word, 'utf-8').toString('base64') + '?=';
-      }
-    });
-    return encodedWords.join(' ');
-}
-
-
-async function sendEmail(uname, address, token) {
-    assert(typeof uname === 'string')
-    assert(typeof address === 'string')
-    assert(typeof token === 'string')
-    const client = new SESClient({ region: 'us-east-1'})
-
-    const sender = `${rfc2047Encode('Roleplayer Guild')} <mahz@roleplayerguild.com>`
-    console.log({sender})
-
-    const command = new SendEmailCommand({
-        Source: sender,
-        Destination: { 
-            ToAddresses: [address], 
-        }, 
-        Message: {
-         Subject: {
-          Charset: "UTF-8", 
-          Data: `Verify your email address to enable email notifications`
-         },
-         Body: {
-            Text: { Data: `
-Hi ${uname},
-
-To verify that this is the email address of your roleplayerguild.com account, click the following link:
-
-${config.HOST}/verify-email?token=${token}&email=${encodeURIComponent(address)}
-
-This lets you receive email notifications when other forum members send you messages.
-
-If you weren't expecting this email, you can safely delete it. It's possible that someone made a mistake while typing their email address.
-
-- @Mahz <mahz@roleplayerguild.com>`.trim() 
-},
-         }, 
-        }, 
-       });
-       return await client.send(command)
-}
-
 
 export default router

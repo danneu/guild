@@ -2,7 +2,6 @@ import { QueryConfig, QueryResult, QueryResultRow } from "pg"
 
 import pg from 'pg'
 import * as config from '../config'
-import * as belt from '../belt'
 import assert from 'assert'
 import { readFileSync } from 'fs'
 import path from 'path'
@@ -104,21 +103,21 @@ export function getClient() {
     return new pg.Client(connectionConfig)
 }
 
-// TODO: Get rid of db/index.js' wrapOptionalClient and use this
-export function wrapOptionalClient(fn: any) {
-    return async function() {
-        const args = Array.prototype.slice.call(arguments, 0)
-        if (belt.isDBClient(args[0])) {
-            return fn.apply(null, args)
-        } else {
-            return pool.withTransaction(async client => {
-                return fn.apply(null, [client, ...args])
-            })
-        }
-    }
-}
+// // TODO: Get rid of db/index.js' wrapOptionalClient and use this
+// export function wrapOptionalClient(fn: any) {
+//     return async function() {
+//         const args = Array.prototype.slice.call(arguments, 0)
+//         if (belt.isDBClient(args[0])) {
+//             return fn.apply(null, args)
+//         } else {
+//             return pool.withTransaction(async client => {
+//                 return fn.apply(null, [client, ...args])
+//             })
+//         }
+//     }
+// }
 
-export default { pool, getClient, wrapOptionalClient }
+export default { pool, getClient }
 
 // TODO: retry logic, explain error (deadlock, etc)
 export async function withPgPoolTransaction<T>(
