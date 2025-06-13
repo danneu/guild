@@ -105,7 +105,7 @@ export function createIntervalCache<T extends CacheConfigMap>(
 
     cache.set(key, {
       value: keyConfig.initialValue,
-      lastUpdated: 0,
+      lastUpdated: -Math.random() * keyConfig.interval, // Random jitter to spread out updates
       updateRequested: keyConfig.enabled, // Only request if enabled
       updating: false,
       failureCount: 0,

@@ -339,7 +339,7 @@ describe("createIntervalCache", () => {
 
     const entry = cache.getEntry("data");
     deepEqual(entry?.value, "initial");
-    deepEqual(entry?.lastUpdated, 0);
+    ok(entry?.lastUpdated <= 0, "lastUpdated should be <= 0 due to jitter"); // Now has negative jitter
     deepEqual(entry?.updateRequested, true);
     deepEqual(entry?.updating, false);
 
@@ -1007,6 +1007,50 @@ describe("createIntervalCache", () => {
     deepEqual(errorEvents.length, 1);
     deepEqual(errorEvents[0].key, "failing");
     ok(errorEvents[0].message.includes("Test error"));
+
+    cache.stop();
+  });
+
+  it("applies random jitter to prevent thundering herd", () => {
+    const cache = createIntervalCache({
+      key1: {
+        enabled: true,
+        initialValue: "value1",
+        interval: 5000,
+        fetch: async () => "updated1",
+      },
+      key2: {
+        enabled: true,
+        initialValue: "value2", 
+        interval: 5000,
+        fetch: async () => "updated2",
+      },
+      key3: {
+        enabled: true,
+        initialValue: "value3",
+        interval: 5000,
+        fetch: async () => "updated3",
+      },
+    });
+
+    // All entries should have negative lastUpdated due to jitter
+    const entry1 = cache.getEntry("key1");
+    const entry2 = cache.getEntry("key2");
+    const entry3 = cache.getEntry("key3");
+    
+    ok(entry1?.lastUpdated < 0, "key1 should have negative lastUpdated");
+    ok(entry2?.lastUpdated < 0, "key2 should have negative lastUpdated");
+    ok(entry3?.lastUpdated < 0, "key3 should have negative lastUpdated");
+    
+    // They should be within the interval range
+    ok(entry1.lastUpdated >= -5000, "key1 jitter should be within interval");
+    ok(entry2.lastUpdated >= -5000, "key2 jitter should be within interval");
+    ok(entry3.lastUpdated >= -5000, "key3 jitter should be within interval");
+    
+    // They should likely be different (very low chance of collision)
+    ok(entry1.lastUpdated !== entry2.lastUpdated || 
+       entry2.lastUpdated !== entry3.lastUpdated, 
+       "Jitter should make entries have different lastUpdated values");
 
     cache.stop();
   });
