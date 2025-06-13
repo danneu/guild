@@ -102,6 +102,7 @@ import services from './services'
 import cache2 from './cache2'
 import makeAgo from './ago'
 import protectCsrf from './middleware/protect-csrf'
+import { pool } from './db/util'
 
 app.use(middleware.methodOverride())
 
@@ -592,7 +593,7 @@ router.post('/sessions', async (ctx: Context) => {
     )
 
     // User authenticated
-    var session = await db.createSession({
+    var session = await db.createSession(pool, {
         userId: user.id,
         ipAddress: ctx.request.ip,
         interval: ctx.vals['remember-me'] ? '1 year' : '2 weeks',
@@ -874,7 +875,7 @@ router.post('/reset-password', async (ctx: Context) => {
 
     // Log the user in
     var interval = rememberMe ? '1 year' : '1 day'
-    var session = await db.createSession({
+    var session = await db.createSession(pool, {
         userId: user.id,
         ipAddress: ctx.request.ip,
         interval: interval,

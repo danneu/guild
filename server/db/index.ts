@@ -9,40 +9,13 @@ import { v7 as uuidv7 } from 'uuid'
 import * as config from '../config'
 import * as belt from '../belt'
 import * as pre from '../presenters'
-import { pool } from './util'
-import { PoolClient } from 'pg'
-import { sql } from 'pg-extra'
+import { pool, maybeOneRow, exactlyOneRow } from './util'
+import { Client, Pool, PoolClient } from 'pg'
 import * as revs from './revs'
 import { Context } from 'koa';
 
-// If a client is not provided to fn as first argument,
-// we'll pass one into it.
-/* function wrapOptionalClient(fn) {
- *   return function*() {
- *     var args = Array.prototype.slice.call(arguments, 0);
- *     if (belt.isDBClient(args[0])) {
- *       return yield fn.apply(null, args);
- *     } else {
- *       return yield withTransaction(function*(client) {
- *         return yield fn.apply(null, [client].concat(args));
- *       });
- *     }
- *   };
- * }
- * */
-
-function wrapOptionalClient(fn: (client: PoolClient, ...args: any[]) => Promise<any>): (...args: any[]) => Promise<any> {
-    return async function() {
-        const args = Array.prototype.slice.call(arguments, 0)
-        if (belt.isDBClient(args[0])) {
-            return fn.apply(null, args as [PoolClient, ...any[]])
-        } else {
-            return pool.withTransaction(async client => {
-                return fn.apply(null, [client, ...args])
-            })
-        }
-    }
-}
+// TODO: db fns should take this as an argument esp if they can be used inside/outside txns
+export type PgQueryExecutor = Pool | PoolClient | Client
 
 // jun-12-2025: another bit of code archaelogy!
 //
@@ -60,7 +33,7 @@ function wrapOptionalClient(fn: (client: PoolClient, ...args: any[]) => Promise<
 //         }
 // }
 
-export const updatePostStatus = async function(postId, status) {
+export async function updatePostStatus(postId: number, status: 'hide' | 'unhide') {
     const STATUS_WHITELIST = ['hide', 'unhide']
     assert(STATUS_WHITELIST.includes(status))
 
@@ -76,15 +49,15 @@ export const updatePostStatus = async function(postId, status) {
             throw new Error('Invalid status ' + status)
     }
 
-    return pool.one(sql`
+    return pool.query(`
     UPDATE posts
-    SET is_hidden = ${isHidden}
-    WHERE id = ${postId}
+    SET is_hidden = $1
+    WHERE id = $2
     RETURNING *
-  `)
+  `, [isHidden, postId]).then(maybeOneRow)
 }
 
-export const updateTopicStatus = async function(topicId, status) {
+export async function updateTopicStatus(topicId: number, status: 'stick' | 'unstick' | 'hide' | 'unhide' | 'close' | 'open') {
     const STATUS_WHITELIST = [
         'stick',
         'unstick',
@@ -122,14 +95,14 @@ export const updateTopicStatus = async function(topicId, status) {
             throw new Error('Invalid status ' + status)
     }
 
-    return pool.one(sql`
+    return pool.query(`
     UPDATE topics
-    SET is_sticky = COALESCE(${a}, is_sticky),
-        is_hidden = COALESCE(${b}, is_hidden),
-        is_closed = COALESCE(${c}, is_closed)
-    WHERE id = ${topicId}
+    SET is_sticky = COALESCE($1, is_sticky),
+        is_hidden = COALESCE($2, is_hidden),
+        is_closed = COALESCE($3, is_closed)
+    WHERE id = $4
     RETURNING *
-  `)
+  `, [a, b, c, topicId]).then(maybeOneRow)
 }
 
 // Same as findTopic but takes a userid so that it can return a topic
@@ -138,7 +111,7 @@ export const updateTopicStatus = async function(topicId, status) {
 export const findTopicWithIsSubscribed = async function(userId, topicId) {
     debug('[findTopicWithIsSubscribed] userId %s, topicId %s:', userId, topicId)
 
-    return pool.one(sql`
+    return pool.query(`
     SELECT
       (
         CASE
@@ -149,9 +122,7 @@ export const findTopicWithIsSubscribed = async function(userId, topicId) {
                 (
                   SELECT t.latest_ic_post_id > w.watermark_post_id
                   FROM topics_users_watermark w
-                  WHERE w.topic_id = t.id AND w.post_type = 'ic' AND w.user_id = ${
-                      userId
-                  }
+                  WHERE w.topic_id = t.id AND w.post_type = 'ic' AND w.user_id = $1
                 ),
                 true
               )
@@ -167,9 +138,7 @@ export const findTopicWithIsSubscribed = async function(userId, topicId) {
                 (
                   SELECT COALESCE(t.latest_ooc_post_id, t.latest_post_id) > w.watermark_post_id
                   FROM topics_users_watermark w
-                  WHERE w.topic_id = t.id AND w.post_type = 'ooc' AND w.user_id = ${
-                      userId
-                  }
+                  WHERE w.topic_id = t.id AND w.post_type = 'ooc' AND w.user_id = $1
                 ),
                 true
               )
@@ -185,9 +154,7 @@ export const findTopicWithIsSubscribed = async function(userId, topicId) {
                 (
                   SELECT t.latest_char_post_id > w.watermark_post_id
                   FROM topics_users_watermark w
-                  WHERE w.topic_id = t.id AND w.post_type = 'char' AND w.user_id = ${
-                      userId
-                  }
+                  WHERE w.topic_id = t.id AND w.post_type = 'char' AND w.user_id = $1
                 ),
                 true
               )
@@ -196,7 +163,7 @@ export const findTopicWithIsSubscribed = async function(userId, topicId) {
       ) unread_char,
       t.*,
       to_json(f.*) "forum",
-      array_agg(${userId}::int) @> Array[ts.user_id::int] "is_subscribed",
+      array_agg($1::int) @> Array[ts.user_id::int] "is_subscribed",
       (SELECT to_json(u2.*) FROM users u2 WHERE u2.id = t.user_id) "user",
       (SELECT json_agg(u3.uname) FROM users u3 WHERE u3.id = ANY (t.co_gm_ids::int[])) co_gm_unames,
       (SELECT json_agg(tb.banned_id) FROM topic_bans tb WHERE tb.topic_id = t.id) banned_ids,
@@ -208,49 +175,47 @@ export const findTopicWithIsSubscribed = async function(userId, topicId) {
       ) tags
     FROM topics t
     JOIN forums f ON t.forum_id = f.id
-    LEFT OUTER JOIN topic_subscriptions ts ON t.id = ts.topic_id AND ts.user_id = ${
-        userId
-    }
-    WHERE t.id = ${topicId}
+    LEFT OUTER JOIN topic_subscriptions ts ON t.id = ts.topic_id AND ts.user_id = $1
+    WHERE t.id = $2
     GROUP BY t.id, f.id, ts.user_id
-  `)
+  `, [userId, topicId]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
 
-export const updateUserBio = async function(userId, bioMarkup, bioHtml) {
+export async function updateUserBio(userId: number, bioMarkup: string, bioHtml: string) {
     assert(_.isString(bioMarkup))
 
-    return pool.one(sql`
+    return pool.query(`
     UPDATE users
-    SET bio_markup = ${bioMarkup}, bio_html = ${bioHtml}
-    WHERE id = ${userId}
+    SET bio_markup = $1, bio_html = $2
+    WHERE id = $3
     RETURNING *
-  `)
+  `, [bioMarkup, bioHtml, userId]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
 
-export const findTopic = async function(topicId) {
-    return pool.one(sql`
+export async function findTopic(topicId: number) {
+    return pool.query(`
     SELECT
       t.*,
       to_json(f.*) "forum"
     FROM topics t
     JOIN forums f ON t.forum_id = f.id
-    WHERE t.id = ${topicId}
-  `)
+    WHERE t.id = $1
+  `, [topicId]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
 
-export const deleteResetTokens = async function(userId) {
+export async function deleteResetTokens(userId: number) {
     assert(_.isNumber(userId))
 
-    return pool.query(sql`
+    return pool.query(`
     DELETE FROM reset_tokens
-    WHERE user_id = ${userId}
-  `)
+    WHERE user_id = $1
+  `, [userId])
 }
 
 ////////////////////////////////////////////////////////////
@@ -258,13 +223,13 @@ export const deleteResetTokens = async function(userId) {
 export const findLatestActiveResetToken = async function(userId) {
     assert(_.isNumber(userId))
 
-    return pool.one(sql`
+    return pool.query(`
     SELECT *
     FROM active_reset_tokens
-    WHERE user_id = ${userId}
+    WHERE user_id = $1
     ORDER BY created_at DESC
     LIMIT 1
-  `)
+  `, [userId]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -274,19 +239,19 @@ export const createResetToken = async function(userId) {
 
     const uuid = uuidv7()
 
-    return pool.one(sql`
+    return pool.query(`
     INSERT INTO reset_tokens (user_id, token)
-    VALUES (${userId}, ${uuid})
+    VALUES ($1, $2)
     RETURNING *
-  `)
+  `, [userId, uuid]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
 
 export const findUserById = async function(id) {
-    return pool.one(sql`
-    SELECT * FROM users WHERE id = ${id}
-  `)
+    return pool.query(`
+    SELECT * FROM users WHERE id = $1
+  `, [id]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -297,17 +262,17 @@ export const findUserBySlug = async function(slug) {
 
     slug = slug.toLowerCase()
 
-    return pool.one(sql`
+    return pool.query(`
     SELECT u.*
     FROM users u
-    WHERE u.slug = ${slug}
+    WHERE u.slug = $1
        OR id = (
          SELECT user_id
          FROM unames
-         WHERE slug = ${slug}
+         WHERE slug = $2
            AND recycle = false
        )
-  `)
+  `, [slug, slug]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -319,15 +284,15 @@ export const findUserWithRatingsBySlug = async function(slug) {
 
     slug = slug.toLowerCase()
 
-    return pool.one(sql`
+    return pool.query(`
     WITH u1 AS (
       SELECT *
       FROM users
-      WHERE slug = ${slug}
+      WHERE slug = $1
          OR id = (
            SELECT user_id
            FROM unames
-           WHERE slug = ${slug}
+           WHERE slug = $2
              AND recycle = false
          )
     ),
@@ -362,7 +327,7 @@ export const findUserWithRatingsBySlug = async function(slug) {
       ) ratings_given
     FROM users
     WHERE id = (SELECT id FROM u1)
-  `)
+  `, [slug, slug]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -373,18 +338,18 @@ export const findUserByUnameOrEmail = async function(unameOrEmail) {
 
     const slug = belt.slugifyUname(unameOrEmail)
 
-    return pool.one(sql`
+    return pool.query(`
     SELECT *
     FROM users u
-    WHERE u.slug = ${slug}
-       OR lower(u.email) = lower(${unameOrEmail})
+    WHERE u.slug = $1
+       OR lower(u.email) = lower($2)
        OR id = (
          SELECT user_id
          FROM unames
-         WHERE slug = ${slug}
+         WHERE slug = $3
            AND recycle = false
        )
-  `)
+  `, [slug, unameOrEmail, slug]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -393,11 +358,11 @@ export const findUserByUnameOrEmail = async function(unameOrEmail) {
 export const findUserByEmail = async function(email) {
     debug('[findUserByEmail] email: ' + email)
 
-    return pool.one(sql`
+    return pool.query(`
     SELECT *
     FROM users u
-    WHERE lower(u.email) = lower(${email});
-  `)
+    WHERE lower(u.email) = lower($1);
+  `, [email]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -408,11 +373,11 @@ export const findUserByUname = async function(uname) {
 
     const slug = belt.slugifyUname(uname)
 
-    return pool.one(sql`
+    return pool.query(`
     SELECT *
     FROM users
-    WHERE slug = ${slug}
-  `)
+    WHERE slug = $1
+  `, [slug]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -421,7 +386,7 @@ export const findUserByUname = async function(uname) {
 export const findRecentPostsForUserId = async function(userId, beforeId) {
     assert(_.isNumber(beforeId) || _.isUndefined(beforeId))
 
-    return pool.many(sql`
+    return pool.query(`
     SELECT
       p.*,
       to_json(t.*) "topic",
@@ -429,10 +394,10 @@ export const findRecentPostsForUserId = async function(userId, beforeId) {
     FROM posts p
     JOIN topics t ON p.topic_id = t.id
     JOIN forums f ON t.forum_id = f.id
-    WHERE p.user_id = ${userId} AND p.id < ${beforeId || 1e9}
+    WHERE p.user_id = $1 AND p.id < $2
     ORDER BY p.id DESC
-    LIMIT ${config.RECENT_POSTS_PER_PAGE}
-  `)
+    LIMIT $3
+  `, [userId, beforeId || 1e9, config.RECENT_POSTS_PER_PAGE]).then(res => res.rows)
 }
 
 ////////////////////////////////////////////////////////////
@@ -441,7 +406,7 @@ export const findRecentPostsForUserId = async function(userId, beforeId) {
 export const findRecentTopicsForUserId = async function(userId, beforeId) {
     assert(_.isNumber(beforeId) || _.isUndefined(beforeId))
 
-    return pool.many(sql`
+    return pool.query(`
     SELECT
       t.*,
       to_json(f.*) "forum",
@@ -453,11 +418,11 @@ export const findRecentTopicsForUserId = async function(userId, beforeId) {
       FROM posts p
       WHERE p.topic_id = t.id
     )
-    WHERE t.user_id = ${userId} AND t.id < ${beforeId || 1e9}
+    WHERE t.user_id = $1 AND t.id < $2
     GROUP BY t.id, f.id, p.id
     ORDER BY t.id DESC
-    LIMIT ${config.RECENT_POSTS_PER_PAGE}
-  `)
+    LIMIT $3
+  `, [userId, beforeId || 1e9, config.RECENT_POSTS_PER_PAGE]).then(res => res.rows)
 }
 
 ////////////////////////////////////////////////////////////
@@ -465,11 +430,11 @@ export const findRecentTopicsForUserId = async function(userId, beforeId) {
 export const _findUser = async function(userId) {
     debug('[findUser] userId: ' + userId)
 
-    return pool.one(sql`
+    return pool.query(`
     SELECT *
     FROM users
-    WHERE id = ${userId}
-  `)
+    WHERE id = $1
+  `, [userId]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -482,11 +447,11 @@ export const findUsersByUnames = async function(unames) {
 
     unames = unames.map(s => s.toLowerCase())
 
-    return pool.many(sql`
+    return pool.query(`
     SELECT u.*
     FROM users u
-    WHERE lower(u.uname) = ANY (${unames}::text[])
-  `)
+    WHERE lower(u.uname) = ANY ($1::text[])
+  `, [unames]).then(res => res.rows)
 }
 
 ////////////////////////////////////////////////////////////
@@ -503,39 +468,39 @@ export const createConvo = function(args) {
 
     return pool.withTransaction(async client => {
         // Create convo
-        const convo = await client.one(sql`
+        const convo = await client.query(`
       INSERT INTO convos (user_id, title)
-      VALUES (${args.userId}, ${args.title})
+      VALUES ($1, $2)
       RETURNING *
-    `)
+    `, [args.userId, args.title]).then(maybeOneRow)
 
         // Insert participants and the PM in parallel
 
         const tasks = args.toUserIds
             .map(toUserId => {
                 // insert each receiving participant
-                client.query(sql`
+                client.query(`
         INSERT INTO convos_participants (convo_id, user_id)
-        VALUES (${convo.id}, ${toUserId})
-      `)
+        VALUES ($1, $2)
+      `, [convo.id, toUserId])
             })
             .concat([
                 // insert the sending participant
-                client.query(sql`
+                client.query(`
         INSERT INTO convos_participants (convo_id, user_id)
-        VALUES (${convo.id}, ${args.userId})
-      `),
+        VALUES ($1, $2)
+      `, [convo.id, args.userId]),
                 // insert the PM
-                client.query(sql`
+                client.query(`
         INSERT INTO pms
           (convo_id, user_id, ip_address, markup, html, idx)
         VALUES (
-          ${convo.id}, ${args.userId}, ${args.ipAddress},
-          ${args.markup}, ${args.html},
+          $1, $2, $3,
+          $4, $5,
           0
         )
         RETURNING *
-      `),
+      `, [convo.id, args.userId, args.ipAddress, args.markup, args.html]),
             ])
 
         const results = await Promise.all(tasks)
@@ -557,15 +522,15 @@ export const findUserByResetToken = function(resetToken) {
         return
     }
 
-    return pool.one(sql`
+    return pool.query(`
     SELECT *
     FROM users u
     WHERE u.id = (
       SELECT rt.user_id
       FROM active_reset_tokens rt
-      WHERE rt.token = ${resetToken}
+      WHERE rt.token = $1
     )
-  `)
+  `, [resetToken]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -573,7 +538,7 @@ export const findUserByResetToken = function(resetToken) {
 export const findUserBySessionId = async function(sessionId) {
     assert(belt.isValidUuid(sessionId))
 
-    const user = await pool.one(sql`
+    const user = await pool.query(`
     UPDATE users
     SET last_online_at = NOW()
     WHERE id = (
@@ -582,11 +547,11 @@ export const findUserBySessionId = async function(sessionId) {
       WHERE u.id = (
         SELECT s.user_id
         FROM active_sessions s
-        WHERE s.id = ${sessionId}
+        WHERE s.id = $1
       )
     )
     RETURNING *
-  `)
+  `, [sessionId]).then(maybeOneRow)
 
     if (user && user.roles) {
         user.roles = pgArray.parse(user.roles, _.identity)
@@ -597,22 +562,27 @@ export const findUserBySessionId = async function(sessionId) {
 
 ////////////////////////////////////////////////////////////
 
-export const createSession = wrapOptionalClient(_createSession)
-async function _createSession(client, props) {
+
+export async function createSession(pgClient: PgQueryExecutor, props: {
+  userId: number
+  ipAddress: string
+  interval: string
+}) {
     debug('[createSession] props: ', props)
-    assert(belt.isDBClient(client))
+    assert(belt.isDBClient(pgClient))
     assert(_.isNumber(props.userId))
     assert(_.isString(props.ipAddress))
     assert(_.isString(props.interval))
 
     const uuid = uuidv7()
 
-    return client.one(sql`
+    return pgClient.query(`
     INSERT INTO sessions (user_id, id, ip_address, expired_at)
-    VALUES (${props.userId}, ${uuid}, ${props.ipAddress}::inet,
-      NOW() + ${props.interval}::interval)
+    VALUES ($1, $2, $3::inet,
+      NOW() + $4::interval)
     RETURNING *
-  `)
+  `, [props.userId, uuid, props.ipAddress, props.interval])
+    .then(exactlyOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -627,7 +597,7 @@ export const findTopicsByForumId = async function(forumId, limit, offset) {
         offset
     )
 
-    return pool.many(sql`
+    return pool.query(`
 SELECT
   t.*,
   to_json(u.*) "user",
@@ -645,12 +615,12 @@ JOIN users u ON t.user_id = u.id
 LEFT JOIN posts p ON t.latest_post_id = p.id
 LEFT JOIN users u2 ON p.user_id = u2.id
 LEFT JOIN forums f ON t.forum_id = f.id
-WHERE t.forum_id = ${forumId}
+WHERE t.forum_id = $1
   AND t.is_hidden = false
 ORDER BY t.is_sticky DESC, t.latest_post_at DESC
-LIMIT ${limit}
-OFFSET ${offset}
-  `)
+LIMIT $2
+OFFSET $3
+  `, [forumId, limit, offset]).then(res => res.rows)
 }
 
 ////////////////////////////////////////////////////////////
@@ -671,17 +641,17 @@ export const findTopicsWithHasPostedByForumId = async function(
         userId
     )
 
-    return pool.many(sql`
+    return pool.query(`
 SELECT
   EXISTS(
-    SELECT 1 FROM posts WHERE topic_id = t.id AND user_id = ${userId}
+    SELECT 1 FROM posts WHERE topic_id = t.id AND user_id = $1
   ) has_posted,
   (
     SELECT t.latest_post_id > (
       SELECT COALESCE(MAX(w.watermark_post_id), 0)
       FROM topics_users_watermark w
       WHERE w.topic_id = t.id
-        AND w.user_id = ${userId}
+        AND w.user_id = $2
     )
   ) unread_posts,
   t.*,
@@ -700,12 +670,12 @@ JOIN users u ON t.user_id = u.id
 LEFT JOIN posts p ON t.latest_post_id = p.id
 LEFT JOIN users u2 ON p.user_id = u2.id
 LEFT JOIN forums f ON t.forum_id = f.id
-WHERE t.forum_id = ${forumId}
+WHERE t.forum_id = $3
   AND t.is_hidden = false
 ORDER BY t.is_sticky DESC, t.latest_post_at DESC
-LIMIT ${limit}
-OFFSET ${offset}
-  `)
+LIMIT $4
+OFFSET $5
+  `, [userId, userId, forumId, limit, offset]).then(res => res.rows)
 }
 
 ////////////////////////////////////////////////////////////
@@ -716,12 +686,12 @@ export const updateUserPassword = async function(userId, password) {
 
     const digest = await belt.hashPassword(password)
 
-    return pool.one(sql`
+    return pool.query(`
     UPDATE users
-    SET digest = ${digest}
-    WHERE id = ${userId}
+    SET digest = $1
+    WHERE id = $2
     RETURNING *
-  `)
+  `, [digest, userId]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -738,13 +708,11 @@ export const updatePost = async function(userId, postId, markup, html, reason) {
     assert(typeof html === 'string')
     assert(!reason || typeof reason === 'string')
 
-    return pool.one(sql`
+    return pool.query(`
     WITH rev AS (
       INSERT INTO post_revs (user_id, post_id, markup, html, length, reason)
       VALUES (
-        ${userId}, ${postId}, ${markup}, ${html}, ${Buffer.byteLength(
-        markup
-    )}, ${reason}
+        $1, $2, $3, $4, $5, $6
       )
       RETURNING html, markup
     )
@@ -753,9 +721,9 @@ export const updatePost = async function(userId, postId, markup, html, reason) {
       , html = rev.html
       , updated_at = NOW()
     FROM rev
-    WHERE posts.id = ${postId}
+    WHERE posts.id = $7
     RETURNING *
-  `)
+  `, [userId, postId, markup, html, Buffer.byteLength(markup), reason, postId]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -765,12 +733,12 @@ export const updatePm = async function(id, markup, html) {
     assert(_.isString(markup))
     assert(_.isString(html))
 
-    return pool.one(sql`
+    return pool.query(`
 UPDATE pms
-SET markup = ${markup}, html = ${html}, updated_at = NOW()
-WHERE id = ${id}
+SET markup = $1, html = $2, updated_at = NOW()
+WHERE id = $3
 RETURNING *
-  `)
+  `, [markup, html, id]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -778,7 +746,7 @@ RETURNING *
 // Attaches topic and forum to post for authorization checks
 // See cancan.js 'READ_POST'
 export const findPostWithTopicAndForum = async function(postId) {
-    return pool.one(sql`
+    return pool.query(`
 SELECT
   p.*,
   to_json(t.*) "topic",
@@ -786,15 +754,15 @@ SELECT
 FROM posts p
 JOIN topics t ON p.topic_id = t.id
 JOIN forums f ON t.forum_id = f.id
-WHERE p.id = ${postId}
-  `)
+WHERE p.id = $1
+  `, [postId]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
 
 // Keep findPost and findPm in sync
 export const findPostById = async function(postId) {
-    return pool.one(sql`
+    return pool.query(`
 SELECT
   p.*,
   to_json(t.*) "topic",
@@ -803,21 +771,21 @@ SELECT
 FROM posts p
 JOIN topics t ON p.topic_id = t.id
 JOIN forums f ON t.forum_id = f.id
-WHERE p.id = ${postId}
-  `)
+WHERE p.id = $1
+  `, [postId]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
 
 export const findPmById = async function findPm(id) {
-    return pool.one(sql`
+    return pool.query(`
 SELECT
   pms.*,
   to_json(c.*) "convo"
 FROM pms
 JOIN convos c ON pms.convo_id = c.id
-WHERE pms.id = ${id}
-  `)
+WHERE pms.id = $1
+  `, [id]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -826,27 +794,27 @@ export const findUsersContainingString = async function(searchTerm) {
     // searchTerm is the term that the user searched for
     assert(_.isString(searchTerm) || _.isUndefined(searchTerm))
 
-    return pool.many(sql`
+    return pool.query(`
 SELECT *
 FROM users
-WHERE lower(uname) LIKE '%' || lower(${searchTerm}::text) || '%'
+WHERE lower(uname) LIKE '%' || lower($1::text) || '%'
 ORDER BY id DESC
-LIMIT ${config.USERS_PER_PAGE}::bigint
-  `)
+LIMIT $2::bigint
+  `, [searchTerm, config.USERS_PER_PAGE]).then(res => res.rows)
 }
 
 ////////////////////////////////////////////////////////////
 
 // Ignore nuked users
 export const paginateUsers = async function(beforeId = 1e9) {
-    return pool.many(sql`
+    return pool.query(`
     SELECT *
     FROM users
-    WHERE id < ${beforeId}
+    WHERE id < $1
       AND is_nuked = false
     ORDER BY id DESC
-    LIMIT ${config.USERS_PER_PAGE}::bigint
-  `)
+    LIMIT $2::bigint
+  `, [beforeId, config.USERS_PER_PAGE]).then(res => res.rows)
 }
 
 ////////////////////////////////////////////////////////////
@@ -855,15 +823,15 @@ export const findUsersContainingStringWithId = async function(searchTerm, before
     // searchTerm is the term that the user searched for
     assert(_.isString(searchTerm) || _.isUndefined(searchTerm))
 
-    return pool.many(sql`
+    return pool.query(`
 SELECT *
 FROM users
 WHERE
-lower(uname) LIKE '%' || lower(${searchTerm}::text) || '%'
-AND id < ${beforeId}
+lower(uname) LIKE '%' || lower($1::text) || '%'
+AND id < $2
 ORDER BY id DESC
-LIMIT ${config.USERS_PER_PAGE}::bigint
-  `)
+LIMIT $3::bigint
+  `, [searchTerm, beforeId, config.USERS_PER_PAGE]).then(res => res.rows)
 }
 
 ////////////////////////////////////////////////////////////
@@ -874,16 +842,16 @@ export const findPmsByConvoId = async function(convoId, page) {
     const fromIdx = (page - 1) * config.POSTS_PER_PAGE
     const toIdx = fromIdx + config.POSTS_PER_PAGE
 
-    return pool.many(sql`
+    return pool.query(`
 SELECT
   pms.*,
   to_json(u.*) "user"
 FROM pms
 JOIN users u ON pms.user_id = u.id
-WHERE pms.convo_id = ${convoId} AND pms.idx >= ${fromIdx} AND pms.idx < ${toIdx}
+WHERE pms.convo_id = $1 AND pms.idx >= $2 AND pms.idx < $3
 GROUP BY pms.id, u.id
 ORDER BY pms.id
-  `)
+  `, [convoId, fromIdx, toIdx]).then(res => res.rows)
 }
 
 ////////////////////////////////////////////////////////////
@@ -911,7 +879,7 @@ export const findPostsByTopicId = async function(topicId, postType, page) {
     // html/markup field in general since they can be huge.
     //
     // Trying to be frugal with the projection
-    const rows = await pool.many(sql`
+    const rows = await pool.query(`
     SELECT
       p.id,
       p.text,
@@ -964,13 +932,13 @@ export const findPostsByTopicId = async function(topicId, postType, page) {
     JOIN forums f ON t.forum_id = f.id
     LEFT OUTER JOIN ratings r ON p.id = r.post_id
     LEFT OUTER JOIN statuses s ON u.current_status_id = s.id
-    WHERE p.topic_id = ${topicId}
-      AND p.type = ${postType}
-      AND p.idx >= ${fromIdx}
-      AND p.idx < ${toIdx}
+    WHERE p.topic_id = $1
+      AND p.type = $2
+      AND p.idx >= $3
+      AND p.idx < $4
     GROUP BY p.id, u.id, t.id, f.id, s.id
     ORDER BY p.idx
-  `)
+  `, [topicId, postType, fromIdx, toIdx]).then(res => res.rows)
 
     return rows.map(row => {
         // Make current_status a property of post.user where it makes more sense
@@ -990,16 +958,16 @@ export const findPostsByTopicId = async function(topicId, postType, page) {
 // TODO: Order by
 // TODO: Pagination
 export const findForumWithTopics = async function(forumId) {
-    const forum = await pool.one(sql`
+    const forum = await pool.query(`
     SELECT
       f.*,
       to_json(array_agg(t.*)) "topics",
       to_json(p.*) "latest_post"
     FROM forums f
     LEFT OUTER JOIN topics t ON f.id = t.forum_id
-    WHERE f.id = ${forumId}
+    WHERE f.id = $1
     GROUP BY f.id
-  `)
+  `, [forumId]).then(maybeOneRow)
 
     if (!forum) return null
 
@@ -1014,22 +982,22 @@ export const findForumWithTopics = async function(forumId) {
 
 // Keep findPostWithTopic and findPmWithConvo in sync
 export const findPostWithTopic = async function(postId) {
-    return pool.one(sql`
+    return pool.query(`
     SELECT
       p.*,
       to_json(t.*) "topic"
     FROM posts p
     JOIN topics t ON p.topic_id = t.id
-    WHERE p.id = ${postId}
+    WHERE p.id = $1
     GROUP BY p.id, t.id
-  `)
+  `, [postId]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
 
 // Keep findPostWithTopic and findPmWithConvo in sync
 export const findPmWithConvo = async function(pmId) {
-    return pool.one(sql`
+    return pool.query(`
 SELECT
   pms.*,
   to_json(c.*) "convo",
@@ -1038,9 +1006,9 @@ FROM pms
 JOIN convos c ON pms.convo_id = c.id
 JOIN convos_participants cp ON cp.convo_id = pms.convo_id
 JOIN users u ON cp.user_id = u.id
-WHERE pms.id = ${pmId}
+WHERE pms.id = $1
 GROUP BY pms.id, c.id
-  `)
+  `, [pmId]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -1052,12 +1020,12 @@ export const createPm = async function(props) {
     assert(_.isString(props.markup))
     assert(_.isString(props.html))
 
-    return pool.one(sql`
+    return pool.query(`
     INSERT INTO pms (user_id, ip_address, convo_id, markup, html)
-    VALUES (${props.userId}, ${props.ipAddress}::inet, ${props.convoId},
-      ${props.markup}, ${props.html})
+    VALUES ($1, $2::inet, $3,
+      $4, $5)
     RETURNING *
-  `)
+  `, [props.userId, props.ipAddress, props.convoId, props.markup, props.html]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -1082,17 +1050,17 @@ export const createPost = async function(args) {
     assert(args.idx === -1 || typeof args.idx === 'undefined')
 
     return pool.withTransaction(async client => {
-        const post = await client.one(sql`
+        const post = await client.query(`
       INSERT INTO posts
         (user_id, ip_address, topic_id, markup, html, type, is_roleplay, idx)
       VALUES (
-        ${args.userId}, ${args.ipAddress}::inet,
-        ${args.topicId}, ${args.markup},
-        ${args.html}, ${args.type}, ${args.isRoleplay},
-        ${args.idx}
+        $1, $2::inet,
+        $3, $4,
+        $5, $6, $7,
+        $8
       )
       RETURNING *
-    `)
+    `, [args.userId, args.ipAddress, args.topicId, args.markup, args.html, args.type, args.isRoleplay, args.idx]).then(maybeOneRow)
 
         await revs.insertPostRev(
             client,
@@ -1136,24 +1104,22 @@ export const createTopic = async function(props) {
 
     return pool.withTransaction(async client => {
         // Create topic
-        const topic = await client.one(sql`
+        const topic = await client.query(`
       INSERT INTO topics
         (forum_id, user_id, title, is_roleplay, join_status)
-      VALUES (${props.forumId}, ${props.userId}, ${props.title},
-        ${props.isRoleplay}, ${props.joinStatus})
+      VALUES ($1, $2, $3,
+        $4, $5)
       RETURNING *
-    `)
+    `, [props.forumId, props.userId, props.title, props.isRoleplay, props.joinStatus]).then(maybeOneRow)
 
         // Create topic's first post
-        const post = await client.one(sql`
+        const post = await client.query(`
       INSERT INTO posts
         (topic_id, user_id, ip_address, markup, html, type, is_roleplay, idx)
-      VALUES (${topic.id}, ${props.userId}, ${props.ipAddress}::inet,
-       ${props.markup}, ${props.html}, ${props.postType}, ${
-            props.isRoleplay
-        }, 0)
+      VALUES ($1, $2, $3::inet,
+       $4, $5, $6, $7, 0)
       RETURNING *
-    `)
+    `, [topic.id, props.userId, props.ipAddress, props.markup, props.html, props.postType, props.isRoleplay]).then(maybeOneRow)
 
         // Create post revision
         await revs.insertPostRev(
@@ -1170,10 +1136,10 @@ export const createTopic = async function(props) {
         // Create tags if given
         if (props.tagIds) {
             const tasks = props.tagIds.map(tagId =>
-                client.query(sql`
+                client.query(`
         INSERT INTO tags_topics (topic_id, tag_id)
-        VALUES (${topic.id}, ${tagId})
-      `)
+        VALUES ($1, $2)
+      `, [topic.id, tagId])
             )
             await Promise.all(tasks)
         }
@@ -1191,28 +1157,24 @@ export const updateUser = async (userId, attrs) => {
     debug('[updateUser] attrs', attrs)
 
     return pool
-        .one(
-            sql`
+        .query(`
     UPDATE users
     SET
-      email = COALESCE(${attrs.email}, email),
-      sig = COALESCE(${attrs.sig}, sig),
-      avatar_url = COALESCE(${attrs.avatar_url}, avatar_url),
-      hide_sigs = COALESCE(${attrs.hide_sigs}, hide_sigs),
-      is_ghost = COALESCE(${attrs.is_ghost}, is_ghost),
-      sig_html = COALESCE(${attrs.sig_html}, sig_html),
-      custom_title = COALESCE(${attrs.custom_title}, custom_title),
-      is_grayscale = COALESCE(${attrs.is_grayscale}, is_grayscale),
-      force_device_width = COALESCE(${
-          attrs.force_device_width
-      }, force_device_width),
-      hide_avatars = COALESCE(${attrs.hide_avatars}, hide_avatars),
-      email_verified = COALESCE(${attrs.email_verified}, email_verified),
-      eflags = COALESCE(${attrs.eflags}, eflags)
-    WHERE id = ${userId}
+      email = COALESCE($1, email),
+      sig = COALESCE($2, sig),
+      avatar_url = COALESCE($3, avatar_url),
+      hide_sigs = COALESCE($4, hide_sigs),
+      is_ghost = COALESCE($5, is_ghost),
+      sig_html = COALESCE($6, sig_html),
+      custom_title = COALESCE($7, custom_title),
+      is_grayscale = COALESCE($8, is_grayscale),
+      force_device_width = COALESCE($9, force_device_width),
+      hide_avatars = COALESCE($10, hide_avatars),
+      email_verified = COALESCE($11, email_verified),
+      eflags = COALESCE($12, eflags)
+    WHERE id = $13
     RETURNING *
-  `
-        )
+  `, [attrs.email, attrs.sig, attrs.avatar_url, attrs.hide_sigs, attrs.is_ghost, attrs.sig_html, attrs.custom_title, attrs.is_grayscale, attrs.force_device_width, attrs.hide_avatars, attrs.email_verified, attrs.eflags, userId]).then(maybeOneRow)
         .catch(err => {
             if (err.code === '23505') {
                 if (/"unique_email"/.test(err.toString())) {
@@ -1226,19 +1188,19 @@ export const updateUser = async (userId, attrs) => {
 ////////////////////////////////////////////////////////////
 
 export const updateUserRole = async function(userId, role) {
-    return pool.one(sql`
+    return pool.query(`
     UPDATE users
-    SET role = ${role}
-    WHERE id = ${userId}
+    SET role = $1
+    WHERE id = $2
     RETURNING *
-  `)
+  `, [role, userId]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
 
 // @fast
 export const findForumById = async function(forumId) {
-    return pool.one(sql`
+    return pool.query(`
     SELECT
       f.*,
       to_json(f2.*) "child_forum",
@@ -1246,9 +1208,9 @@ export const findForumById = async function(forumId) {
     FROM forums f
     LEFT OUTER JOIN forums f2 ON f.id = f2.parent_forum_id
     LEFT OUTER JOIN forums f3 ON f.parent_forum_id = f3.id
-    WHERE f.id = ${forumId}
+    WHERE f.id = $1
     GROUP BY f.id, f2.id, f3.id
-  `)
+  `, [forumId]).then(maybeOneRow)
 }
 
 export const findForum2 = async function(forumId) {
@@ -1257,13 +1219,13 @@ export const findForum2 = async function(forumId) {
     // - child_forums are a list of forums that point to this one
     // - sibling_forums are all children at this level including curr forum
 
-    return pool.one(sql`
+    return pool.query(`
     SELECT
       f.*,
       (
         SELECT COALESCE(json_agg(forums.*), '[]')
         FROM forums
-        WHERE parent_forum_id = ${forumId}
+        WHERE parent_forum_id = $1
       ) "child_forums",
       (
         SELECT COALESCE(json_agg(forums.*), '[]')
@@ -1277,9 +1239,9 @@ export const findForum2 = async function(forumId) {
         WHERE id = f.parent_forum_id
       ) "parent_forum"
     FROM forums f
-    WHERE f.id = ${forumId}
+    WHERE f.id = $2
     GROUP BY f.id
-  `)
+  `, [forumId, forumId]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -1288,7 +1250,7 @@ export const findForum2 = async function(forumId) {
 // it includes the nuke info
 export const findLatestUsers = async function(limit = 25) {
     debug(`[findLatestUsers]`)
-    return pool.many(sql`
+    return pool.query(`
     SELECT
       u.*,
       (
@@ -1304,8 +1266,8 @@ export const findLatestUsers = async function(limit = 25) {
       ) nuked_by
     FROM users u
     ORDER BY id DESC
-    LIMIT ${limit}
-  `)
+    LIMIT $1
+  `, [limit]).then(res => res.rows)
 }
 
 ////////////////////////////////////////////////////////////
@@ -1314,28 +1276,28 @@ export const findLatestUsers = async function(limit = 25) {
 export const findModCategory = async function() {
     debug(`[findModCategory]`)
     const MOD_CATEGORY_ID = 4
-    return pool.one(sql`
+    return pool.query(`
     SELECT c.*
     FROM categories c
-    WHERE c.id = ${MOD_CATEGORY_ID}
-  `)
+    WHERE c.id = $1
+  `, [MOD_CATEGORY_ID]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
 
 // Only returns non-mod-forum categories
 export const findCategories = async function() {
-    return pool.many(sql`
+    return pool.query(`
     SELECT c.*
     FROM categories c
     ORDER BY c.pos
-  `)
+  `).then(res => res.rows)
 }
 
 ////////////////////////////////////////////////////////////
 
 export const findCategoriesWithForums = async function() {
-    const categories = await pool.many(sql`
+    const categories = await pool.query(`
 SELECT
   c.*,
   array_agg(
@@ -1390,7 +1352,7 @@ LEFT OUTER JOIN posts p ON f.latest_post_id = p.id
 WHERE f.is_hidden = false AND c.pos >= 0
 GROUP BY c.id
 ORDER BY c.pos
-  `)
+  `).then(res => res.rows)
 
     categories.forEach(c => {
         c.forums = _.sortBy(c.forums, 'pos')
@@ -1418,12 +1380,12 @@ export const createUserWithSession = async function(props) {
 
     return pool.withTransaction(async client => {
         // Ensure uname doesn't exist in history
-        const history = await client.one(sql`
+        const history = await client.query(`
       SELECT 1
       FROM unames
-      WHERE slug = ${slug}
+      WHERE slug = $1
         AND recycle = false
-    `)
+    `, [slug]).then(maybeOneRow)
 
         if (history) {
             throw 'UNAME_TAKEN'
@@ -1432,11 +1394,11 @@ export const createUserWithSession = async function(props) {
         let user
 
         try {
-            user = await client.one(sql`
+            user = await client.query(`
         INSERT INTO users (uname, digest, email, slug, hide_sigs)
-        VALUES (${props.uname}, ${digest}, ${props.email}, ${slug}, true)
+        VALUES ($1, $2, $3, $4, true)
         RETURNING *
-      `)
+      `, [props.uname, digest, props.email, slug]).then(maybeOneRow)
         } catch (err) {
             if (err instanceof Error && 'code' in err && err.code === '23505') {
                 if (/unique_username/.test(err.toString())) throw 'UNAME_TAKEN'
@@ -1448,10 +1410,10 @@ export const createUserWithSession = async function(props) {
         }
 
         try {
-            await client.query(sql`
+            await client.query(`
         INSERT INTO unames (user_id, uname, slug)
-        VALUES (${user.id}, ${user.uname}, ${user.slug})
-      `)
+        VALUES ($1, $2, $3)
+      `, [user.id, user.uname, user.slug])
         } catch (err) {
             if (err instanceof Error && 'code' in err && err.code === '23505') {
                 if (/unique_unrecyclable_slug/.test(err.toString()))
@@ -1476,11 +1438,11 @@ export const logoutSession = async function(userId, sessionId) {
     assert(_.isNumber(userId))
     assert(_.isString(sessionId) && belt.isValidUuid(sessionId))
 
-    return pool.query(sql`
+    return pool.query(`
     DELETE FROM sessions
-    WHERE user_id = ${userId}
-      AND id = ${sessionId}
-  `)
+    WHERE user_id = $1
+      AND id = $2
+  `, [userId, sessionId])
 }
 
 ////////////////////////////////////////////////////////////
@@ -1489,7 +1451,7 @@ export const findForums = async function(categoryIds) {
     debug(`[findForums] categoryIds=%j`, categoryIds)
     assert(_.isArray(categoryIds))
 
-    return pool.many(sql`
+    return pool.query(`
     SELECT
       f.*,
       to_json(p.*) "latest_post",
@@ -1499,9 +1461,9 @@ export const findForums = async function(categoryIds) {
     LEFT OUTER JOIN posts p ON f.latest_post_id = p.id
     LEFT OUTER JOIN topics t ON t.id = p.topic_id
     LEFT OUTER JOIN users u ON u.id = p.user_id
-    WHERE f.category_id = ANY (${categoryIds}::int[])
+    WHERE f.category_id = ANY ($1::int[])
     ORDER BY pos;
-  `)
+  `, [categoryIds]).then(res => res.rows)
     //--WHERE f.category_id IN (${categoryIds}::int[])
 }
 
@@ -1513,13 +1475,11 @@ export const findForums = async function(categoryIds) {
 export const getApproxCount = async function(tableName) {
     assert(_.isString(tableName))
     return pool
-        .one(
-            sql`
+        .query(`
     SELECT reltuples "count"
     FROM pg_class
-    WHERE relname = ${tableName}
-  `
-        )
+    WHERE relname = $1
+  `, [tableName]).then(maybeOneRow)
         .then(row => {
             return row.count
         })
@@ -1529,43 +1489,46 @@ export const getApproxCount = async function(tableName) {
 
 // Ignore nuked users
 export const getLatestUser = async function() {
-    return pool.one(sql`
+    return pool.query(`
     SELECT *
     FROM users
     WHERE is_nuked = false
     ORDER BY created_at DESC
     LIMIT 1
-  `)
+  `).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
 
 // Users online within the last X minutes
 export const getOnlineUsers = async function() {
-    return pool.many(sql`
+    return pool.query(`
     SELECT *
     FROM users
     WHERE last_online_at > NOW() - interval '15 minutes'
     ORDER BY uname
-  `)
+  `).then(res => res.rows)
 }
 
-export const getMaxTopicId = async function() {
+export async function getMaxTopicId(): Promise<number> {
     return pool
-        .one(sql`SELECT MAX(id) "max_id" FROM topics`)
-        .then(row => row.max_id)
+        .query<{ max_id: number }>(`SELECT MAX(id) "max_id" FROM topics`)
+        .then(exactlyOneRow)
+        .then(res => res.max_id)
 }
 
-export const getMaxPostId = async function() {
+export async function getMaxPostId(): Promise<number> {
     return pool
-        .one(sql`SELECT MAX(id) "max_id" FROM posts`)
-        .then(row => row.max_id)
+        .query<{ max_id: number }>(`SELECT MAX(id) "max_id" FROM posts`)
+        .then(exactlyOneRow)
+        .then(res => res.max_id)
 }
 
-export const getMaxUserId = async function() {
+export async function getMaxUserId(): Promise<number> {
     return pool
-        .one(sql`SELECT MAX(id) "max_id" FROM users`)
-        .then(row => row.max_id)
+        .query<{ max_id: number }>(`SELECT MAX(id) "max_id" FROM users`)
+        .then(exactlyOneRow)
+        .then(res => res.max_id)
 }
 
 // https://web.archive.org/web/20131218103719/http://roleplayerguild.com/
@@ -1598,17 +1561,17 @@ export const getStats = async function() {
 }
 
 export async function deleteLegacySig(userId: number) {
-    return pool.query(sql`
-    UPDATE users SET legacy_sig = NULL WHERE id = ${userId}
-  `)
+    return pool.query(`
+    UPDATE users SET legacy_sig = NULL WHERE id = $1
+  `, [userId])
 }
 
 export async function findStaffUsers() {
-    return pool.many(sql`
+    return pool.query(`
     SELECT u.*
     FROM users u
     WHERE u.role IN ('mod', 'smod', 'admin', 'conmod', 'arenamod', 'pwmod')
-  `)
+  `).then(res => res.rows)
 }
 
 // sub notes have a meta that looks like {ic: true, ooc: true, char: true}
@@ -1629,15 +1592,15 @@ export const createSubNotification = async function(
 
     const meta = { [postType]: true }
 
-    return pool.query(sql`
+    return pool.query(`
     INSERT INTO notifications
     (type, from_user_id, to_user_id, topic_id, meta, count)
-    VALUES ('TOPIC_SUB', ${fromUserId}, ${toUserId}, ${topicId}, ${meta}, 1)
+    VALUES ('TOPIC_SUB', $1, $2, $3, $4, 1)
     ON CONFLICT (type, to_user_id, topic_id) WHERE type = 'TOPIC_SUB'
       DO UPDATE
       SET count = COALESCE(notifications.count, 0) + 1,
-          meta = notifications.meta || ${meta}::jsonb
-  `)
+          meta = notifications.meta || $5::jsonb
+  `, [fromUserId, toUserId, topicId, meta, meta])
 }
 
 // Users receive this when someone starts a convo with them
@@ -1650,13 +1613,11 @@ export async function createConvoNotification(opts: {
     assert(_.isNumber(opts.to_user_id))
     assert(opts.convo_id)
 
-    return pool.many(sql`
+    return pool.query(`
     INSERT INTO notifications (type, from_user_id, to_user_id, convo_id, count)
-    VALUES ('CONVO', ${opts.from_user_id}, ${opts.to_user_id}, ${
-        opts.convo_id
-    }, 1)
+    VALUES ('CONVO', $1, $2, $3, 1)
     RETURNING *
-  `)
+  `, [opts.from_user_id, opts.to_user_id, opts.convo_id]).then(res => res.rows)
 }
 
 ////////////////////////////////////////////////////////////
@@ -1670,14 +1631,12 @@ export const createPmNotification = async function(opts) {
     assert(_.isNumber(opts.to_user_id))
     assert(opts.convo_id)
 
-    return pool.query(sql`
+    return pool.query(`
     INSERT INTO notifications (type, from_user_id, to_user_id, convo_id, count)
-    VALUES ('CONVO', ${opts.from_user_id}, ${opts.to_user_id}, ${
-        opts.convo_id
-    }, 1)
+    VALUES ('CONVO', $1, $2, $3, 1)
     ON CONFLICT (to_user_id, convo_id) DO UPDATE
       SET count = COALESCE(notifications.count, 0) + 1
-  `)
+  `, [opts.from_user_id, opts.to_user_id, opts.convo_id])
 }
 
 // type is 'REPLY_VM' or 'TOPLEVEL_VM'
@@ -1686,77 +1645,76 @@ export const createVmNotification = async function(data) {
     assert(Number.isInteger(data.from_user_id))
     assert(Number.isInteger(data.to_user_id))
     assert(Number.isInteger(data.vm_id))
-    return pool.query(sql`
+    return pool.query(`
     INSERT INTO notifications (type, from_user_id, to_user_id, vm_id, count)
     VALUES (
-      ${data.type}, ${data.from_user_id}, ${data.to_user_id}, ${data.vm_id}, 1
+      $1, $2, $3, $4, 1
     )
     ON CONFLICT (vm_id, to_user_id) DO UPDATE
       SET count = COALESCE(notifications.count, 0) + 1
-  `)
+  `, [data.type, data.from_user_id, data.to_user_id, data.vm_id])
 }
 
 // Pass in optional notification type to filter
-export const findNotificationsForUserId = async function(toUserId, type) {
+export async function findNotificationsForUserId(toUserId: number, type?: string) {
     assert(Number.isInteger(toUserId))
 
-    return pool.many(
-        sql`
-    SELECT *
-    FROM notifications
-    WHERE to_user_id = ${toUserId}
-  `.append(type ? sql`AND type = ${type}` : sql``)
-    )
+    const query = `
+        SELECT *
+        FROM notifications
+        WHERE to_user_id = $1
+        ${type ? 'AND type = $2' : ''}
+    `
+    
+    const params = type ? [toUserId, type] : [toUserId]
+    
+    return pool.query(query, params).then(res => res.rows)
 }
 
 // Returns how many rows deleted
-export const deleteConvoNotification = async function(toUserId, convoId) {
+export async function deleteConvoNotification(toUserId: number, convoId: number) {
     return pool
-        .query(
-            sql`
+        .query(`
     DELETE FROM notifications
     WHERE type = 'CONVO'
-      AND to_user_id = ${toUserId}
-      AND convo_id = ${convoId}
-  `
-        )
+      AND to_user_id = $1
+      AND convo_id = $2
+  `, [toUserId, convoId])
         .then(result => result.rowCount)
 }
 
 // Returns how many rows deleted
-export const deleteSubNotifications = async function(toUserId, topicIds) {
+export async function deleteSubNotifications(toUserId: number, topicIds: number[]) {
     assert(Number.isInteger(toUserId))
     assert(Array.isArray(topicIds))
     return pool
-        .query(
-            sql`
+        .query(`
     DELETE FROM notifications
     WHERE type = 'TOPIC_SUB'
-      AND to_user_id = ${toUserId}
-      AND topic_id = ANY (${topicIds})
-  `
-        )
+      AND to_user_id = $1
+      AND topic_id = ANY ($2)
+  `, [toUserId, topicIds])
         .then(result => result.rowCount)
 }
 
 // Deletes all rows in notifications table for user,
 // and also resets the counter caches
-export const clearNotifications = async function(toUserId, notificationIds) {
+export async function clearNotifications(toUserId: number, notificationIds: number[]) {
     assert(Number.isInteger(toUserId))
     assert(Array.isArray(notificationIds))
 
-    await pool.query(sql`
+    await pool.query(`
     DELETE FROM notifications
     WHERE
-      to_user_id = ${toUserId}
-      AND id = ANY (${notificationIds}::int[])
-  `)
+      to_user_id = $1
+      AND id = ANY ($2::int[])
+  `, [toUserId, notificationIds])
 
     // TODO: Remove
     // Resetting notification count manually until I can ensure
     // notification system doesn't create negative notification counts
 
-    return pool.query(sql`
+    return pool.query(`
     UPDATE users
     SET
       notifications_count = sub.notifications_count,
@@ -1767,48 +1725,58 @@ export const clearNotifications = async function(toUserId, notificationIds) {
         COUNT(*) notifications_count,
         COUNT(*) FILTER(WHERE n.type = 'CONVO') convo_notifications_count
       FROM notifications n
-      WHERE n.to_user_id = ${toUserId}
+      WHERE n.to_user_id = $1
       GROUP BY n.to_user_id
     ) sub
-    WHERE users.id = ${toUserId}
-      AND sub.to_user_id = ${toUserId}
-  `)
+    WHERE users.id = $2
+      AND sub.to_user_id = $3
+  `, [toUserId, toUserId, toUserId])
 }
 
-export const clearConvoNotifications = async function(toUserId) {
-    await pool.query(sql`
+export async function clearConvoNotifications(toUserId: number) {
+    await pool.query(`
     DELETE FROM notifications
-    WHERE to_user_id = ${toUserId} AND type = 'CONVO'
-  `)
+    WHERE to_user_id = $1 AND type = 'CONVO'
+  `, [toUserId])
 
     // TODO: Remove
     // Resetting notification count manually until I can ensure
     // notification system doesn't create negative notification counts
 
-    return pool.query(sql`
+    return pool.query(`
     UPDATE users
     SET convo_notifications_count = 0
-    WHERE id = ${toUserId}
-  `)
+    WHERE id = $1
+  `, [toUserId])
 }
 
 // Returns [String]
-export const findAllUnames = async function() {
+// Keep in sync with findAllUnamesJson - really they should reuse the same logic
+// Used for building the server regex-trie of names
+export async function findAllUnames() {
+  //   return pool
+  //       .query(`
+  //   SELECT uname FROM users ORDER BY uname
+  // `)
+  //       .then(res => res.rows.map(row => row.uname))
+
+    // pms_count starts at 1 due to welcome message
     return pool
-        .many(
-            sql`
-    SELECT uname FROM users ORDER BY uname
-  `
-        )
-        .then(rows => rows.map(row => row.uname))
+        .query<{ uname: string }>(`
+    SELECT uname
+    FROM users
+    WHERE (posts_count > 0 OR pms_count > 1)
+      AND is_nuked = false
+      AND last_online_at > NOW() - '1 year'::interval
+  `).then(res => res.rows.map(row => row.uname))
 }
 
 ////////////////////////////////////////////////////////////
 
-export const findRGNTopicForHomepage = async function(topic_id) {
+export async function findRGNTopicForHomepage(topic_id: number) {
     assert(topic_id)
 
-    return pool.one(sql`
+    return pool.query(`
 SELECT
   t.id,
   t.title,
@@ -1818,18 +1786,18 @@ SELECT
 FROM topics t
 JOIN posts p ON t.latest_post_id = p.id
 JOIN users u ON p.user_id = u.id
-WHERE t.id = ${topic_id}
-  `)
+WHERE t.id = $1
+  `, [topic_id]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
 
 // Keep in sync with findTopicWithHasSubscribed
-export const findTopicById = async function(topicId) {
+export async function findTopicById(topicId: number) {
     debug(`[findTopicById] topicId=${topicId}`)
     assert(topicId)
 
-    return pool.one(sql`
+    return pool.query(`
 SELECT
   t.*,
   to_json(f.*) "forum",
@@ -1844,48 +1812,56 @@ SELECT
   ) tags
 FROM topics t
 JOIN forums f ON t.forum_id = f.id
-WHERE t.id = ${topicId}
+WHERE t.id = $1
 GROUP BY t.id, f.id
-  `)
+  `, [topicId]).then(maybeOneRow)
 }
 
 // props:
 // - title Maybe String
 // - join-status Maybe (jump-in | apply | full)
 //
-export const updateTopic = async function(topicId, props) {
+export async function updateTopic(topicId: number, props: {
+  title?: string
+  join_status?: 'jump-in' | 'apply' | 'full'
+}) {
     assert(topicId)
     assert(props)
 
-    return pool.one(sql`
+    return pool.query(`
     UPDATE topics
     SET
-      title = COALESCE(${props.title}, title),
-      join_status = COALESCE(${props.join_status}, join_status)::join_status
-    WHERE id = ${topicId}
+      title = COALESCE($1, title),
+      join_status = COALESCE($2, join_status)::join_status
+    WHERE id = $3
     RETURNING *
-  `)
+  `, [props.title, props.join_status, topicId]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
 
-export const createMentionNotification = async function({
+export async function createMentionNotification({
     from_user_id,
     to_user_id,
     post_id,
     topic_id,
+}: {
+    from_user_id: number
+    to_user_id: number
+    post_id: number
+    topic_id: number
 }) {
     assert(from_user_id)
     assert(to_user_id)
     assert(post_id)
     assert(topic_id)
 
-    return pool.one(sql`
+    return pool.query(`
     INSERT INTO notifications
     (type, from_user_id, to_user_id, topic_id, post_id)
-    VALUES ('MENTION', ${from_user_id}, ${to_user_id}, ${topic_id}, ${post_id})
+    VALUES ('MENTION', $1, $2, $3, $4)
     RETURNING *
-  `)
+  `, [from_user_id, to_user_id, topic_id, post_id]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -1934,12 +1910,12 @@ export const createQuoteNotification = async function({
     assert(post_id)
     assert(topic_id)
 
-    return pool.one(sql`
+    return pool.query(`
     INSERT INTO notifications
     (type, from_user_id, to_user_id, topic_id, post_id)
-    VALUES ('QUOTE', ${from_user_id}, ${to_user_id}, ${topic_id}, ${post_id})
+    VALUES ('QUOTE', $1, $2, $3, $4)
     RETURNING *
-  `)
+  `, [from_user_id, to_user_id, topic_id, post_id]).then(maybeOneRow)
 }
 
 // Keep in sync with db.parseAndCreateMentionNotifications
@@ -1976,7 +1952,7 @@ export const parseAndCreateQuoteNotifications = async function(props) {
 }
 
 export const findReceivedNotificationsForUserId = async function(toUserId) {
-    return pool.many(sql`
+    return pool.query(`
 SELECT
   n.*,
   to_json(u.*) "from_user",
@@ -2018,10 +1994,10 @@ LEFT OUTER JOIN convos c ON n.convo_id = c.id
 LEFT OUTER JOIN topics t ON n.topic_id = t.id
 LEFT OUTER JOIN posts p ON n.post_id = p.id
 LEFT OUTER JOIN vms ON n.vm_id = vms.id
-WHERE n.to_user_id = ${toUserId}
+WHERE n.to_user_id = $1
 ORDER BY n.id DESC
 LIMIT 50
-  `)
+  `, [toUserId]).then(res => res.rows)
 }
 
 // Returns how many rows deleted
@@ -2033,13 +2009,11 @@ export const deleteNotificationsForPostId = async function(toUserId, postId) {
     assert(postId)
 
     return pool
-        .query(
-            sql`
+        .query(`
     DELETE FROM notifications
-    WHERE to_user_id = ${toUserId}
-      AND post_id = ${postId}
-  `
-        )
+    WHERE to_user_id = $1
+      AND post_id = $2
+  `, [toUserId, postId])
         .then(result => result.rowCount)
 }
 
@@ -2062,39 +2036,39 @@ export async function upsertViewer(ctx: Context, forumId: number, topicId?: numb
         (ctx.currUser.is_ghost || ctx.currUser.role === 'banned')
     ) {
         // banned and ghosts have their unames hidden
-        return pool.query(sql`
+        return pool.query(`
       INSERT INTO viewers (ip, forum_id, topic_id, viewed_at)
-      VALUES (${ctx.ip}, ${forumId}, ${topicId}, NOW())
+      VALUES ($1, $2, $3, NOW())
       ON CONFLICT (ip) DO UPDATE
-        SET forum_id = ${forumId}
-          , topic_id = ${topicId}
+        SET forum_id = $4
+          , topic_id = $5
           , viewed_at = NOW()
-    `)
+    `, [ctx.ip, forumId, topicId, forumId, topicId])
     } else {
-        return pool.query(sql`
+        return pool.query(`
       INSERT INTO viewers (uname, forum_id, topic_id, viewed_at)
-      VALUES (${ctx.currUser.uname}, ${forumId}, ${topicId}, NOW())
+      VALUES ($1, $2, $3, NOW())
       ON CONFLICT (uname) DO UPDATE
-        SET forum_id = ${forumId}
-          , topic_id = ${topicId}
+        SET forum_id = $4
+          , topic_id = $5
           , viewed_at = NOW()
-    `)
+    `, [ctx.currUser.uname, forumId, topicId, forumId, topicId])
     }
 }
 
 // Returns map of ForumId->Int
-export async function getForumViewerCounts() {
+export async function getForumViewerCounts(): Promise<Record<number, number>> {
     // Query returns { forum_id: Int, viewers_count: Int } for every forum
-    const rows = await pool.many(sql`
+    const rows = await pool.query<{ forum_id: number, viewers_count: number }>(`
 SELECT
   f.id "forum_id",
   COUNT(v.*) "viewers_count"
 FROM forums f
 LEFT OUTER JOIN active_viewers v ON f.id = v.forum_id
 GROUP BY f.id
-  `)
+  `).then(res => res.rows)
 
-    const output = {}
+    const output: Record<number, number> = {}
 
     rows.forEach(row => {
         output[row.forum_id] = row.viewers_count
@@ -2106,16 +2080,14 @@ GROUP BY f.id
 // Deletes viewers where viewed_at is older than 15 min ago
 // Run this in a cronjob
 // Returns Int of viewers deleted
-export const clearExpiredViewers = async function() {
+export async function clearExpiredViewers() {
     debug('[clearExpiredViewers] Running')
 
     const count = await pool
-        .query(
-            sql`
+        .query(`
     DELETE FROM viewers
     WHERE viewed_at < NOW() - interval '15 minutes'
-  `
-        )
+  `)
         .then(result => result.rowCount)
 
     debug('[clearExpiredViewers] Deleted views: ' + count)
@@ -2126,15 +2098,15 @@ export const clearExpiredViewers = async function() {
 // Returns viewers as a map of { users: [Viewer], guests: [Viewer] }
 //
 // @fast
-export const findViewersForTopicId = async function(topicId) {
+export async function findViewersForTopicId(topicId: number) {
     assert(topicId)
 
-    const viewers = await pool.many(sql`
+    const viewers = await pool.query(`
     SELECT *
     FROM active_viewers
-    WHERE topic_id = ${topicId}
+    WHERE topic_id = $1
     ORDER BY uname
-  `)
+  `, [topicId]).then(res => res.rows)
 
     return {
         users: _.filter(viewers, 'uname'),
@@ -2145,15 +2117,15 @@ export const findViewersForTopicId = async function(topicId) {
 // Returns viewers as a map of { users: [Viewer], guests: [Viewer] }
 //
 // @fast
-export const findViewersForForumId = async function(forumId) {
+export async function findViewersForForumId(forumId: number) {
     assert(forumId)
 
-    const viewers = await pool.many(sql`
+    const viewers = await pool.query(`
     SELECT *
     FROM active_viewers
-    WHERE forum_id = ${forumId}
+    WHERE forum_id = $1
     ORDER BY uname
-  `)
+  `, [forumId]).then(res => res.rows)
 
     return {
         users: viewers.filter(x => x.uname),
@@ -2162,7 +2134,7 @@ export const findViewersForForumId = async function(forumId) {
 }
 
 // leaveRedirect: Bool
-export const moveTopic = async function(
+export async function moveTopic(
     topicId,
     fromForumId,
     toForumId,
@@ -2173,28 +2145,29 @@ export const moveTopic = async function(
     let topic
 
     if (leaveRedirect) {
-        topic = await pool.one(sql`
+        topic = await pool.query(`
       UPDATE topics
-      SET forum_id = ${toForumId},
-          moved_from_forum_id = ${fromForumId},
+      SET forum_id = $1,
+          moved_from_forum_id = $2,
           moved_at = NOW()
-      WHERE id = ${topicId}
+      WHERE id = $3
       RETURNING *
-    `)
+    `, [toForumId, fromForumId, topicId]).then(maybeOneRow)
     } else {
-        topic = await pool.one(sql`
+        topic = await pool.query(`
       UPDATE topics
-      SET forum_id = ${toForumId}, moved_at = NOW()
-      WHERE id = ${topicId}
+      SET forum_id = $1, moved_at = NOW()
+      WHERE id = $2
       RETURNING *
-    `)
+    `, [toForumId, topicId]).then(maybeOneRow)
     }
 
     // TODO: Put this in transaction
 
+    // FIXME: parallel queries aren't a thing
     const [fromForum, toForum] = await Promise.all([
-        pool.one(sql`SELECT * FROM forums WHERE id = ${fromForumId}`),
-        pool.one(sql`SELECT * FROM forums WHERE id = ${toForumId}`),
+        pool.query(`SELECT * FROM forums WHERE id = $1`, [fromForumId]).then(maybeOneRow),
+        pool.query(`SELECT * FROM forums WHERE id = $1`, [toForumId]).then(maybeOneRow),
     ])
 
     // If moved topic's latest post is newer than destination forum's latest post,
@@ -2207,26 +2180,26 @@ export const moveTopic = async function(
             topic.latest_post_id
         )
 
-        await pool.query(sql`
+        await pool.query(`
       UPDATE forums
-      SET latest_post_id = ${topic.latest_post_id}
-      WHERE id = ${topic.forum_id}
-    `)
+      SET latest_post_id = $1
+      WHERE id = $2
+    `, [topic.latest_post_id, topic.forum_id])
     }
 
     // Update fromForum.latest_post_id if it was topic.latest_post_id since
     // we moved the topic out of this forum.
     if (topic.latest_post_id === fromForum.latest_post_id) {
         debug('[moveTopic] Updating fromForum.latest_post_id')
-        await pool.query(sql`
+        await pool.query(`
       UPDATE forums
       SET latest_post_id = (
         SELECT MAX(t.latest_post_id) "latest_post_id"
         FROM topics t
-        WHERE t.forum_id = ${fromForumId}
+        WHERE t.forum_id = $1
       )
-      WHERE id = ${fromForumId}
-    `)
+      WHERE id = $2
+    `, [fromForumId, fromForumId])
     }
 
     return topic
@@ -2249,81 +2222,81 @@ export const ratePost = async function(props) {
     assert(props.to_user_id)
     assert(props.type)
 
-    return pool.one(sql`
+    return pool.query(`
     INSERT INTO ratings (from_user_id, from_user_uname, post_id, type, to_user_id)
     VALUES (
-      ${props.from_user_id},
-      ${props.from_user_uname},
-      ${props.post_id},
-      ${props.type},
-      ${props.to_user_id}
+      $1,
+      $2,
+      $3,
+      $4,
+      $5
     )
     ON CONFLICT (from_user_id, post_id) DO NOTHING
     RETURNING *
-  `)
+  `, [props.from_user_id, props.from_user_uname, props.post_id, props.type, props.to_user_id]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
 
-export const findLatestRatingForUserId = async function(userId) {
+export async function findLatestRatingForUserId(userId: number) {
     assert(userId)
 
-    return pool.one(sql`
+    return pool.query(`
     SELECT *
     FROM ratings
-    WHERE from_user_id = ${userId}
+    WHERE from_user_id = $1
     ORDER BY created_at DESC
     LIMIT 1
-  `)
+  `, [userId]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
 
-export const findRatingByFromUserIdAndPostId = async function(
+export async function findRatingByFromUserIdAndPostId(
     from_user_id,
     post_id
 ) {
     assert(from_user_id)
     assert(post_id)
 
-    return pool.one(sql`
+    return pool.query(`
     SELECT *
     FROM ratings
-    WHERE from_user_id = ${from_user_id}
-      AND post_id = ${post_id}
-  `)
+    WHERE from_user_id = $1
+      AND post_id = $2
+  `, [from_user_id, post_id]).then(maybeOneRow)
 }
 
-export const deleteRatingByFromUserIdAndPostId = async function(
+export async function deleteRatingByFromUserIdAndPostId(
     from_user_id,
     post_id
 ) {
     assert(from_user_id)
     assert(post_id)
 
-    return pool.query(sql`
+    return pool.query(`
     DELETE FROM ratings
-    WHERE from_user_id = ${from_user_id} AND post_id = ${post_id}
+    WHERE from_user_id = $1 AND post_id = $2
     RETURNING *
-  `)
+  `, [from_user_id, post_id])
 }
 
-export const deleteLegacyAvatar = async function(userId) {
-    return pool.one(sql`
+export async function deleteLegacyAvatar(userId: number) {
+    return pool.query(`
     UPDATE users
     SET legacy_avatar_url = null
-    WHERE id = ${userId}
+    WHERE id = $1
     RETURNING *
-  `)
+  `, [userId]).then(maybeOneRow)
 }
 
-export const deleteAvatar = async function(userId) {
-    return pool.one(sql`
+export async function deleteAvatar(userId: number) {
+    return pool.query(`
 UPDATE users
 SET legacy_avatar_url = null, avatar_url = ''
-WHERE id = ${userId}
+WHERE id = $1
 RETURNING *
-  `)
+  `, [userId]).then(maybeOneRow)
 }
 
 // User receives this when someone rates their post
@@ -2343,13 +2316,12 @@ export const createRatingNotification = async function(props) {
 
     // TODO: does that {type: _} thing work?
 
-    return pool.one(sql`
+    return pool.query(`
 INSERT INTO notifications
 (type, from_user_id, to_user_id, meta, post_id, topic_id)
-VALUES ('RATING', ${props.from_user_id}, ${props.to_user_id},
-  ${{ type: props.rating_type }}, ${props.post_id}, ${props.topic_id})
+VALUES ('RATING', $1, $2, $3, $4, $5)
 RETURNING *
-  `)
+  `, [props.from_user_id, props.to_user_id, { type: props.rating_type }, props.post_id, props.topic_id]).then(maybeOneRow)
 }
 
 // -> JSONString
@@ -2358,17 +2330,15 @@ RETURNING *
 // - logged on in the last year
 // - have at least one post
 // - are not nuked
-export const findAllUnamesJson = async function() {
+export async function findAllUnamesJson() {
     return pool
-        .one(
-            sql`
+        .query(`
     SELECT json_agg(uname) unames
     FROM users
     WHERE posts_count > 0
       AND is_nuked = false
       AND last_online_at > NOW() - '1 year'::interval
-  `
-        )
+  `).then(maybeOneRow)
         .then(row => row.unames)
 }
 
@@ -2376,26 +2346,26 @@ export const updateTopicCoGms = async function(topicId, userIds) {
     assert(topicId)
     assert(_.isArray(userIds))
 
-    return pool.one(sql`
+    return pool.query(`
     UPDATE topics
-    SET co_gm_ids = ${userIds}
-    WHERE id = ${topicId}
+    SET co_gm_ids = $1
+    WHERE id = $2
     RETURNING *
-  `)
+  `, [userIds, topicId]).then(maybeOneRow)
 }
 
 export const findAllTags = async function() {
-    return pool.many(sql`SELECT * FROM tags`)
+    return pool.query(`SELECT * FROM tags`).then(res => res.rows)
 }
 
 // Returns [TagGroup] where each group has [Tag] array bound to `tags` property
 export const findAllTagGroups = async function() {
-    return pool.many(sql`
+    return pool.query(`
     SELECT
       *,
       (SELECT json_agg(t.*) FROM tags t WHERE t.tag_group_id = tg.id) tags
     FROM tag_groups tg
-  `)
+  `).then(res => res.rows)
 }
 
 // topicId :: String | Int
@@ -2405,19 +2375,19 @@ export const updateTopicTags = async function(topicId, tagIds) {
     assert(_.isArray(tagIds))
 
     return pool.withTransaction(async client => {
-        await client.query(sql`
+        await client.query(`
       DELETE FROM tags_topics
-      WHERE topic_id = ${topicId}
-    `)
+      WHERE topic_id = $1
+    `, [topicId])
         // Now create the new bridge links in parallel
         // FIXME: Can't make parallel requests on a single connection, so
         // make it explicitly serial.
         return Promise.all(
             tagIds.map(tagId => {
-                return client.query(sql`
+                return client.query(`
         INSERT INTO tags_topics (topic_id, tag_id)
-        VALUES (${topicId}, ${tagId})
-      `)
+        VALUES ($1, $2)
+      `, [topicId, tagId])
             })
         )
     })
@@ -2427,7 +2397,7 @@ export const updateTopicTags = async function(topicId, tagIds) {
 export const findLatestChecks = async function() {
     const forumIds = [12, 38, 13, 14, 15, 16, 40, 43]
 
-    return pool.many(sql`
+    return pool.query(`
     SELECT
       t.*,
       (SELECT to_json(u.*) FROM users u WHERE id = t.user_id) "user",
@@ -2439,17 +2409,17 @@ export const findLatestChecks = async function() {
       ) tags
     FROM topics t
     WHERE
-      t.forum_id = ANY (${forumIds}::int[])
+      t.forum_id = ANY ($1::int[])
       AND NOT t.is_hidden
     ORDER BY t.id DESC
     LIMIT 5
-  `)
+  `, [forumIds]).then(res => res.rows)
 }
 
 // Returns latest 5 unhidden roleplays
 export const findLatestRoleplays = async function() {
     const forumIds = [3, 4, 5, 6, 7, 39, 42]
-    return pool.many(sql`
+    return pool.query(`
 SELECT
   t.*,
   (SELECT to_json(u.*) FROM users u WHERE id = t.user_id) "user",
@@ -2461,17 +2431,16 @@ SELECT
   ) tags
 FROM topics t
 WHERE
-  t.forum_id = ANY (${forumIds}::int[])
+  t.forum_id = ANY ($1::int[])
   AND NOT t.is_hidden
 ORDER BY t.id DESC
 LIMIT 5
-  `)
+  `, [forumIds]).then(res => res.rows)
 }
 
 export const findAllPublicTopicUrls = async function() {
     return pool
-        .many(
-            sql`
+        .query(`
     SELECT id, title
     FROM topics
     WHERE
@@ -2482,8 +2451,7 @@ export const findAllPublicTopicUrls = async function() {
         WHERE category_id NOT IN (4)
       )
     ORDER BY id
-  `
-        )
+  `).then(res => res.rows)
         .then(rows => {
             return rows.map(row => pre.presentTopic(row).url)
         })
@@ -2493,7 +2461,7 @@ export const findPostsByIds = async function(ids) {
     assert(_.isArray(ids))
     ids = ids.map(Number) // Ensure ids are numbers, not strings
 
-    const rows = await pool.many(sql`
+    const rows = await pool.query(`
     SELECT
       p.*,
       to_json(t.*) topic,
@@ -2503,8 +2471,8 @@ export const findPostsByIds = async function(ids) {
     JOIN topics t ON p.topic_id = t.id
     JOIN forums f ON t.forum_id = f.id
     JOIN users u ON p.user_id = u.id
-    WHERE p.id = ANY (${ids}::int[])
-  `)
+    WHERE p.id = ANY ($1::int[])
+  `, [ids]).then(res => res.rows)
 
     // Reorder posts by the order of ids passed in
     const out: any[] = []
@@ -2520,9 +2488,9 @@ export const findPostsByIds = async function(ids) {
 ////////////////////////////////////////////////////////////
 
 export async function getUnamesMappedToIds() {
-    const rows = await pool.many(sql`
+    const rows = await pool.query(`
     SELECT uname, id FROM users
-  `)
+  `).then(res => res.rows)
 
     const out = {}
 
@@ -2537,7 +2505,7 @@ export async function getUnamesMappedToIds() {
 
 // Trophies are returned newly-awarded first
 export async function findTrophiesForUserId(user_id: number) {
-    return pool.many(sql`
+    return pool.query(`
 SELECT
   tu.is_anon,
   t.*,
@@ -2552,55 +2520,55 @@ FROM trophies t
 JOIN trophies_users tu ON t.id = tu.trophy_id
 LEFT OUTER JOIN users u1 ON tu.awarded_by = u1.id
 LEFT OUTER JOIN trophy_groups tg ON t.group_id = tg.id
-WHERE tu.user_id = ${user_id}
+WHERE tu.user_id = $1
 ORDER BY tu.awarded_at DESC
-  `)
+  `, [user_id]).then(res => res.rows)
 }
 
 ////////////////////////////////////////////////////////////
 
 // Finds one trophy
 export async function findTrophyById(trophy_id: number) {
-    return pool.one(sql`
+    return pool.query(`
     SELECT
       t.*,
       to_json(tg.*) "group"
     FROM trophies t
     LEFT OUTER JOIN trophy_groups tg ON t.group_id = tg.id
-    WHERE t.id = ${trophy_id}
+    WHERE t.id = $1
     GROUP BY t.id, tg.id
-  `)
+  `, [trophy_id]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
 
 export const findTrophiesByGroupId = async function(group_id) {
-    return pool.many(sql`
+    return pool.query(`
     SELECT *
     FROM trophies t
-    WHERE t.group_id = ${group_id}
+    WHERE t.group_id = $1
     ORDER BY t.id ASC
-  `)
+  `, [group_id]).then(res => res.rows)
 }
 
 ////////////////////////////////////////////////////////////
 
 export async function findTrophyGroups() {
-    return pool.many(sql`
+    return pool.query(`
     SELECT *
     FROM trophy_groups
     ORDER BY id DESC
-  `)
+  `).then(res => res.rows)
 }
 
 ////////////////////////////////////////////////////////////
 
 export async function findTrophyGroupById(group_id: number) {
-    return pool.one(sql`
+    return pool.query(`
     SELECT *
     FROM trophy_groups tg
-    WHERE tg.id = ${group_id}
-  `)
+    WHERE tg.id = $1
+  `, [group_id]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -2609,15 +2577,15 @@ export async function findTrophyGroupById(group_id: number) {
 // description_markup Optional
 // description_html Optional
 export async function updateTrophyGroup(id: number, title: string, desc_markup: string, desc_html: string) {
-    return pool.one(sql`
+    return pool.query(`
     UPDATE trophy_groups
     SET
-      title = ${title},
-      description_markup = ${desc_markup},
-      description_html = ${desc_html}
-    WHERE id = ${id}
+      title = $1,
+      description_markup = $2,
+      description_html = $3
+    WHERE id = $4
     RETURNING *
-  `)
+  `, [title, desc_markup, desc_html, id]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -2630,15 +2598,15 @@ export async function updateTrophyGroup(id: number, title: string, desc_markup: 
 export async function updateTrophy(id: number, title: string, desc_markup: string, desc_html: string) {
     assert(Number.isInteger(id))
 
-    return pool.one(sql`
+    return pool.query(`
 UPDATE trophies
 SET
-  title = ${title},
-  description_markup = ${desc_markup},
-  description_html = ${desc_html}
-WHERE id = ${id}
+  title = $1,
+  description_markup = $2,
+  description_html = $3
+WHERE id = $4
 RETURNING *
-  `)
+  `, [title, desc_markup, desc_html, id]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -2654,14 +2622,14 @@ export async function updateTrophyUserBridge(
 ) {
     assert(Number.isInteger(id))
 
-    return pool.one(sql`
+    return pool.query(`
     UPDATE trophies_users
     SET
-      message_markup = ${message_markup},
-      message_html = ${message_html}}
-    WHERE id = ${id}
+      message_markup = $1,
+      message_html = $2
+    WHERE id = $3
     RETURNING *
-  `)
+  `, [message_markup, message_html, id]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -2669,11 +2637,11 @@ export async function updateTrophyUserBridge(
 export const deactivateCurrentTrophyForUserId = async function(user_id) {
     assert(_.isNumber(user_id))
 
-    return pool.one(sql`
+    return pool.query(`
     UPDATE users
     SET active_trophy_id = NULL
-    WHERE id = ${user_id}
-  `)
+    WHERE id = $1
+  `, [user_id]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -2682,11 +2650,11 @@ export const updateUserActiveTrophyId = async function(user_id, trophy_id) {
     assert(_.isNumber(user_id))
     assert(_.isNumber(trophy_id))
 
-    return pool.one(sql`
+    return pool.query(`
     UPDATE users
-    SET active_trophy_id = ${trophy_id}
-    WHERE id = ${user_id}
-  `)
+    SET active_trophy_id = $1
+    WHERE id = $2
+  `, [trophy_id, user_id]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -2695,7 +2663,7 @@ export const findTrophyUserBridgeById = async function(id) {
     debug('[findTrophyUserBridgeById] id=%j', id)
     assert(id)
 
-    return pool.one(sql`
+    return pool.query(`
     SELECT
       tu.*,
       to_json(t.*) AS trophy,
@@ -2703,8 +2671,8 @@ export const findTrophyUserBridgeById = async function(id) {
     FROM trophies_users tu
     JOIN trophies t ON tu.trophy_id = t.id
     JOIN users u ON tu.user_id = u.id
-    WHERE tu.id = ${id}
-  `)
+    WHERE tu.id = $1
+  `, [id]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -2716,20 +2684,20 @@ export const findTrophyByIdAndUserId = async function(trophy_id, user_id) {
     assert(_.isNumber(user_id))
     assert(_.isNumber(trophy_id))
 
-    return pool.one(sql`
+    return pool.query(`
     SELECT trophies.*
     FROM trophies_users
     JOIN trophies ON trophies_users.trophy_id = trophies.id
-    WHERE trophies_users.trophy_id = ${trophy_id}
-      AND trophies_users.user_id = ${user_id}
+    WHERE trophies_users.trophy_id = $1
+      AND trophies_users.user_id = $2
     LIMIT 1
-  `)
+  `, [trophy_id, user_id]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
 
 export const findWinnersForTrophyId = async function(trophy_id) {
-    return pool.many(sql`
+    return pool.query(`
     SELECT
       tu.is_anon,
       winners.id,
@@ -2743,8 +2711,8 @@ export const findWinnersForTrophyId = async function(trophy_id) {
     FROM trophies_users tu
     JOIN users winners ON tu.user_id = winners.id
     LEFT OUTER JOIN users awarders ON tu.awarded_by = awarders.id
-    WHERE tu.trophy_id = ${trophy_id}
-  `)
+    WHERE tu.trophy_id = $1
+  `, [trophy_id]).then(res => res.rows)
 }
 
 ////////////////////////////////////////////////////////////
@@ -2761,11 +2729,11 @@ export const createTrophyGroup = async function(
     assert(_.isUndefined(description_markup) || _.isString(description_markup))
     assert(_.isUndefined(description_html) || _.isString(description_html))
 
-    return pool.one(sql`
+    return pool.query(`
 INSERT INTO trophy_groups (title, description_markup, description_html)
-VALUES (${title}, ${description_markup}, ${description_html})
+VALUES ($1, $2, $3)
 RETURNING *
-  `)
+  `, [title, description_markup, description_html]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -2776,52 +2744,52 @@ export const createStatus = async function({ user_id, html, text }) {
     assert(typeof text === 'string')
     assert(typeof html === 'string')
 
-    return pool.one(sql`
+    return pool.query(`
     INSERT INTO statuses (user_id, text, html)
-    VALUES (${user_id}, ${text}, ${html})
+    VALUES ($1, $2, $3)
     RETURNING *
-  `)
+  `, [user_id, text, html]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
 
 // @fast
 export const findLatestStatusesForUserId = async function(user_id) {
-    return pool.many(sql`
+    return pool.query(`
     SELECT *
     FROM statuses
-    WHERE user_id = ${user_id}
+    WHERE user_id = $1
     ORDER BY created_at DESC
     LIMIT 5
-  `)
+  `, [user_id]).then(res => res.rows)
 }
 
 ////////////////////////////////////////////////////////////
 
 export const findStatusById = async function(id) {
-    return pool.one(sql`
+    return pool.query(`
     SELECT
       us.*,
       to_json(u.*) "user"
     FROM statuses us
     JOIN users u ON us.user_id = u.id
-    WHERE us.id = ${id}
-  `)
+    WHERE us.id = $1
+  `, [id]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
 
 export const deleteStatusById = async function(id) {
-    return pool.query(sql`
+    return pool.query(`
     DELETE FROM statuses
-    WHERE id = ${id}
-  `)
+    WHERE id = $1
+  `, [id])
 }
 
 ////////////////////////////////////////////////////////////
 
 export const findLatestStatuses = async function() {
-    return pool.many(sql`
+    return pool.query(`
     SELECT
       us.*,
       to_json(u.*) "user"
@@ -2830,7 +2798,7 @@ export const findLatestStatuses = async function() {
     WHERE u.is_nuked = false
     ORDER BY created_at DESC
     LIMIT 8
-  `)
+  `).then(res => res.rows)
 }
 
 ////////////////////////////////////////////////////////////
@@ -2838,11 +2806,11 @@ export const findLatestStatuses = async function() {
 export const clearCurrentStatusForUserId = async function(user_id) {
     assert(user_id)
 
-    return pool.query(sql`
+    return pool.query(`
 UPDATE users
 SET current_status_id = NULL
-WHERE id = ${user_id}
-  `)
+WHERE id = $1
+  `, [user_id])
 }
 
 ////////////////////////////////////////////////////////////
@@ -2862,7 +2830,7 @@ export const findAllStatuses = async function() {
     // GROUP BY s.id, u.id
     // ORDER BY s.created_at DESC
     // LIMIT 100
-    const statuses = await pool.many(sql`
+    const statuses = await pool.query(`
 WITH sids AS (
   SELECT s.id
   FROM statuses s
@@ -2889,7 +2857,7 @@ SELECT
 FROM statuses s
 WHERE s.id IN (SELECT id FROM sids)
 ORDER BY s.created_at DESC
-  `)
+  `).then(res => res.rows)
 
     statuses.forEach(status => {
         status.likers = (status.likers || []).filter(Boolean)
@@ -2906,18 +2874,18 @@ export const likeStatus = async function({ user_id, status_id }) {
         .withTransaction(async client => {
             // 1. Create status_likes row
 
-            await client.query(sql`
+            await client.query(`
       INSERT INTO status_likes (status_id, user_id)
-      VALUES (${status_id}, ${user_id})
-    `)
+      VALUES ($1, $2)
+    `, [status_id, user_id])
 
             // 2. Update status
 
-            return client.query(sql`
+            return client.query(`
       UPDATE statuses
-      SET liked_user_ids = array_append(liked_user_ids, ${user_id})
-      WHERE id = ${status_id}
-    `)
+      SET liked_user_ids = array_append(liked_user_ids, $1)
+      WHERE id = $2
+    `, [user_id, status_id])
         })
         .catch(err => {
             if (err.code === '23505') {
@@ -2933,11 +2901,11 @@ export const likeStatus = async function({ user_id, status_id }) {
 export const latestStatusLikeAt = async function(user_id) {
     assert(user_id)
 
-    const row = await pool.one(sql`
+    const row = await pool.query(`
     SELECT MAX(created_at) created_at
     FROM status_likes
-    WHERE user_id = ${user_id}
-  `)
+    WHERE user_id = $1
+  `, [user_id]).then(maybeOneRow)
 
     return row && row.created_at
 }
@@ -2951,17 +2919,15 @@ export const updateTopicWatermark = async function(props) {
     assert(props.post_type)
     assert(props.post_id)
 
-    return pool.query(sql`
+    return pool.query(`
     INSERT INTO topics_users_watermark
       (topic_id, user_id, post_type, watermark_post_id)
     VALUES (
-      ${props.topic_id}, ${props.user_id}, ${props.post_type}, ${props.post_id}
+      $1, $2, $3, $4
     )
     ON CONFLICT (topic_id, user_id, post_type) DO UPDATE
-      SET watermark_post_id = GREATEST(topics_users_watermark.watermark_post_id, ${
-          props.post_id
-      })
-  `)
+      SET watermark_post_id = GREATEST(topics_users_watermark.watermark_post_id, $5)
+  `, [props.topic_id, props.user_id, props.post_type, props.post_id, props.post_id])
 }
 
 ////////////////////////////////////////////////////////////
@@ -2975,14 +2941,14 @@ export const _findFirstUnreadPostId = async function({
     assert(topic_id)
     assert(post_type)
 
-    const row = await pool.one(sql`
+    const row = await pool.query(`
     SELECT COALESCE(
       MIN(p.id),
       (
         SELECT MIN(p2.id)
         FROM posts p2
-        WHERE p2.topic_id = ${topic_id}
-          AND p2.type = ${post_type}
+        WHERE p2.topic_id = $1
+          AND p2.type = $2
           AND p2.is_hidden = false
       )
     ) post_id
@@ -2991,14 +2957,14 @@ export const _findFirstUnreadPostId = async function({
       p.id > (
         SELECT w.watermark_post_id
         FROM topics_users_watermark w
-        WHERE w.topic_id = ${topic_id}
-          AND w.user_id = ${user_id}
-          AND w.post_type = ${post_type}
+        WHERE w.topic_id = $3
+          AND w.user_id = $4
+          AND w.post_type = $5
       )
-      AND p.topic_id = ${topic_id}
-      AND p.type = ${post_type}
+      AND p.topic_id = $6
+      AND p.type = $7
       AND p.is_hidden = false
-  `)
+  `, [topic_id, post_type, topic_id, user_id, post_type, topic_id, post_type]).then(maybeOneRow)
 
     return row && row.post_id
 }
@@ -3020,17 +2986,15 @@ export const findFirstUnreadPostId = async function({
     assert(topic_id)
     assert(post_type)
 
-    const row = await pool.one(sql`
+    const row = await pool.query(`
 SELECT COALESCE(MIN(p.id),
-  CASE ${post_type}::post_type
+  CASE $1::post_type
     WHEN 'ic' THEN
-      (SELECT t.latest_ic_post_id FROM topics t WHERE t.id = ${topic_id})
+      (SELECT t.latest_ic_post_id FROM topics t WHERE t.id = $2)
     WHEN 'ooc' THEN
-      (SELECT COALESCE(t.latest_ooc_post_id, t.latest_post_id) FROM topics t WHERE t.id = ${
-          topic_id
-      })
+      (SELECT COALESCE(t.latest_ooc_post_id, t.latest_post_id) FROM topics t WHERE t.id = $3)
     WHEN 'char' THEN
-      (SELECT t.latest_char_post_id FROM topics t WHERE t.id = ${topic_id})
+      (SELECT t.latest_char_post_id FROM topics t WHERE t.id = $4)
   END
 ) post_id
 FROM posts p
@@ -3039,15 +3003,15 @@ WHERE
     (
       SELECT w.watermark_post_id
       FROM topics_users_watermark w
-      WHERE w.topic_id = ${topic_id}
-        AND w.user_id = ${user_id}
-        AND w.post_type = ${post_type}
+      WHERE w.topic_id = $5
+        AND w.user_id = $6
+        AND w.post_type = $7
     ),
     0
   )
-  AND p.topic_id = ${topic_id}
-  AND p.type = ${post_type}
-  `)
+  AND p.topic_id = $8
+  AND p.type = $9
+  `, [post_type, topic_id, topic_id, topic_id, topic_id, user_id, post_type, topic_id, post_type]).then(maybeOneRow)
 
     return row && row.post_id
 }
@@ -3058,20 +3022,20 @@ export const deleteNotificationForUserIdAndId = async function(userId, id) {
     assert(Number.isInteger(userId))
     assert(Number.isInteger(id))
 
-    return pool.query(sql`
+    return pool.query(`
     DELETE FROM notifications
-    WHERE to_user_id = ${userId}
-      AND id = ${id}
-  `)
+    WHERE to_user_id = $1
+      AND id = $2
+  `, [userId, id])
 }
 
 export const findNotificationById = async function(id) {
     debug(`[findNotification] id=${id}`)
-    return pool.one(sql`
+    return pool.query(`
     SELECT *
     FROM notifications
-    WHERE id = ${id}
-  `)
+    WHERE id = $1
+  `, [id]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -3082,18 +3046,18 @@ export const findUnackedFeedbackTopic = function(feedback_topic_id, user_id) {
     assert(_.isNumber(feedback_topic_id))
     assert(_.isNumber(user_id))
 
-    return pool.one(sql`
+    return pool.query(`
     SELECT *
     FROM feedback_topics
     WHERE
-      id = ${feedback_topic_id}
+      id = $1
       AND NOT EXISTS (
         SELECT 1
         FROM feedback_replies fr
-        WHERE fr.feedback_topic_id = ${feedback_topic_id}
-          AND fr.user_id = ${user_id}
+        WHERE fr.feedback_topic_id = $2
+          AND fr.user_id = $3
       )
-  `)
+  `, [feedback_topic_id, feedback_topic_id, user_id]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -3101,11 +3065,11 @@ export const findUnackedFeedbackTopic = function(feedback_topic_id, user_id) {
 export const findFeedbackTopicById = async function(ftopic_id) {
     assert(_.isNumber(ftopic_id))
 
-    return pool.one(sql`
+    return pool.query(`
     SELECT feedback_topics.*
     FROM feedback_topics
-    WHERE id = ${ftopic_id}
-  `)
+    WHERE id = $1
+  `, [ftopic_id]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -3113,15 +3077,15 @@ export const findFeedbackTopicById = async function(ftopic_id) {
 export const findFeedbackRepliesByTopicId = async function(ftopic_id) {
     assert(_.isNumber(ftopic_id))
 
-    return pool.many(sql`
+    return pool.query(`
     SELECT
       fr.*,
       u.uname
     FROM feedback_replies fr
     JOIN users u ON fr.user_id = u.id
-    WHERE fr.feedback_topic_id = ${ftopic_id}
+    WHERE fr.feedback_topic_id = $1
     ORDER BY id DESC
-  `)
+  `, [ftopic_id]).then(res => res.rows)
 }
 
 ////////////////////////////////////////////////////////////
@@ -3136,11 +3100,11 @@ export const insertReplyToUnackedFeedbackTopic = async function(
     assert(_.isNumber(user_id))
     assert(_.isBoolean(ignored))
 
-    return pool.one(sql`
+    return pool.query(`
     INSERT INTO feedback_replies (user_id, ignored, text, feedback_topic_id)
-    VALUES (${user_id}, ${ignored}, ${text}, ${feedback_topic_id})
+    VALUES ($1, $2, $3, $4)
     RETURNING *
-  `)
+  `, [user_id, ignored, text, feedback_topic_id]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -3149,7 +3113,7 @@ export const insertReplyToUnackedFeedbackTopic = async function(
 export const findFriendshipsForUserId = async function(user_id, limit = 100) {
     assert(_.isNumber(user_id))
 
-    return pool.many(sql`
+    return pool.query(`
 SELECT
   friendships.*,
   json_build_object(
@@ -3162,26 +3126,26 @@ SELECT
   EXISTS(
     SELECT 1
     FROM friendships
-    WHERE to_user_id = ${user_id}
+    WHERE to_user_id = $1
       AND from_user_id = u1.id
   ) "is_mutual"
 FROM friendships
 JOIN users u1 ON friendships.to_user_id = u1.id
-WHERE from_user_id = ${user_id}
+WHERE from_user_id = $2
 ORDER BY u1.last_online_at DESC NULLS LAST
-LIMIT ${limit}
-  `)
+LIMIT $3
+  `, [user_id, user_id, limit]).then(res => res.rows)
 }
 
 // @fast
 //
 // TODO: add is_mutual
 export const findFriendshipBetween = async function(from_id, to_id) {
-    return pool.one(sql`
-    SELECT friendships
+    return pool.query(`
+    SELECT *
     FROM friendships
-    WHERE from_user_id = ${from_id} AND to_user_id = ${to_id}
-  `)
+    WHERE from_user_id = $1 AND to_user_id = $2
+  `, [from_id, to_id]).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -3191,13 +3155,12 @@ export async function createFriendship(from_id: number, to_id: number) {
     assert(_.isNumber(to_id))
 
     // Note: race condition
-    const count = await pool.one<{ count: number }>(
-            sql`
+    const count = await pool.query<{ count: number }>(`
     SELECT COUNT(*) "count"
     FROM friendships
-    WHERE from_user_id = ${from_id}
-  `
-        )
+    WHERE from_user_id = $1
+  `, [from_id])
+        .then(maybeOneRow)
         .then(row => row!.count)
 
     if (count >= 100) {
@@ -3205,12 +3168,10 @@ export async function createFriendship(from_id: number, to_id: number) {
     }
 
     return pool
-        .query(
-            sql`
+        .query(`
     INSERT INTO friendships (from_user_id, to_user_id)
-    VALUES (${from_id}, ${to_id})
-  `
-        )
+    VALUES ($1, $2)
+  `, [from_id, to_id])
         .catch(err => {
             // Ignore unique violation, like if user double-clicks
             // the add-friend button
@@ -3225,10 +3186,10 @@ export const deleteFriendship = async function(from_id, to_id) {
     assert(_.isNumber(from_id))
     assert(_.isNumber(to_id))
 
-    return pool.query(sql`
+    return pool.query(`
     DELETE FROM friendships
-    WHERE from_user_id = ${from_id} AND to_user_id = ${to_id}
-  `)
+    WHERE from_user_id = $1 AND to_user_id = $2
+  `, [from_id, to_id])
 }
 
 ////////////////////////////////////////////////////////////
@@ -3239,14 +3200,12 @@ export const getVmThreadUserIds = async function(parentVmId) {
     assert(Number.isInteger(parentVmId))
 
     return pool
-        .many(
-            sql`
+        .query(`
     SELECT DISTINCT from_user_id
     FROM vms
-    WHERE id = ${parentVmId}
-       OR parent_vm_id = ${parentVmId}
-  `
-        )
+    WHERE id = $1
+       OR parent_vm_id = $2
+  `, [parentVmId, parentVmId]).then(res => res.rows)
         .then(rows => rows.map(row => row.from_user_id))
 }
 
@@ -3263,19 +3222,18 @@ export const createVm = async function(data) {
     assert(_.isString(data.markup))
     assert(_.isString(data.html))
 
-    return pool.one(sql`
+    return pool.query(`
 INSERT INTO vms (from_user_id, to_user_id, markup, html, parent_vm_id)
-VALUES (${data.from_user_id},
- ${data.to_user_id}, ${data.markup}, ${data.html}, ${data.parent_vm_id})
+VALUES ($1, $2, $3, $4, $5)
 RETURNING *
-  `)
+  `, [data.from_user_id, data.to_user_id, data.markup, data.html, data.parent_vm_id]).then(maybeOneRow)
 }
 
 export const findLatestVMsForUserId = async function(user_id) {
     assert(Number.isInteger(user_id))
 
     // Created index for this: create index vms_apple ON vms (to_user_id, parent_vm_id)
-    return pool.many(sql`
+    return pool.query(`
 SELECT
   vms.*,
   json_build_object(
@@ -3303,27 +3261,27 @@ SELECT
   ) child_vms
 FROM vms
 JOIN users u ON vms.from_user_id = u.id
-WHERE vms.to_user_id = ${user_id} AND parent_vm_id IS NULL
+WHERE vms.to_user_id = $1 AND parent_vm_id IS NULL
 ORDER BY vms.id DESC
 LIMIT 30
-  `)
+  `, [user_id]).then(res => res.rows)
 }
 
 export const clearVmNotification = async function(to_user_id, vm_id) {
     assert(Number.isInteger(to_user_id))
     assert(Number.isInteger(vm_id))
 
-    return pool.query(sql`
+    return pool.query(`
     DELETE FROM notifications
-    WHERE to_user_id = ${to_user_id} AND vm_id = ${vm_id}
-  `)
+    WHERE to_user_id = $1 AND vm_id = $2
+  `, [to_user_id, vm_id])
 }
 
 ////////////////////////////////////////////////////////////
 // current_sidebar_contests
 
 export const clearCurrentSidebarContest = async function() {
-    return pool.query(sql`
+    return pool.query(`
     UPDATE current_sidebar_contests
     SET is_current = false
   `)
@@ -3339,18 +3297,18 @@ export const updateCurrentSidebarContest = async function(id, data) {
     assert(_.isBoolean(data.is_current) || _.isUndefined(data.is_current))
 
     // Reminder: Only COALESCE things that are not nullable
-    return pool.one(sql`
+    return pool.query(`
     UPDATE current_sidebar_contests
     SET
-      title       = COALESCE(${data.title}, title),
-      topic_url   = COALESCE(${data.topic_url}, topic_url),
-      deadline    = COALESCE(${data.deadline}, deadline),
-      image_url   = ${data.image_url},
-      description = ${data.description},
-      is_current  = COALESCE(${data.is_current}, is_current)
-    WHERE id = ${id}
+      title       = COALESCE($1, title),
+      topic_url   = COALESCE($2, topic_url),
+      deadline    = COALESCE($3, deadline),
+      image_url   = $4,
+      description = $5,
+      is_current  = COALESCE($6, is_current)
+    WHERE id = $7
     RETURNING *
-  `)
+  `, [data.title, data.topic_url, data.deadline, data.image_url, data.description, data.is_current, id]).then(maybeOneRow)
 }
 
 export const insertCurrentSidebarContest = async function(data) {
@@ -3360,25 +3318,24 @@ export const insertCurrentSidebarContest = async function(data) {
     assert(_.isString(data.image_url) || _.isUndefined(data.image_url))
     assert(_.isString(data.description) || _.isUndefined(data.description))
 
-    return pool.one(sql`
+    return pool.query(`
     INSERT INTO current_sidebar_contests
     (title, topic_url, deadline, image_url, description, is_current)
     VALUES
-    (${data.title}, ${data.topic_url}, ${data.deadline},
-     ${data.image_url}, ${data.description}, true)
+    ($1, $2, $3, $4, $5, true)
     RETURNING *
-  `)
+  `, [data.title, data.topic_url, data.deadline, data.image_url, data.description]).then(maybeOneRow)
 }
 
 // Returns object or undefined
 export const getCurrentSidebarContest = async function() {
-    return pool.one(sql`
+    return pool.query(`
     SELECT *
     FROM current_sidebar_contests
     WHERE is_current = true
     ORDER BY id DESC
     LIMIT 1
-  `)
+  `).then(maybeOneRow)
 }
 
 ////////////////////////////////////////////////////////////
@@ -3388,12 +3345,12 @@ export const updateConvoFolder = async function(userId, convoId, folder) {
     assert(convoId)
     assert(_.isString(folder))
 
-    return pool.query(sql`
+    return pool.query(`
     UPDATE convos_participants
-    SET folder = ${folder}
-    WHERE user_id = ${userId}
-      AND convo_id = ${convoId}
-  `)
+    SET folder = $1
+    WHERE user_id = $2
+      AND convo_id = $3
+  `, [folder, userId, convoId])
 }
 
 ////////////////////////////////////////////////////////////
@@ -3407,22 +3364,22 @@ export const updateConvoFolder = async function(userId, convoId, folder) {
 export const unnukeUser = async function(userId) {
     assert(Number.isInteger(userId))
     const sqls = {
-        unbanUser: sql`
-      UPDATE users
-      SET role = 'member'
-        , is_nuked = false
-      WHERE id = ${userId}
-    `,
-        unhideTopics: sql`
-      UPDATE topics SET is_hidden = false WHERE user_id = ${userId}
-    `,
-        unhidePosts: sql`
-      UPDATE posts SET is_hidden = false WHERE user_id = ${userId}
-    `,
-        deleteFromNukelist: sql`
-      DELETE FROM nuked_users
-      WHERE user_id = ${userId}
-    `,
+        unbanUser: {
+            text: `UPDATE users SET role = 'member', is_nuked = false WHERE id = $1`,
+            values: [userId]
+        },
+        unhideTopics: {
+            text: `UPDATE topics SET is_hidden = false WHERE user_id = $1`,
+            values: [userId]
+        },
+        unhidePosts: {
+            text: `UPDATE posts SET is_hidden = false WHERE user_id = $1`,
+            values: [userId]
+        },
+        deleteFromNukelist: {
+            text: `DELETE FROM nuked_users WHERE user_id = $1`,
+            values: [userId]
+        },
     }
     return pool.withTransaction(async client => {
         await client.query(sqls.unbanUser)
@@ -3441,29 +3398,30 @@ export const nukeUser = async function({ spambot, nuker }) {
     assert(Number.isInteger(nuker))
 
     const sqls = {
-        banUser: sql`
-      UPDATE users
-      SET role = 'banned'
-        , is_nuked = true
-      WHERE id = ${spambot}
-    `,
-        hideTopics: sql`
-      UPDATE topics SET is_hidden = true WHERE user_id = ${spambot}
-    `,
-        hidePosts: sql`
-      UPDATE posts SET is_hidden = true WHERE user_id = ${spambot}
-    `,
-        insertNukelist: sql`
-      INSERT INTO nuked_users (user_id, nuker_id)
-      VALUES (${spambot}, ${nuker})
-    `,
+        banUser: {
+            text: `UPDATE users SET role = 'banned', is_nuked = true WHERE id = $1`,
+            values: [spambot]
+        },
+        hideTopics: {
+            text: `UPDATE topics SET is_hidden = true WHERE user_id = $1`,
+            values: [spambot]
+        },
+        hidePosts: {
+            text: `UPDATE posts SET is_hidden = true WHERE user_id = $1`,
+            values: [spambot]
+        },
+        insertNukelist: {
+            text: `INSERT INTO nuked_users (user_id, nuker_id) VALUES ($1, $2)`,
+            values: [spambot, nuker]
+        },
         // Update the latest_post_id of every topic
         // that the nuked user has a latest post in
         //
         // TODO: Undo this in `unnukeUser`.
         //
         // FIXME: This is too slow.
-        updateTopics: sql`
+        updateTopics: {
+            text: `
       UPDATE topics
       SET
         latest_post_id = sub2.latest_post_id
@@ -3474,13 +3432,15 @@ export const nukeUser = async function({ spambot, nuker }) {
           SELECT t.id topic_id
           FROM posts p
           JOIN topics t ON p.id = t.latest_post_id
-          WHERE p.user_id = ${spambot}
+          WHERE p.user_id = $1
         ) sub on posts.topic_id = sub.topic_id
         WHERE posts.is_hidden = false
         GROUP BY sub.topic_id
       ) sub2
       WHERE id = sub2.topic_id
     `,
+            values: [spambot]
+        },
     }
 
     return pool
@@ -3506,26 +3466,26 @@ export const deleteUserTopicBan = async (topicId, userId) => {
     assert(Number.isInteger(topicId))
     assert(Number.isInteger(userId))
 
-    return pool.query(sql`
+    return pool.query(`
     DELETE FROM topic_bans
-    WHERE topic_id = ${topicId}
-      AND banned_id = ${userId}
-  `)
+    WHERE topic_id = $1
+      AND banned_id = $2
+  `, [topicId, userId])
 }
 
 export const deleteTopicBan = async banId => {
     assert(Number.isInteger(banId))
 
-    return pool.query(sql`
+    return pool.query(`
     DELETE FROM topic_bans
-    WHERE id = ${banId}
-  `)
+    WHERE id = $1
+  `, [banId])
 }
 
 export const getTopicBan = async banId => {
     assert(Number.isInteger(banId))
 
-    return pool.one(sql`
+    return pool.query(`
     SELECT
       tb.*,
       json_build_object(
@@ -3541,8 +3501,8 @@ export const getTopicBan = async banId => {
     FROM topic_bans tb
     JOIN users u1 ON u1.id = tb.banned_by_id
     JOIN users u2 ON u2.id = tb.banned_id
-    WHERE tb.id = ${banId}
-  `)
+    WHERE tb.id = $1
+  `, [banId]).then(maybeOneRow)
 }
 
 export const insertTopicBan = async (topicId, gmId, bannedId) => {
@@ -3551,12 +3511,10 @@ export const insertTopicBan = async (topicId, gmId, bannedId) => {
     assert(Number.isInteger(bannedId))
 
     return pool
-        .query(
-            sql`
+        .query(`
     INSERT INTO topic_bans (topic_id, banned_by_id, banned_id)
-    VALUES (${topicId}, ${gmId}, ${bannedId})
-  `
-        )
+    VALUES ($1, $2, $3)
+  `, [topicId, gmId, bannedId])
         .catch(err => {
             if (err.code === '23505') {
                 return
@@ -3568,7 +3526,7 @@ export const insertTopicBan = async (topicId, gmId, bannedId) => {
 export const listTopicBans = async topicId => {
     assert(Number.isInteger(topicId))
 
-    return pool.many(sql`
+    return pool.query(`
     SELECT
       tb.*,
       json_build_object(
@@ -3584,12 +3542,12 @@ export const listTopicBans = async topicId => {
     FROM topic_bans tb
     JOIN users u1 ON u1.id = tb.banned_by_id
     JOIN users u2 ON u2.id = tb.banned_id
-    WHERE tb.topic_id = ${topicId}
-  `)
+    WHERE tb.topic_id = $1
+  `, [topicId]).then(res => res.rows)
 }
 
 export const allForumMods = async () => {
-    return pool.many(sql`
+    return pool.query(`
     SELECT
       fm.forum_id,
       json_build_object(
@@ -3599,7 +3557,7 @@ export const allForumMods = async () => {
       ) "user"
     FROM users u
     JOIN forum_mods fm ON u.id = fm.user_id
-  `)
+  `).then(res => res.rows)
 }
 
 ////////////////////////////////////////////////////////////
