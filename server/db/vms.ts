@@ -36,6 +36,6 @@ export const deleteVmChildren = async parentId => {
 export const deleteNotificationsForVmId = async id => {
     return pool.query(`
     DELETE FROM notifications
-    WHERE id = $1
+    WHERE vm_id = $1
   `, [id])
 }
