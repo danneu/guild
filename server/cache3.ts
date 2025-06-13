@@ -33,11 +33,9 @@ const cache = createIntervalCache({
   "uname-set": {
     enabled: true,
     initialValue: new Set(),
-    // interval: 1000 * 60 * 5, // 5 minutes
-    interval: Infinity,
+    interval: 1000 * 60 * 30, // 30 minutes as a backup
     fetch: async () => {
       const unames = await db.findAllActiveUnames();
-      console.log("unames", unames);
       return new Set(unames.map((uname) => uname.toLowerCase()));
     },
   },
