@@ -569,10 +569,9 @@ export async function createSession(pgClient: PgQueryExecutor, props: {
   interval: string
 }) {
     debug('[createSession] props: ', props)
-    assert(belt.isDBClient(pgClient))
-    assert(_.isNumber(props.userId))
-    assert(_.isString(props.ipAddress))
-    assert(_.isString(props.interval))
+    assert(typeof props.userId === 'number')
+    assert(typeof props.ipAddress === 'string')
+    assert(typeof props.interval === 'string')
 
     const uuid = uuidv7()
 

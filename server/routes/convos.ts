@@ -13,7 +13,7 @@ import * as config from '../config.js'
 import * as cancan from '../cancan.js'
 const bbcode = require('../bbcode.js')
 import * as paginate from '../paginate.js'
-import * as emailer2 from '../emailer2'
+import * as emailer from '../emailer'
 import * as eflags from '../eflags.js'
 import { Context } from 'koa'
 
@@ -149,29 +149,16 @@ router.post('/convos', async (ctx: Context) => {
         .filter(user => user.eflags & eflags.NEW_CONVO)
 
     if (recipients.length > 0) {
-    emailer2.sendEmail({
-        fromName: `Roleplayer Guild`,
-        fromEmail: 'mahz@roleplayerguild.com',
-        toEmails: recipients.map(u => u.email),
-        subject: `${ctx.currUser.uname} sent you a new convo: ${convo.title}`,
-        bodyText: `
-${ctx.currUser.uname} said: 
-
-${markup.slice(0, 1000)}${markup.length > 1000 ? '...' : ''}
-
-* * *
-
-${config.HOST}${convo.url}
-
-You are receiving this because you opted in to email notifications.
-Manage notifications: ${config.HOST}/me/edit#email
-
-<3 GuildBot
-        `.trim()
-    })
-    .catch(err => {
-        console.error(`Error sending convo notification email:`, err)
-    })
+        // Send in background
+        emailer.sendNewConvoEmails({
+            senderUname: ctx.currUser.uname,
+            recipients,
+            convoTitle: convo.title,
+            convoId: convo.id,
+            messageMarkup: markup,
+        }).catch(e => {
+            console.error(`Error sending convo notification emails:`, e)
+        })
     }
 
     ctx.response.redirect(convo.url)

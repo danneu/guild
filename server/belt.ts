@@ -229,19 +229,6 @@ export const calcTotalPostPages = function(totalItems) {
     return Math.max(1, Math.ceil(totalItems / config.POSTS_PER_PAGE))
 }
 
-// FIXME: This is a sloppy was to see if an object is a pg client
-export const isDBClient = function(obj) {
-    var keys = Object.keys(obj)
-
-    return (
-        keys.includes('database') &&
-        keys.includes('connection') &&
-        keys.includes('readyForQuery') &&
-        keys.includes('hasExecuted') &&
-        keys.includes('queryQueue')
-    )
-}
-
 export function slugifyUname(uname: string): string {
     const slug = uname
         .trim()

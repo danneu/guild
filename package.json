@@ -28,7 +28,7 @@
     "license": "MIT",
     "dependencies": {
         "@aws-sdk/client-s3": "^3.828.0",
-        "@aws-sdk/client-ses": "^3.344.0",
+        "@aws-sdk/client-sesv2": "^3.828.0",
         "@aws-sdk/lib-storage": "^3.828.0",
         "@koa/router": "^13.1.0",
         "autolinker": "^4.1.5",
@@ -50,8 +50,7 @@
         "koa-send": "^5.0.1",
         "koa-static": "^5.0.0",
         "lodash": "^4.17.15",
-        "nodemailer": "4.0.1",
-        "nodemailer-ses-transport": "1.5.1",
+        "nodemailer": "^7.0.3",
         "nunjucks": "^3.2.0",
         "pg": "^8.0.0",
         "postgres-array": "3.0.4",
@@ -63,14 +62,16 @@
         "sharp": "^0.34.2",
         "simple-oauth2": "^1.2.0",
         "tsafe": "^1.8.5",
-        "tsx": "^4.20.1",
+        "tsx": "^4.20.3",
         "uuid": "^11.1.0",
-        "zod": "^3.25.62"
+        "zod": "^3.25.64"
     },
     "devDependencies": {
+        "@types/debug": "^4.1.12",
         "@types/koa": "^2.15.0",
         "@types/koa__router": "^12.0.4",
         "@types/node": "^24.0.1",
+        "@types/nunjucks": "^3.2.6",
         "@types/pg": "^8.10.1",
         "@types/react": "^19.1.7",
         "@types/react-dom": "^19.1.6",
