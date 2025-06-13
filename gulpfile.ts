@@ -7,6 +7,8 @@ import uglifyJs from "gulp-uglify";
 import { deleteAsync } from "del";
 import vinylPaths from "vinyl-paths";
 
+// Important: Keep in sync with views/layouts/master.html
+
 function clean() {
   return deleteAsync(["dist/**/*"]);
 }
