@@ -3,9 +3,9 @@
 An ancient forum somehow still running in production.
 
 - Started as a vBulletin forum in 2006 when I was 17
-- Unfortunately deleted in 2015 (Guildfall) [Wayback Machine example](https://web.archive.org/web/20100915043234/http://roleplayerguild.com/)
-- Written from scratch with Clojure and Datomic in 2015 (don't ask)
-- Ported to Node.js and Postgres starting in 2018 (ongoing infiniwork)
+- Unfortunately deleted in 2015 (Guildfall) [Wayback machine](https://web.archive.org/web/20100915043234/http://roleplayerguild.com/)
+- Written from scratch with Clojure and Datomic in 2014 (don't ask) [Wayback machine](https://web.archive.org/web/20140331023634/http://www.roleplayerguild.com/)
+- Ported to Node.js and Postgres starting in 2015 (ongoing infiniwork) [Wayback machine](https://web.archive.org/web/20150201030909/http://www.roleplayerguild.com/)
 
 ## Setup and Install
 
