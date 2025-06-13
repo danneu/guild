@@ -2840,6 +2840,21 @@ guildbot.connect().catch((err) => console.error("guildbot error", err));
 
 app.use(router.routes());
 
+// TODO: use cache3 and delete cache and cache2
+//
+// cache3.on("error", (err) => {
+//   console.error("cache3 error", err);
+// });
+// console.log("Starting cache3 before binding server");
+// cache3
+//   .start()
+//   .then(() => {
+//     return app.listen(config.PORT);
+//   })
+//   .then(() => {
+//     console.log("Listening on", config.PORT);
+//   });
+
 app.listen(config.PORT, () => {
   console.log("Listening on", config.PORT);
 });
