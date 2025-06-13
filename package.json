@@ -76,7 +76,7 @@
     "@types/react": "^19.1.7",
     "@types/react-dom": "^19.1.6",
     "del": "^2.2.2",
-    "gulp": "^4.0.0",
+    "gulp": "^5.0.1",
     "gulp-clean": "^0.4.0",
     "gulp-concat": "^2.4.3",
     "gulp-cssnano": "^2.1.3",
