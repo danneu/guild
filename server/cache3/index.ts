@@ -13,14 +13,14 @@ export class IntervalCacheError extends Error {
   }
 }
 
-type CacheConfig<T> = {
+export type CacheConfig<T> = {
   enabled: boolean;
   initialValue: T;
   interval: number;
   fetch: () => Promise<T>;
 };
 
-type CacheConfigMap<T extends Record<string, { value: any }>> = {
+export type CacheConfigMap<T extends Record<string, { value: any }>> = {
   [K in keyof T]: CacheConfig<T[K]["value"]>;
 };
 
@@ -189,8 +189,13 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
       try {
         await Promise.all(populatePromises);
       } catch (error) {
-        console.error("cache3 could not start due to population errors:", error);
-        throw new Error("Failed to populate cache entries. Server start aborted.");
+        console.error(
+          "cache3 could not start due to population errors:",
+          error,
+        );
+        throw new Error(
+          "Failed to populate cache entries. Server start aborted.",
+        );
       }
 
       // Now start the update loop
@@ -203,9 +208,9 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
   }
 
   /**
-   * Stops the cache system by halting the update loop and clearing all cached data.
-   * After calling stop(), all cache entries are removed and get() calls will throw errors.
-   * Used for cleanup when shutting down the application.
+   * Stops the background update loop while preserving all cached data.
+   * Cache entries remain accessible via get() after stopping.
+   * Use this to pause automatic updates without losing cached values.
    */
   function stop() {
     running = false;
@@ -213,7 +218,6 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
       clearInterval(intervalId);
       intervalId = null;
     }
-    cache.clear();
   }
 
   /**
@@ -237,7 +241,9 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
    * Works even on disabled cache entries (with a warning).
    * Emits error events if the fetch operation fails.
    */
-  async function forceUpdate<K extends keyof T>(key: K): Promise<T[K]["value"] | undefined> {
+  async function forceUpdate<K extends keyof T>(
+    key: K,
+  ): Promise<T[K]["value"] | undefined> {
     const keyConfig = config[key];
     const entry = cache.get(key);
     if (!keyConfig || !entry) {

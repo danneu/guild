@@ -402,7 +402,7 @@ describe("createIntervalCache", () => {
     consoleSpy.mockRestore();
   });
 
-  it("stop() clears cache and stops updates", async () => {
+  it("stop() preserves cache data but stops updates", async () => {
     let fetchCount = 0;
     const cache = createIntervalCache(
       {
@@ -419,6 +419,7 @@ describe("createIntervalCache", () => {
     // Start and initial update
     await cache.start();
     ok(fetchCount > 0);
+    const valueAfterStart = cache.get("data");
 
     // Stop the cache
     cache.stop();
@@ -429,12 +430,20 @@ describe("createIntervalCache", () => {
     await vi.advanceTimersByTimeAsync(5000);
     deepEqual(fetchCount, countAfterStop);
 
-    // Cache should be cleared - get() should return undefined and warn
-    const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const result = cache.get("data");
-    deepEqual(result, undefined);
-    ok(consoleSpy.mock.calls.length > 0);
-    consoleSpy.mockRestore();
+    // Cache data should still be accessible
+    const valueAfterStop = cache.get("data");
+    deepEqual(valueAfterStop, valueAfterStart);
+
+    // Should be able to request updates but they won't happen
+    cache.requestUpdate("data");
+    await vi.advanceTimersByTimeAsync(2000);
+    deepEqual(fetchCount, countAfterStop);
+
+    // forceUpdate should still work after stop
+    const expectedValue = `update-${fetchCount + 1}`;
+    const forceResult = await cache.forceUpdate("data");
+    deepEqual(forceResult, expectedValue);
+    deepEqual(cache.get("data"), expectedValue);
   });
 
   it("emits error events during start() population failures", async () => {

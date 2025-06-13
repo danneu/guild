@@ -18,3 +18,8 @@ The purpose of the cache is:
 - cache.requestRefresh(key) shouldn't do anything but set `updateRequested` on the value so that the cache's next run will update the value. Even if requestRefresh(key) is run many times, it should never update any faster than the interval
 - cache.getEntry(key) should return the entry object for testing
 - cache.start() returns a promise that resolves once every key has been populated. and only until then will the internal update interval start. this is so we can do things like prevent server boot if the cache can't populate.
+- cache.stop() should stop the update loop but not clear the cache.
+
+TODO
+
+- cache.start() shouldn't throw if the cache can't populate. The whole point of initialValue is that the cache can start partially populated. Instead, it just emits 'error' events. cache.start() doesn't return a promise at all.
