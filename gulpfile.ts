@@ -25,7 +25,7 @@ function copyVendorDeps() {
 function copyServerFiles() {
   return Promise.all([
     src("server/bbcode.js").pipe(dest("public/vendor/xbbcode/xbbcode/")),
-    src("server/ago.js").pipe(dest("public/js/ago.js")),
+    src("server/ago.js").pipe(dest("public/js/")),
   ]);
 }
 
