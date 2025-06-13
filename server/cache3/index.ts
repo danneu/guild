@@ -112,50 +112,30 @@ export function createIntervalCache<T extends CacheConfigMap>(
 
     for (const [key, keyConfig] of Object.entries(config)) {
       const entry = cache.get(key);
-      // console.log(`[updateLoop] ${key} entry`);
-      // console.dir(entry, { depth: null });
+
+      // Skip if updating (an entry should never have more than one fetch in flight)
       if (!entry || entry.updating) {
-        if (key === "categories") {
-          debugLog(
-            "skipping categories because there's no entry or it's updating",
-          );
-        }
         continue;
       }
 
       // Skip if disabled
       if (!keyConfig.enabled) {
-        if (key === "categories") {
-          debugLog("skipping categories because it's disabled");
-        }
         continue;
       }
 
       // Skip if still in backoff period
       if (now < entry.backoffUntil) {
-        if (key === "categories") {
-          debugLog("skipping categories because it's in backoff period");
-        }
         continue;
       }
 
       const timeSinceUpdate = now - entry.lastUpdated;
-      
-      // Step 1: Auto-request updates when interval has passed
+
+      // Auto-request updates when interval has passed
       if (timeSinceUpdate >= keyConfig.interval) {
         entry.updateRequested = true;
       }
-      
-      // Step 2: Gate updates on both conditions
-      const shouldUpdate = entry.updateRequested && timeSinceUpdate >= keyConfig.interval;
 
-      if (key === "categories") {
-        debugLog(
-          `[updateLoop] ${key} shouldUpdate: ${shouldUpdate}, timeSinceUpdate: ${timeSinceUpdate}, interval: ${keyConfig.interval}`,
-        );
-      }
-
-      if (shouldUpdate) {
+      if (entry.updateRequested) {
         entry.updating = true;
         entry.updateRequested = false;
 
