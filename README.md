@@ -1,4 +1,3 @@
-
 # Guild
 
 An ancient forum somehow still running in production.
@@ -18,7 +17,7 @@ The Guild is a Node.js app that talks to a Postgres database.
   ```sh
   git clone git@github.com:danneu/guild.git
   cd guild
-  npm install
+  pnpm install
   ```
 
 - Launch Postgres (by default it will run on `http://localhost:5432`) and create an empty database named `guild`.
@@ -30,14 +29,16 @@ The Guild is a Node.js app that talks to a Postgres database.
 - The Guild comes with a command that rebuilds the database with tables and fills them with some data to play with:
 
   ```sh
-  npm run reset-db
+  pnpm run reset-db
   ```
 
 - Now you can launch the server:
 
   ```sh
-  npm start
+  pnpm start
   > Listening on port 3000
+
+  # Or in dev mode: pnpm run dev
   ```
 
 ## Building js/css assets
@@ -45,25 +46,24 @@ The Guild is a Node.js app that talks to a Postgres database.
 The guild uses [gulp](https://gulpjs.com) to build assets into the folder `./dist/` which will include a manifest file `./dist/rev-manifest.json` that contains the name of the bundles.
 
 ```
-dist/
-    fonts/
-        all-155a92ba49.js
-        all-bfacf3040f.css
-        rev-manifest.json
+dist
+├── all-06d6e3ed22.js
+├── all-7dd8853d5f.css
+├── fonts
+└── rev-manifest.json
 ```
 
 You can run the task with:
 
 ```sh
-npm run assets
+pnpm run build
 ```
 
-If the dist folder exists, then the compiled js/css/fonts bundles will be served. 
+If the dist folder exists, then the compiled js/css/fonts bundles will be served.
 
 Otherwise, i.e. for development, all of the js/css/font files are loaded individually and uncompiled.
 
-In other words, you must run `npm run assets` in production for the compiled assets to be served, and you must also remember to rebuild them when they change, else stale bundles will be served.
-
+In other words, you must run `pnpm run build` in production for the compiled assets to be served, and you must also remember to rebuild them when they change, else stale bundles will be served.
 
 ## Config and Environment Variables
 

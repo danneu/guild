@@ -12,7 +12,7 @@
     "docker:build": "docker build -t guild .",
     "docker:run": "docker run -p 3000:3000 --env-file .env guild",
     "// ==================": "prod ==================================",
-    "production:deploy": "npm version patch -m '%s [deploy]' && git push origin --follow-tags",
+    "production:deploy": "pnpm version patch -m '%s [deploy]' && git push origin --follow-tags",
     "production:logs": "fly logs --app rpguild",
     "production:ssh": "fly ssh console --app rpguild",
     "// ===================": "staging ==================================",
