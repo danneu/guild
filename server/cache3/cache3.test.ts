@@ -691,4 +691,151 @@ describe("createIntervalCache", () => {
     cache.stop();
     consoleSpy.mockRestore();
   });
+
+  it("implements exponential backoff on fetch failures", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const cache = createIntervalCache({
+      data: {
+        enabled: true,
+        initialValue: "initial",
+        interval: 1000,
+        fetch: async () => {
+          throw new Error("Always fails");
+        },
+      },
+    }, { 
+      loopInterval: 50,
+      backoff: {
+        maxBackoffMs: 10000,
+        multiplier: 2,
+      }
+    });
+
+    // Test using forceUpdate to bypass timing complexities
+    await cache.forceUpdate("data"); // 1st failure
+    await cache.forceUpdate("data"); // 2nd failure  
+    await cache.forceUpdate("data"); // 3rd failure
+
+    // Verify the exponential backoff pattern in the logs
+    ok(consoleSpy.mock.calls.some(call => 
+      call[0].includes("attempt 1") && call[0].includes("backing off 1000ms")
+    ));
+    ok(consoleSpy.mock.calls.some(call => 
+      call[0].includes("attempt 2") && call[0].includes("backing off 2000ms")
+    ));
+    ok(consoleSpy.mock.calls.some(call => 
+      call[0].includes("attempt 3") && call[0].includes("backing off 4000ms")
+    ));
+
+    cache.stop();
+    consoleSpy.mockRestore();
+  });
+
+  it("respects maxBackoffMs setting", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const cache = createIntervalCache({
+      data: {
+        enabled: true,
+        initialValue: "initial",
+        interval: 1000,
+        fetch: async () => {
+          throw new Error("Always fails");
+        },
+      },
+    }, { 
+      loopInterval: 50,
+      backoff: {
+        maxBackoffMs: 3000, // Cap at 3 seconds
+        multiplier: 2,
+      }
+    });
+
+    // Use forceUpdate to test the max backoff quickly
+    await cache.forceUpdate("data"); // 1st: 1000ms backoff
+    await cache.forceUpdate("data"); // 2nd: 2000ms backoff  
+    await cache.forceUpdate("data"); // 3rd: should be 4000ms but capped at 3000ms
+
+    // Verify backoff was capped at maxBackoffMs (3000ms, not 4000ms)
+    ok(consoleSpy.mock.calls.some(call => 
+      call[0].includes("attempt 3") && call[0].includes("backing off 3000ms")
+    ));
+
+    cache.stop();
+    consoleSpy.mockRestore();
+  });
+
+  it("resets backoff state on successful update", async () => {
+    let shouldFail = true;
+
+    const cache = createIntervalCache({
+      data: {
+        enabled: true,
+        initialValue: "initial",
+        interval: 1000,
+        fetch: async () => {
+          if (shouldFail) {
+            throw new Error("Failure");
+          }
+          return `success-${Date.now()}`;
+        },
+      },
+    }, { 
+      loopInterval: 50,
+      backoff: { maxBackoffMs: 10000, multiplier: 2 }
+    });
+
+    cache.start();
+
+    // Let it fail once to set backoff state
+    await vi.advanceTimersByTimeAsync(1100);
+    
+    // Verify failure state exists
+    let entry = cache.getEntry("data");
+    ok(entry?.failureCount > 0);
+    ok(entry?.backoffUntil > 0);
+
+    // Now make it succeed
+    shouldFail = false;
+    
+    // Force an update to bypass backoff timing
+    await cache.forceUpdate("data");
+    ok(cache.get("data").startsWith("success"));
+
+    // Check that backoff state was reset
+    entry = cache.getEntry("data");
+    deepEqual(entry?.failureCount, 0);
+    deepEqual(entry?.backoffUntil, 0);
+
+    cache.stop();
+  });
+
+  it("resets backoff state when manually setting values", () => {
+    const cache = createIntervalCache({
+      data: {
+        enabled: true,
+        initialValue: "initial",
+        interval: 1000,
+        fetch: async () => { throw new Error("Always fails"); },
+      },
+    });
+
+    // Simulate a failure state by directly manipulating entry
+    const entry = cache.getEntry("data");
+    if (entry) {
+      entry.failureCount = 5;
+      entry.backoffUntil = Date.now() + 10000;
+    }
+
+    // Manual set should reset backoff state
+    cache.set("data", "manually set");
+    
+    const updatedEntry = cache.getEntry("data");
+    deepEqual(updatedEntry?.failureCount, 0);
+    deepEqual(updatedEntry?.backoffUntil, 0);
+    deepEqual(updatedEntry?.value, "manually set");
+
+    cache.stop();
+  });
 });

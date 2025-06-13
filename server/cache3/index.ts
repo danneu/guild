@@ -29,21 +29,38 @@ type CacheEntry<T> = {
   lastUpdated: number;
   updateRequested: boolean;
   updating: boolean;
+  failureCount: number;
+  backoffUntil: number;
 };
 
 export type CacheOptions = {
   loopInterval?: number;
+  backoff?: {
+    maxBackoffMs?: number;
+    multiplier?: number;
+  };
 };
 
 const defaultOptions: CacheOptions = {
   loopInterval: 1000,
+  backoff: {
+    maxBackoffMs: 60000, // 1 minute
+    multiplier: 2,
+  },
 };
 
 export function createIntervalCache<T extends Record<string, { value: any }>>(
   config: CacheConfigMap<T>,
   options: CacheOptions = defaultOptions,
 ) {
-  const { loopInterval = defaultOptions.loopInterval } = options;
+  const { 
+    loopInterval = defaultOptions.loopInterval,
+    backoff = defaultOptions.backoff 
+  } = options;
+  const { 
+    maxBackoffMs = defaultOptions.backoff!.maxBackoffMs!,
+    multiplier = defaultOptions.backoff!.multiplier! 
+  } = backoff || {};
   const cache = new Map<keyof T, CacheEntry<any>>();
   let running = false; // Don't start running until start() is called
   let intervalId: NodeJS.Timeout | null = null;
@@ -66,6 +83,8 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
       lastUpdated: 0,
       updateRequested: keyConfig.enabled, // Only request if enabled
       updating: false,
+      failureCount: 0,
+      backoffUntil: 0,
     });
   }
 
@@ -91,6 +110,9 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
       // Skip if disabled
       if (!keyConfig.enabled) continue;
 
+      // Skip if still in backoff period
+      if (now < entry.backoffUntil) continue;
+
       const timeSinceUpdate = now - entry.lastUpdated;
       const shouldUpdate =
         entry.updateRequested && timeSinceUpdate >= keyConfig.interval;
@@ -103,13 +125,27 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
           const newValue = await keyConfig.fetch();
           entry.value = newValue;
           entry.lastUpdated = Date.now();
+          // Reset failure count on success
+          entry.failureCount = 0;
+          entry.backoffUntil = 0;
         } catch (error) {
+          // Increment failure count and calculate backoff
+          entry.failureCount++;
+          const backoffMs = Math.min(
+            Math.pow(multiplier, entry.failureCount - 1) * 1000,
+            maxBackoffMs
+          );
+          entry.backoffUntil = Date.now() + backoffMs;
+
           const cacheError = new IntervalCacheError(
             `Error updating cache for key ${String(key)}: ${error instanceof Error ? error.message : error}`,
             String(key),
           );
           cacheError.cause = error;
-          console.error(`Error updating cache for key ${String(key)}:`, error);
+          console.error(
+            `Error updating cache for key ${String(key)} (attempt ${entry.failureCount}, backing off ${backoffMs}ms):`,
+            error
+          );
           emitter.emit("error", cacheError);
         } finally {
           entry.updating = false;
@@ -145,6 +181,9 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
     entry.value = value;
     entry.lastUpdated = Date.now();
     entry.updateRequested = false; // Clear any pending update request
+    // Reset backoff state when manually setting value
+    entry.failureCount = 0;
+    entry.backoffUntil = 0;
   }
 
   /**
@@ -213,14 +252,28 @@ export function createIntervalCache<T extends Record<string, { value: any }>>(
       entry.value = newValue;
       entry.lastUpdated = Date.now();
       entry.updateRequested = false;
+      // Reset failure count on success
+      entry.failureCount = 0;
+      entry.backoffUntil = 0;
       return newValue;
     } catch (error) {
+      // Increment failure count and calculate backoff for forceUpdate too
+      entry.failureCount++;
+      const backoffMs = Math.min(
+        Math.pow(multiplier, entry.failureCount - 1) * 1000,
+        maxBackoffMs
+      );
+      entry.backoffUntil = Date.now() + backoffMs;
+
       const cacheError = new IntervalCacheError(
         `Error updating cache for key ${String(key)}: ${error instanceof Error ? error.message : error}`,
         String(key),
       );
       cacheError.cause = error;
-      console.error(`Error updating cache for key ${String(key)}:`, error);
+      console.error(
+        `Error force updating cache for key ${String(key)} (attempt ${entry.failureCount}, backing off ${backoffMs}ms):`,
+        error
+      );
       emitter.emit("error", cacheError);
       return undefined;
     }
