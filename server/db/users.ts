@@ -7,7 +7,6 @@ const knex = Knex({ client: 'pg' })
 import _ from 'lodash'
 // 1st
 import { pool } from './util.js'
-import { sql } from 'pg-extra'
 
 // Note: The db/*.js files are an ongoing effort to
 // split apart the db/index.js monolith.
@@ -48,12 +47,12 @@ export const updateUser = async function(userId, fields) {
 export const unapproveUser = async userId => {
     assert(Number.isInteger(userId))
 
-    return pool.query(sql`
+    return pool.query(`
     UPDATE users
     SET approved_by_id = NULL,
         approved_at = NULL
-    WHERE id = ${userId}
-  `)
+    WHERE id = $1
+  `, [userId])
 }
 
 ////////////////////////////////////////////////////////////
@@ -62,12 +61,12 @@ export const approveUser = async ({ approvedBy, targetUser }) => {
     assert(Number.isInteger(approvedBy))
     assert(Number.isInteger(targetUser))
 
-    return pool.query(sql`
+    return pool.query(`
     UPDATE users
-    SET approved_by_id = ${approvedBy},
+    SET approved_by_id = $1,
         approved_at = NOW()
-    WHERE id = ${targetUser}
-  `)
+    WHERE id = $2
+  `, [approvedBy, targetUser])
 }
 
 ////////////////////////////////////////////////////////////

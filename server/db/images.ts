@@ -6,14 +6,13 @@ import Knex from 'knex'
 const knex = Knex({ client: 'pg' })
 import _ from 'lodash'
 // 1st
-import { pool } from './util.js'
-import { sql } from 'pg-extra'
+import { pool, maybeOneRow } from './util.js'
 
 ////////////////////////////////////////////////////////////
 
 export const getImage = async function(uuid) {
     assert(typeof uuid === 'string')
-    return pool.one(sql`
+    return pool.query(`
     SELECT
       images.*,
       json_build_object(
@@ -22,14 +21,14 @@ export const getImage = async function(uuid) {
       ) "user"
     FROM images
     JOIN users ON images.user_id = users.id
-    WHERE images.id = ${uuid}
+    WHERE images.id = $1
       AND deleted_at IS NULL
-  `)
+  `, [uuid]).then(maybeOneRow)
 }
 
 export const getLatestImages = async function(limit = 10) {
     debug(`[getLatestImages]`)
-    return pool.many(sql`
+    return pool.query(`
     SELECT
       images.*,
       json_build_object(
@@ -40,13 +39,13 @@ export const getLatestImages = async function(limit = 10) {
     JOIN users ON images.user_id = users.id
     WHERE images.deleted_at IS NULL
     ORDER BY images.created_at DESC
-    LIMIT ${limit}
-  `)
+    LIMIT $1
+  `, [limit]).then(res => res.rows)
 }
 
 export const getUserAlbums = async function(userId) {
     assert(Number.isInteger(userId))
-    return pool.many(sql`
+    return pool.query(`
     SELECT
       albums.*,
       json_build_object(
@@ -55,14 +54,14 @@ export const getUserAlbums = async function(userId) {
       ) "user"
     FROM albums
     JOIN users ON albums.user_id = users.id
-    WHERE albums.user_id = ${userId}
+    WHERE albums.user_id = $1
     ORDER BY albums.created_at DESC
-  `)
+  `, [userId]).then(res => res.rows)
 }
 
 export const getUserImages = async function(userId) {
     assert(Number.isInteger(userId))
-    return pool.many(sql`
+    return pool.query(`
     SELECT
       images.*,
       json_build_object(
@@ -71,15 +70,15 @@ export const getUserImages = async function(userId) {
       ) "user"
     FROM images
     JOIN users ON images.user_id = users.id
-    WHERE images.user_id = ${userId}
+    WHERE images.user_id = $1
       AND images.deleted_at IS NULL
     ORDER BY images.created_at DESC
-  `)
+  `, [userId]).then(res => res.rows)
 }
 
 export const getAlbumImages = async function(albumId) {
     assert(Number.isInteger(albumId))
-    return pool.many(sql`
+    return pool.query(`
     SELECT
       images.*,
       json_build_object(
@@ -88,10 +87,10 @@ export const getAlbumImages = async function(albumId) {
       ) "user"
     FROM images
     JOIN users ON images.user_id = users.id
-    WHERE images.album_id = ${albumId}
+    WHERE images.album_id = $1
       AND images.deleted_at IS NULL
     ORDER BY images.created_at DESC
-  `)
+  `, [albumId]).then(res => res.rows)
 }
 
 // description is optional
@@ -108,43 +107,43 @@ export const insertImage = async function(
     assert(Number.isInteger(albumId))
     assert(typeof src === 'string')
     assert(['image/jpeg', 'image/gif', 'image/png', 'image/avif'].indexOf(mime) > -1)
-    return pool.query(sql`
+    return pool.query(`
     INSERT INTO images (id, album_id, user_id, src, mime, description)
-    VALUES (${imageId}, ${albumId}, ${userId}, ${src}, ${mime}, ${description})
-  `)
+    VALUES ($1, $2, $3, $4, $5, $6)
+  `, [imageId, albumId, userId, src, mime, description])
 }
 
 // TODO: Also delete from S3
 export const deleteImage = async function(imageId) {
     assert(typeof imageId === 'string')
-    return pool.query(sql`
+    return pool.query(`
     UPDATE images
     SET deleted_at = NOW()
-    WHERE id = ${imageId}
-  `)
+    WHERE id = $1
+  `, [imageId])
 }
 
 // markup is optional
 export const insertAlbum = async function(userId, title, markup) {
     assert(Number.isInteger(userId))
     assert(typeof title === 'string')
-    return pool.one(sql`
+    return pool.query(`
     INSERT INTO albums (user_id, title, markup)
-    VALUES (${userId}, ${title}, ${markup})
+    VALUES ($1, $2, $3)
     RETURNING *
-  `)
+  `, [userId, title, markup]).then(maybeOneRow)
 }
 
 export const getAlbum = async function(albumId) {
     assert(albumId)
-    return pool.one(sql`
+    return pool.query(`
     SELECT
       a.*,
       to_json(u.*) "user"
     FROM albums a
     JOIN users u ON a.user_id = u.id
-    WHERE a.id = ${albumId}
-  `)
+    WHERE a.id = $1
+  `, [albumId]).then(maybeOneRow)
 }
 
 // Generalized update function that takes an object of

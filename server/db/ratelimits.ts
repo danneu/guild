@@ -4,8 +4,7 @@ import assert from 'assert'
 import createDebug from 'debug'; const debug = createDebug('db:ratelimits')
 import _ from 'lodash'
 // 1st
-import { pool } from './util'
-import { sql } from 'pg-extra'
+import { pool, maybeOneRow } from './util'
 
 // maxDate (Required Date): the maximum, most recent timestamp that the user
 // can have if they have a row in the table. i.e. if user can only post
@@ -24,25 +23,23 @@ export const bump = async function(userId, ipAddress, maxDate) {
     assert(typeof ipAddress === 'string')
     assert(_.isDate(maxDate))
 
-    const sqls = {
-        recentRatelimit: sql`
+    const recentRatelimitQuery = `
       SELECT *
       FROM ratelimits
-      WHERE ip_root(ip_address) = ip_root(${ipAddress})
+      WHERE ip_root(ip_address) = ip_root($1)
       ORDER BY id DESC
       LIMIT 1
-    `,
-        insertRatelimit: sql`
+    `
+    const insertRatelimitQuery = `
       INSERT INTO ratelimits (user_id, ip_address) VALUES
-      (${userId}, ${ipAddress})
-    `,
-    }
+      ($1, $2)
+    `
 
     return pool.withTransaction(async client => {
         // Temporarily disabled as a longshot attempt to prevent issue
         // -- yield client.queryPromise('SET TRANSACTION ISOLATION LEVEL SERIALIZABLE');
         // Get latest ratelimit for this user
-        const row = await client.one(sqls.recentRatelimit)
+        const row = await client.query(recentRatelimitQuery, [ipAddress]).then(maybeOneRow)
         // If it's too soon, throw the Date when ratelimit expires
         if (row && row.created_at > maxDate) {
             const elapsed = Date.now() - row.created_at.getTime() // since ratelimit
@@ -51,6 +48,6 @@ export const bump = async function(userId, ipAddress, maxDate) {
             throw expires
         }
         // Else, insert new ratelimit
-        return client.query(sqls.insertRatelimit)
+        return client.query(insertRatelimitQuery, [userId, ipAddress])
     })
 }

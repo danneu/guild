@@ -6,7 +6,6 @@ const knex = Knex({ client: 'pg' })
 import createDebug from 'debug'; const debug = createDebug('app:db:hits')
 // 1st
 import { pool } from './util'
-import { sql } from 'pg-extra'
 import { isValidUuid } from '../belt'
 
 ////////////////////////////////////////////////////////////
@@ -39,19 +38,17 @@ export const findAltsFromRequest = async (ipAddress, track) => {
     // NOTE: The CASE expressions try to match TRACK first since it's
     // the best alt-account indicator.
 
-    const rows = await pool.many(sql`
+    const rows = await pool.query(`
     WITH RECURSIVE sub1 (user_id, ip_address, track, created_at, match) AS (
       SELECT
         user_id, ip_address, track, created_at,
         CASE
-          WHEN hits.track = ${track} THEN 'TRACK'
-          WHEN ip_root(hits.ip_address) = ip_root(${
-              ipAddress
-          }) THEN 'IP_ADDRESS'
+          WHEN hits.track = $1 THEN 'TRACK'
+          WHEN ip_root(hits.ip_address) = ip_root($2) THEN 'IP_ADDRESS'
         END as "match"
       FROM hits
-      WHERE track = ${track}
-         OR ip_root(ip_address) = ip_root(${ipAddress})
+      WHERE track = $1
+         OR ip_root(ip_address) = ip_root($2)
 
       UNION
 
@@ -75,7 +72,7 @@ export const findAltsFromRequest = async (ipAddress, track) => {
       (SELECT to_json(users.*) FROM users WHERE id = sub1.user_id) "user"
     FROM sub1
     GROUP BY sub1.user_id, sub1.match
-  `)
+  `, [track, ipAddress]).then(res => res.rows)
 
     // mapping of user_id -> {user: {...}, matches: {'TRACK': Date, 'IP_ADDRESS': Date, ...]}
     const map = {}
@@ -110,14 +107,14 @@ export const findAltsFromUserId = async userId => {
     // NOTE: The CASE expressions try to match TRACK first since it's
     // the best alt-account indicator.
 
-    const rows = await pool.many(sql`
+    const rows = await pool.query(`
     WITH RECURSIVE tracks AS (
       -- Get all tracks for the init case
-      SELECT DISTINCT track FROM hits WHERE user_id = ${userId}
+      SELECT DISTINCT track FROM hits WHERE user_id = $1
     ), ip_roots AS (
       -- Get all ip addresses for the init case
       SELECT DISTINCT ip_root(ip_address) ip_address_root
-      FROM hits WHERE user_id = ${userId}
+      FROM hits WHERE user_id = $1
     ), sub1 (user_id, ip_address, track, created_at, match) AS (
       -- Init case
       SELECT
@@ -173,10 +170,10 @@ export const findAltsFromUserId = async userId => {
         WHERE id = sub1.user_id
       ) "user"
     FROM sub1
-    WHERE user_id != ${userId}
+    WHERE user_id != $1
     GROUP BY sub1.user_id, sub1.match
     ORDER BY sub1.user_id DESC
-  `)
+  `, [userId]).then(res => res.rows)
 
     // mapping of user_id -> {user: {...}, matches: {'TRACK': Date, 'IP_ADDRESS': Date, ...]}
     const map = {}

@@ -429,6 +429,7 @@ router.get('/me/edit', async (ctx: Context) => {
 
 router.post('/topics/:topicSlug/co-gms', async (ctx: Context) => {
     var topicId = belt.extractId(ctx.params.topicSlug)
+    ctx.assert(topicId, 404)
     var topic = await db.findTopicById(topicId).then(pre.presentTopic)
     ctx.assert(topic, 404)
     ctx.assertAuthorized(ctx.currUser, 'UPDATE_TOPIC_CO_GMS', topic)
@@ -464,6 +465,7 @@ router.post('/topics/:topicSlug/co-gms', async (ctx: Context) => {
 
 router.delete('/topics/:topicSlug/co-gms/:userSlug', async (ctx: Context) => {
     var topicId = belt.extractId(ctx.params.topicSlug)
+    ctx.assert(topicId, 404)
     var topic = await db.findTopicById(topicId).then(pre.presentTopic)
     ctx.assert(topic, 404)
     ctx.assertAuthorized(ctx.currUser, 'UPDATE_TOPIC_CO_GMS', topic)
@@ -1811,6 +1813,7 @@ router.get('/pms/:id', async (ctx: Context) => {
 // Body { uname: String }
 router.post('/topics/:slug/bans', async (ctx: Context) => {
     const topicId = belt.extractId(ctx.params.slug)
+    ctx.assert(topicId, 404)
     const topic = await db.findTopicById(topicId).then(pre.presentTopic)
     ctx.assert(topic, 404)
     ctx.assertAuthorized(ctx.currUser, 'UPDATE_TOPIC', topic)
@@ -2264,6 +2267,7 @@ router.get('/me/notifications', async (ctx: Context) => {
 //
 router.post('/topics/:slug/move', async (ctx: Context) => {
     const topicId = belt.extractId(ctx.params.slug)
+    ctx.assert(topicId, 404)
     let topic = await db.findTopicById(topicId).then(pre.presentTopic)
     ctx.assert(topic, 404)
     ctx.assertAuthorized(ctx.currUser, 'MOVE_TOPIC', topic)

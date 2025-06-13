@@ -1,10 +1,9 @@
 // 3rd
 import Discord from 'discord.js'
-import { sql } from 'pg-extra'
 // 1st
 import * as config from './config'
 import * as dice from './dice'
-import { getClient } from './db/util'
+import { exactlyOneRow, getClient } from './db/util'
 
 function timeout(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms))
@@ -28,9 +27,11 @@ export default {
         const client = getClient()
         client.connect()
 
-        const { lock } = await client.one(
-            sql`SELECT pg_try_advisory_lock(1337) "lock"`
-        )
+        const { lock } = await client
+            .query<{ lock: boolean }>(
+                `SELECT pg_try_advisory_lock(1337) "lock"`
+            )
+            .then(exactlyOneRow)
 
         if (!lock) {
             // Release the losing clients

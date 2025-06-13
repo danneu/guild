@@ -3,12 +3,10 @@ import path from 'path'
 import fs from 'fs'
 // 3rd party
 import _ from 'lodash'
-import promiseMap from 'promise.map'
 // 1st party
 import { NODE_ENV, DATABASE_URL } from './config'
 import * as db from './db'
 import { pool } from './db/util'
-import { _raw } from 'pg-extra'
 
 if (NODE_ENV !== 'development') {
     console.log('can only reset db in development')
@@ -33,7 +31,7 @@ async function resetDb() {
     console.log('-- schema.sql')
     await (async () => {
         const str = slurpSqlSync('schema.sql')
-        await pool.query(_raw`${str}`)
+        await pool.query(str)
         console.log('Reset schema.sql')
     })()
 
@@ -41,7 +39,7 @@ async function resetDb() {
     console.log('-- functions_and_triggers.sql')
     await (async () => {
         const str = slurpSqlSync('functions_and_triggers.sql')
-        await pool.query(_raw`${str}`)
+        await pool.query(str)
         console.log('Reset functions_and_triggers.sql')
     })()
 
@@ -49,63 +47,56 @@ async function resetDb() {
     console.log('-- 5-drop-plv8.sql')
     await (async () => {
         const str = slurpSqlSync('5-drop-plv8.sql')
-        await pool.query(_raw`${str}`)
+        await pool.query(str)
         console.log('Reset 5-drop-plv8.sql')
     })()
 
     // Seed data
     await (async () => {
         const str = slurpSqlSync('dev_seeds.sql')
-        await pool.query(_raw`${str}`)
+        await pool.query(str)
         console.log('Inserted dev_seeds.sql')
     })()
 
     // Insert 100 topics for forum1
     await (async () => {
         console.log('Inserting 100 topics into forum 1')
-        await promiseMap(
-            _.range(100),
-            (n: number) => {
-                const markup = 'Post ' + n
-                return db.createTopic({
-                    userId: 1,
-                    forumId: 1,
-                    ipAddress: '1.2.3.4',
-                    title: 'My topic ' + n,
-                    markup: markup,
-                    html: markup,
-                    isRoleplay: false,
-                    postType: 'ooc',
-                })
-            },
-            1
-        )
+        for (let i = 0; i < 100; i++) {
+            const markup = 'Post ' + i
+            await db.createTopic({
+                userId: 1,
+                forumId: 1,
+                ipAddress: '1.2.3.4',
+                title: 'My topic ' + i,
+                markup: markup,
+                html: markup,
+                isRoleplay: false,
+                postType: 'ooc',
+            })
+        }
     })()
 
     // Insert 100 posts for topic1
     await (async () => {
         console.log('Inserting 100 posts into topic 1')
-        await promiseMap(
-            _.range(100),
-            (n: number) => {
-                const markup = n.toString()
-                return db.createPost({
-                    userId: 1,
-                    ipAddress: '1.2.3.4',
-                    markup: markup,
-                    html: markup,
-                    topicId: 1,
-                    isRoleplay: false,
-                    type: 'ooc',
-                })
-            },
-            1
-        )
+
+        for (let i = 0; i < 100; i++) {
+            const markup = String(`Post ${i}`)
+            await db.createPost({
+                userId: 1,
+                ipAddress: '1.2.3.4',
+                markup: markup,
+                html: markup,
+                topicId: 1,
+                isRoleplay: false,
+                type: 'ooc',
+            })
+        }
     })()
 
     await (async () => {
         const str = slurpSqlSync('after_seed.sql')
-        await pool.query(_raw`${str}`)
+        await pool.query(str)
         console.log('Ran after_seed.sql')
     })()
 }
