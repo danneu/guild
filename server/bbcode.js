@@ -15,7 +15,7 @@ if (isServer) {
     // 3rd party
     var Autolinker = require('autolinker')
     // 1st party
-    cache = require('./cache')
+    cache = require('./cache').default
 }
 
 function escapeHtml(unsafe) {
