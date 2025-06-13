@@ -28,27 +28,27 @@ function slurpSqlSync(filePath: string) {
 
 async function resetDb() {
   // Create tables
-  console.log("-- schema.sql");
+  console.log("-- 1-schema.sql");
   await (async () => {
-    const str = slurpSqlSync("schema.sql");
+    const str = slurpSqlSync("1-schema.sql");
     await pool.query(str);
-    console.log("Reset schema.sql");
+    console.log("Reset 1-schema.sql");
   })();
 
   // Triggers: TODO delete this, almost all the fns are moved to 5-drop-plv8.sql
-  console.log("-- functions_and_triggers.sql");
+  console.log("-- 2-functions_and_triggers.sql");
   await (async () => {
-    const str = slurpSqlSync("functions_and_triggers.sql");
+    const str = slurpSqlSync("2-functions_and_triggers.sql");
     await pool.query(str);
-    console.log("Reset functions_and_triggers.sql");
+    console.log("Reset 2-functions_and_triggers.sql");
   })();
 
-  // Run 5-drop-plv8.sql
-  console.log("-- 5-drop-plv8.sql");
+  // Run drop-plv8.sql
+  console.log("-- 3-drop-plv8.sql");
   await (async () => {
-    const str = slurpSqlSync("5-drop-plv8.sql");
+    const str = slurpSqlSync("3-drop-plv8.sql");
     await pool.query(str);
-    console.log("Reset 5-drop-plv8.sql");
+    console.log("Reset 3-drop-plv8.sql");
   })();
 
   // Seed data
