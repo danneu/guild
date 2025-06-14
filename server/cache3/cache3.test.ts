@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, afterEach, vi } from "vitest";
 import { deepEqual, ok } from "node:assert";
-import { createIntervalCache, IntervalCacheError } from "./index";
+import { createIntervalCache, CacheFetchError, CacheTimeoutError } from "./index";
 
 describe("createIntervalCache", () => {
   beforeEach(() => {
@@ -79,7 +79,7 @@ describe("createIntervalCache", () => {
 
   it("start() doesn't throw and updateLoop emits error events on failures", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const errorEvents: IntervalCacheError[] = [];
+    const errorEvents: CacheFetchError[] = [];
 
     const cache = createIntervalCache({
       data: {
@@ -92,7 +92,7 @@ describe("createIntervalCache", () => {
       },
     }, { loopInterval: 50 });
 
-    cache.on('error', (error: IntervalCacheError) => {
+    cache.on('error', (error: CacheFetchError) => {
       errorEvents.push(error);
     });
 
@@ -476,7 +476,7 @@ describe("createIntervalCache", () => {
   });
 
   it("emits error events during updateLoop failures", async () => {
-    const errorEvents: IntervalCacheError[] = [];
+    const errorEvents: CacheFetchError[] = [];
     
     const cache = createIntervalCache({
       failing: {
@@ -495,7 +495,7 @@ describe("createIntervalCache", () => {
       },
     }, { loopInterval: 50 });
 
-    cache.on('error', (error: IntervalCacheError) => {
+    cache.on('error', (error: CacheFetchError) => {
       errorEvents.push(error);
     });
 
@@ -507,7 +507,7 @@ describe("createIntervalCache", () => {
 
     // Should have received at least one error event
     ok(errorEvents.length >= 1);
-    deepEqual(errorEvents[0].name, "IntervalCacheError");
+    deepEqual(errorEvents[0].name, "CacheFetchError");
     deepEqual(errorEvents[0].key, "failing");
     ok(errorEvents[0].message.includes("Update failed"));
 
@@ -519,7 +519,7 @@ describe("createIntervalCache", () => {
   });
 
   it("emits error events during background updates", async () => {
-    const errorEvents: IntervalCacheError[] = [];
+    const errorEvents: CacheFetchError[] = [];
     let shouldFail = false;
 
     const cache = createIntervalCache({
@@ -536,7 +536,7 @@ describe("createIntervalCache", () => {
       },
     }, { loopInterval: 50 });
 
-    cache.on('error', (error: IntervalCacheError) => {
+    cache.on('error', (error: CacheFetchError) => {
       errorEvents.push(error);
     });
 
@@ -556,7 +556,7 @@ describe("createIntervalCache", () => {
 
     // Should have received at least one error event (may be more due to auto-retries)
     ok(errorEvents.length >= 1);
-    deepEqual(errorEvents[0].name, "IntervalCacheError");
+    deepEqual(errorEvents[0].name, "CacheFetchError");
     deepEqual(errorEvents[0].key, "data");
     ok(errorEvents[0].message.includes("Update failed"));
 
@@ -567,7 +567,7 @@ describe("createIntervalCache", () => {
   });
 
   it("emits error events during forceUpdate failures and returns undefined", async () => {
-    const errorEvents: IntervalCacheError[] = [];
+    const errorEvents: CacheFetchError[] = [];
 
     const cache = createIntervalCache({
       data: {
@@ -580,7 +580,7 @@ describe("createIntervalCache", () => {
       },
     });
 
-    cache.on('error', (error: IntervalCacheError) => {
+    cache.on('error', (error: CacheFetchError) => {
       errorEvents.push(error);
     });
 
@@ -591,7 +591,7 @@ describe("createIntervalCache", () => {
 
     // Should have received one error event
     deepEqual(errorEvents.length, 1);
-    deepEqual(errorEvents[0].name, "IntervalCacheError");
+    deepEqual(errorEvents[0].name, "CacheFetchError");
     deepEqual(errorEvents[0].key, "data");
     ok(errorEvents[0].message.includes("Force update failed"));
 
@@ -602,7 +602,7 @@ describe("createIntervalCache", () => {
   });
 
   it("error events include original error as cause", async () => {
-    const errorEvents: IntervalCacheError[] = [];
+    const errorEvents: CacheFetchError[] = [];
     const originalError = new Error("Original error message");
 
     const cache = createIntervalCache({
@@ -616,7 +616,7 @@ describe("createIntervalCache", () => {
       },
     });
 
-    cache.on('error', (error: IntervalCacheError) => {
+    cache.on('error', (error: CacheFetchError) => {
       errorEvents.push(error);
     });
 
@@ -1168,6 +1168,100 @@ describe("createIntervalCache", () => {
     
     await promise1;
     deepEqual(cache.get("data"), "fetched");
+
+    cache.stop();
+    vi.useRealTimers();
+  });
+
+  it("waitUntilReady rejects with CacheTimeoutError on timeout", async () => {
+    vi.useFakeTimers();
+    
+    const cache = createIntervalCache({
+      slowKey: {
+        enabled: true,
+        initialValue: "initial",
+        interval: 5000, // Long interval
+        fetch: async (prevValue) => {
+          // Simulate a very slow fetch that won't complete in time
+          await new Promise(resolve => setTimeout(resolve, 20000));
+          return "slow-value";
+        },
+      },
+    }, { loopInterval: 100, debug: true });
+
+    cache.start();
+
+    // Set up waitUntilReady with a short timeout
+    const readyPromise = cache.waitUntilReady({ timeout: 1000 });
+
+    // Advance time to trigger the timeout but not long enough for the slow fetch
+    await vi.advanceTimersByTimeAsync(1100);
+
+    try {
+      await readyPromise;
+      throw new Error("Should have thrown CacheTimeoutError");
+    } catch (error) {
+      ok(error instanceof CacheTimeoutError, "Should throw CacheTimeoutError");
+      ok(error.message.includes("Cache not ready within 1000ms timeout"), "Should include timeout message");
+      deepEqual(error.name, "CacheTimeoutError");
+    }
+
+    cache.stop();
+    vi.useRealTimers();
+  });
+
+  it("waitUntilReady resolves before timeout when ready event occurs", async () => {
+    vi.useFakeTimers();
+    
+    const cache = createIntervalCache({
+      fastKey: {
+        enabled: true,
+        initialValue: "initial",
+        interval: 1000,
+        fetch: async (prevValue) => "fast-value",
+      },
+    }, { loopInterval: 50, debug: true });
+
+    cache.start();
+
+    // Set up waitUntilReady with a generous timeout
+    const readyPromise = cache.waitUntilReady({ timeout: 5000 });
+
+    // Advance time to trigger the fetch
+    await vi.advanceTimersByTimeAsync(1100);
+
+    // Should resolve successfully before timeout
+    await readyPromise;
+    
+    deepEqual(cache.get("fastKey"), "fast-value");
+
+    cache.stop();
+    vi.useRealTimers();
+  });
+
+  it("waitUntilReady uses default timeout when none specified", async () => {
+    vi.useFakeTimers();
+    
+    // This test verifies the default timeout is 10_000ms by checking it doesn't throw immediately
+    const cache = createIntervalCache({
+      data: {
+        enabled: true,
+        initialValue: "initial",
+        interval: 1000,
+        fetch: async (prevValue) => "updated",
+      },
+    }, { loopInterval: 50 });
+
+    cache.start();
+
+    // Should not throw immediately with default timeout
+    const readyPromise = cache.waitUntilReady(); // Using default timeout
+    
+    // Advance time to trigger the fetch
+    await vi.advanceTimersByTimeAsync(1100);
+    
+    // Should resolve quickly since we have enabled keys
+    await readyPromise;
 
     cache.stop();
     vi.useRealTimers();

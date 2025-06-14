@@ -1,15 +1,22 @@
 import { EventEmitter } from "events";
 
-export class IntervalCacheError extends Error {
-  public key?: string;
-  public override cause?: unknown;
+export class CacheFetchError extends Error {
+  public key: string;
+  public override cause: unknown;
 
-  constructor(message: string, key?: string) {
+  constructor(message: string, key: string, cause?: unknown) {
     super(message);
-    this.name = "IntervalCacheError";
-    if (key) {
-      this.key = key;
-    }
+    this.name = "CacheFetchError";
+    this.key = key;
+    this.cause = cause;
+  }
+}
+
+// Throws from waitUntilReady() on timeout
+export class CacheTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CacheTimeoutError";
   }
 }
 
@@ -34,7 +41,7 @@ export function createConfig<T>(
 
 // Type-safe event definitions
 export type CacheEvents<T extends CacheConfigMap> = {
-  error: (error: IntervalCacheError) => void;
+  error: (error: CacheFetchError) => void;
   update: (event: {
     key: keyof T;
     value: any; // Will be properly typed at usage
@@ -258,11 +265,11 @@ export function createIntervalCache<T extends CacheConfigMap>(
           );
           entry.backoffUntil = Date.now() + backoffMs;
 
-          const cacheError = new IntervalCacheError(
+          const cacheError = new CacheFetchError(
             `Error updating cache for key ${String(key)}: ${error instanceof Error ? error.message : error}`,
             String(key),
+            error,
           );
-          cacheError.cause = error;
           console.error(
             `Error updating cache for key ${String(key)} (attempt ${entry.failureCount}, backing off ${backoffMs}ms):`,
             error,
@@ -412,11 +419,11 @@ export function createIntervalCache<T extends CacheConfigMap>(
       );
       entry.backoffUntil = Date.now() + backoffMs;
 
-      const cacheError = new IntervalCacheError(
+      const cacheError = new CacheFetchError(
         `Error updating cache for key ${String(key)}: ${error instanceof Error ? error.message : error}`,
         String(key),
+        error,
       );
-      cacheError.cause = error;
       console.error(
         `Error force updating cache for key ${String(key)} (attempt ${entry.failureCount}, backing off ${backoffMs}ms):`,
         error,
@@ -437,7 +444,9 @@ export function createIntervalCache<T extends CacheConfigMap>(
 
   let waitUntilReadyPromise: Promise<void> | null = null;
 
-  function waitUntilReady() {
+  function waitUntilReady({
+    timeout = 10_000,
+  }: { timeout?: number } = {}): Promise<void> {
     if (waitUntilReadyPromise) {
       return waitUntilReadyPromise;
     }
@@ -448,13 +457,29 @@ export function createIntervalCache<T extends CacheConfigMap>(
       return waitUntilReadyPromise;
     }
 
-    waitUntilReadyPromise = new Promise((resolve) => {
+    waitUntilReadyPromise = new Promise((resolve, reject) => {
       // Check again in case ready was emitted between the check above and setting up the listener
       if (readyEmitted) {
         resolve();
         return;
       }
-      emitter.once("ready", resolve);
+
+      // Set up timeout
+      const timeoutId = setTimeout(() => {
+        emitter.off("ready", onReady);
+        waitUntilReadyPromise = null; // Reset so next call can create a new promise
+        reject(
+          new CacheTimeoutError(`Cache not ready within ${timeout}ms timeout`),
+        );
+      }, timeout);
+
+      // Set up ready listener
+      const onReady = () => {
+        clearTimeout(timeoutId);
+        resolve();
+      };
+
+      emitter.once("ready", onReady);
     });
     return waitUntilReadyPromise;
   }
