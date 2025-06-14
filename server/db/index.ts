@@ -715,7 +715,7 @@ export async function createSession(
 ////////////////////////////////////////////////////////////
 
 // Sync with db.findTopicsWithHasPostedByForumId
-export const findTopicsByForumId = async function (forumId, limit, offset) {
+export const findTopicsByForumId = async function (forumId, limit, offset, canViewHidden) {
   debug(
     "[%s] forumId: %s, limit: %s, offset: %s",
     "findTopicsByForumId",
@@ -745,12 +745,12 @@ LEFT JOIN posts p ON t.latest_post_id = p.id
 LEFT JOIN users u2 ON p.user_id = u2.id
 LEFT JOIN forums f ON t.forum_id = f.id
 WHERE t.forum_id = $1
-  AND t.is_hidden = false
+  AND ($2 OR t.is_hidden = false)
 ORDER BY t.is_sticky DESC, t.latest_post_at DESC
-LIMIT $2
-OFFSET $3
+LIMIT $3
+OFFSET $4
   `,
-      [forumId, limit, offset],
+      [forumId, canViewHidden, limit, offset],
     )
     .then((res) => res.rows);
 };
@@ -765,6 +765,7 @@ export const findTopicsWithHasPostedByForumId = async function (
   limit,
   offset,
   userId,
+  canViewHidden,
 ) {
   assert(userId);
   debug(
@@ -805,12 +806,12 @@ LEFT JOIN posts p ON t.latest_post_id = p.id
 LEFT JOIN users u2 ON p.user_id = u2.id
 LEFT JOIN forums f ON t.forum_id = f.id
 WHERE t.forum_id = $3
-  AND t.is_hidden = false
+  AND ($4 OR t.is_hidden = false)
 ORDER BY t.is_sticky DESC, t.latest_post_at DESC
-LIMIT $4
-OFFSET $5
+LIMIT $5
+OFFSET $6
   `,
-      [userId, userId, forumId, limit, offset],
+      [userId, userId, forumId, canViewHidden, limit, offset],
     )
     .then((res) => res.rows);
 };
