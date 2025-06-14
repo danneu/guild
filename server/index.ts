@@ -2841,9 +2841,9 @@ cache3.on("error", (err) => {
 });
 
 console.log("Waiting for cache3 to be ready before starting server...");
+cache3.start();
 cache3.waitUntilReady().then(() => {
   app.listen(config.PORT, () => {
     console.log("Listening on", config.PORT);
-    cache3.start();
   });
 });
