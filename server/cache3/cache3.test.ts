@@ -1054,4 +1054,122 @@ describe("createIntervalCache", () => {
 
     cache.stop();
   });
+
+  it("waitUntilReady resolves when all enabled cache items have been fetched", async () => {
+    vi.useFakeTimers();
+    let user1FetchCount = 0;
+    let user2FetchCount = 0;
+
+    const cache = createIntervalCache({
+      user1: {
+        enabled: true,
+        initialValue: { id: 0, name: "initial" },
+        interval: 1000, // Minimum allowed interval
+        fetch: async (prevValue) => {
+          user1FetchCount++;
+          return { id: user1FetchCount, name: `user1-${user1FetchCount}` };
+        },
+      },
+      user2: {
+        enabled: true,
+        initialValue: { id: 0, name: "initial" },
+        interval: 1000, // Minimum allowed interval
+        fetch: async (prevValue) => {
+          user2FetchCount++;
+          return { id: user2FetchCount, name: `user2-${user2FetchCount}` };
+        },
+      },
+      disabled: {
+        enabled: false,
+        initialValue: { id: 0, name: "disabled" },
+        interval: 100,
+        fetch: async (prevValue) => ({ id: 999, name: "should-not-fetch" }),
+      },
+    }, { loopInterval: 50, debug: true });
+
+    // Start the cache
+    cache.start();
+
+    // Wait for ready - should resolve when both enabled keys have been fetched
+    const readyPromise = cache.waitUntilReady();
+    
+    // Advance time to trigger fetches (account for jitter)
+    await vi.advanceTimersByTimeAsync(1100);
+    
+    await readyPromise;
+
+    // Both enabled keys should have been fetched at least once
+    ok(user1FetchCount >= 1, `user1 should be fetched at least once, got ${user1FetchCount}`);
+    ok(user2FetchCount >= 1, `user2 should be fetched at least once, got ${user2FetchCount}`);
+
+    // Values should be updated from initial values
+    const user1Value = cache.get("user1");
+    const user2Value = cache.get("user2");
+    ok(user1Value.id > 0, "user1 should have updated id");
+    ok(user2Value.id > 0, "user2 should have updated id");
+
+    // Disabled key should still have initial value
+    deepEqual(cache.get("disabled"), { id: 0, name: "disabled" });
+
+    cache.stop();
+    vi.useRealTimers();
+  });
+
+  it("waitUntilReady resolves immediately when no keys are enabled", async () => {
+    const cache = createIntervalCache({
+      disabled1: {
+        enabled: false,
+        initialValue: "value1",
+        interval: 1000,
+        fetch: async (prevValue) => "should-not-fetch",
+      },
+      disabled2: {
+        enabled: false,
+        initialValue: "value2",
+        interval: 1000,
+        fetch: async (prevValue) => "should-not-fetch",
+      },
+    }, { debug: true });
+
+    // Should resolve immediately since no keys are enabled
+    const startTime = Date.now();
+    await cache.waitUntilReady();
+    const duration = Date.now() - startTime;
+
+    // Should resolve almost immediately (within 100ms to account for async timing)
+    ok(duration < 100, `Should resolve immediately, took ${duration}ms`);
+
+    cache.stop();
+  });
+
+  it("multiple calls to waitUntilReady return the same promise", async () => {
+    vi.useFakeTimers();
+    const cache = createIntervalCache({
+      data: {
+        enabled: true,
+        initialValue: "initial",
+        interval: 1000,
+        fetch: async (prevValue) => "fetched",
+      },
+    }, { loopInterval: 50, debug: true });
+
+    cache.start();
+
+    // Multiple calls should return the same promise
+    const promise1 = cache.waitUntilReady();
+    const promise2 = cache.waitUntilReady();
+    const promise3 = cache.waitUntilReady();
+
+    ok(promise1 === promise2, "First two calls should return same promise");
+    ok(promise2 === promise3, "Second and third calls should return same promise");
+
+    // Advance time to trigger fetch
+    await vi.advanceTimersByTimeAsync(1100);
+    
+    await promise1;
+    deepEqual(cache.get("data"), "fetched");
+
+    cache.stop();
+    vi.useRealTimers();
+  });
 });

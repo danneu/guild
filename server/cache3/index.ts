@@ -13,6 +13,25 @@ export class IntervalCacheError extends Error {
   }
 }
 
+// Use this helper to create each config entry so that it
+// knows its prev type in the fetch fn.
+// TODO: Is there a way around this?
+export function createConfig<T>(
+  initialValue: T,
+  config: {
+    enabled: boolean;
+    interval: number;
+    fetch: (prev: T) => Promise<T>;
+  },
+): CacheConfig<T> {
+  return {
+    initialValue,
+    enabled: config.enabled,
+    interval: config.interval,
+    fetch: config.fetch,
+  };
+}
+
 // Type-safe event definitions
 export type CacheEvents<T extends CacheConfigMap> = {
   error: (error: IntervalCacheError) => void;
@@ -20,6 +39,7 @@ export type CacheEvents<T extends CacheConfigMap> = {
     key: keyof T;
     value: any; // Will be properly typed at usage
   }) => void;
+  ready: () => void;
 };
 
 // Type-safe EventEmitter interface
@@ -98,6 +118,11 @@ export function createIntervalCache<T extends CacheConfigMap>(
   // Prevent throwing errors when no listeners are attached
   emitter.on("error", () => {});
 
+  // Track which enabled keys have been successfully fetched at least once
+  const enabledKeys = new Set<keyof T>();
+  const fetchedKeys = new Set<keyof T>();
+  let readyEmitted = false;
+
   // Debug logging helper
   const debugLog = (...args: any[]) => {
     if (debug) {
@@ -115,6 +140,11 @@ export function createIntervalCache<T extends CacheConfigMap>(
       keyConfig.interval = 1000;
     }
 
+    // Track enabled keys for ready state
+    if (keyConfig.enabled) {
+      enabledKeys.add(key);
+    }
+
     cache.set(key, {
       value: keyConfig.initialValue,
       lastUpdated: -Math.random() * keyConfig.interval, // Random jitter to spread out updates
@@ -123,6 +153,37 @@ export function createIntervalCache<T extends CacheConfigMap>(
       failureCount: 0,
       backoffUntil: 0,
     });
+  }
+
+  // Check if ready immediately (in case all keys are disabled) - do this asynchronously
+  // so that waitUntilReady() has a chance to set up listeners first
+  process.nextTick(checkAndEmitReady);
+
+  // Helper function to check if all enabled keys have been fetched and emit ready event
+  function checkAndEmitReady() {
+    if (!readyEmitted) {
+      // If no enabled keys, emit ready immediately
+      if (enabledKeys.size === 0) {
+        readyEmitted = true;
+        debugLog("No enabled cache keys - emitting ready event immediately");
+        emitter.emit("ready");
+        return;
+      }
+
+      // Check if all enabled keys have been fetched
+      if (fetchedKeys.size >= enabledKeys.size) {
+        for (const key of enabledKeys) {
+          if (!fetchedKeys.has(key)) {
+            return; // Not all enabled keys have been fetched yet
+          }
+        }
+        readyEmitted = true;
+        debugLog(
+          "All enabled cache keys have been fetched - emitting ready event",
+        );
+        emitter.emit("ready");
+      }
+    }
   }
 
   /**
@@ -180,8 +241,14 @@ export function createIntervalCache<T extends CacheConfigMap>(
           entry.backoffUntil = 0;
           debugLog(`Successfully updated key '${String(key)}'`);
 
+          // Track that this key has been fetched
+          fetchedKeys.add(key);
+
           // Emit update event
           emitter.emit("update", { key, value: newValue });
+
+          // Check if all enabled keys are now ready
+          checkAndEmitReady();
         } catch (error) {
           // Increment failure count and calculate backoff
           entry.failureCount++;
@@ -250,6 +317,9 @@ export function createIntervalCache<T extends CacheConfigMap>(
    * Simple and synchronous - just starts the interval timer.
    */
   function start(): void {
+    if (running) {
+      return;
+    }
     debugLog(
       `Starting cache with ${Object.keys(config).length} keys, loopInterval: ${loopInterval}ms`,
     );
@@ -323,8 +393,14 @@ export function createIntervalCache<T extends CacheConfigMap>(
       });
       debugLog(`Successfully force updated key '${String(key)}'`);
 
+      // Track that this key has been fetched
+      fetchedKeys.add(key);
+
       // Emit update event
       emitter.emit("update", { key, value: newValue });
+
+      // Check if all enabled keys are now ready
+      checkAndEmitReady();
 
       return newValue;
     } catch (error) {
@@ -359,11 +435,36 @@ export function createIntervalCache<T extends CacheConfigMap>(
     return cache.get(key);
   }
 
+  let waitUntilReadyPromise: Promise<void> | null = null;
+
+  function waitUntilReady() {
+    if (waitUntilReadyPromise) {
+      return waitUntilReadyPromise;
+    }
+
+    // If already ready, resolve immediately
+    if (readyEmitted) {
+      waitUntilReadyPromise = Promise.resolve();
+      return waitUntilReadyPromise;
+    }
+
+    waitUntilReadyPromise = new Promise((resolve) => {
+      // Check again in case ready was emitted between the check above and setting up the listener
+      if (readyEmitted) {
+        resolve();
+        return;
+      }
+      emitter.once("ready", resolve);
+    });
+    return waitUntilReadyPromise;
+  }
+
   return {
     get,
     set,
     start,
     stop,
+    waitUntilReady,
     requestUpdate,
     forceUpdate, // For testing
     getEntry, // For testing

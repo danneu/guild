@@ -2839,11 +2839,11 @@ app.use(router.routes());
 cache3.on("error", (err) => {
   console.error("cache3 error", err);
 });
-// cache3.on("update", (event) => {
-//   console.log("cache3 update", event.key);
-// });
-cache3.start();
 
-app.listen(config.PORT, () => {
-  console.log("Listening on", config.PORT);
+console.log("Waiting for cache3 to be ready before starting server...");
+cache3.waitUntilReady().then(() => {
+  app.listen(config.PORT, () => {
+    console.log("Listening on", config.PORT);
+    cache3.start();
+  });
 });

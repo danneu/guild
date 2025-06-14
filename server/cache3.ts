@@ -1,28 +1,29 @@
-import { createIntervalCache } from "./cache3/index";
+import { createConfig, createIntervalCache } from "./cache3/index";
 import * as config from "./config";
 import * as db from "./db";
 import * as pre from "./presenters";
 
 const cache = createIntervalCache({
-  staff: {
+  staff: createConfig([], {
     enabled: true,
-    initialValue: [],
     interval: 1000 * 60 * 5, // 5 minutes
     fetch: () => db.findStaffUsers(),
-  },
+  }),
 
-  stats: {
-    enabled: true,
-    initialValue: {
+  stats: createConfig(
+    {
       topicsCount: 0,
       usersCount: 0,
       postsCount: 0,
       latestUser: null,
       onlineUsers: [],
     },
-    interval: 1000 * 60, // 60 seconds
-    fetch: () => db.getStats(),
-  },
+    {
+      enabled: true,
+      interval: 1000 * 60, // 60 seconds
+      fetch: () => db.getStats(),
+    },
+  ),
 
   // This must be updated manually on user change (register, nuke)
   //
@@ -30,80 +31,76 @@ const cache = createIntervalCache({
   //
   // - [x]: register
   // - [ ]: nuke
-  "uname-set": {
+  "uname-set": createConfig(new Set<string>(), {
     enabled: true,
-    initialValue: new Set(),
     interval: 1000 * 60 * 30, // 30 minutes as a backup
     fetch: async () => {
       const unames = await db.findAllActiveUnames();
       return new Set(unames.map((uname) => uname.toLowerCase()));
     },
-  },
+  }),
 
-  "forum-viewer-counts": {
-    enabled: true,
-    initialValue: {},
-    interval: 1000 * 10, // 10 seconds
-    fetch: () => db.getForumViewerCounts(),
-  },
+  "forum-viewer-counts": createConfig<Record<number, number>>(
+    {},
+    {
+      enabled: true,
+      interval: 1000 * 10, // 10 seconds
+      fetch: () => db.getForumViewerCounts(),
+    },
+  ),
 
-  categories: {
+  categories: createConfig<any[]>([], {
     enabled: true,
-    initialValue: [],
     interval: 1000 * 15, // 15 seconds
     fetch: () =>
       db
         .findCategoriesWithForums()
         .then((xs) => xs.map((x) => pre.presentCategory(x))),
-  },
+  }),
 
-  "latest-checks": {
+  "latest-checks": createConfig<any[]>([], {
     enabled: true,
-    initialValue: [],
     interval: 1000 * 15, // 15 seconds
     fetch: () => db.findLatestChecks(),
-  },
+  }),
 
-  "latest-roleplays": {
+  "latest-roleplays": createConfig<any[]>([], {
     enabled: true,
-    initialValue: [],
     interval: 1000 * 15, // 15 seconds
     fetch: () => db.findLatestRoleplays(),
-  },
+  }),
 
-  "latest-statuses": {
+  "latest-statuses": createConfig<any[]>([], {
     enabled: true,
-    initialValue: [],
     interval: 1000 * 15, // 15 seconds
     fetch: () => db.findLatestStatuses(),
-  },
+  }),
 
-  "unames->ids": {
-    enabled: true,
-    initialValue: {},
-    interval: 1000 * 60 * 60, // 60 minutes
-    fetch: () => db.getUnamesMappedToIds(),
-  },
+  "unames->ids": createConfig<Record<string, number>>(
+    {},
+    {
+      enabled: true,
+      interval: 1000 * 60 * 60, // 60 minutes
+      fetch: () => db.getUnamesMappedToIds(),
+    },
+  ),
 
-  "current-sidebar-contest": {
+  "current-sidebar-contest": createConfig<any | null>(null, {
     enabled: true,
-    initialValue: null,
     interval: 1000 * 45, // 45 seconds
     fetch: () => db.getCurrentSidebarContest(),
-  },
+  }),
 
-  "latest-rpgn-topic": {
+  "latest-rpgn-topic": createConfig<any | null>(null, {
     enabled: typeof config.LATEST_RPGN_TOPIC_ID === "number",
-    initialValue: null,
     interval: 1000 * 60, // 1 minute
     fetch: () => db.findRGNTopicForHomepage(config.LATEST_RPGN_TOPIC_ID!),
-  },
+  }),
 
   // from cache2
 
-  "forum-mods": {
+  "forum-mods": createConfig<Record<number, any[]>>(Object.create(null), {
     enabled: true,
-    initialValue: Object.create(null),
     interval: 1000 * 60 * 10,
     fetch: async () => {
       // maps forumId -> [User]
@@ -114,7 +111,7 @@ const cache = createIntervalCache({
       });
       return mapping;
     },
-  },
+  }),
 
   "faq-post": {
     enabled: !!config.FAQ_POST_ID,
