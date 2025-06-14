@@ -114,7 +114,9 @@
               {% if post.user.avatar_url %}
                 <div class="post-avatar"
                      style="margin-top: 10px;">
-                  <img src="{{ post.user.avatar_url}}" alt="Avatar of {{ post.user.uname }}">
+                  <a href="{{ post.user.url }}">
+                    <img src="{{ post.user.avatar_url}}" alt="Avatar of {{ post.user.uname }}">
+                  </a>
                 </div>
               {% endif %}
 
