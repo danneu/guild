@@ -1,68 +1,71 @@
 app = "rpguild"
-primary_region = "dfw" 
+primary_region = "dfw"
 
 [build]
-  dockerfile = "Dockerfile"
+dockerfile = "Dockerfile"
 
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "512mb"
+size = "shared-cpu-1x"
+memory = "512mb"
+
+[deploy]
+strategy = "bluegreen"
 
 [env]
-  PORT = "3000"
-  NODE_ENV = "production"
-  # Only non-sensitive config vars
-  FAQ_POST_ID="4301082"
-  MIN_TOPIC_TITLE_LENGTH = "3"
-  MAX_TOPIC_TITLE_LENGTH = "150"
-  MIN_POST_LENGTH = "1"
-  MAX_POST_LENGTH = "150000"
-  MIN_UNAME_LENGTH = "2"
-  MAX_UNAME_LENGTH = "15"
-  MAX_BIO_LENGTH = "100000"
-  MAX_VM_LENGTH = "300"
-  MENTIONS_PER_POST = "10"
-  QUOTES_PER_POST = "10"
-  MAX_CONVO_PARTICIPANTS = "10"
-  MAX_CO_GM_COUNT = "2"
-  POSTS_PER_PAGE = "20"
-  USERS_PER_PAGE = "20"
-  RECENT_POSTS_PER_PAGE = "10"
-  CONVOS_PER_PAGE = "10"
-  SEARCH_RESULTS_PER_PAGE = "50"
-  RULES_POST_ID= "4291608"
-  IS_PM_SYSTEM_ONLINE = "true"
-  FROM_EMAIL= "mahz@roleplayerguild.com"
-  HOST= "https://www.roleplayerguild.com"
-  # TODO: what do these do?
-  ERROR_PAGE_URL= "https://guild.neocities.org/error.html"
-  MAINTENANCE_PAGE_URL= "https://guild.neocities.org/maintenance.html"
-  STAFF_REPRESENTATIVE_ID= "8231"
+PORT = "3000"
+NODE_ENV = "production"
+# Only non-sensitive config vars
+FAQ_POST_ID = "4301082"
+MIN_TOPIC_TITLE_LENGTH = "3"
+MAX_TOPIC_TITLE_LENGTH = "150"
+MIN_POST_LENGTH = "1"
+MAX_POST_LENGTH = "150000"
+MIN_UNAME_LENGTH = "2"
+MAX_UNAME_LENGTH = "15"
+MAX_BIO_LENGTH = "100000"
+MAX_VM_LENGTH = "300"
+MENTIONS_PER_POST = "10"
+QUOTES_PER_POST = "10"
+MAX_CONVO_PARTICIPANTS = "10"
+MAX_CO_GM_COUNT = "2"
+POSTS_PER_PAGE = "20"
+USERS_PER_PAGE = "20"
+RECENT_POSTS_PER_PAGE = "10"
+CONVOS_PER_PAGE = "10"
+SEARCH_RESULTS_PER_PAGE = "50"
+RULES_POST_ID = "4291608"
+IS_PM_SYSTEM_ONLINE = "true"
+FROM_EMAIL = "mahz@roleplayerguild.com"
+HOST = "https://www.roleplayerguild.com"
+# TODO: what do these do?
+ERROR_PAGE_URL = "https://guild.neocities.org/error.html"
+MAINTENANCE_PAGE_URL = "https://guild.neocities.org/maintenance.html"
+STAFF_REPRESENTATIVE_ID = "8231"
 
 [[services]]
-  internal_port = 3000
-  protocol = "tcp"
-  auto_stop_machines = "stop" # Stop idle machines
-  auto_start_machines = true
-  min_machines_running = 1  # Always keep 1 running
+internal_port = 3000
+protocol = "tcp"
+auto_stop_machines = "stop" # Stop idle machines
+auto_start_machines = true
+min_machines_running = 1    # Always keep 1 running
 
-  [[services.ports]]
-    handlers = ["http"]
-    port = 80
-    # Turned this off so website works with CF ssl=flexible until 
-    # dns is propagated to everyone
-    # force_https = true
+[[services.ports]]
+handlers = ["http"]
+port = 80
+# Turned this off so website works with CF ssl=flexible until 
+# dns is propagated to everyone
+# force_https = true
 
-  [[services.ports]]
-    handlers = ["tls", "http"]
-    port = 443
+[[services.ports]]
+handlers = ["tls", "http"]
+port = 443
 
-  [[services.http_checks]]
-    interval = "30s"
-    grace_period = "10s"
-    method = "get"
-    path = "/health"
-    protocol = "http"
-    timeout = "3s"
-    [services.http_checks.headers]
-      X-Forwarded-Proto = "https"  # Helps with CF health checks
+[[services.http_checks]]
+interval = "30s"
+grace_period = "10s"
+method = "get"
+path = "/health"
+protocol = "http"
+timeout = "3s"
+[services.http_checks.headers]
+X-Forwarded-Proto = "https" # Helps with CF health checks

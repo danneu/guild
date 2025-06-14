@@ -7,7 +7,7 @@ import createDebug from "debug";
 const debug = createDebug("app:search");
 // 1st
 import { pool } from "../db/util.js";
-import cache from "../cache";
+import cache3 from "../cache3";
 import * as pre from "../presenters";
 import { Context } from "koa";
 
@@ -40,7 +40,7 @@ router.get("/search", async (ctx: Context) => {
 
   // TODO: Stop hard-coding lexus lounge authorization
   // Ignore lexus-lounge and test categories
-  const publicCategories = cache.get("categories").filter((c) => {
+  const publicCategories = cache3.get("categories").filter((c) => {
     return c.id !== 4 && c.id !== 5;
   });
 
@@ -81,7 +81,7 @@ router.get("/search", async (ctx: Context) => {
     .toInts()
     .val();
 
-  const unamesToIds = cache.get("unames->ids");
+  const unamesToIds = cache3.get("unames->ids");
 
   const unames = ctx
     .validateQuery("unames")

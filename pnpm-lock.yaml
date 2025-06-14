@@ -101,9 +101,6 @@ importers:
       react-dom:
         specifier: ^19.1.0
         version: 19.1.0(react@19.1.0)
-      regex-trie:
-        specifier: 1.0.4
-        version: 1.0.4
       sharp:
         specifier: ^0.34.2
         version: 0.34.2
@@ -2236,10 +2233,6 @@ packages:
   jsbn@0.1.1:
     resolution: {integrity: sha512-UVU9dibq2JcFWxQPA6KCqj5O42VOmAY3zQUfEKxU0KpTGXwNoCjkX1e13eHNvw/xPynt6pU0rZ1htjWTNTSXsg==}
 
-  jsesc@0.5.0:
-    resolution: {integrity: sha512-uZz5UnB7u4T9LvwmFqXii7pZSouaRPorGs5who1Ip7VO0wxanFvBL7GkM6dTHlgX+jhBApRetaWpnDabOeTcnA==}
-    hasBin: true
-
   json-schema-traverse@0.4.1:
     resolution: {integrity: sha512-xbbCH5dCYU5T8LcEhhuh7HJ88HXuW3qsI3Y0zOZFKfZEHcpWiHU/Jxzk629Brsab/mMiHQti9wMP+845RPe3Vg==}
 
@@ -2807,9 +2800,6 @@ packages:
 
   reduce-function-call@1.0.3:
     resolution: {integrity: sha512-Hl/tuV2VDgWgCSEeWMLwxLZqX7OK59eU1guxXsRKTAyeYimivsKdtcV4fu3r710tpG5GmDKDhQ0HSZLExnNmyQ==}
-
-  regex-trie@1.0.4:
-    resolution: {integrity: sha512-GgXho+/rI/A2Rq2bwzt265c0mV37RUyxZ8215o+8DpUy4/p+RW4LKLw35EVHgPSMuyZ6aWCkPk6PaHiVkGpdGg==}
 
   remove-trailing-separator@1.1.0:
     resolution: {integrity: sha512-/hS+Y0u3aOfIETiaiirUFwDBDzmXPvO+jAfKTitUngIPzdKc6Z0LoFjM/CK5PL4C+eKwHohlHAb6H0VFfmmUsw==}
@@ -5877,8 +5867,6 @@ snapshots:
 
   jsbn@0.1.1: {}
 
-  jsesc@0.5.0: {}
-
   json-schema-traverse@0.4.1: {}
 
   json-schema@0.4.0: {}
@@ -6490,10 +6478,6 @@ snapshots:
   reduce-function-call@1.0.3:
     dependencies:
       balanced-match: 1.0.2
-
-  regex-trie@1.0.4:
-    dependencies:
-      jsesc: 0.5.0
 
   remove-trailing-separator@1.1.0: {}
 

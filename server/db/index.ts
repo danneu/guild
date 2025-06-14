@@ -1881,7 +1881,7 @@ const legacyCounts = {
   users: 44799,
 };
 
-export const getStats = async function () {
+export async function getStats() {
   let [topicsCount, usersCount, postsCount, latestUser, onlineUsers] =
     await Promise.all([
       getMaxTopicId(), //getApproxCount('topics'),
@@ -1896,7 +1896,7 @@ export const getStats = async function () {
   postsCount += legacyCounts.posts;
 
   return { topicsCount, usersCount, postsCount, latestUser, onlineUsers };
-};
+}
 
 export async function deleteLegacySig(userId: number) {
   return pool.query(
@@ -2139,23 +2139,27 @@ export async function clearConvoNotifications(toUserId: number) {
   );
 }
 
-// Returns [String]
-// Keep in sync with findAllUnamesJson - really they should reuse the same logic
-// Used for building the server regex-trie of names
-export async function findAllUnames() {
-  //   return pool
-  //       .query(`
-  //   SELECT uname FROM users ORDER BY uname
-  // `)
-  //       .then(res => res.rows.map(row => row.uname))
+////////////////////////////////////////////////////////////
 
+// Returns [String]
+// Stored in cache3.uname-set
+//
+// A user is active enough to be in this list if:
+// - has at least one post/PM or joined in the last month
+// - isn't nuked
+// - has logged on in the last year
+export async function findAllActiveUnames() {
   // pms_count starts at 1 due to welcome message
   return pool
     .query<{ uname: string }>(
       `
     SELECT uname
     FROM users
-    WHERE (posts_count > 0 OR pms_count > 1)
+    WHERE (
+        posts_count > 0
+        OR pms_count > 1
+        OR created_at > NOW() - '1 month'::interval
+      )
       AND is_nuked = false
       AND last_online_at > NOW() - '1 year'::interval
   `,
@@ -2841,27 +2845,6 @@ RETURNING *
     .then(maybeOneRow);
 };
 
-// -> JSONString
-//
-// Only gets users that:
-// - logged on in the last year
-// - have at least one post
-// - are not nuked
-export async function findAllUnamesJson() {
-  return pool
-    .query(
-      `
-    SELECT json_agg(uname) unames
-    FROM users
-    WHERE posts_count > 0
-      AND is_nuked = false
-      AND last_online_at > NOW() - '1 year'::interval
-  `,
-    )
-    .then(maybeOneRow)
-    .then((row) => row.unames);
-}
-
 export const updateTopicCoGms = async function (topicId, userIds) {
   assert(topicId);
   assert(_.isArray(userIds));
@@ -2884,7 +2867,7 @@ export const findAllTags = async function () {
 };
 
 // Returns [TagGroup] where each group has [Tag] array bound to `tags` property
-export const findAllTagGroups = async function () {
+export async function findAllTagGroups(): Promise<unknown[]> {
   return pool
     .query(
       `
@@ -2895,7 +2878,7 @@ export const findAllTagGroups = async function () {
   `,
     )
     .then((res) => res.rows);
-};
+}
 
 // topicId :: String | Int
 // tagIds :: [Int]
@@ -2929,7 +2912,7 @@ export const updateTopicTags = async function (topicId, tagIds) {
 };
 
 // Returns latest 5 unhidden checks
-export const findLatestChecks = async function () {
+export async function findLatestChecks() {
   const forumIds = [12, 38, 13, 14, 15, 16, 40, 43];
 
   return pool
@@ -2954,10 +2937,10 @@ export const findLatestChecks = async function () {
       [forumIds],
     )
     .then((res) => res.rows);
-};
+}
 
 // Returns latest 5 unhidden roleplays
-export const findLatestRoleplays = async function () {
+export async function findLatestRoleplays() {
   const forumIds = [3, 4, 5, 6, 7, 39, 42];
   return pool
     .query(
@@ -2981,7 +2964,7 @@ LIMIT 5
       [forumIds],
     )
     .then((res) => res.rows);
-};
+}
 
 export const findAllPublicTopicUrls = async function () {
   return pool
@@ -3395,7 +3378,7 @@ export const createStatus = async function ({ user_id, html, text }) {
 ////////////////////////////////////////////////////////////
 
 // @fast
-export const findLatestStatusesForUserId = async function (user_id) {
+export async function findLatestStatusesForUserId(user_id: number) {
   return pool
     .query(
       `
@@ -3408,7 +3391,7 @@ export const findLatestStatusesForUserId = async function (user_id) {
       [user_id],
     )
     .then((res) => res.rows);
-};
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -3442,7 +3425,7 @@ export const deleteStatusById = async function (id) {
 
 ////////////////////////////////////////////////////////////
 
-export const findLatestStatuses = async function () {
+export async function findLatestStatuses() {
   return pool
     .query(
       `
@@ -3457,7 +3440,7 @@ export const findLatestStatuses = async function () {
   `,
     )
     .then((res) => res.rows);
-};
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -4128,7 +4111,7 @@ export const insertCurrentSidebarContest = async function (data) {
 };
 
 // Returns object or undefined
-export const getCurrentSidebarContest = async function () {
+export async function getCurrentSidebarContest() {
   return pool
     .query(
       `
@@ -4140,7 +4123,7 @@ export const getCurrentSidebarContest = async function () {
   `,
     )
     .then(maybeOneRow);
-};
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -4372,7 +4355,16 @@ export const listTopicBans = async (topicId) => {
     .then((res) => res.rows);
 };
 
-export const allForumMods = async () => {
+export async function allForumMods(): Promise<
+  Array<{
+    forum_id: number;
+    user: {
+      id: number;
+      uname: string;
+      slug: string;
+    };
+  }>
+> {
   return pool
     .query(
       `
@@ -4388,7 +4380,7 @@ export const allForumMods = async () => {
   `,
     )
     .then((res) => res.rows);
-};
+}
 
 ////////////////////////////////////////////////////////////
 
