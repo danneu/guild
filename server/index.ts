@@ -635,7 +635,6 @@ router.get("/register", async (ctx: Context) => {
 //
 router.get("/", async (ctx: Context) => {
   const categories = cache.get("categories");
-console.log(categories[0].forums[0])
   // We don't show the mod forum on the homepage.
   // Nasty, but just delete it for now
   // TODO: Abstract
