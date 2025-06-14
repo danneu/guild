@@ -2630,6 +2630,7 @@ export async function moveTopic(
     )
     .then(maybeOneRow);
   }
+
   let is_roleplay = await pool
   .query(
     `
@@ -2639,6 +2640,7 @@ export async function moveTopic(
     `,
     [toForumId]
   ).then(maybeOneRow);
+
   is_roleplay = is_roleplay.is_roleplay;
 
   if(topic.ooc_posts_count == 0 && !is_roleplay){
@@ -2649,8 +2651,8 @@ export async function moveTopic(
       `
       UPDATE posts
       SET type = 'ooc'
-      WHERE topic_id = $1
-      `,
+    WHERE topic_id = $1
+    `,
     [topic.id],
     );
 
@@ -2665,7 +2667,6 @@ export async function moveTopic(
       [topic.ooc_posts_count, topic.ic_posts_count, topic.id],
     );
   }
-
   // TODO: Put this in transaction
 
   // FIXME: parallel queries aren't a thing
