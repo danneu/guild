@@ -315,7 +315,7 @@ export const findUserBySlug = async function (slug) {
 
   slug = slug.toLowerCase();
 
-  return pool
+  let user = await pool
     .query(
       `
     SELECT u.*
@@ -331,6 +331,23 @@ export const findUserBySlug = async function (slug) {
       [slug, slug],
     )
     .then(maybeOneRow);
+  if (user && user.id){
+      //Get all users from the database where the user ID is any account owned by the same user as our account
+      const altList = await pool.query(`SELECT json_agg(users.* ORDER BY users.uname ASC)
+      FROM users
+      WHERE id IN (SELECT
+        id
+        FROM alts
+        WHERE owner_id = (
+          SELECT owner_id
+          FROM alts
+          WHERE id = ${user.id}
+        )
+        AND id != ${user.id}
+      )`).then(maybeOneRow);
+      user.alts = altList.json_agg;
+  }
+  return user
 };
 
 ////////////////////////////////////////////////////////////
@@ -677,6 +694,23 @@ export const findUserBySessionId = async function (sessionId) {
 
   if (user && user.roles) {
     user.roles = pgArray.parse(user.roles, _.identity);
+  }
+
+   if (user && user.id){
+    //Get all users from the database where the user ID is any account owned by the same user as our account
+    const altList = await pool.query(`SELECT json_agg(users.* ORDER BY users.uname ASC)
+    FROM users
+    WHERE id IN (SELECT
+      id
+      FROM alts
+      WHERE owner_id = (
+        SELECT owner_id
+        FROM alts
+        WHERE id = $1
+      )
+      AND id != $1
+    )`, [user.id]).then(maybeOneRow);
+    user.alts = altList.json_agg
   }
 
   return user;
@@ -1752,6 +1786,12 @@ export const createUserWithSession = async function (props) {
       interval: "1 year", // TODO: Decide how long to log user in upon registration
     });
 
+    await pool.query(`
+      INSERT INTO alts
+      VALUES ($1, $1)`,
+      [user.id]
+    );
+    //Register user alt
     return { user, session };
   });
 };
@@ -2630,7 +2670,41 @@ export async function moveTopic(
       )
       .then(maybeOneRow);
   }
+  let is_roleplay = await pool
+    .query(
+      `
+      SELECT is_roleplay
+      FROM forums
+      WHERE id = $1
+      `,
+      [toForumId]
+    ).then(maybeOneRow);
+  is_roleplay = is_roleplay.is_roleplay;
 
+  if(topic.ooc_posts_count == 0 && !is_roleplay){
+    //Instance where topic is moved but all posts are in the IC. We can auto-convert those to OOC posts
+    //TODO: We really should be setting is_roleplay to false when put in a non-roleplay subforum, or just bite the bullet and display both tabs when an RP is put into a non-RP subforum
+    await pool
+    .query(
+      `
+      UPDATE posts
+      SET type = 'ooc'
+      WHERE topic_id = $1
+      `,
+    [topic.id],
+    );
+
+    await pool
+    .query(
+      `
+      UPDATE topics
+      SET ic_posts_count = $1,
+      ooc_posts_count = $2
+      WHERE id = $3
+      `,
+      [topic.ooc_posts_count, topic.ic_posts_count, topic.id],
+    );
+  }
   // TODO: Put this in transaction
 
   // FIXME: parallel queries aren't a thing

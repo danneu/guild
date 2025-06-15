@@ -89,6 +89,15 @@
         </div>
       {% endif %}
 
+      <!-- Unlink Button -->
+      {% if (ctx.currUser) and (ctx.currUser.alts) and ((user.uname in ctx.currUser.alts | getPropertyList('uname')) or ((user.uname == ctx.currUser.uname) and (ctx.currUser.alts.length > 0))) %}
+        <div class="pull-right" style="margin-right: 10px; display: inline-block;">
+          <form method="POST" action="/me/unlink" onsubmit="return confirm('Are you sure you want to unlink this account?');">
+           <button type="submit" name="uname" value="{{ user.uname }}" class="btn btn-danger">Unlink Account</button>
+          </form>
+        </div>
+      {% endif %}
+
       <!-- Nuke Button -->
       {% if can(ctx.currUser, 'NUKE_USER', user) %}
         <div class="pull-right" style="margin-right: 10px; display: inline-block;">
