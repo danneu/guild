@@ -679,6 +679,24 @@ export const findUserBySessionId = async function (sessionId) {
     user.roles = pgArray.parse(user.roles, _.identity);
   }
 
+   if (user && user.id){
+    //Get all users from the database where the user ID is any account owned by the same user as our account
+    const altList = await pool.query(`SELECT json_agg(users.* ORDER BY users.uname ASC)
+    FROM users
+    WHERE id IN (SELECT
+      id
+      FROM alts
+      WHERE ownerId = (
+        SELECT ownerId
+        FROM alts
+        WHERE id = $1
+      )
+      AND id != $1
+    )`, [user_id]).then(maybeOneRow);
+
+    user.alts = altList.json_agg
+  }
+
   return user;
 };
 
