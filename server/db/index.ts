@@ -333,7 +333,7 @@ export async function findUserBySlug(
 
   slug = slug.toLowerCase();
 
-  let user = pool
+  let user = await pool
     .query<DbUser>(
       `
     SELECT u.*
@@ -365,7 +365,6 @@ export async function findUserBySlug(
       )`).then(maybeOneRow);
       user.alts = altList.json_agg;
   }
-
   return user
 };
 

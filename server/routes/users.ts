@@ -75,10 +75,13 @@ router.get(
   loadUserFromSlug("slug"),
   async (ctx: Context) => {
 
-    ctx.assert(ctx.currUser && cancan.isStaffRole(ctx.currUser.role), 403)
-    const { user } = ctx.state
-    const alts = user.alts.map(function(altAccount) {return altAccount.uname;}) //await db.hits.findAltsFromUserId(user.id)
-    return ctx.body = JSON.stringify(alts)  //Shortcut to allow staff to see alts. TODO: Prettify
+    ctx.assert(ctx.currUser && cancan.isStaffRole(ctx.currUser.role), 403);
+    const { user } = ctx.state;
+
+    const alts = user.alts ?
+      user.alts.map(function(altAccount) {return altAccount.uname;})
+      : []; //await db.hits.findAltsFromUserId(user.id)
+    return ctx.body = JSON.stringify(alts);  //Shortcut to allow staff to see alts. TODO: Prettify
 
 
     // const alts = await db.hits.findAltsFromUserId(user.id)
