@@ -74,31 +74,34 @@ export const approveUser = async ({ approvedBy, targetUser }) => {
 //Updates alts table: looks up the row with the alt's ID, then finds its owner ID, then updates all rows with the same owner ID. This merges two alt chains into one.
 //SET: Grabs the owner_id of the user registering the alt (in case they're an alt of some other account)
 //WHERE: Everyone owned by the same account as the current alt
-exports.linkUserAlts = async function(userId, altId) {
-  return pool.query(sql`
+export const linkUserAlts = async function(userId, altId) {
+  return pool.query(`
     UPDATE alts
-    SET owner_id = (SELECT owner_id from alts WHERE id=${userId})
-    WHERE owner_id = (SELECT owner_id FROM alts WHERE id = ${altId})
-  `)
-}
+    SET owner_id = (SELECT owner_id from alts WHERE id=$1)
+    WHERE owner_id = (SELECT owner_id FROM alts WHERE id = $2)`,
+    [userId, altId]);
+};
 
 ////////////////////////////////////////////////////////////
 //First runs a query to find all accounts owned by the unlinked account. It sets the owner of all of those accounts to one of the other accounts in the pool (since there's no legit hierarchy)
 //Then we set the ID of the unlinked account to itself, marking it as unowned. And due to the previous query, it won't be part of any pool.
-exports.unlinkUserAlts = async function(userId) {
-  await pool.query(sql`
+export const unlinkUserAlts = async function(userId) {
+  await pool.query(`
     UPDATE alts
     SET owner_id = (
       SELECT MIN(id)
       FROM alts
-      WHERE owner_id = ${userId}
-      AND id <> ${userId}
-  )
-    WHERE owner_id = ${userId} AND id <> ${userId}`)
+      WHERE owner_id = $1
+      AND id <> $1
+    )
+    WHERE owner_id = $1 AND id <> $1`,
+    [userId]
+  );
 
-  return pool.query(sql`
+  return pool.query(`
     UPDATE alts
-    SET owner_id = ${userId}
-    WHERE id=${userId}`
-  )
-}
+    SET owner_id = $1
+    WHERE id=$1`,
+    [userId]
+  );
+};

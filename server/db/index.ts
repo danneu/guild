@@ -362,7 +362,7 @@ export async function findUserBySlug(
           WHERE id = ${user.id}
         )
         AND id != ${user.id}
-      )`).then((res) => res.rows);
+      )`).then(maybeOneRow);
       user.alts = altList.json_agg;
   }
 
@@ -737,8 +737,7 @@ export const findUserBySessionId = async function (sessionId) {
         WHERE id = $1
       )
       AND id != $1
-    )`, [user_id]).then(maybeOneRow);
-
+    )`, [user.id]).then(maybeOneRow);
     user.alts = altList.json_agg
   }
 
