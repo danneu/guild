@@ -10,4 +10,4 @@ CREATE INDEX idx_alts_owner_id ON alts(owner_id);
 -- Initialize with existing users
 INSERT INTO alts (id, owner_id)
 SELECT id, id
-FROM users
+FROM users;

@@ -329,7 +329,8 @@ const nunjucksOptions = {
     getPropertyList: (objList, propertyName) => {
       return objList.map(function(testObj) {
         return testObj[propertyName];
-      }),
+      })
+    },
   },
 };
 
@@ -626,7 +627,7 @@ router.post('/swapAccount', async ctx => {
   var newUser = ctx.currUser.alts.filter(alt => {return alt.uname  === ctx.vals.uname})[0]; //Filter should only return zero or one item (we set it to that item or undefined)
   ctx.assert(newUser, 403);  //See if any of the current user's alts contain the new account
   await db.logoutSession(ctx.currUser.id, ctx.cookies.get('sessionId'));  //End the current session to avoid polluting db
-  var session = await db.createSession({
+  var session = await db.createSession(pool, {
     userId: newUser.id,
     ipAddress: ctx.request.ip,
     interval:  '1 year',  //If they're using the switcher, they probably want a long-lived session.
