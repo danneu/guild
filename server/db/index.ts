@@ -315,7 +315,7 @@ export const findUserBySlug = async function (slug) {
 
   slug = slug.toLowerCase();
 
-  let user = pool
+  let user = await pool
     .query(
       `
     SELECT u.*
@@ -347,7 +347,6 @@ export const findUserBySlug = async function (slug) {
       )`).then(maybeOneRow);
       user.alts = altList.json_agg;
   }
-
   return user
 };
 
