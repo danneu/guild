@@ -73,12 +73,12 @@ router.get(
   "/users/:slug/alts",
   loadUserFromSlug("slug"),
   async (ctx: Context) => {
-    ctx.body = "temp disabled";
-    return;
 
-    // ctx.assert(ctx.currUser && cancan.isStaffRole(ctx.currUser.role), 403)
+    ctx.assert(ctx.currUser && cancan.isStaffRole(ctx.currUser.role), 403)
+    const { user } = ctx.state
+    const alts = user.alts.map(function(altAccount) {return altAccount.uname;}) //await db.hits.findAltsFromUserId(user.id)
+    return ctx.body = JSON.stringify(alts)  //Shortcut to allow staff to see alts. TODO: Prettify
 
-    // const { user } = ctx.state
 
     // const alts = await db.hits.findAltsFromUserId(user.id)
 
