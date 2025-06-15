@@ -107,7 +107,8 @@ const cache = createIntervalCache({
       const mapping: Record<number, any[]> = Object.create(null);
       const rows = await db.allForumMods();
       rows.forEach((row) => {
-        mapping[row.forum_id] = [row.user];
+        mapping[row.forum_id] = mapping[row.forum_id] || [];
+        mapping[row.forum_id].push(row.user);
       });
       return mapping;
     },
