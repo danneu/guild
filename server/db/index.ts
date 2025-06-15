@@ -333,7 +333,7 @@ export async function findUserBySlug(
 
   slug = slug.toLowerCase();
 
-  return pool
+  let user = pool
     .query<DbUser>(
       `
     SELECT u.*
@@ -349,7 +349,25 @@ export async function findUserBySlug(
       [slug, slug],
     )
     .then(maybeOneRow);
-}
+  if (user && user.id){
+      //Get all users from the database where the user ID is any account owned by the same user as our account
+      const altList = await pool.query(`SELECT json_agg(users.* ORDER BY users.uname ASC)
+      FROM users
+      WHERE id IN (SELECT
+        id
+        FROM alts
+        WHERE ownerId = (
+          SELECT ownerId
+          FROM alts
+          WHERE id = ${user.id}
+        )
+        AND id != ${user.id}
+      )`).then((res) => res.rows);
+      user.alts = altList.json_agg;
+  }
+
+  return user
+};
 
 ////////////////////////////////////////////////////////////
 
@@ -1815,6 +1833,12 @@ export async function createUserWithSession(props: {
       interval: "1 year", // TODO: Decide how long to log user in upon registration
     });
 
+    await pool.query(`
+      INSERT INTO alts
+      VALUES ($1, $1)`,
+      [user.id]
+    );
+    //Register user alt
     return { user, session };
   });
 }
