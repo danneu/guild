@@ -338,8 +338,8 @@ export const findUserBySlug = async function (slug) {
       WHERE id IN (SELECT
         id
         FROM alts
-        WHERE ownerId = (
-          SELECT ownerId
+        WHERE owner_id = (
+          SELECT owner_id
           FROM alts
           WHERE id = ${user.id}
         )
@@ -704,8 +704,8 @@ export const findUserBySessionId = async function (sessionId) {
     WHERE id IN (SELECT
       id
       FROM alts
-      WHERE ownerId = (
-        SELECT ownerId
+      WHERE owner_id = (
+        SELECT owner_id
         FROM alts
         WHERE id = $1
       )
