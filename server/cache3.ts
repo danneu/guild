@@ -26,10 +26,12 @@ const cache = createIntervalCache({
   ),
 
   // This must be updated manually on user change (register, nuke)
+  // But it must be done in a way that syncs across multiple machines
+  // e.g. can't just be done in a route handler.
   //
   // TODO:
   //
-  // - [x]: register
+  // - [ ]: register
   // - [ ]: nuke
   "uname-set": createConfig(new Set<string>(), {
     enabled: true,
@@ -108,7 +110,7 @@ const cache = createIntervalCache({
       const rows = await db.allForumMods();
       rows.forEach((row) => {
         mapping[row.forum_id] = mapping[row.forum_id] || [];
-        mapping[row.forum_id].push(row.user);
+        mapping[row.forum_id]!.push(row.user);
       });
       return mapping;
     },

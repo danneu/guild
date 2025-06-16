@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to rollback to (e.g., 1.2.3)'
+        description: "Tag/version to rollback to (e.g., v1.2.3)"
         required: true
         type: string
 
@@ -13,11 +13,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          ref: ${{ github.event.inputs.version }}  # Checkout specific tag
-      
+          ref: ${{ github.event.inputs.version }} # Checkout specific tag
+
       - name: Setup Fly.io
         uses: superfly/flyctl-actions/setup-flyctl@master
-        
+
       - name: Deploy specific version
         run: flyctl deploy --remote-only --env APP_VERSION=${{ github.event.inputs.version }}
         env:
