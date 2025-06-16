@@ -556,16 +556,13 @@ router.post("/posts/:postId/rate", async (ctx: Context) => {
   // so do not create notification
   if (rating) {
     // Send receiver a RATING notification in the background
-    const notif = await db
-      .createRatingNotification({
-        from_user_id: ctx.currUser.id,
-        to_user_id: post.user_id,
-        post_id: post.id,
-        topic_id: post.topic_id,
-        rating_type: rating.type,
-      })
-      .catch((err) => console.error(err, err.stack));
-    console.log("rating notif", notif);
+    db.createRatingNotification({
+      from_user_id: ctx.currUser.id,
+      to_user_id: post.user_id,
+      post_id: post.id,
+      topic_id: post.topic_id,
+      rating_type: rating.type,
+    }).catch((err) => console.error(err, err.stack));
   }
 
   ctx.type = "json";
