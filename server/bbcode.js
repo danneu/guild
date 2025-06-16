@@ -8,14 +8,14 @@
 var isServer = typeof window === "undefined";
 var isBrowser = typeof window !== "undefined";
 
-var util, cache;
+var util, cache3;
 if (isServer) {
   // Node
   util = require("util");
   // 3rd party
   var Autolinker = require("autolinker");
   // 1st party
-  cache = require("./cache3").default;
+  cache3 = require("./cache3").default;
 }
 
 function escapeHtml(unsafe) {
@@ -173,7 +173,7 @@ function replaceMentions(text) {
       return '<a class="bb-mention" href="' + path + '">@' + uname + "</a>";
     } else {
       // If we're on the server, then only render anchor if uname exists in DB.
-      var unames = cache.get("uname-set");
+      var unames = cache3.get("uname-set");
       if (unames.has(uname.toLowerCase())) {
         return '<a class="bb-mention" href="' + path + '">@' + uname + "</a>";
       } else {
