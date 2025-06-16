@@ -6,7 +6,7 @@ import _ from "lodash";
 // 1st party
 import { NODE_ENV, DATABASE_URL } from "./config";
 import * as db from "./db";
-import { pool } from "./db/util";
+import { pool, withPgPoolTransaction } from "./db/util";
 
 if (NODE_ENV !== "development") {
   console.log("can only reset db in development");
@@ -80,18 +80,20 @@ async function resetDb() {
   await (async () => {
     console.log("Inserting 100 posts into topic 1");
 
-    for (let i = 0; i < 100; i++) {
-      const markup = String(`Post ${i}`);
-      await db.createPost({
-        userId: 1,
-        ipAddress: "1.2.3.4",
-        markup: markup,
-        html: markup,
-        topicId: 1,
-        isRoleplay: false,
-        type: "ooc",
-      });
-    }
+    await withPgPoolTransaction(pool, async (pgClient) => {
+      for (let i = 0; i < 100; i++) {
+        const markup = String(`Post ${i}`);
+        await db.createPost(pgClient, {
+          userId: 1,
+          ipAddress: "1.2.3.4",
+          markup: markup,
+          html: markup,
+          topicId: 1,
+          isRoleplay: false,
+          type: "ooc",
+        });
+      }
+    });
   })();
 
   await (async () => {

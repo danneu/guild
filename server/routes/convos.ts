@@ -4,7 +4,6 @@ import _ from "lodash";
 // import createDebug from 'debug'
 // const debug = createDebug('app:routes:convos')
 import bouncer from "koa-bouncer";
-import promiseMap from "promise.map";
 // 1st party
 import * as db from "../db/index.js";
 import * as belt from "../belt.js";
@@ -16,6 +15,8 @@ import * as paginate from "../paginate.js";
 import * as emailer from "../emailer";
 import * as eflags from "../eflags.js";
 import { Context } from "koa";
+import { pool, withPgPoolTransaction } from "../db/util.js";
+import { z } from "zod";
 
 const router = new Router();
 
@@ -114,53 +115,53 @@ router.post("/convos", async (ctx: Context) => {
   // Render bbcode
   var html = bbcode(markup);
 
-  // If all unames are valid, then we can create a convo
-  const toUserIds = users.map((x) => x.id);
-  const convo = await db
-    .createConvo({
-      userId: ctx.currUser.id,
-      toUserIds,
-      title,
-      markup,
-      html,
-      ipAddress: ctx.request.ip,
-    })
-    .then(pre.presentConvo);
-
-  // Create on-guild CONVO notification for each recipient
-  promiseMap(
-    toUserIds,
-    (toUserId) => {
-      return db.createConvoNotification({
-        from_user_id: ctx.currUser.id,
-        to_user_id: toUserId,
-        convo_id: convo.id,
-      });
-    },
-    2,
-  ).catch((err) => console.error("error sending convo notifications", err));
-
-  // Create email notification for each recipient
-  const recipients = users
-    // Only email-verified users
-    .filter((u) => u.email_verified)
-    // Get the users that want to receive emails for new convos
-    .filter((user) => user.eflags & eflags.NEW_CONVO);
-
-  if (recipients.length > 0) {
-    // Send in background
-    emailer
-      .sendNewConvoEmails({
-        senderUname: ctx.currUser.uname,
-        recipients,
-        convoTitle: convo.title,
-        convoId: convo.id,
-        messageMarkup: markup,
+  const convo = await withPgPoolTransaction(pool, async (pgClient) => {
+    // If all unames are valid, then we can create a convo
+    const toUserIds = users.map((x) => x.id);
+    const convo = await db
+      .createConvo(pgClient, {
+        userId: ctx.currUser.id,
+        toUserIds,
+        title,
+        markup,
+        html,
+        ipAddress: ctx.request.ip,
       })
-      .catch((e) => {
-        console.error(`Error sending convo notification emails:`, e);
-      });
-  }
+      .then((convo) => pre.presentConvo(convo)!);
+
+    // Create on-guild CONVO notification for each recipient
+    const tasks = toUserIds.map((toUserId) => ({
+      from_user_id: ctx.currUser.id,
+      to_user_id: toUserId,
+      convo_id: convo.id,
+    }));
+
+    await db.createConvoNotificationsBulk(pgClient, tasks);
+
+    // Create email notification for each recipient
+    const recipients = users
+      // Only email-verified users
+      .filter((u) => u.email_verified)
+      // Get the users that want to receive emails for new convos
+      .filter((user) => user.eflags & eflags.NEW_CONVO);
+
+    if (recipients.length > 0) {
+      // Send in background
+      emailer
+        .sendNewConvoEmails({
+          senderUname: ctx.currUser.uname,
+          recipients,
+          convoTitle: convo.title,
+          convoId: convo.id,
+          messageMarkup: markup,
+        })
+        .catch((e) => {
+          console.error(`Error sending convo notification emails:`, e);
+        });
+    }
+
+    return convo;
+  });
 
   ctx.response.redirect(convo.url);
 });
@@ -221,35 +222,35 @@ router.post("/convos/:convoId/pms", async (ctx: Context) => {
   ctx.assertAuthorized(ctx.currUser, "CREATE_PM", convo);
 
   // Render bbcode
-  var html = bbcode(ctx.vals.markup);
+  const html = bbcode(ctx.vals.markup);
 
-  var pm = await db.createPm({
-    userId: ctx.currUser.id,
-    ipAddress: ctx.request.ip,
-    convoId: ctx.params.convoId,
-    markup: ctx.vals.markup,
-    html: html,
+  const pm = await withPgPoolTransaction(pool, async (pgClient) => {
+    const pm = await db.createPm(pgClient, {
+      userId: ctx.currUser.id,
+      ipAddress: ctx.request.ip,
+      convoId: ctx.params.convoId,
+      markup: ctx.vals.markup,
+      html: html,
+    });
+    const presentedPm = pre.presentPm(pm)!;
+
+    // Get only userIds of the *other* participants
+    // Don't want to create notification for ourself
+    const toUserIds = (
+      await db.convos.findParticipantIds(ctx.params.convoId)
+    ).filter((userId) => userId !== ctx.currUser.id);
+
+    // Upsert notifications table
+
+    const notifications = toUserIds.map((toUserId) => ({
+      from_user_id: ctx.currUser.id,
+      to_user_id: toUserId,
+      convo_id: ctx.params.convoId,
+    }));
+    await db.createPmNotificationsBulk(pgClient, notifications);
+
+    return presentedPm;
   });
-  pre.presentPm(pm);
-
-  // Get only userIds of the *other* participants
-  // Don't want to create notification for ourself
-  var toUserIds = (
-    await db.convos.findParticipantIds(ctx.params.convoId)
-  ).filter((userId) => userId !== ctx.currUser.id);
-
-  // Upsert notifications table
-  promiseMap(
-    toUserIds,
-    (toUserId) => {
-      return db.createPmNotification({
-        from_user_id: ctx.currUser.id,
-        to_user_id: toUserId,
-        convo_id: ctx.params.convoId,
-      });
-    },
-    2,
-  ).catch((err) => console.error("error sending pm notifications", err));
 
   ctx.redirect(pm.url);
 });
@@ -271,11 +272,14 @@ router.delete("/me/convos/trash", async (ctx: Context) => {
 //
 // Body: { ids: [Int] }
 router.delete("/me/convos", async (ctx: Context) => {
-  const ids = ctx.validateBody("ids").toArray().toInts().val();
+  const BodySchema = z.object({
+    ids: z.array(z.number()).min(1),
+  });
+  const { ids } = BodySchema.parse(ctx.request.body);
 
   const convos = await db.convos
     .getConvos(ids)
-    .then((xs) => xs.map(pre.presentConvo));
+    .then((xs) => xs.map((x) => pre.presentConvo(x)!));
 
   ctx.assert(
     convos.every((convo) => cancan.can(ctx.currUser, "DELETE_CONVO", convo)),

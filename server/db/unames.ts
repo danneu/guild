@@ -100,12 +100,18 @@ export const latestUnameChanges = async function (limit = 10) {
 
 ////////////////////////////////////////////////////////////
 
-export const changeUname = async function ({
+export async function changeUname({
   userId,
   changedById,
   oldUname,
   newUname,
   recycle = false,
+}: {
+  userId: number;
+  changedById: number;
+  oldUname: string;
+  newUname: string;
+  recycle?: boolean;
 }) {
   debug(`[changeUname] oldUname=%j, newUname=%j`, oldUname, newUname);
   assert(Number.isInteger(userId));
@@ -163,6 +169,6 @@ export const changeUname = async function ({
       )
       .then(maybeOneRow);
   });
-};
+}
 
 ////////////////////////////////////////////////////////////

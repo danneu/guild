@@ -1,4 +1,3 @@
-"use strict";
 import "dotenv/config";
 import * as config from "./config";
 import { z } from "zod";
@@ -86,7 +85,6 @@ import _ from "lodash";
 import createDebug from "debug";
 const debug = createDebug("app:index");
 import assert from "assert";
-import promiseMap from "promise.map";
 // 1st party
 import * as db from "./db";
 import * as pre from "./presenters";
@@ -101,7 +99,7 @@ import services from "./services";
 import cache3 from "./cache3";
 import makeAgo from "./ago";
 import protectCsrf from "./middleware/protect-csrf";
-import { pool } from "./db/util";
+import { pool, withPgPoolTransaction } from "./db/util";
 
 app.use(middleware.methodOverride());
 
@@ -469,23 +467,23 @@ router.post("/topics/:topicSlug/co-gms", async (ctx: Context) => {
 router.delete("/topics/:topicSlug/co-gms/:userSlug", async (ctx: Context) => {
   var topicId = belt.extractId(ctx.params.topicSlug);
   ctx.assert(topicId, 404);
-  var topic = await db.findTopicById(topicId).then(pre.presentTopic);
+  const topic = await db.findTopicById(topicId).then(pre.presentTopic);
   ctx.assert(topic, 404);
   ctx.assertAuthorized(ctx.currUser, "UPDATE_TOPIC_CO_GMS", topic);
 
-  var user = await db.findUserBySlug(ctx.params.userSlug);
+  const user = await db.findUserBySlug(ctx.params.userSlug);
   ctx.check(user, "User does not exist");
-  ctx.check(topic.co_gm_ids.includes(user.id), "User is not a co-GM");
+  ctx.check(topic.co_gm_ids.includes(user!.id), "User is not a co-GM");
 
   await db.updateTopicCoGms(
     topic.id,
     topic.co_gm_ids.filter((co_gm_id) => {
-      return co_gm_id !== user.id;
+      return co_gm_id !== user!.id;
     }),
   );
 
   ctx.flash = {
-    message: ["success", util.format("Co-GM removed: %s", user.uname)],
+    message: ["success", util.format("Co-GM removed: %s", user!.uname)],
   };
   ctx.response.redirect(topic.url + "/edit#co-gms");
 });
@@ -596,13 +594,13 @@ router.post("/sessions", async (ctx: Context) => {
   );
 
   // User authenticated
-  var session = await db.createSession(pool, {
+  const session = await db.createSession(pool, {
     userId: user.id,
     ipAddress: ctx.request.ip,
     interval: ctx.vals["remember-me"] ? "1 year" : "2 weeks",
   });
 
-  ctx.cookies.set("sessionId", session.id, {
+  ctx.cookies.set("sessionId", String(session.id), {
     expires: ctx.vals["remember-me"]
       ? belt.futureDate({ years: 1 })
       : undefined,
@@ -870,13 +868,13 @@ router.post("/reset-password", async (ctx: Context) => {
   await db.deleteResetTokens(user.id);
 
   // Log the user in
-  var interval = rememberMe ? "1 year" : "1 day";
-  var session = await db.createSession(pool, {
+  const interval = rememberMe ? "1 year" : "1 day";
+  const session = await db.createSession(pool, {
     userId: user.id,
     ipAddress: ctx.request.ip,
     interval: interval,
   });
-  ctx.cookies.set("sessionId", session.id, {
+  ctx.cookies.set("sessionId", String(session.id), {
     expires: belt.futureDate(
       new Date(),
       rememberMe ? { years: 1 } : { days: 1 },
@@ -1087,8 +1085,8 @@ router.post(
           ctx.request.body.markup.length,
       );
 
-    var postType = ctx.vals["post-type"];
-    var topic = await db.findTopic(topicId);
+    const postType = ctx.vals["post-type"];
+    const topic = await db.findTopic(topicId);
     ctx.assert(topic, 404);
     topic.mods = cache3.get("forum-mods")[topic.forum_id] || [];
     ctx.assertAuthorized(ctx.currUser, "CREATE_POST", topic);
@@ -1099,64 +1097,68 @@ router.post(
     }
 
     // Render the bbcode
-    var html = bbcode(ctx.vals.markup);
+    const html = bbcode(ctx.vals.markup);
 
-    var post = await db
-      .createPost({
-        userId: ctx.currUser.id,
-        ipAddress: ctx.request.ip,
-        topicId: topic.id,
-        markup: ctx.vals.markup,
-        html: html,
-        type: postType,
-        isRoleplay: topic.forum.is_roleplay,
-      })
-      .then(pre.presentPost);
+    const { post, mentionNotificationsCount, quoteNotificationsCount } =
+      await withPgPoolTransaction(pool, async (pgClient) => {
+        const post = await db
+          .createPost(pgClient, {
+            userId: ctx.currUser.id,
+            ipAddress: ctx.request.ip,
+            topicId: topic.id,
+            markup: ctx.vals.markup,
+            html: html,
+            type: postType,
+            isRoleplay: topic.forum.is_roleplay,
+          })
+          .then(pre.presentPost);
 
-    // Send MENTION and QUOTE notifications
-    var results = await Promise.all([
-      db.parseAndCreateMentionNotifications({
-        fromUser: ctx.currUser,
-        markup: ctx.vals.markup,
-        post_id: post.id,
-        topic_id: post.topic_id,
-      }),
-      db.parseAndCreateQuoteNotifications({
-        fromUser: ctx.currUser,
-        markup: ctx.vals.markup,
-        post_id: post.id,
-        topic_id: post.topic_id,
-      }),
-    ]);
+        // Send MENTION and QUOTE notifications
 
-    var mentionNotificationsCount = results[0].length;
-    var quoteNotificationsCount = results[1].length;
-    {
-      // Send subscription notifications
+        const mentionNotifications =
+          await db.parseAndCreateMentionNotifications(pgClient, {
+            fromUser: ctx.currUser,
+            markup: ctx.vals.markup,
+            post_id: post.id,
+            topic_id: post.topic_id,
+          });
 
-      // Get all people who do not have this sub archived
-      const subscribers = (
-        await db.subscriptions.listActiveSubscribersForTopic(post.topic_id)
-      )
-        // Ignore self
-        .filter((u) => u.id !== ctx.currUser.id);
+        const quoteNotifications = await db.parseAndCreateQuoteNotifications(
+          pgClient,
+          {
+            fromUser: ctx.currUser,
+            markup: ctx.vals.markup,
+            post_id: post.id,
+            topic_id: post.topic_id,
+          },
+        );
 
-      // Create notifications in the background
-      promiseMap(
-        subscribers,
-        ({ id }) => {
-          return db.createSubNotification(
-            ctx.currUser.id,
-            id,
-            post.topic_id,
-            postType,
-          );
-        },
-        2,
-      ).catch((err) =>
-        console.error("error creating sub notes on new post:", err),
-      );
-    }
+        const mentionNotificationsCount = mentionNotifications.length;
+        const quoteNotificationsCount = quoteNotifications.length;
+        {
+          // Send subscription notifications
+
+          // Get all people who do not have this sub archived
+          const subscribers = (
+            await db.subscriptions.listActiveSubscribersForTopic(
+              pgClient,
+              post.topic_id,
+            )
+          )
+            // Ignore self
+            .filter((u) => u.user_id !== ctx.currUser.id);
+
+          const subNotifications = subscribers.map(({ user_id }) => ({
+            fromUserId: ctx.currUser.id as number,
+            toUserId: user_id,
+            topicId: post.topic_id as number,
+            postType: postType as "ic" | "ooc" | "char",
+          }));
+          await db.createSubNotificationsBulk(pgClient, subNotifications);
+        }
+
+        return { post, mentionNotificationsCount, quoteNotificationsCount };
+      });
 
     ctx.flash = {
       message: [
@@ -1893,9 +1895,9 @@ router.put("/topics/:slug/edit", async (ctx: Context) => {
   ctx.assert(ctx.currUser, 403);
   var topicId = belt.extractId(ctx.params.slug);
   ctx.assert(topicId, 404);
-  var topic = await db.findTopicById(topicId);
+  const topic = await db.findTopicById(topicId);
   ctx.assert(topic, 404);
-  topic = pre.presentTopic(topic);
+  const presentedTopic = pre.presentTopic(topic)!;
   ctx.assertAuthorized(ctx.currUser, "UPDATE_TOPIC_TITLE", topic);
 
   // Parameter validation
@@ -1930,7 +1932,7 @@ router.put("/topics/:slug/edit", async (ctx: Context) => {
         message: ["danger", ex.message],
         params: ctx.request.body,
       };
-      ctx.response.redirect(topic.url + "/edit");
+      ctx.response.redirect(presentedTopic.url + "/edit");
       return;
     }
     throw ex;
@@ -1943,7 +1945,7 @@ router.put("/topics/:slug/edit", async (ctx: Context) => {
   });
 
   ctx.flash = { message: ["success", "Topic updated"] };
-  ctx.response.redirect(topic.url + "/edit");
+  ctx.response.redirect(presentedTopic.url + "/edit");
 });
 
 // Always redirects to the last post of a tab
@@ -2213,7 +2215,7 @@ router.get("/topics/:slug", async (ctx: Context) => {
 // Staff list
 //
 router.get("/staff", async (ctx: Context) => {
-  const users = cache3.get("staff").map(pre.presentUser);
+  const users = cache3.get("staff").map((u) => pre.presentUser(u)!);
 
   await ctx.render("staff", {
     ctx,
