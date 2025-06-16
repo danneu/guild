@@ -1997,8 +1997,9 @@ export async function createSubNotificationsBulk(
   assert(fromUserIds.length === topicIds.length);
   assert(fromUserIds.length === metas.length);
 
-  return pgClient.query(
-    `
+  return pgClient
+    .query<DbNotification>(
+      `
     INSERT INTO notifications (type, from_user_id, to_user_id, topic_id, meta, count)
     SELECT 
       'TOPIC_SUB',
@@ -2011,9 +2012,11 @@ export async function createSubNotificationsBulk(
       DO UPDATE
       SET count = COALESCE(notifications.count, 0) + 1,
           meta = notifications.meta || EXCLUDED.meta
+    RETURNING *
     `,
-    [fromUserIds, toUserIds, topicIds, metas],
-  );
+      [fromUserIds, toUserIds, topicIds, metas],
+    )
+    .then((res) => res.rows);
 }
 
 // Users receive this when someone starts a convo with them
