@@ -8,14 +8,14 @@
 var isServer = typeof window === "undefined";
 var isBrowser = typeof window !== "undefined";
 
-var util, cache3;
+var util, cache;
 if (isServer) {
   // Node
   util = require("util");
   // 3rd party
   var Autolinker = require("autolinker");
   // 1st party
-  cache3 = require("./cache3").default;
+  cache = require("./cache3").default;
 }
 
 function escapeHtml(unsafe) {
@@ -173,8 +173,8 @@ function replaceMentions(text) {
       return '<a class="bb-mention" href="' + path + '">@' + uname + "</a>";
     } else {
       // If we're on the server, then only render anchor if uname exists in DB.
-      var unameSet = cache3.get("uname-set");
-      if (unameSet.has(uname.toLowerCase())) {
+      var unames = cache.get("uname-set");
+      if (unames.has(uname.toLowerCase())) {
         return '<a class="bb-mention" href="' + path + '">@' + uname + "</a>";
       } else {
         return "[@" + uname + "]";
@@ -842,12 +842,12 @@ var XBBCODE = (function () {
     table: {
       openTag: function (params, content) {
         if (params && params.slice(1) === "bordered")
-          return '<div class="table-responsive"><table class="bb-table table table-bordered">';
-        return '<div class="table-responsive"><table class="bb-table table">';
+          return '<table class="bb-table table table-bordered">';
+        return '<table class="bb-table table">';
       },
       closeTag: function (params, content) {
         isFirstTableRow = true;
-        return "</table></div>";
+        return "</table>";
       },
       // restrictChildrenTo: ["tbody","thead", "tfoot", "tr"]
       restrictChildrenTo: ["row"],
