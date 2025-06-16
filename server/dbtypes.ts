@@ -86,3 +86,18 @@ export type DbTopic = {
   banned_ids: number[];
   join_status: string;
 };
+
+export type DbVm = {
+  id: number;
+  from_user_id: number;
+  to_user_id: number;
+  markup: string;
+  html: string;
+  parent_vm_id: number | null;
+};
+
+export type DbTag = {
+  id: number;
+  name: string;
+  tag_group_id: number;
+};

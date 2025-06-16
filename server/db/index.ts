@@ -21,9 +21,12 @@ import { Context } from "koa";
 import {
   DbConvo,
   DbNotification,
+  DbPm,
   DbSession,
+  DbTag,
   DbTopic,
   DbUser,
+  DbVm,
 } from "../dbtypes";
 
 // TODO: db fns should take this as an argument esp if they can be used inside/outside txns
@@ -1257,14 +1260,24 @@ GROUP BY pms.id, c.id
 ////////////////////////////////////////////////////////////
 
 // Returns created PM
-export const createPm = async function (props) {
+export async function createPm(
+  pgClient: PgClientInTransaction,
+  props: {
+    userId: number;
+    ipAddress: string;
+    convoId: number;
+    markup: string;
+    html: string;
+  },
+) {
+  assert(pgClient._inTransaction, "pgClient must be in a transaction");
   assert(_.isNumber(props.userId));
   assert(props.convoId);
   assert(_.isString(props.markup));
   assert(_.isString(props.html));
 
-  return pool
-    .query(
+  return pgClient
+    .query<DbPm>(
       `
     INSERT INTO pms (user_id, ip_address, convo_id, markup, html)
     VALUES ($1, $2::inet, $3,
@@ -1273,8 +1286,8 @@ export const createPm = async function (props) {
   `,
       [props.userId, props.ipAddress, props.convoId, props.markup, props.html],
     )
-    .then(maybeOneRow);
-};
+    .then(exactlyOneRow);
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -2046,46 +2059,140 @@ export async function createConvoNotificationsBulk(
 // Tries to create a convo notification.
 // If to_user_id already has a convo notification for this convo, then
 // increment the count
-export const createPmNotification = async function (opts) {
-  debug("[createPmNotification] opts: ", opts);
-  assert(_.isNumber(opts.from_user_id));
-  assert(_.isNumber(opts.to_user_id));
-  assert(opts.convo_id);
-
-  return pool.query(
-    `
-    INSERT INTO notifications (type, from_user_id, to_user_id, convo_id, count)
-    VALUES ('CONVO', $1, $2, $3, 1)
-    ON CONFLICT (to_user_id, convo_id) DO UPDATE
-      SET count = COALESCE(notifications.count, 0) + 1
-  `,
-    [opts.from_user_id, opts.to_user_id, opts.convo_id],
+export async function createPmNotificationsBulk(
+  pgClient: PgClientInTransaction,
+  notifications: Array<{
+    from_user_id: number;
+    to_user_id: number;
+    convo_id: number;
+  }>,
+) {
+  debug(
+    "[createPmNotificationsBulk] notifications count: ",
+    notifications.length,
   );
-};
+  assert(pgClient._inTransaction, "pgClient must be in a transaction");
+  if (notifications.length === 0) return [];
 
-// type is 'REPLY_VM' or 'TOPLEVEL_VM'
-export async function createVmNotification(data: {
-  type: "REPLY_VM" | "TOPLEVEL_VM";
-  from_user_id: number;
-  to_user_id: number;
-  vm_id: number;
-}) {
-  assert(["REPLY_VM", "TOPLEVEL_VM"].includes(data.type));
-  assert(Number.isInteger(data.from_user_id));
-  assert(Number.isInteger(data.to_user_id));
-  assert(Number.isInteger(data.vm_id));
-  return pool.query(
-    `
-    INSERT INTO notifications (type, from_user_id, to_user_id, vm_id, count)
-    VALUES (
-      $1, $2, $3, $4, 1
+  // Validate all inputs
+  notifications.forEach(({ from_user_id, to_user_id, convo_id }) => {
+    assert(_.isNumber(from_user_id));
+    assert(_.isNumber(to_user_id));
+    assert(convo_id);
+  });
+
+  const fromUserIds = notifications.map((n) => n.from_user_id);
+  const toUserIds = notifications.map((n) => n.to_user_id);
+  const convoIds = notifications.map((n) => n.convo_id);
+
+  return pgClient
+    .query<DbNotification>(
+      `
+      INSERT INTO notifications (type, from_user_id, to_user_id, convo_id, count)
+      SELECT 
+        'CONVO',
+        unnest($1::int[]),
+        unnest($2::int[]), 
+        unnest($3::int[]),
+        1
+      ON CONFLICT (to_user_id, convo_id) WHERE type = 'CONVO'
+        DO UPDATE
+        SET count = COALESCE(notifications.count, 0) + 1,
+            from_user_id = EXCLUDED.from_user_id,  -- Update to latest sender
+            updated_at = CURRENT_TIMESTAMP
+      RETURNING *
+      `,
+      [fromUserIds, toUserIds, convoIds],
     )
-    ON CONFLICT (to_user_id, vm_id) WHERE type IN ('TOPLEVEL_VM', 'REPLY_VM')
-      DO UPDATE
-      SET count = COALESCE(notifications.count, 0) + 1
-  `,
-    [data.type, data.from_user_id, data.to_user_id, data.vm_id],
-  );
+    .then((result) => result.rows);
+}
+
+export async function createTopLevelVmNotificationsBulk(
+  pgClient: PgClientInTransaction,
+  notifications: Array<{
+    from_user_id: number;
+    to_user_id: number;
+    vm_id: number;
+  }>,
+) {
+  assert(pgClient._inTransaction, "pgClient must be in a transaction");
+  if (notifications.length === 0) return [];
+
+  // Validate all inputs
+  notifications.forEach(({ from_user_id, to_user_id, vm_id }) => {
+    assert(Number.isInteger(from_user_id));
+    assert(Number.isInteger(to_user_id));
+    assert(Number.isInteger(vm_id));
+  });
+
+  const fromUserIds = notifications.map((n) => n.from_user_id);
+  const toUserIds = notifications.map((n) => n.to_user_id);
+  const vmIds = notifications.map((n) => n.vm_id);
+
+  return pgClient
+    .query<DbNotification>(
+      `
+      INSERT INTO notifications (type, from_user_id, to_user_id, vm_id, count)
+      SELECT 
+        'TOPLEVEL_VM',
+        unnest($1::int[]),
+        unnest($2::int[]), 
+        unnest($3::int[]),
+        1
+      ON CONFLICT (to_user_id, vm_id) WHERE type = 'TOPLEVEL_VM'
+        DO UPDATE
+        SET count = COALESCE(notifications.count, 0) + 1,
+            from_user_id = EXCLUDED.from_user_id,  -- Update to latest sender
+            updated_at = CURRENT_TIMESTAMP
+      RETURNING *
+      `,
+      [fromUserIds, toUserIds, vmIds],
+    )
+    .then((result) => result.rows);
+}
+
+export async function createReplyVmNotificationsBulk(
+  pgClient: PgClientInTransaction,
+  notifications: Array<{
+    from_user_id: number;
+    to_user_id: number;
+    vm_id: number;
+  }>,
+) {
+  assert(pgClient._inTransaction, "pgClient must be in a transaction");
+  if (notifications.length === 0) return [];
+
+  // Validate all inputs
+  notifications.forEach(({ from_user_id, to_user_id, vm_id }) => {
+    assert(Number.isInteger(from_user_id));
+    assert(Number.isInteger(to_user_id));
+    assert(Number.isInteger(vm_id));
+  });
+
+  const fromUserIds = notifications.map((n) => n.from_user_id);
+  const toUserIds = notifications.map((n) => n.to_user_id);
+  const vmIds = notifications.map((n) => n.vm_id);
+
+  return pgClient
+    .query<DbNotification>(
+      `
+      INSERT INTO notifications (type, from_user_id, to_user_id, vm_id, count)
+      SELECT 
+        'REPLY_VM',
+        unnest($1::int[]),
+        unnest($2::int[]), 
+        unnest($3::int[]),
+        1
+      ON CONFLICT (to_user_id, vm_id) WHERE type = 'REPLY_VM'
+        DO UPDATE
+        SET count = COALESCE(notifications.count, 0) + 1,
+            from_user_id = EXCLUDED.from_user_id,  -- Update to latest sender
+            updated_at = CURRENT_TIMESTAMP
+      RETURNING *
+      `,
+      [fromUserIds, toUserIds, vmIds],
+    )
+    .then((result) => result.rows);
 }
 
 // Pass in optional notification type to filter
@@ -2931,7 +3038,15 @@ RETURNING *
 // - topic_id
 // - rating_type: Any rating_type enum
 // Returns created notification
-export const createRatingNotification = async function (props) {
+//
+// TODO: Handle rating undo
+export async function createRatingNotification(props: {
+  from_user_id: number;
+  to_user_id: number;
+  post_id: number;
+  topic_id: number;
+  rating_type: "like" | "laugh" | "thank";
+}) {
   assert(props.from_user_id);
   assert(props.to_user_id);
   assert(props.post_id);
@@ -2941,7 +3056,7 @@ export const createRatingNotification = async function (props) {
   // TODO: does that {type: _} thing work?
 
   return pool
-    .query(
+    .query<DbNotification>(
       `
 INSERT INTO notifications
 (type, from_user_id, to_user_id, meta, post_id, topic_id)
@@ -2956,15 +3071,15 @@ RETURNING *
         props.topic_id,
       ],
     )
-    .then(maybeOneRow);
-};
+    .then(exactlyOneRow);
+}
 
-export const updateTopicCoGms = async function (topicId, userIds) {
+export async function updateTopicCoGms(topicId: number, userIds: number[]) {
   assert(topicId);
   assert(_.isArray(userIds));
 
   return pool
-    .query(
+    .query<DbTopic>(
       `
     UPDATE topics
     SET co_gm_ids = $1
@@ -2973,12 +3088,12 @@ export const updateTopicCoGms = async function (topicId, userIds) {
   `,
       [userIds, topicId],
     )
-    .then(maybeOneRow);
-};
+    .then(exactlyOneRow);
+}
 
-export const findAllTags = async function () {
-  return pool.query(`SELECT * FROM tags`).then((res) => res.rows);
-};
+export async function findAllTags() {
+  return pool.query<DbTag>(`SELECT * FROM tags`).then((res) => res.rows);
+}
 
 // Returns [TagGroup] where each group has [Tag] array bound to `tags` property
 export async function findAllTagGroups(): Promise<unknown[]> {
@@ -4046,11 +4161,14 @@ export const deleteFriendship = async function (from_id, to_id) {
 
 // Returns array of all unique user IDs that have posted a VM
 // in a thread, given the root VM ID of that thread
-export const getVmThreadUserIds = async function (parentVmId) {
+export async function getVmThreadUserIds(
+  pgClient: PgQueryExecutor,
+  parentVmId: number,
+) {
   assert(Number.isInteger(parentVmId));
 
-  return pool
-    .query(
+  return pgClient
+    .query<Pick<DbVm, "from_user_id">>(
       `
     SELECT DISTINCT from_user_id
     FROM vms
@@ -4059,9 +4177,8 @@ export const getVmThreadUserIds = async function (parentVmId) {
   `,
       [parentVmId, parentVmId],
     )
-    .then((res) => res.rows)
-    .then((rows) => rows.map((row) => row.from_user_id));
-};
+    .then((res) => res.rows.map((vm) => vm.from_user_id));
+}
 
 // data:
 // - to_user_id: Int
@@ -4070,14 +4187,24 @@ export const getVmThreadUserIds = async function (parentVmId) {
 // - html
 // Optional
 // - parent_vm_id: Int - Only present if this VM is a reply to a toplevel VM
-export const createVm = async function (data) {
+export async function createVm(
+  pgClient: PgClientInTransaction,
+  data: {
+    from_user_id: number;
+    to_user_id: number;
+    markup: string;
+    html: string;
+    parent_vm_id: number | null;
+  },
+) {
+  assert(pgClient._inTransaction, "pgClient must be in a transaction");
   assert(Number.isInteger(data.from_user_id));
   assert(Number.isInteger(data.to_user_id));
   assert(_.isString(data.markup));
   assert(_.isString(data.html));
 
-  return pool
-    .query(
+  return pgClient
+    .query<DbVm>(
       `
 INSERT INTO vms (from_user_id, to_user_id, markup, html, parent_vm_id)
 VALUES ($1, $2, $3, $4, $5)
@@ -4091,8 +4218,8 @@ RETURNING *
         data.parent_vm_id,
       ],
     )
-    .then(maybeOneRow);
-};
+    .then(exactlyOneRow);
+}
 
 export const findLatestVMsForUserId = async function (user_id) {
   assert(Number.isInteger(user_id));

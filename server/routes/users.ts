@@ -926,48 +926,53 @@ router.post("/users/:slug/vms", async (ctx: Context) => {
 
   const html = bbcode(ctx.vals.markup);
 
-  // Create VM
-  const vm = await db.createVm({
-    from_user_id: ctx.currUser.id,
-    to_user_id: user.id,
-    markup: ctx.vals.markup,
-    html,
-    parent_vm_id: ctx.vals.parent_vm_id,
-  });
+  const vm = await withPgPoolTransaction(pool, async (pgClient) => {
+    // Create VM
+    const vm = await db.createVm(pgClient, {
+      from_user_id: ctx.currUser.id,
+      to_user_id: user.id,
+      markup: ctx.vals.markup,
+      html,
+      parent_vm_id: ctx.vals.parent_vm_id,
+    });
 
-  // if VM is a reply, notify everyone in the thread and the owner of the
-  // profile. but don't notify currUser.
-  if (vm.parent_vm_id) {
-    let userIds = await db.getVmThreadUserIds(vm.parent_vm_id || vm.id);
-    // push on the profile owner
-    userIds.push(vm.to_user_id);
-    // don't notify anyone twice
-    userIds = _.uniq(userIds);
-    // don't notify self
-    userIds = userIds.filter((id) => id !== ctx.currUser.id);
-    // send out notifications in parallel
-    await Promise.all(
-      userIds.map((toUserId) => {
-        return db.createVmNotification({
-          type: "REPLY_VM",
-          from_user_id: vm.from_user_id,
-          to_user_id: toUserId,
-          vm_id: vm.parent_vm_id || vm.id,
-        });
-      }),
-    );
-  } else {
-    // else, it's a top-level VM. just notify profile owner
-    // unless we are leaving VM on our own wall
-    if (vm.from_user_id !== vm.to_user_id) {
-      await db.createVmNotification({
-        type: "TOPLEVEL_VM",
+    // if VM is a reply, notify everyone in the thread and the owner of the
+    // profile. but don't notify currUser.
+    if (vm.parent_vm_id) {
+      let userIds = await db.getVmThreadUserIds(
+        pgClient,
+        vm.parent_vm_id || vm.id,
+      );
+      // push on the profile owner
+      userIds.push(vm.to_user_id);
+      // don't notify anyone twice
+      userIds = [...new Set(userIds)];
+      // don't notify self
+      userIds = userIds.filter((id) => id !== ctx.currUser.id);
+
+      const notifications = userIds.map((toUserId) => ({
         from_user_id: vm.from_user_id,
-        to_user_id: vm.to_user_id,
-        vm_id: vm.parent_vm_id || vm.id,
-      });
+        to_user_id: toUserId,
+        vm_id: vm.id,
+      }));
+
+      await db.createReplyVmNotificationsBulk(pgClient, notifications);
+    } else {
+      // else, it's a top-level VM. just notify profile owner
+      // unless we are leaving VM on our own wall
+      if (vm.from_user_id !== vm.to_user_id) {
+        await db.createTopLevelVmNotificationsBulk(pgClient, [
+          {
+            from_user_id: vm.from_user_id,
+            to_user_id: vm.to_user_id,
+            vm_id: vm.parent_vm_id || vm.id,
+          },
+        ]);
+      }
     }
-  }
+
+    return vm;
+  });
 
   ctx.flash = {
     message: ["success", "Visitor message successfully posted"],

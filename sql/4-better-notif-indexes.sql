@@ -26,13 +26,17 @@ create unique index notifications_rating_unique on notifications (to_user_id, po
   where type = 'RATING';
 -- and post_id is not null; (post_id is always set if we create a rating)
 
--- One TOPLEVEL_VM per user per VM (TODO: Verify this is correct)
--- CREATE UNIQUE INDEX notifications_toplevel_vm_unique
--- ON notifications (to_user_id, vm_id) WHERE type = 'TOPLEVEL_VM';
+-- One TOPLEVEL_VM per user (this is created when a user creates a new VM on their page)
+-- I don't think we create notifications when a user replies to a VM on their page that wasn't
+-- created by them.
+DROP INDEX IF EXISTS notifications_toplevel_vm_unique;
 
--- One REPLY_VM per user per VM (TODO: Verify this is correct)
--- CREATE UNIQUE INDEX notifications_reply_vm_unique
--- ON notifications (to_user_id, vm_id) WHERE type = 'REPLY_VM';
+CREATE UNIQUE INDEX notifications_toplevel_vm_unique ON notifications (to_user_id, vm_id) WHERE type = 'TOPLEVEL_VM';
+
+-- One REPLY_VM per user per VM (everyone someone replies to their VM, the count++)
+DROP INDEX IF EXISTS notifications_reply_vm_unique;
+
+CREATE UNIQUE INDEX notifications_reply_vm_unique ON notifications (to_user_id, vm_id) WHERE type = 'REPLY_VM';
 
 --------------------------------
 -- Delete obsolete indexes
@@ -44,4 +48,4 @@ ALTER TABLE notifications
 DROP CONSTRAINT notifications_to_user_id_convo_id_key;
 
 -- TODO: Must remove its use from ON CONFLICT clause in db.createVmNotification
--- DROP INDEX unique_to_user_id_vm_id;
+DROP INDEX unique_to_user_id_vm_id;

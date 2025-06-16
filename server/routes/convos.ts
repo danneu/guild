@@ -4,7 +4,6 @@ import _ from "lodash";
 // import createDebug from 'debug'
 // const debug = createDebug('app:routes:convos')
 import bouncer from "koa-bouncer";
-import promiseMap from "promise.map";
 // 1st party
 import * as db from "../db/index.js";
 import * as belt from "../belt.js";
@@ -17,6 +16,7 @@ import * as emailer from "../emailer";
 import * as eflags from "../eflags.js";
 import { Context } from "koa";
 import { pool, withPgPoolTransaction } from "../db/util.js";
+import { z } from "zod";
 
 const router = new Router();
 
@@ -222,35 +222,35 @@ router.post("/convos/:convoId/pms", async (ctx: Context) => {
   ctx.assertAuthorized(ctx.currUser, "CREATE_PM", convo);
 
   // Render bbcode
-  var html = bbcode(ctx.vals.markup);
+  const html = bbcode(ctx.vals.markup);
 
-  var pm = await db.createPm({
-    userId: ctx.currUser.id,
-    ipAddress: ctx.request.ip,
-    convoId: ctx.params.convoId,
-    markup: ctx.vals.markup,
-    html: html,
+  const pm = await withPgPoolTransaction(pool, async (pgClient) => {
+    const pm = await db.createPm(pgClient, {
+      userId: ctx.currUser.id,
+      ipAddress: ctx.request.ip,
+      convoId: ctx.params.convoId,
+      markup: ctx.vals.markup,
+      html: html,
+    });
+    const presentedPm = pre.presentPm(pm)!;
+
+    // Get only userIds of the *other* participants
+    // Don't want to create notification for ourself
+    const toUserIds = (
+      await db.convos.findParticipantIds(ctx.params.convoId)
+    ).filter((userId) => userId !== ctx.currUser.id);
+
+    // Upsert notifications table
+
+    const notifications = toUserIds.map((toUserId) => ({
+      from_user_id: ctx.currUser.id,
+      to_user_id: toUserId,
+      convo_id: ctx.params.convoId,
+    }));
+    await db.createPmNotificationsBulk(pgClient, notifications);
+
+    return presentedPm;
   });
-  pre.presentPm(pm);
-
-  // Get only userIds of the *other* participants
-  // Don't want to create notification for ourself
-  var toUserIds = (
-    await db.convos.findParticipantIds(ctx.params.convoId)
-  ).filter((userId) => userId !== ctx.currUser.id);
-
-  // Upsert notifications table
-  promiseMap(
-    toUserIds,
-    (toUserId) => {
-      return db.createPmNotification({
-        from_user_id: ctx.currUser.id,
-        to_user_id: toUserId,
-        convo_id: ctx.params.convoId,
-      });
-    },
-    2,
-  ).catch((err) => console.error("error sending pm notifications", err));
 
   ctx.redirect(pm.url);
 });
@@ -272,7 +272,10 @@ router.delete("/me/convos/trash", async (ctx: Context) => {
 //
 // Body: { ids: [Int] }
 router.delete("/me/convos", async (ctx: Context) => {
-  const ids = ctx.validateBody("ids").toArray().toInts().val();
+  const BodySchema = z.object({
+    ids: z.array(z.number()).min(1),
+  });
+  const { ids } = BodySchema.parse(ctx.request.body);
 
   const convos = await db.convos
     .getConvos(ids)
