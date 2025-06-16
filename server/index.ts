@@ -105,7 +105,14 @@ import { pool } from "./db/util";
 
 app.use(middleware.methodOverride());
 
-app.use(protectCsrf(["roleplayerguild.com", "localhost", "rpguild.fly.dev"]));
+app.use(
+  protectCsrf([
+    "roleplayerguild.com",
+    "localhost",
+    "rpguild.fly.dev",
+    "rpguild-staging.fly.dev",
+  ]),
+);
 
 // Catch and log all errors that bubble up to koa
 // app.on('error', function(err) {
