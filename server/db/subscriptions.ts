@@ -3,23 +3,20 @@ import assert from "assert";
 // import createDebug from 'debug';
 // const debug = createDebug('app:db:subscriptions')
 // 1st
-import { PgClientInTransaction, pool } from "./util";
+import { pool } from "./util";
 import * as db from ".";
 
 ////////////////////////////////////////////////////////////
 
 // Gets non-archived subs
-export async function listActiveSubscribersForTopic(
-  pgClient: PgClientInTransaction,
-  topicId: number,
-) {
+export const listActiveSubscribersForTopic = async function (topicId) {
   assert(Number.isInteger(topicId));
 
-  return pgClient
-    .query<{ user_id: number }>(
+  return pool
+    .query(
       `
     SELECT
-      u.id as user_id
+      u.id
     FROM users u
     JOIN topic_subscriptions ts ON u.id = ts.user_id
     WHERE ts.topic_id = $1
@@ -28,7 +25,7 @@ export async function listActiveSubscribersForTopic(
       [topicId],
     )
     .then((res) => res.rows);
-}
+};
 
 ////////////////////////////////////////////////////////////
 

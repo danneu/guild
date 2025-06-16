@@ -1,13 +1,14 @@
 // 3rd
 import assert from "assert";
 // 1st
-import { pool, maybeOneRow, PgClientInTransaction } from "./util";
+import { pool, maybeOneRow } from "./util";
+import pg from "pg";
 
 ////////////////////////////////////////////////////////////
 
 // Reason is optional
 export async function insertPostRev(
-  pgClient: PgClientInTransaction,
+  client: pg.PoolClient,
   userId: number,
   postId: number,
   markup: string,
@@ -20,7 +21,7 @@ export async function insertPostRev(
   assert(typeof html === "string");
   assert(!reason || typeof reason === "string");
 
-  return pgClient.query(
+  return client.query(
     `
     INSERT INTO post_revs (user_id, post_id, markup, html, length, reason)
     VALUES (

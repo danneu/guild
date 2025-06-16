@@ -27,7 +27,6 @@ import {
 } from "../services/discord";
 import ipintel from "../services/ipintel";
 import { Context, Next } from "koa";
-import { pool, withPgPoolTransaction } from "../db/util";
 
 const router = new Router();
 
@@ -140,9 +139,7 @@ router.get(
 // - uname
 router.post("/users/:slug/unames", async (ctx: Context) => {
   ctx.assert(ctx.currUser, 404);
-  let user = await db
-    .findUserBySlug(ctx.params.slug)
-    .then((user) => pre.presentUser(user)!);
+  let user = await db.findUserBySlug(ctx.params.slug).then(pre.presentUser);
   ctx.assert(user, 404);
   ctx.assertAuthorized(ctx.currUser, "CHANGE_UNAME", user);
 
@@ -174,7 +171,6 @@ router.post("/users/:slug/unames", async (ctx: Context) => {
 
   try {
     user = await db.unames
-      // Will fail if userId is not found
       .changeUname({
         userId: user.id,
         changedById: ctx.currUser.id,
@@ -182,7 +178,7 @@ router.post("/users/:slug/unames", async (ctx: Context) => {
         newUname: ctx.vals.uname,
         recycle: ctx.vals.recycle,
       })
-      .then((user) => pre.presentUser(user)!);
+      .then(pre.presentUser);
   } catch (err) {
     if (err === "UNAME_TAKEN") {
       ctx.flash = { message: ["danger", "Username taken"] };
@@ -299,27 +295,19 @@ router.post("/users", checkCloudflareTurnstile, async (ctx: Context) => {
     welcomePost.html
   ) {
     const { markup, html } = welcomePost;
+    const convo = await db.createConvo({
+      userId: config.STAFF_REPRESENTATIVE_ID,
+      toUserIds: [user.id],
+      title: "RPGuild Welcome Package",
+      markup,
+      html,
+    });
 
-    // TODO: All queries in this route should be wrapped in the same transaction
-    await withPgPoolTransaction(pool, async (pgClient) => {
-      const convo = await db.createConvo(pgClient, {
-        userId: config.STAFF_REPRESENTATIVE_ID,
-        // Added ipAddress to satisfy TS but need to ensure ip is taken from CF header
-        ipAddress: ctx.request.ip,
-        toUserIds: [user.id],
-        title: "RPGuild Welcome Package",
-        markup,
-        html,
-      });
-
-      // Create CONVO notification
-      await db.createConvoNotificationsBulk(pgClient, [
-        {
-          from_user_id: config.STAFF_REPRESENTATIVE_ID,
-          to_user_id: user.id,
-          convo_id: convo.id,
-        },
-      ]);
+    // Create CONVO notification
+    await db.createConvoNotification({
+      from_user_id: config.STAFF_REPRESENTATIVE_ID,
+      to_user_id: user.id,
+      convo_id: convo.id,
     });
   }
 
@@ -384,9 +372,9 @@ router.put("/users/:slug/role", async (ctx: Context) => {
   }
 
   await db.updateUserRole(user.id, ctx.request.body.role);
-  const presentedUser = pre.presentUser(user)!;
+  pre.presentUser(user);
   ctx.flash = { message: ["success", "User role updated"] };
-  ctx.response.redirect(presentedUser.url + "/edit");
+  ctx.response.redirect(user.url + "/edit");
 });
 
 ////////////////////////////////////////////////////////////
@@ -591,9 +579,9 @@ router.put("/users/:slug", async (ctx: Context) => {
     }
     throw err;
   }
-  const presentedUser = pre.presentUser(user)!;
+  user = pre.presentUser(user);
   ctx.flash = { message: ["success", "User updated"] };
-  ctx.response.redirect(presentedUser.url + "/edit");
+  ctx.response.redirect(user.url + "/edit");
 });
 
 //
@@ -926,53 +914,48 @@ router.post("/users/:slug/vms", async (ctx: Context) => {
 
   const html = bbcode(ctx.vals.markup);
 
-  const vm = await withPgPoolTransaction(pool, async (pgClient) => {
-    // Create VM
-    const vm = await db.createVm(pgClient, {
-      from_user_id: ctx.currUser.id,
-      to_user_id: user.id,
-      markup: ctx.vals.markup,
-      html,
-      parent_vm_id: ctx.vals.parent_vm_id,
-    });
-
-    // if VM is a reply, notify everyone in the thread and the owner of the
-    // profile. but don't notify currUser.
-    if (vm.parent_vm_id) {
-      let userIds = await db.getVmThreadUserIds(
-        pgClient,
-        vm.parent_vm_id || vm.id,
-      );
-      // push on the profile owner
-      userIds.push(vm.to_user_id);
-      // don't notify anyone twice
-      userIds = [...new Set(userIds)];
-      // don't notify self
-      userIds = userIds.filter((id) => id !== ctx.currUser.id);
-
-      const notifications = userIds.map((toUserId) => ({
-        from_user_id: vm.from_user_id,
-        to_user_id: toUserId,
-        vm_id: vm.id,
-      }));
-
-      await db.createReplyVmNotificationsBulk(pgClient, notifications);
-    } else {
-      // else, it's a top-level VM. just notify profile owner
-      // unless we are leaving VM on our own wall
-      if (vm.from_user_id !== vm.to_user_id) {
-        await db.createTopLevelVmNotificationsBulk(pgClient, [
-          {
-            from_user_id: vm.from_user_id,
-            to_user_id: vm.to_user_id,
-            vm_id: vm.parent_vm_id || vm.id,
-          },
-        ]);
-      }
-    }
-
-    return vm;
+  // Create VM
+  const vm = await db.createVm({
+    from_user_id: ctx.currUser.id,
+    to_user_id: user.id,
+    markup: ctx.vals.markup,
+    html,
+    parent_vm_id: ctx.vals.parent_vm_id,
   });
+
+  // if VM is a reply, notify everyone in the thread and the owner of the
+  // profile. but don't notify currUser.
+  if (vm.parent_vm_id) {
+    let userIds = await db.getVmThreadUserIds(vm.parent_vm_id || vm.id);
+    // push on the profile owner
+    userIds.push(vm.to_user_id);
+    // don't notify anyone twice
+    userIds = _.uniq(userIds);
+    // don't notify self
+    userIds = userIds.filter((id) => id !== ctx.currUser.id);
+    // send out notifications in parallel
+    await Promise.all(
+      userIds.map((toUserId) => {
+        return db.createVmNotification({
+          type: "REPLY_VM",
+          from_user_id: vm.from_user_id,
+          to_user_id: toUserId,
+          vm_id: vm.parent_vm_id || vm.id,
+        });
+      }),
+    );
+  } else {
+    // else, it's a top-level VM. just notify profile owner
+    // unless we are leaving VM on our own wall
+    if (vm.from_user_id !== vm.to_user_id) {
+      await db.createVmNotification({
+        type: "TOPLEVEL_VM",
+        from_user_id: vm.from_user_id,
+        to_user_id: vm.to_user_id,
+        vm_id: vm.parent_vm_id || vm.id,
+      });
+    }
+  }
 
   ctx.flash = {
     message: ["success", "Visitor message successfully posted"],
@@ -1133,9 +1116,9 @@ router.post(
 
 // if ?override=true, don't do thw twoWeek check
 router.post("/users/:slug/nuke", async (ctx: Context) => {
-  const user = await db.findUserBySlug(ctx.params.slug);
+  var user = await db.findUserBySlug(ctx.params.slug);
   ctx.assert(user, 404);
-  const presentedUser = pre.presentUser(user)!;
+  pre.presentUser(user);
   ctx.assertAuthorized(ctx.currUser, "NUKE_USER", user);
   // prevent accidental nukings. if a user is over 2 weeks old,
   // they aren't likely to be a spambot.
@@ -1153,7 +1136,7 @@ router.post("/users/:slug/nuke", async (ctx: Context) => {
   } catch (err) {
     if (err === "ALREADY_NUKED") {
       ctx.flash = { message: ["success", "Nuked the bastard"] };
-      ctx.redirect(presentedUser.url);
+      ctx.redirect(user.url);
       return;
     }
     throw err;
@@ -1172,7 +1155,7 @@ router.post("/users/:slug/nuke", async (ctx: Context) => {
   );
 
   ctx.flash = { message: ["success", "Nuked the bastard"] };
-  ctx.redirect(presentedUser.url);
+  ctx.redirect(user.url);
 });
 
 ////////////////////////////////////////////////////////////

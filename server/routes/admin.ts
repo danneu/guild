@@ -37,10 +37,10 @@ router.post("/admin/users/merge", async (ctx: Context) => {
 
   const mainUser = await db
     .findUserBySlug(ctx.vals["main-slug"])
-    .then((user) => pre.presentUser(user));
+    .then(pre.presentUser);
   const huskUser = await db
     .findUserBySlug(ctx.vals["husk-slug"])
-    .then((user) => pre.presentUser(user));
+    .then(pre.presentUser);
 
   ctx
     .validateBody("main-slug")
@@ -50,14 +50,14 @@ router.post("/admin/users/merge", async (ctx: Context) => {
     .check(!!huskUser, "user not found for husk slug");
 
   await db.admin.mergeUsers({
-    mainId: mainUser!.id,
-    huskId: huskUser!.id,
+    mainId: mainUser.id,
+    huskId: huskUser.id,
   });
 
   ctx.flash = {
-    message: ["success", `${huskUser!.uname} merged into ${mainUser!.uname}`],
+    message: ["success", `${huskUser.uname} merged into ${mainUser.uname}`],
   };
-  ctx.redirect(mainUser!.url);
+  ctx.redirect(mainUser.url);
 });
 
 ////////////////////////////////////////////////////////////

@@ -5,7 +5,6 @@ import _ from "lodash";
 // 1st party
 import * as belt from "./belt.js";
 import * as config from "./config.js";
-import { DbConvo, DbPm, DbUser } from "./dbtypes.js";
 
 /*
    Presenters should mutate*return the obj passed in, and handle null
@@ -79,21 +78,16 @@ export const presentForum = function (forum) {
   return forum;
 };
 
-export type PresentedUser = DbUser & {
-  url: string;
-  avatar_url_sm: string;
-};
-
-export function presentUser(user: DbUser | void): PresentedUser | null {
+export const presentUser = function (user) {
   if (!user) return null;
 
-  (user as PresentedUser).url = "/users/" + user.slug;
+  user.url = "/users/" + user.slug;
 
-  delete (user as any).digest;
+  delete user.digest;
 
   if (user.is_nuked) {
-    user.bio_markup = "";
-    user.bio_html = "";
+    user.bio_markup = null;
+    user.bio_html = null;
     user.sig_html = "";
     user.sig = "";
     user.avatar_url = "";
@@ -113,7 +107,7 @@ export function presentUser(user: DbUser | void): PresentedUser | null {
       user.avatar_url = "https://" + parsed.pathname.slice(1);
     }
 
-    (user as PresentedUser).avatar_url_sm = user.avatar_url.replace(
+    user.avatar_url_sm = user.avatar_url.replace(
       /\/([a-f0-9\-]+\.[a-z]+)$/,
       "/32/$1",
     );
@@ -124,13 +118,12 @@ export function presentUser(user: DbUser | void): PresentedUser | null {
   }
 
   // Fix embedded
-  if (typeof user.created_at === "string")
-    user.created_at = new Date(user.created_at);
-  if (typeof user.last_online_at === "string")
+  if (_.isString(user.created_at)) user.created_at = new Date(user.created_at);
+  if (_.isString(user.last_online_at))
     user.last_online_at = new Date(user.last_online_at);
 
-  return user as PresentedUser;
-}
+  return user;
+};
 
 export const presentTopic = function (topic) {
   if (!topic) return null;
@@ -173,15 +166,7 @@ export const presentCategory = function (category) {
   return category;
 };
 
-export type PresentedConvo = DbConvo & {
-  url: string;
-  created_at: Date;
-  user?: PresentedUser;
-  participants: DbUser[];
-  pms: DbPm[];
-};
-
-export function presentConvo(convo: DbConvo): PresentedConvo | null {
+export const presentConvo = function (convo) {
   if (!convo) return null;
 
   if (_.isString(convo.created_at))
@@ -195,8 +180,8 @@ export function presentConvo(convo: DbConvo): PresentedConvo | null {
   presentUser(convo.latest_user);
   presentPm(convo.latest_pm);
 
-  return convo as PresentedConvo;
-}
+  return convo;
+};
 
 export const presentPost = function (post) {
   if (!post) return null;
