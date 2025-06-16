@@ -9,7 +9,12 @@ import { v7 as uuidv7 } from "uuid";
 import * as config from "../config";
 import * as belt from "../belt";
 import * as pre from "../presenters";
-import { pool, maybeOneRow, exactlyOneRow } from "./util";
+import {
+  pool,
+  maybeOneRow,
+  exactlyOneRow,
+  PgClientInTransaction,
+} from "./util";
 import { Client, Pool, PoolClient } from "pg";
 import * as revs from "./revs";
 import { Context } from "koa";
@@ -534,14 +539,14 @@ export const _findUser = async function (userId) {
 
 // Returns an array of Users
 // (Case insensitive uname lookup)
-export const findUsersByUnames = async function (unames) {
+export async function findUsersByUnames(unames: string[]) {
   assert(_.isArray(unames));
   assert(_.every(unames, _.isString));
 
   unames = unames.map((s) => s.toLowerCase());
 
   return pool
-    .query(
+    .query<{ id: number }>(
       `
     SELECT u.*
     FROM users u
@@ -550,7 +555,7 @@ export const findUsersByUnames = async function (unames) {
       [unames],
     )
     .then((res) => res.rows);
-};
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -715,7 +720,12 @@ export async function createSession(
 ////////////////////////////////////////////////////////////
 
 // Sync with db.findTopicsWithHasPostedByForumId
-export const findTopicsByForumId = async function (forumId, limit, offset, canViewHidden) {
+export const findTopicsByForumId = async function (
+  forumId,
+  limit,
+  offset,
+  canViewHidden,
+) {
   debug(
     "[%s] forumId: %s, limit: %s, offset: %s",
     "findTopicsByForumId",
@@ -1258,7 +1268,7 @@ export const createPm = async function (props) {
 // - type        Required String, ic | ooc | char
 // - isRoleplay  Required Boolean
 // - idx         Undefined or -1 if it's the tab's wiki post
-export const createPost = async function (args) {
+export async function createPost(pgClient: PgClientInTransaction, args) {
   debug(`[createPost] args:`, args);
   assert(_.isNumber(args.userId));
   assert(_.isString(args.ipAddress));
@@ -1269,10 +1279,9 @@ export const createPost = async function (args) {
   assert(["ic", "ooc", "char"].includes(args.type));
   assert(args.idx === -1 || typeof args.idx === "undefined");
 
-  return pool.withTransaction(async (client) => {
-    const post = await client
-      .query(
-        `
+  const post = await pgClient
+    .query(
+      `
       INSERT INTO posts
         (user_id, ip_address, topic_id, markup, html, type, is_roleplay, idx)
       VALUES (
@@ -1283,30 +1292,29 @@ export const createPost = async function (args) {
       )
       RETURNING *
     `,
-        [
-          args.userId,
-          args.ipAddress,
-          args.topicId,
-          args.markup,
-          args.html,
-          args.type,
-          args.isRoleplay,
-          args.idx,
-        ],
-      )
-      .then(maybeOneRow);
+      [
+        args.userId,
+        args.ipAddress,
+        args.topicId,
+        args.markup,
+        args.html,
+        args.type,
+        args.isRoleplay,
+        args.idx,
+      ],
+    )
+    .then(maybeOneRow);
 
-    await revs.insertPostRev(
-      client,
-      args.userId,
-      post.id,
-      args.markup,
-      args.html,
-    );
+  await revs.insertPostRev(
+    pgClient,
+    args.userId,
+    post.id,
+    args.markup,
+    args.html,
+  );
 
-    return post;
-  });
-};
+  return post;
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -1923,12 +1931,17 @@ export async function findStaffUsers() {
 // sub notes have a meta that looks like {ic: true, ooc: true, char: true}
 // which indicates which postType the notification has accumulated new
 // posts for.
-export const createSubNotification = async function (
+export async function createSubNotification({
   fromUserId,
   toUserId,
   topicId,
   postType,
-) {
+}: {
+  fromUserId: number;
+  toUserId: number;
+  topicId: number;
+  postType: "ic" | "ooc" | "char";
+}) {
   debug(`[createSubNotification]`, fromUserId, toUserId, topicId);
 
   assert(["ic", "ooc", "char"].includes(postType));
@@ -1950,7 +1963,53 @@ export const createSubNotification = async function (
   `,
     [fromUserId, toUserId, topicId, meta, meta],
   );
-};
+}
+
+// TODO: This should obsolete createSubNotification
+export async function createSubNotificationsBulk(
+  pgClient: PgClientInTransaction,
+  notifications: Array<{
+    fromUserId: number;
+    toUserId: number;
+    topicId: number;
+    postType: "ic" | "ooc" | "char";
+  }>,
+) {
+  assert(pgClient._inTransaction, "pgClient must be in a transaction");
+  if (notifications.length === 0) return;
+
+  // Validate all inputs
+  notifications.forEach(({ fromUserId, toUserId, topicId, postType }) => {
+    assert(["ic", "ooc", "char"].includes(postType));
+    assert(Number.isInteger(topicId));
+    assert(Number.isInteger(fromUserId));
+    assert(Number.isInteger(toUserId));
+  });
+
+  // Method 1: Using UNNEST (PostgreSQL arrays)
+  const fromUserIds = notifications.map((n) => n.fromUserId);
+  const toUserIds = notifications.map((n) => n.toUserId);
+  const topicIds = notifications.map((n) => n.topicId);
+  const metas = notifications.map((n) => ({ [n.postType]: true }));
+
+  return pgClient.query(
+    `
+    INSERT INTO notifications (type, from_user_id, to_user_id, topic_id, meta, count)
+    SELECT 
+      'TOPIC_SUB',
+      unnest($1::int[]),
+      unnest($2::int[]), 
+      unnest($3::int[]),
+      unnest($4::jsonb[]),
+      1
+    ON CONFLICT (to_user_id, topic_id) WHERE type = 'TOPIC_SUB'
+      DO UPDATE
+      SET count = COALESCE(notifications.count, 0) + 1,
+          meta = notifications.meta || EXCLUDED.meta
+    `,
+    [fromUserIds, toUserIds, topicIds, metas],
+  );
+}
 
 // Users receive this when someone starts a convo with them
 export async function createConvoNotification(opts: {
@@ -1997,7 +2056,12 @@ export const createPmNotification = async function (opts) {
 };
 
 // type is 'REPLY_VM' or 'TOPLEVEL_VM'
-export const createVmNotification = async function (data) {
+export async function createVmNotification(data: {
+  type: "REPLY_VM" | "TOPLEVEL_VM";
+  from_user_id: number;
+  to_user_id: number;
+  vm_id: number;
+}) {
   assert(["REPLY_VM", "TOPLEVEL_VM"].includes(data.type));
   assert(Number.isInteger(data.from_user_id));
   assert(Number.isInteger(data.to_user_id));
@@ -2008,12 +2072,13 @@ export const createVmNotification = async function (data) {
     VALUES (
       $1, $2, $3, $4, 1
     )
-    ON CONFLICT (vm_id, to_user_id) DO UPDATE
+    ON CONFLICT (to_user_id, vm_id) WHERE type IN ('TOPLEVEL_VM', 'REPLY_VM')
+      DO UPDATE
       SET count = COALESCE(notifications.count, 0) + 1
   `,
     [data.type, data.from_user_id, data.to_user_id, data.vm_id],
   );
-};
+}
 
 // Pass in optional notification type to filter
 export async function findNotificationsForUserId(
@@ -2255,38 +2320,57 @@ export async function updateTopic(
 
 ////////////////////////////////////////////////////////////
 
-export async function createMentionNotification({
-  from_user_id,
-  to_user_id,
-  post_id,
-  topic_id,
-}: {
-  from_user_id: number;
-  to_user_id: number;
-  post_id: number;
-  topic_id: number;
-}) {
-  assert(from_user_id);
-  assert(to_user_id);
-  assert(post_id);
-  assert(topic_id);
+export async function createMentionNotificationsBulk(
+  pgClient: PgClientInTransaction,
+  notifications: Array<{
+    from_user_id: number;
+    to_user_id: number;
+    post_id: number;
+    topic_id: number;
+  }>,
+) {
+  assert(pgClient._inTransaction, "pgClient must be in a transaction");
+  if (notifications.length === 0) return [];
 
-  return pool
-    .query(
+  // Validate all inputs
+  notifications.forEach(({ from_user_id, to_user_id, post_id, topic_id }) => {
+    assert(from_user_id);
+    assert(to_user_id);
+    assert(post_id);
+    assert(topic_id);
+  });
+
+  const fromUserIds = notifications.map((n) => n.from_user_id);
+  const toUserIds = notifications.map((n) => n.to_user_id);
+  const topicIds = notifications.map((n) => n.topic_id);
+  const postIds = notifications.map((n) => n.post_id);
+
+  return pgClient
+    .query<{ id: number }>(
       `
-    INSERT INTO notifications
-    (type, from_user_id, to_user_id, topic_id, post_id)
-    VALUES ('MENTION', $1, $2, $3, $4)
+    INSERT INTO notifications (type, from_user_id, to_user_id, topic_id, post_id)
+    SELECT 
+      'MENTION',
+      unnest($1::int[]),
+      unnest($2::int[]), 
+      unnest($3::int[]),
+      unnest($4::int[])
+    ON CONFLICT (to_user_id, post_id) WHERE type = 'MENTION'
+      DO NOTHING
     RETURNING *
-  `,
-      [from_user_id, to_user_id, topic_id, post_id],
+    `,
+      [fromUserIds, toUserIds, topicIds, postIds],
     )
-    .then(maybeOneRow);
+    .then((result) => result.rows);
 }
 
 ////////////////////////////////////////////////////////////
 
-export const parseAndCreateMentionNotifications = async function (props) {
+export async function parseAndCreateMentionNotifications(
+  pgClient: PgClientInTransaction,
+  props,
+) {
+  assert(pgClient._inTransaction, "pgClient must be in a transaction");
   debug("[parseAndCreateMentionNotifications] Started...");
   assert(props.fromUser.id);
   assert(props.fromUser.uname);
@@ -2305,46 +2389,69 @@ export const parseAndCreateMentionNotifications = async function (props) {
   const mentionedUsers = await findUsersByUnames(mentionedUnames);
 
   // Create the notifications in parallel
-  const tasks = mentionedUsers.map((toUser) => {
-    return createMentionNotification({
-      from_user_id: props.fromUser.id,
-      to_user_id: toUser.id,
-      post_id: props.post_id,
-      topic_id: props.topic_id,
-    });
-  });
+  const tasks = mentionedUsers.map((toUser) => ({
+    from_user_id: props.fromUser.id,
+    to_user_id: toUser.id,
+    post_id: props.post_id,
+    topic_id: props.topic_id,
+  }));
 
-  return Promise.all(tasks);
-};
+  return createMentionNotificationsBulk(pgClient, tasks);
+}
 
 ////////////////////////////////////////////////////////////
 
-export const createQuoteNotification = async function ({
-  from_user_id,
-  to_user_id,
-  topic_id,
-  post_id,
-}) {
-  assert(from_user_id);
-  assert(to_user_id);
-  assert(post_id);
-  assert(topic_id);
+export async function createQuoteNotificationsBulk(
+  pgClient: PgClientInTransaction,
+  notifications: Array<{
+    from_user_id: number;
+    to_user_id: number;
+    topic_id: number;
+    post_id: number;
+  }>,
+) {
+  assert(pgClient._inTransaction, "pgClient must be in a transaction");
+  if (notifications.length === 0) return [];
 
-  return pool
-    .query(
+  // Validate all inputs
+  notifications.forEach(({ from_user_id, to_user_id, post_id, topic_id }) => {
+    assert(from_user_id);
+    assert(to_user_id);
+    assert(post_id);
+    assert(topic_id);
+  });
+
+  // Extract arrays for UNNEST
+  const fromUserIds = notifications.map((n) => n.from_user_id);
+  const toUserIds = notifications.map((n) => n.to_user_id);
+  const topicIds = notifications.map((n) => n.topic_id);
+  const postIds = notifications.map((n) => n.post_id);
+
+  return pgClient
+    .query<{ id: number }>(
       `
-    INSERT INTO notifications
-    (type, from_user_id, to_user_id, topic_id, post_id)
-    VALUES ('QUOTE', $1, $2, $3, $4)
+    INSERT INTO notifications (type, from_user_id, to_user_id, topic_id, post_id)
+    SELECT 
+      'QUOTE',
+      unnest($1::int[]),
+      unnest($2::int[]), 
+      unnest($3::int[]),
+      unnest($4::int[])
+    ON CONFLICT (to_user_id, post_id) WHERE type = 'QUOTE'
+      DO NOTHING
     RETURNING *
-  `,
-      [from_user_id, to_user_id, topic_id, post_id],
+    `,
+      [fromUserIds, toUserIds, topicIds, postIds],
     )
-    .then(maybeOneRow);
-};
+    .then((result) => result.rows);
+}
 
 // Keep in sync with db.parseAndCreateMentionNotifications
-export const parseAndCreateQuoteNotifications = async function (props) {
+export async function parseAndCreateQuoteNotifications(
+  pgClient: PgClientInTransaction,
+  props,
+) {
+  assert(pgClient._inTransaction, "pgClient must be in a transaction");
   debug("[parseAndCreateQuoteNotifications] Started...");
   assert(props.fromUser.id);
   assert(props.fromUser.uname);
@@ -2364,17 +2471,15 @@ export const parseAndCreateQuoteNotifications = async function (props) {
   const mentionedUsers = await findUsersByUnames(mentionedUnames);
 
   // Create the notifications in parallel
-  return Promise.all(
-    mentionedUsers.map((toUser) => {
-      return createQuoteNotification({
-        from_user_id: props.fromUser.id,
-        to_user_id: toUser.id,
-        post_id: props.post_id,
-        topic_id: props.topic_id,
-      });
-    }),
-  );
-};
+  const tasks = mentionedUsers.map((toUser) => ({
+    from_user_id: props.fromUser.id,
+    to_user_id: toUser.id,
+    post_id: props.post_id,
+    topic_id: props.topic_id,
+  }));
+
+  return createQuoteNotificationsBulk(pgClient, tasks);
+}
 
 export const findReceivedNotificationsForUserId = async function (toUserId) {
   return pool

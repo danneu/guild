@@ -101,7 +101,7 @@ import services from "./services";
 import cache3 from "./cache3";
 import makeAgo from "./ago";
 import protectCsrf from "./middleware/protect-csrf";
-import { pool } from "./db/util";
+import { pool, withPgPoolTransaction } from "./db/util";
 
 app.use(middleware.methodOverride());
 
@@ -1094,62 +1094,82 @@ router.post(
     // Render the bbcode
     var html = bbcode(ctx.vals.markup);
 
-    var post = await db
-      .createPost({
-        userId: ctx.currUser.id,
-        ipAddress: ctx.request.ip,
-        topicId: topic.id,
-        markup: ctx.vals.markup,
-        html: html,
-        type: postType,
-        isRoleplay: topic.forum.is_roleplay,
-      })
-      .then(pre.presentPost);
+    const { post, mentionNotificationsCount, quoteNotificationsCount } =
+      await withPgPoolTransaction(pool, async (pgClient) => {
+        var post = await db
+          .createPost(pgClient, {
+            userId: ctx.currUser.id,
+            ipAddress: ctx.request.ip,
+            topicId: topic.id,
+            markup: ctx.vals.markup,
+            html: html,
+            type: postType,
+            isRoleplay: topic.forum.is_roleplay,
+          })
+          .then(pre.presentPost);
 
-    // Send MENTION and QUOTE notifications
-    var results = await Promise.all([
-      db.parseAndCreateMentionNotifications({
-        fromUser: ctx.currUser,
-        markup: ctx.vals.markup,
-        post_id: post.id,
-        topic_id: post.topic_id,
-      }),
-      db.parseAndCreateQuoteNotifications({
-        fromUser: ctx.currUser,
-        markup: ctx.vals.markup,
-        post_id: post.id,
-        topic_id: post.topic_id,
-      }),
-    ]);
+        // Send MENTION and QUOTE notifications
 
-    var mentionNotificationsCount = results[0].length;
-    var quoteNotificationsCount = results[1].length;
-    {
-      // Send subscription notifications
+        const mentionNotifications =
+          await db.parseAndCreateMentionNotifications(pgClient, {
+            fromUser: ctx.currUser,
+            markup: ctx.vals.markup,
+            post_id: post.id,
+            topic_id: post.topic_id,
+          });
 
-      // Get all people who do not have this sub archived
-      const subscribers = (
-        await db.subscriptions.listActiveSubscribersForTopic(post.topic_id)
-      )
-        // Ignore self
-        .filter((u) => u.id !== ctx.currUser.id);
+        const quoteNotifications = await db.parseAndCreateQuoteNotifications(
+          pgClient,
+          {
+            fromUser: ctx.currUser,
+            markup: ctx.vals.markup,
+            post_id: post.id,
+            topic_id: post.topic_id,
+          },
+        );
 
-      // Create notifications in the background
-      promiseMap(
-        subscribers,
-        ({ id }) => {
-          return db.createSubNotification(
-            ctx.currUser.id,
-            id,
-            post.topic_id,
-            postType,
-          );
-        },
-        2,
-      ).catch((err) =>
-        console.error("error creating sub notes on new post:", err),
-      );
-    }
+        const mentionNotificationsCount = mentionNotifications.length;
+        const quoteNotificationsCount = quoteNotifications.length;
+        {
+          // Send subscription notifications
+
+          // Get all people who do not have this sub archived
+          const subscribers = (
+            await db.subscriptions.listActiveSubscribersForTopic(
+              pgClient,
+              post.topic_id,
+            )
+          )
+            // Ignore self
+            .filter((u) => u.user_id !== ctx.currUser.id);
+
+          const subNotifications = subscribers.map(({ user_id }) => ({
+            fromUserId: ctx.currUser.id as number,
+            toUserId: user_id,
+            topicId: post.topic_id as number,
+            postType: postType as "ic" | "ooc" | "char",
+          }));
+          await db.createSubNotificationsBulk(pgClient, subNotifications);
+
+          // Create notifications in the background
+          // promiseMap(
+          //   subscribers,
+          //   ({ id }) => {
+          //     return db.createSubNotification({
+          //       fromUserId: ctx.currUser.id,
+          //       toUserId: id,
+          //       topicId: post.topic_id,
+          //       postType,
+          //     });
+          //   },
+          //   2,
+          // ).catch((err) =>
+          //   console.error("error creating sub notes on new post:", err),
+          // );
+        }
+
+        return { post, mentionNotificationsCount, quoteNotificationsCount };
+      });
 
     ctx.flash = {
       message: [

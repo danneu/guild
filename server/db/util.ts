@@ -136,19 +136,26 @@ export function getClient() {
 
 export default { pool, getClient };
 
+export type PgClientInTransaction = pg.PoolClient & {
+  _inTransaction?: true;
+};
+
 // TODO: retry logic, explain error (deadlock, etc)
 export async function withPgPoolTransaction<T>(
   pool: InstanceType<typeof pg.Pool>,
-  callback: (client: pg.PoolClient) => Promise<T>,
+  callback: (client: PgClientInTransaction) => Promise<T>,
 ): Promise<T> {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const result = await callback(client);
+    (client as PgClientInTransaction)._inTransaction = true;
+    const result = await callback(client as PgClientInTransaction);
     await client.query("COMMIT");
+    delete (client as PgClientInTransaction)._inTransaction;
     return result;
   } catch (e) {
     await client.query("ROLLBACK");
+    delete (client as PgClientInTransaction)._inTransaction;
     throw e;
   } finally {
     client.release();
