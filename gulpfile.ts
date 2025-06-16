@@ -14,10 +14,13 @@ function clean() {
 }
 
 function copyFonts() {
-  return src([
-    "public/vendor/bootstrap/fonts/**",
-    "public/vendor/font-awesome/fonts/**",
-  ]).pipe(dest("dist/fonts"));
+  return src(
+    ["public/vendor/bootstrap/fonts/**", "public/vendor/font-awesome/fonts/**"],
+    {
+      // Don't decode as utf-8; keep as binary
+      encoding: false,
+    },
+  ).pipe(dest("dist/fonts"));
 }
 
 function copyVendorDeps() {
