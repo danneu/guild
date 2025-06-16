@@ -22,6 +22,7 @@ import {
   DbConvo,
   DbNotification,
   DbPm,
+  DbRatingType,
   DbSession,
   DbTag,
   DbTopic,
@@ -2951,7 +2952,13 @@ export async function moveTopic(
 // - type: like | laugh | thank
 //
 // If returns falsey, then rating already exists.
-export const ratePost = async function (props) {
+export async function ratePost(props: {
+  post_id: number;
+  from_user_id: number;
+  from_user_uname: string;
+  to_user_id: number;
+  type: DbRatingType;
+}) {
   assert(props.post_id);
   assert(props.from_user_id);
   assert(props.from_user_uname);
@@ -2981,7 +2988,7 @@ export const ratePost = async function (props) {
       ],
     )
     .then(maybeOneRow);
-};
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -3021,7 +3028,10 @@ export async function findRatingByFromUserIdAndPostId(from_user_id, post_id) {
     .then(maybeOneRow);
 }
 
-export async function deleteRatingByFromUserIdAndPostId(from_user_id, post_id) {
+export async function deleteRatingByFromUserIdAndPostId(
+  from_user_id: number,
+  post_id: number,
+) {
   assert(from_user_id);
   assert(post_id);
 
@@ -3092,16 +3102,21 @@ export async function createRatingNotification(props: {
     .query<DbNotification>(
       `
 INSERT INTO notifications
-(type, from_user_id, to_user_id, meta, post_id, topic_id)
-VALUES ('RATING', $1, $2, $3, $4, $5)
+(type, from_user_id, to_user_id, meta, post_id, topic_id, count)
+VALUES ('RATING', $1, $2, $3, $4, $5, 1)
+ON CONFLICT (to_user_id, post_id) WHERE type = 'RATING'
+  DO UPDATE
+    SET count = COALESCE(notifications.count, 0) + 1,
+        updated_at = NOW(),
+        meta = $3
 RETURNING *
   `,
       [
-        props.from_user_id,
-        props.to_user_id,
-        { type: props.rating_type },
-        props.post_id,
-        props.topic_id,
+        props.from_user_id, // $1
+        props.to_user_id, // $2
+        { type: props.rating_type }, // $3
+        props.post_id, // $4
+        props.topic_id, // $5
       ],
     )
     .then(exactlyOneRow);

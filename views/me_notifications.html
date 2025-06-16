@@ -51,6 +51,9 @@
           </div>
         {% elif n.type == 'RATING' %}
           <p>
+            {% if n.count > 1 %}
+              <span>{{ n.count }} people rated your post. Latest rating:</span>
+            {% endif %}
             <a href="/users/{{ n.from_user.slug }}">{{ n.from_user.uname }}</a>
             <img src="{{ n.meta.type|ratingTypeToImageSrc }}">'d your post in
             <a href="{{ n.post.url }}">{{ n.topic.title }}</a>

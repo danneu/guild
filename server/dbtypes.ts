@@ -101,3 +101,21 @@ export type DbTag = {
   name: string;
   tag_group_id: number;
 };
+
+export const DbRatingType = {
+  like: "like",
+  laugh: "laugh",
+  thank: "thank",
+} as const;
+
+export type DbRatingType = (typeof DbRatingType)[keyof typeof DbRatingType];
+
+export type DbRating = {
+  id: number;
+  from_user_id: number;
+  from_user_uname: string;
+  to_user_id: number;
+  post_id: number;
+  type: DbRatingType;
+  created_at: Date;
+};
