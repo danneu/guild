@@ -1078,8 +1078,8 @@ router.post(
           ctx.request.body.markup.length,
       );
 
-    var postType = ctx.vals["post-type"];
-    var topic = await db.findTopic(topicId);
+    const postType = ctx.vals["post-type"];
+    const topic = await db.findTopic(topicId);
     ctx.assert(topic, 404);
     topic.mods = cache3.get("forum-mods")[topic.forum_id] || [];
     ctx.assertAuthorized(ctx.currUser, "CREATE_POST", topic);
@@ -1090,11 +1090,11 @@ router.post(
     }
 
     // Render the bbcode
-    var html = bbcode(ctx.vals.markup);
+    const html = bbcode(ctx.vals.markup);
 
     const { post, mentionNotificationsCount, quoteNotificationsCount } =
       await withPgPoolTransaction(pool, async (pgClient) => {
-        var post = await db
+        const post = await db
           .createPost(pgClient, {
             userId: ctx.currUser.id,
             ipAddress: ctx.request.ip,
