@@ -18,6 +18,13 @@ import {
 import { Client, Pool, PoolClient } from "pg";
 import * as revs from "./revs";
 import { Context } from "koa";
+import {
+  DbConvo,
+  DbNotification,
+  DbSession,
+  DbTopic,
+  DbUser,
+} from "../dbtypes";
 
 // TODO: db fns should take this as an argument esp if they can be used inside/outside txns
 export type PgQueryExecutor = Pool | PoolClient | Client;
@@ -314,14 +321,16 @@ export const findUserById = async function (id) {
 
 ////////////////////////////////////////////////////////////
 
-export const findUserBySlug = async function (slug) {
+export async function findUserBySlug(
+  slug: string,
+): Promise<DbUser | undefined> {
   debug(`[findUserBySlug] slug=%j`, slug);
   assert(_.isString(slug));
 
   slug = slug.toLowerCase();
 
   return pool
-    .query(
+    .query<DbUser>(
       `
     SELECT u.*
     FROM users u
@@ -336,7 +345,7 @@ export const findUserBySlug = async function (slug) {
       [slug, slug],
     )
     .then(maybeOneRow);
-};
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -546,7 +555,7 @@ export async function findUsersByUnames(unames: string[]) {
   unames = unames.map((s) => s.toLowerCase());
 
   return pool
-    .query<{ id: number }>(
+    .query<DbUser>(
       `
     SELECT u.*
     FROM users u
@@ -561,52 +570,62 @@ export async function findUsersByUnames(unames: string[]) {
 
 // If toUsrIds is not given, then it's a self-convo
 // TODO: Wrap in transaction, Document the args of this fn
-export const createConvo = function (args) {
+export async function createConvo(
+  pgClient: PgClientInTransaction,
+  args: {
+    userId: number;
+    toUserIds: number[];
+    title: string;
+    markup: string;
+    html: string;
+    ipAddress: string;
+  },
+) {
   debug("[createConvo] args: ", args);
+  assert(pgClient._inTransaction, "pgClient must be in a transaction");
   assert(_.isNumber(args.userId));
   assert(_.isUndefined(args.toUserIds) || _.isArray(args.toUserIds));
   assert(_.isString(args.title));
   assert(_.isString(args.markup));
   assert(_.isString(args.html));
 
-  return pool.withTransaction(async (client) => {
-    // Create convo
-    const convo = await client
-      .query(
-        `
+  // Create convo
+  const convo = await pgClient
+    .query<DbConvo>(
+      `
       INSERT INTO convos (user_id, title)
       VALUES ($1, $2)
       RETURNING *
     `,
-        [args.userId, args.title],
-      )
-      .then(maybeOneRow);
+      [args.userId, args.title],
+    )
+    .then(exactlyOneRow);
 
-    // Insert participants and the PM in parallel
+  // Insert participants and the PM in parallel
 
-    const tasks = args.toUserIds
-      .map((toUserId) => {
-        // insert each receiving participant
-        client.query(
-          `
+  const tasks = args.toUserIds
+    .map((toUserId) => {
+      // insert each receiving participant
+      return pgClient.query(
+        `
         INSERT INTO convos_participants (convo_id, user_id)
         VALUES ($1, $2)
       `,
-          [convo.id, toUserId],
-        );
-      })
-      .concat([
-        // insert the sending participant
-        client.query(
-          `
+        [convo.id, toUserId],
+      );
+    })
+    .concat([
+      // insert the sending participant
+      pgClient.query(
+        `
         INSERT INTO convos_participants (convo_id, user_id)
         VALUES ($1, $2)
       `,
-          [convo.id, args.userId],
-        ),
-        // insert the PM
-        client.query(
-          `
+        [convo.id, args.userId],
+      ),
+      // insert the PM
+      pgClient.query(
+        `
         INSERT INTO pms
           (convo_id, user_id, ip_address, markup, html, idx)
         VALUES (
@@ -616,18 +635,17 @@ export const createConvo = function (args) {
         )
         RETURNING *
       `,
-          [convo.id, args.userId, args.ipAddress, args.markup, args.html],
-        ),
-      ]);
+        [convo.id, args.userId, args.ipAddress, args.markup, args.html],
+      ),
+    ]);
 
-    const results = await Promise.all(tasks);
+  const results = await Promise.all(tasks);
 
-    // Assoc firstPm to the returned convo
-    convo.firstPm = _.last(results).rows[0];
-    convo.pms_count++; // This is a stale copy so we need to manually inc
-    return convo;
-  });
-};
+  // Assoc firstPm to the returned convo
+  (convo as any).firstPm = _.last(results).rows[0];
+  convo.pms_count++; // This is a stale copy so we need to manually inc
+  return convo;
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -705,7 +723,7 @@ export async function createSession(
   const uuid = uuidv7();
 
   return pgClient
-    .query(
+    .query<DbSession>(
       `
     INSERT INTO sessions (user_id, id, ip_address, expired_at)
     VALUES ($1, $2, $3::inet,
@@ -1688,7 +1706,12 @@ ORDER BY c.pos
 // - Use `createUser` if you only want to create a user.
 //
 // Throws: 'UNAME_TAKEN', 'EMAIL_TAKEN'
-export const createUserWithSession = async function (props) {
+export async function createUserWithSession(props: {
+  uname: string;
+  ipAddress: string;
+  password: string;
+  email: string;
+}): Promise<{ user: DbUser; session: DbSession }> {
   debug("[createUserWithSession] props: ", props);
   assert(_.isString(props.uname));
   assert(_.isString(props.ipAddress));
@@ -1720,7 +1743,7 @@ export const createUserWithSession = async function (props) {
 
     try {
       user = await client
-        .query(
+        .query<DbUser>(
           `
         INSERT INTO users (uname, digest, email, slug, hide_sigs)
         VALUES ($1, $2, $3, $4, true)
@@ -1728,7 +1751,7 @@ export const createUserWithSession = async function (props) {
       `,
           [props.uname, digest, props.email, slug],
         )
-        .then(maybeOneRow);
+        .then(exactlyOneRow);
     } catch (err) {
       if (err instanceof Error && "code" in err && err.code === "23505") {
         if (/unique_username/.test(err.toString())) throw "UNAME_TAKEN";
@@ -1762,7 +1785,7 @@ export const createUserWithSession = async function (props) {
 
     return { user, session };
   });
-};
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -1931,41 +1954,6 @@ export async function findStaffUsers() {
 // sub notes have a meta that looks like {ic: true, ooc: true, char: true}
 // which indicates which postType the notification has accumulated new
 // posts for.
-export async function createSubNotification({
-  fromUserId,
-  toUserId,
-  topicId,
-  postType,
-}: {
-  fromUserId: number;
-  toUserId: number;
-  topicId: number;
-  postType: "ic" | "ooc" | "char";
-}) {
-  debug(`[createSubNotification]`, fromUserId, toUserId, topicId);
-
-  assert(["ic", "ooc", "char"].includes(postType));
-  assert(Number.isInteger(topicId));
-  assert(Number.isInteger(fromUserId));
-  assert(Number.isInteger(toUserId));
-
-  const meta = { [postType]: true };
-
-  return pool.query(
-    `
-    INSERT INTO notifications
-    (type, from_user_id, to_user_id, topic_id, meta, count)
-    VALUES ('TOPIC_SUB', $1, $2, $3, $4, 1)
-    ON CONFLICT (type, to_user_id, topic_id) WHERE type = 'TOPIC_SUB'
-      DO UPDATE
-      SET count = COALESCE(notifications.count, 0) + 1,
-          meta = notifications.meta || $5::jsonb
-  `,
-    [fromUserId, toUserId, topicId, meta, meta],
-  );
-}
-
-// TODO: This should obsolete createSubNotification
 export async function createSubNotificationsBulk(
   pgClient: PgClientInTransaction,
   notifications: Array<{
@@ -2012,23 +2000,43 @@ export async function createSubNotificationsBulk(
 }
 
 // Users receive this when someone starts a convo with them
-export async function createConvoNotification(opts: {
-  from_user_id: number;
-  to_user_id: number;
-  convo_id: number;
-}) {
-  assert(_.isNumber(opts.from_user_id));
-  assert(_.isNumber(opts.to_user_id));
-  assert(opts.convo_id);
+export async function createConvoNotificationsBulk(
+  pgClient: PgClientInTransaction,
+  notifications: Array<{
+    from_user_id: number;
+    to_user_id: number;
+    convo_id: number;
+  }>,
+) {
+  assert(pgClient._inTransaction, "pgClient must be in a transaction");
+  if (notifications.length === 0) return [];
 
-  return pool
-    .query(
+  // Validate all inputs
+  notifications.forEach(({ from_user_id, to_user_id, convo_id }) => {
+    assert(Number.isInteger(from_user_id));
+    assert(Number.isInteger(to_user_id));
+    assert(Number.isInteger(convo_id));
+  });
+
+  const fromUserIds = notifications.map((n) => n.from_user_id);
+  const toUserIds = notifications.map((n) => n.to_user_id);
+  const convoIds = notifications.map((n) => n.convo_id);
+
+  return pgClient
+    .query<DbNotification>(
       `
-    INSERT INTO notifications (type, from_user_id, to_user_id, convo_id, count)
-    VALUES ('CONVO', $1, $2, $3, 1)
-    RETURNING *
-  `,
-      [opts.from_user_id, opts.to_user_id, opts.convo_id],
+      INSERT INTO notifications (type, from_user_id, to_user_id, convo_id, count)
+      SELECT 
+        'CONVO',
+        unnest($1::int[]),
+        unnest($2::int[]), 
+        unnest($3::int[]),
+        1
+      ON CONFLICT (to_user_id, convo_id) WHERE type = 'CONVO'
+        DO NOTHING
+      RETURNING *
+      `,
+      [fromUserIds, toUserIds, convoIds],
     )
     .then((res) => res.rows);
 }
@@ -2265,7 +2273,7 @@ export async function findTopicById(topicId: number) {
   assert(topicId);
 
   return pool
-    .query(
+    .query<DbTopic>(
       `
 SELECT
   t.*,

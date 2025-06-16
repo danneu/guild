@@ -1,4 +1,3 @@
-"use strict";
 import "dotenv/config";
 import * as config from "./config";
 import { z } from "zod";
@@ -86,7 +85,6 @@ import _ from "lodash";
 import createDebug from "debug";
 const debug = createDebug("app:index");
 import assert from "assert";
-import promiseMap from "promise.map";
 // 1st party
 import * as db from "./db";
 import * as pre from "./presenters";
@@ -462,23 +460,23 @@ router.post("/topics/:topicSlug/co-gms", async (ctx: Context) => {
 router.delete("/topics/:topicSlug/co-gms/:userSlug", async (ctx: Context) => {
   var topicId = belt.extractId(ctx.params.topicSlug);
   ctx.assert(topicId, 404);
-  var topic = await db.findTopicById(topicId).then(pre.presentTopic);
+  const topic = await db.findTopicById(topicId).then(pre.presentTopic);
   ctx.assert(topic, 404);
   ctx.assertAuthorized(ctx.currUser, "UPDATE_TOPIC_CO_GMS", topic);
 
-  var user = await db.findUserBySlug(ctx.params.userSlug);
+  const user = await db.findUserBySlug(ctx.params.userSlug);
   ctx.check(user, "User does not exist");
-  ctx.check(topic.co_gm_ids.includes(user.id), "User is not a co-GM");
+  ctx.check(topic.co_gm_ids.includes(user!.id), "User is not a co-GM");
 
   await db.updateTopicCoGms(
     topic.id,
     topic.co_gm_ids.filter((co_gm_id) => {
-      return co_gm_id !== user.id;
+      return co_gm_id !== user!.id;
     }),
   );
 
   ctx.flash = {
-    message: ["success", util.format("Co-GM removed: %s", user.uname)],
+    message: ["success", util.format("Co-GM removed: %s", user!.uname)],
   };
   ctx.response.redirect(topic.url + "/edit#co-gms");
 });
@@ -589,13 +587,13 @@ router.post("/sessions", async (ctx: Context) => {
   );
 
   // User authenticated
-  var session = await db.createSession(pool, {
+  const session = await db.createSession(pool, {
     userId: user.id,
     ipAddress: ctx.request.ip,
     interval: ctx.vals["remember-me"] ? "1 year" : "2 weeks",
   });
 
-  ctx.cookies.set("sessionId", session.id, {
+  ctx.cookies.set("sessionId", String(session.id), {
     expires: ctx.vals["remember-me"]
       ? belt.futureDate({ years: 1 })
       : undefined,
@@ -863,13 +861,13 @@ router.post("/reset-password", async (ctx: Context) => {
   await db.deleteResetTokens(user.id);
 
   // Log the user in
-  var interval = rememberMe ? "1 year" : "1 day";
-  var session = await db.createSession(pool, {
+  const interval = rememberMe ? "1 year" : "1 day";
+  const session = await db.createSession(pool, {
     userId: user.id,
     ipAddress: ctx.request.ip,
     interval: interval,
   });
-  ctx.cookies.set("sessionId", session.id, {
+  ctx.cookies.set("sessionId", String(session.id), {
     expires: belt.futureDate(
       new Date(),
       rememberMe ? { years: 1 } : { days: 1 },
@@ -1150,22 +1148,6 @@ router.post(
             postType: postType as "ic" | "ooc" | "char",
           }));
           await db.createSubNotificationsBulk(pgClient, subNotifications);
-
-          // Create notifications in the background
-          // promiseMap(
-          //   subscribers,
-          //   ({ id }) => {
-          //     return db.createSubNotification({
-          //       fromUserId: ctx.currUser.id,
-          //       toUserId: id,
-          //       topicId: post.topic_id,
-          //       postType,
-          //     });
-          //   },
-          //   2,
-          // ).catch((err) =>
-          //   console.error("error creating sub notes on new post:", err),
-          // );
         }
 
         return { post, mentionNotificationsCount, quoteNotificationsCount };
@@ -1906,9 +1888,9 @@ router.put("/topics/:slug/edit", async (ctx: Context) => {
   ctx.assert(ctx.currUser, 403);
   var topicId = belt.extractId(ctx.params.slug);
   ctx.assert(topicId, 404);
-  var topic = await db.findTopicById(topicId);
+  const topic = await db.findTopicById(topicId);
   ctx.assert(topic, 404);
-  topic = pre.presentTopic(topic);
+  const presentedTopic = pre.presentTopic(topic)!;
   ctx.assertAuthorized(ctx.currUser, "UPDATE_TOPIC_TITLE", topic);
 
   // Parameter validation
@@ -1943,7 +1925,7 @@ router.put("/topics/:slug/edit", async (ctx: Context) => {
         message: ["danger", ex.message],
         params: ctx.request.body,
       };
-      ctx.response.redirect(topic.url + "/edit");
+      ctx.response.redirect(presentedTopic.url + "/edit");
       return;
     }
     throw ex;
@@ -1956,7 +1938,7 @@ router.put("/topics/:slug/edit", async (ctx: Context) => {
   });
 
   ctx.flash = { message: ["success", "Topic updated"] };
-  ctx.response.redirect(topic.url + "/edit");
+  ctx.response.redirect(presentedTopic.url + "/edit");
 });
 
 // Always redirects to the last post of a tab
@@ -2226,7 +2208,7 @@ router.get("/topics/:slug", async (ctx: Context) => {
 // Staff list
 //
 router.get("/staff", async (ctx: Context) => {
-  const users = cache3.get("staff").map(pre.presentUser);
+  const users = cache3.get("staff").map((u) => pre.presentUser(u)!);
 
   await ctx.render("staff", {
     ctx,

@@ -10,6 +10,7 @@ import * as pre from "../presenters";
 import * as config from "../config";
 import bbcode from "../bbcode";
 import { Context } from "koa";
+import { pool, withPgPoolTransaction } from "../db/util";
 
 ////////////////////////////////////////////////////////////
 
@@ -49,27 +50,29 @@ router.post("/topics/:topicId/:postType/0th", async (ctx: Context) => {
 
   const redirectTo = `${topic.url}/${postType}`;
 
-  await db
-    .createPost({
-      userId: ctx.currUser.id,
-      ipAddress: ctx.ip,
-      markup: ctx.vals.markup,
-      html: bbcode(ctx.vals.markup),
-      topicId: topic.id,
-      isRoleplay: true,
-      type: postType,
-      idx: -1,
-    })
-    .catch((err) => {
-      if (err.code === "23505") {
-        ctx.flash = {
-          message: ["danger", `0th post for this tab already exists.`],
-        };
-        ctx.redirect(redirectTo);
-        return;
-      }
-      throw err;
-    });
+  await withPgPoolTransaction(pool, async (pgClient) => {
+    await db
+      .createPost(pgClient, {
+        userId: ctx.currUser.id,
+        ipAddress: ctx.ip,
+        markup: ctx.vals.markup,
+        html: bbcode(ctx.vals.markup),
+        topicId: topic.id,
+        isRoleplay: true,
+        type: postType,
+        idx: -1,
+      })
+      .catch((err) => {
+        if (err.code === "23505") {
+          ctx.flash = {
+            message: ["danger", `0th post for this tab already exists.`],
+          };
+          ctx.redirect(redirectTo);
+          return;
+        }
+        throw err;
+      });
+  });
 
   ctx.flash = { message: ["success", `Created 0th post for ${postType} tab`] };
   ctx.redirect(redirectTo);

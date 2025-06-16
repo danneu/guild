@@ -27,6 +27,7 @@ import {
 } from "../services/discord";
 import ipintel from "../services/ipintel";
 import { Context, Next } from "koa";
+import { pool, withPgPoolTransaction } from "../db/util";
 
 const router = new Router();
 
@@ -139,7 +140,9 @@ router.get(
 // - uname
 router.post("/users/:slug/unames", async (ctx: Context) => {
   ctx.assert(ctx.currUser, 404);
-  let user = await db.findUserBySlug(ctx.params.slug).then(pre.presentUser);
+  let user = await db
+    .findUserBySlug(ctx.params.slug)
+    .then((user) => pre.presentUser(user)!);
   ctx.assert(user, 404);
   ctx.assertAuthorized(ctx.currUser, "CHANGE_UNAME", user);
 
@@ -171,6 +174,7 @@ router.post("/users/:slug/unames", async (ctx: Context) => {
 
   try {
     user = await db.unames
+      // Will fail if userId is not found
       .changeUname({
         userId: user.id,
         changedById: ctx.currUser.id,
@@ -178,7 +182,7 @@ router.post("/users/:slug/unames", async (ctx: Context) => {
         newUname: ctx.vals.uname,
         recycle: ctx.vals.recycle,
       })
-      .then(pre.presentUser);
+      .then((user) => pre.presentUser(user)!);
   } catch (err) {
     if (err === "UNAME_TAKEN") {
       ctx.flash = { message: ["danger", "Username taken"] };
@@ -295,19 +299,27 @@ router.post("/users", checkCloudflareTurnstile, async (ctx: Context) => {
     welcomePost.html
   ) {
     const { markup, html } = welcomePost;
-    const convo = await db.createConvo({
-      userId: config.STAFF_REPRESENTATIVE_ID,
-      toUserIds: [user.id],
-      title: "RPGuild Welcome Package",
-      markup,
-      html,
-    });
 
-    // Create CONVO notification
-    await db.createConvoNotification({
-      from_user_id: config.STAFF_REPRESENTATIVE_ID,
-      to_user_id: user.id,
-      convo_id: convo.id,
+    // TODO: All queries in this route should be wrapped in the same transaction
+    await withPgPoolTransaction(pool, async (pgClient) => {
+      const convo = await db.createConvo(pgClient, {
+        userId: config.STAFF_REPRESENTATIVE_ID,
+        // Added ipAddress to satisfy TS but need to ensure ip is taken from CF header
+        ipAddress: ctx.request.ip,
+        toUserIds: [user.id],
+        title: "RPGuild Welcome Package",
+        markup,
+        html,
+      });
+
+      // Create CONVO notification
+      await db.createConvoNotificationsBulk(pgClient, [
+        {
+          from_user_id: config.STAFF_REPRESENTATIVE_ID,
+          to_user_id: user.id,
+          convo_id: convo.id,
+        },
+      ]);
     });
   }
 
@@ -372,9 +384,9 @@ router.put("/users/:slug/role", async (ctx: Context) => {
   }
 
   await db.updateUserRole(user.id, ctx.request.body.role);
-  pre.presentUser(user);
+  const presentedUser = pre.presentUser(user)!;
   ctx.flash = { message: ["success", "User role updated"] };
-  ctx.response.redirect(user.url + "/edit");
+  ctx.response.redirect(presentedUser.url + "/edit");
 });
 
 ////////////////////////////////////////////////////////////
@@ -579,9 +591,9 @@ router.put("/users/:slug", async (ctx: Context) => {
     }
     throw err;
   }
-  user = pre.presentUser(user);
+  const presentedUser = pre.presentUser(user)!;
   ctx.flash = { message: ["success", "User updated"] };
-  ctx.response.redirect(user.url + "/edit");
+  ctx.response.redirect(presentedUser.url + "/edit");
 });
 
 //
@@ -1116,9 +1128,9 @@ router.post(
 
 // if ?override=true, don't do thw twoWeek check
 router.post("/users/:slug/nuke", async (ctx: Context) => {
-  var user = await db.findUserBySlug(ctx.params.slug);
+  const user = await db.findUserBySlug(ctx.params.slug);
   ctx.assert(user, 404);
-  pre.presentUser(user);
+  const presentedUser = pre.presentUser(user)!;
   ctx.assertAuthorized(ctx.currUser, "NUKE_USER", user);
   // prevent accidental nukings. if a user is over 2 weeks old,
   // they aren't likely to be a spambot.
@@ -1136,7 +1148,7 @@ router.post("/users/:slug/nuke", async (ctx: Context) => {
   } catch (err) {
     if (err === "ALREADY_NUKED") {
       ctx.flash = { message: ["success", "Nuked the bastard"] };
-      ctx.redirect(user.url);
+      ctx.redirect(presentedUser.url);
       return;
     }
     throw err;
@@ -1155,7 +1167,7 @@ router.post("/users/:slug/nuke", async (ctx: Context) => {
   );
 
   ctx.flash = { message: ["success", "Nuked the bastard"] };
-  ctx.redirect(user.url);
+  ctx.redirect(presentedUser.url);
 });
 
 ////////////////////////////////////////////////////////////

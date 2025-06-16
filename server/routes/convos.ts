@@ -16,6 +16,7 @@ import * as paginate from "../paginate.js";
 import * as emailer from "../emailer";
 import * as eflags from "../eflags.js";
 import { Context } from "koa";
+import { pool, withPgPoolTransaction } from "../db/util.js";
 
 const router = new Router();
 
@@ -114,53 +115,53 @@ router.post("/convos", async (ctx: Context) => {
   // Render bbcode
   var html = bbcode(markup);
 
-  // If all unames are valid, then we can create a convo
-  const toUserIds = users.map((x) => x.id);
-  const convo = await db
-    .createConvo({
-      userId: ctx.currUser.id,
-      toUserIds,
-      title,
-      markup,
-      html,
-      ipAddress: ctx.request.ip,
-    })
-    .then(pre.presentConvo);
-
-  // Create on-guild CONVO notification for each recipient
-  promiseMap(
-    toUserIds,
-    (toUserId) => {
-      return db.createConvoNotification({
-        from_user_id: ctx.currUser.id,
-        to_user_id: toUserId,
-        convo_id: convo.id,
-      });
-    },
-    2,
-  ).catch((err) => console.error("error sending convo notifications", err));
-
-  // Create email notification for each recipient
-  const recipients = users
-    // Only email-verified users
-    .filter((u) => u.email_verified)
-    // Get the users that want to receive emails for new convos
-    .filter((user) => user.eflags & eflags.NEW_CONVO);
-
-  if (recipients.length > 0) {
-    // Send in background
-    emailer
-      .sendNewConvoEmails({
-        senderUname: ctx.currUser.uname,
-        recipients,
-        convoTitle: convo.title,
-        convoId: convo.id,
-        messageMarkup: markup,
+  const convo = await withPgPoolTransaction(pool, async (pgClient) => {
+    // If all unames are valid, then we can create a convo
+    const toUserIds = users.map((x) => x.id);
+    const convo = await db
+      .createConvo(pgClient, {
+        userId: ctx.currUser.id,
+        toUserIds,
+        title,
+        markup,
+        html,
+        ipAddress: ctx.request.ip,
       })
-      .catch((e) => {
-        console.error(`Error sending convo notification emails:`, e);
-      });
-  }
+      .then((convo) => pre.presentConvo(convo)!);
+
+    // Create on-guild CONVO notification for each recipient
+    const tasks = toUserIds.map((toUserId) => ({
+      from_user_id: ctx.currUser.id,
+      to_user_id: toUserId,
+      convo_id: convo.id,
+    }));
+
+    await db.createConvoNotificationsBulk(pgClient, tasks);
+
+    // Create email notification for each recipient
+    const recipients = users
+      // Only email-verified users
+      .filter((u) => u.email_verified)
+      // Get the users that want to receive emails for new convos
+      .filter((user) => user.eflags & eflags.NEW_CONVO);
+
+    if (recipients.length > 0) {
+      // Send in background
+      emailer
+        .sendNewConvoEmails({
+          senderUname: ctx.currUser.uname,
+          recipients,
+          convoTitle: convo.title,
+          convoId: convo.id,
+          messageMarkup: markup,
+        })
+        .catch((e) => {
+          console.error(`Error sending convo notification emails:`, e);
+        });
+    }
+
+    return convo;
+  });
 
   ctx.response.redirect(convo.url);
 });
@@ -275,7 +276,7 @@ router.delete("/me/convos", async (ctx: Context) => {
 
   const convos = await db.convos
     .getConvos(ids)
-    .then((xs) => xs.map(pre.presentConvo));
+    .then((xs) => xs.map((x) => pre.presentConvo(x)!));
 
   ctx.assert(
     convos.every((convo) => cancan.can(ctx.currUser, "DELETE_CONVO", convo)),
