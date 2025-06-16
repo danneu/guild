@@ -1,3 +1,10 @@
+-- add updated_at column to notifications table
+
+alter table notifications
+add column updated_at timestamptz not null default now();
+-- Update existing rows to set updated_at = created_at
+UPDATE notifications SET updated_at = created_at;
+
 -- Ensure that a user can only have one notification for each type at a time
 
 -- One MENTION per post (we don't create mentions for PMs)
