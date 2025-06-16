@@ -194,7 +194,8 @@ var XBBCODE = (function () {
   var tabIdx = 0;
   // Only true for the first [row] parsed within a [table]
   // This lets me wrap the first [row] with a <thead>
-  var isFirstTableRow = true;
+  // var isFirstTableRow = true;
+  var isFirstTableRow = false; // (nvm, we don't want the thead styling)
   // Global array of errors that will be concat'd to the errorQueue array at the
   // end. I use this to implement tag validation.
   var tagErrs = [];
@@ -843,10 +844,10 @@ var XBBCODE = (function () {
       openTag: function (params, content) {
         if (params && params.slice(1) === "bordered")
           return '<table class="bb-table table table-bordered">';
-        return '<table class="bb-table table">';
+        return '<table class="bb-table">';
       },
       closeTag: function (params, content) {
-        isFirstTableRow = true;
+        // isFirstTableRow = true;
         return "</table>";
       },
       // restrictChildrenTo: ["tbody","thead", "tfoot", "tr"]
