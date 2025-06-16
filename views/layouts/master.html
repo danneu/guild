@@ -108,7 +108,7 @@
                   Staff
                 </a>
               </li>
-            {% if false and cache2.get('faq-post') %}
+            {% if false and cache3.get('faq-post') %}
               <li>
                 <a href="/faq">
                   <span class="glyphicon glyphicon-question-sign"></span>
@@ -129,8 +129,8 @@
               <a href="/discord">
                 <span class="glyphicon glyphicon-comment"></span>
                 Discord
-                {% if cache2.get('discord-stats').online > 0 %}
-                  <span class="label label-primary" style="color: #fff;">{{ cache2.get('discord-stats').online }} Online</span>
+                {% if cache3.get('discord-stats').online > 0 %}
+                  <span class="label label-primary" style="color: #fff;">{{ cache3.get('discord-stats').online }} Online</span>
                 {% endif %}
               </a>
             </li>

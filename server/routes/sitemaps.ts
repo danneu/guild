@@ -1,26 +1,26 @@
 // 3rd
 import Router from "@koa/router";
-import compress from "koa-compress";
+// import compress from "koa-compress";
 import nunjucks from "nunjucks";
 // 1st
-import cache from "../cache";
+import cache3 from "../cache3";
 import { Context } from "koa";
 
 const router = new Router();
 
 ////////////////////////////////////////////////////////////
 
-router.get("/sitemap.txt", async (ctx: Context) => {
-  ctx.redirect("/sitemap.xml");
-});
+// router.get("/sitemap.txt", async (ctx: Context) => {
+//   ctx.redirect("/sitemap.xml");
+// });
 
-router.get("/sitemaps/:idx.txt", compress(), async (ctx: Context) => {
-  const idx = parseInt(ctx.params.idx) || 0;
-  const chunk = cache.get("sitemaps")[idx];
-  ctx.assert(chunk, 404);
-  ctx.type = "text/plain";
-  ctx.body = chunk.join("\n");
-});
+// router.get("/sitemaps/:idx.txt", compress(), async (ctx: Context) => {
+//   const idx = parseInt(ctx.params.idx) || 0;
+//   const chunk = cache3.get("sitemaps")[idx];
+//   ctx.assert(chunk, 404);
+//   ctx.type = "text/plain";
+//   ctx.body = chunk.join("\n");
+// });
 
 ////////////////////////////////////////////////////////////
 
@@ -39,7 +39,7 @@ const indexTemplate = nunjucks.compile(
 );
 
 router.get("/sitemap.xml", async (ctx: Context) => {
-  var chunks = cache.get("sitemaps");
+  var chunks = cache3.get("sitemaps");
   ctx.type = "text/xml";
   ctx.body = indexTemplate.render({ count: chunks.length });
 });
