@@ -1195,7 +1195,8 @@ describe("createIntervalCache", () => {
     const readyPromise = cache.waitUntilReady({ timeout: 1000 });
 
     // Advance time to trigger the timeout but not long enough for the slow fetch
-    await vi.advanceTimersByTimeAsync(1100);
+    // Note: Don't await this to ensure timeout rejection happens synchronously with fake timers
+    vi.advanceTimersByTimeAsync(1100);
 
     try {
       await readyPromise;
