@@ -1987,11 +1987,15 @@ export async function createSubNotificationsBulk(
     assert(Number.isInteger(toUserId));
   });
 
-  // Method 1: Using UNNEST (PostgreSQL arrays)
   const fromUserIds = notifications.map((n) => n.fromUserId);
   const toUserIds = notifications.map((n) => n.toUserId);
   const topicIds = notifications.map((n) => n.topicId);
   const metas = notifications.map((n) => ({ [n.postType]: true }));
+
+  // Ensure all the unnest arrays have the same length
+  assert(fromUserIds.length === toUserIds.length);
+  assert(fromUserIds.length === topicIds.length);
+  assert(fromUserIds.length === metas.length);
 
   return pgClient.query(
     `
@@ -2034,6 +2038,10 @@ export async function createConvoNotificationsBulk(
   const fromUserIds = notifications.map((n) => n.from_user_id);
   const toUserIds = notifications.map((n) => n.to_user_id);
   const convoIds = notifications.map((n) => n.convo_id);
+
+  // Ensure all the unnest arrays have the same length
+  assert(fromUserIds.length === toUserIds.length);
+  assert(fromUserIds.length === convoIds.length);
 
   return pgClient
     .query<DbNotification>(
@@ -2085,6 +2093,10 @@ export async function createPmNotificationsBulk(
   const toUserIds = notifications.map((n) => n.to_user_id);
   const convoIds = notifications.map((n) => n.convo_id);
 
+  // Ensure all the unnest arrays have the same length
+  assert(fromUserIds.length === toUserIds.length);
+  assert(fromUserIds.length === convoIds.length);
+
   return pgClient
     .query<DbNotification>(
       `
@@ -2129,6 +2141,10 @@ export async function createTopLevelVmNotificationsBulk(
   const toUserIds = notifications.map((n) => n.to_user_id);
   const vmIds = notifications.map((n) => n.vm_id);
 
+  // Ensure all the unnest arrays have the same length
+  assert(fromUserIds.length === toUserIds.length);
+  assert(fromUserIds.length === vmIds.length);
+
   return pgClient
     .query<DbNotification>(
       `
@@ -2172,6 +2188,10 @@ export async function createReplyVmNotificationsBulk(
   const fromUserIds = notifications.map((n) => n.from_user_id);
   const toUserIds = notifications.map((n) => n.to_user_id);
   const vmIds = notifications.map((n) => n.vm_id);
+
+  // Ensure all the unnest arrays have the same length
+  assert(fromUserIds.length === toUserIds.length);
+  assert(fromUserIds.length === vmIds.length);
 
   return pgClient
     .query<DbNotification>(
@@ -2460,6 +2480,11 @@ export async function createMentionNotificationsBulk(
   const topicIds = notifications.map((n) => n.topic_id);
   const postIds = notifications.map((n) => n.post_id);
 
+  // Ensure all the unnest arrays have the same length
+  assert(fromUserIds.length === toUserIds.length);
+  assert(fromUserIds.length === topicIds.length);
+  assert(fromUserIds.length === postIds.length);
+
   return pgClient
     .query<{ id: number }>(
       `
@@ -2541,6 +2566,11 @@ export async function createQuoteNotificationsBulk(
   const toUserIds = notifications.map((n) => n.to_user_id);
   const topicIds = notifications.map((n) => n.topic_id);
   const postIds = notifications.map((n) => n.post_id);
+
+  // Ensure all the unnest arrays have the same length
+  assert(fromUserIds.length === toUserIds.length);
+  assert(fromUserIds.length === topicIds.length);
+  assert(fromUserIds.length === postIds.length);
 
   return pgClient
     .query<{ id: number }>(
