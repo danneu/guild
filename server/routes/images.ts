@@ -140,7 +140,7 @@ router.post("/users/:user_slug/images", loadUser, async (ctx: Context) => {
         `Image cannot exceed 40 MB. Max: 40,000,000. Yours: ${upload.size}`,
       ],
     };
-    return ctx.redirect("back");
+    return ctx.back("/");
   }
 
   const uuid = uuidv7();

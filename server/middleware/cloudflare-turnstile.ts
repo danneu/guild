@@ -48,7 +48,7 @@ export default async function checkCloudflareTurnstile(
       message: ["danger", "You failed the human test"],
       params: ctx.request.body,
     };
-    ctx.response.redirect("back");
+    ctx.back("/");
     return;
   }
 

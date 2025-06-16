@@ -157,7 +157,7 @@ router.post("/me/subscriptions/mass-action", async (ctx: Context) => {
     ctx.flash = {
       message: ["success", `${ids.length} subscriptions were deleted`],
     };
-    ctx.redirect("back");
+    ctx.back("/");
   }
 });
 

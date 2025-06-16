@@ -340,6 +340,17 @@ app.use(nunjucksRender("views", nunjucksOptions));
 
 app.use(bouncer.middleware());
 
+// tell typescript that ctx.response.back(url) exists
+// new in koa v3 but @types/koa are old
+declare module "koa" {
+  interface Response {
+    back(url: string): void;
+  }
+  interface Context {
+    back(url: string): void;
+  }
+}
+
 app.use(async (ctx: Context, next: Next) => {
   try {
     await next();
@@ -357,7 +368,7 @@ app.use(async (ctx: Context, next: Next) => {
         // i.e. large posts, large bodies of text
         params: ctx.request.body,
       };
-      ctx.response.redirect("back");
+      ctx.back("/");
       return;
     }
     if (ex instanceof bouncer.ValidationError) {
@@ -367,7 +378,7 @@ app.use(async (ctx: Context, next: Next) => {
         // i.e. large posts, large bodies of text
         params: ctx.request.body,
       };
-      ctx.response.redirect("back");
+      ctx.back("/");
       return;
     }
     throw ex;
@@ -800,12 +811,12 @@ router.post("/forgot", async (ctx: Context) => {
         "For some reason, the email failed to be sent. Email me at <mahz@roleplayerguild.com> to let me know.",
       ],
     };
-    ctx.redirect("back");
+    ctx.back("/");
     return;
   }
 
   ctx.flash = { message: ["success", successMessage] };
-  ctx.response.redirect("/");
+  ctx.back("/");
 });
 
 // Password reset form
@@ -1819,7 +1830,7 @@ router.post("/topics/:slug/bans", async (ctx: Context) => {
     ctx.flash = {
       message: ["danger", "Cannot ban more than 10 users from a roleplay"],
     };
-    ctx.redirect("back");
+    ctx.back("/");
     return;
   }
 
@@ -1832,7 +1843,7 @@ router.post("/topics/:slug/bans", async (ctx: Context) => {
     ctx.flash = {
       message: ["danger", "Could not find user with that name"],
     };
-    ctx.redirect("back");
+    ctx.back("/");
     return;
   }
 

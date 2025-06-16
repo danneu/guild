@@ -586,7 +586,7 @@ router.put("/users/:slug", async (ctx: Context) => {
           }> is already in use. Send a PM to Mahz if you want an email address migrated to this account.`,
         ],
       };
-      ctx.redirect("back");
+      ctx.back("/");
       return;
     }
     throw err;
