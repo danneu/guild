@@ -10,6 +10,11 @@ import { Context, Next } from "koa";
 
 ////////////////////////////////////////////////////////////
 
+// Ensure bot has these rolls on Discord dashboard:
+// MANAGE_NICKNAMES
+// MANAGE_ROLES
+// CREATE_INSTANT_INVITE
+
 function createRouter() {
   const router = new Router();
 
@@ -79,7 +84,10 @@ function createRouter() {
       scope: ["identify", "guilds.join"].join(" "),
     });
 
-    ctx.cookies.set("oauth2_state", state);
+    ctx.cookies.set("oauth2_state", state, {
+      httpOnly: true,
+      secure: config.NODE_ENV === "production",
+    });
     ctx.redirect(authzUri);
   });
 

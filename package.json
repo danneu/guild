@@ -64,7 +64,7 @@
     "tsafe": "^1.8.5",
     "tsx": "^4.20.3",
     "uuid": "^11.1.0",
-    "zod": "^3.25.65"
+    "zod": "^3.25.67"
   },
   "devDependencies": {
     "@total-typescript/ts-reset": "^0.6.1",
