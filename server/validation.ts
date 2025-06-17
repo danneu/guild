@@ -25,7 +25,7 @@ import { Validator } from "koa-bouncer";
 // Custom koa-validate validators //////////////////////////
 ////////////////////////////////////////////////////////////
 
-Validator.addMethod("notEq", function (otherVal, tip) {
+Validator.addMethod("notEq", function (otherVal: any, tip?: string) {
   this.checkPred((val) => val !== otherVal, tip);
   return this;
 });

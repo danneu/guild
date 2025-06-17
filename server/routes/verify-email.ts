@@ -9,7 +9,7 @@ import { Context } from "koa";
 
 const router = new Router();
 
-function createToken(secret: string, email: string) {
+function createToken(secret, email) {
   assert(typeof email === "string");
   assert(typeof secret === "string");
   const hmac = crypto.createHmac("sha512", secret);
@@ -25,7 +25,7 @@ router.get("/verify-email", async (ctx: Context) => {
   ctx.assert(typeof token === "string", 400, "expected token field");
   ctx.assert(typeof email === "string", 400, "expected email field");
 
-  if ((token as string) !== createToken(config.SECRET, email as string)) {
+  if (token !== createToken(config.SECRET, email)) {
     ctx.flash = { message: ["danger", "Invalid token."] };
     ctx.redirect(ctx.currUser ? "/me/edit" : "/");
     return;
@@ -72,7 +72,7 @@ router.post("/api/verify-email", async (ctx: Context) => {
 
   const prev = sent.get(ctx.currUser.id);
   if (!prev || belt.isOlderThan(prev, { seconds: 60 })) {
-    const token = createToken(config.SECRET, ctx.currUser.email as string);
+    const token = createToken(config.SECRET, ctx.currUser.email);
     await emailer.sendEmailVerificationLinkEmail({
       toUname: ctx.currUser.uname,
       toEmail: ctx.currUser.email,

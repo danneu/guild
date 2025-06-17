@@ -13,7 +13,7 @@ import * as config from "../../config";
 class IntelClient {
   // ApiResult = 'GOOD' | 'BAD' | 'API_TIMEOUT' | 'API_ERROR'
   // Returns Promise<ApiResult>
-  async checkIpAddress(ipAddress) {
+  async checkIpAddress(ipAddress: string) {
     assert(typeof ipAddress === "string");
 
     return Promise.race([
@@ -23,7 +23,7 @@ class IntelClient {
   }
 
   // Returns Promise<ApiResult>
-  async _request(ipAddress) {
+  async _request(ipAddress: string) {
     assert(typeof ipAddress === "string");
 
     // Ensure works with ipv6 since it's not url-encoded
@@ -69,7 +69,7 @@ class IntelClient {
 const client = new IntelClient();
 
 export default {
-  process: async (ipAddress, user) => {
+  process: async (ipAddress: string, user: any) => {
     assert(typeof ipAddress === "string");
     assert(typeof user.uname === "string");
 

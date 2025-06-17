@@ -21,7 +21,7 @@ async function loadUser(ctx: Context, next: Next) {
   return next();
 }
 
-async function loadImage(ctx: Context, next) {
+async function loadImage(ctx: Context, next: Next) {
   ctx.assert(belt.isValidUuid(ctx.params.image_id), 404);
   const image = await db.images.getImage(ctx.params.image_id);
   pre.presentImage(image);
@@ -30,7 +30,7 @@ async function loadImage(ctx: Context, next) {
   return next();
 }
 
-async function loadAlbum(ctx: Context, next) {
+async function loadAlbum(ctx: Context, next: Next) {
   ctx.assert(/^[0-9]+$/.test(ctx.params.album_id), 404);
   const album = await db.images.getAlbum(ctx.params.album_id);
   pre.presentAlbum(album);

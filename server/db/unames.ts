@@ -9,7 +9,7 @@ import * as belt from "../belt";
 
 ////////////////////////////////////////////////////////////
 
-export const lastUnameChange = async function (userId) {
+export const lastUnameChange = async function (userId: number) {
   return pool
     .query(
       `
@@ -28,7 +28,7 @@ export const lastUnameChange = async function (userId) {
 ////////////////////////////////////////////////////////////
 
 // Get all username changes for a given user. Will return at least one username (their initial username).
-export const userUnameHistory = async function (userId) {
+export const userUnameHistory = async function (userId: number) {
   assert(Number.isInteger(userId));
   return pool
     .query(
@@ -54,7 +54,7 @@ export const userUnameHistory = async function (userId) {
     .then((res) => res.rows);
 };
 
-export const latestUnameChanges = async function (limit = 10) {
+export const latestUnameChanges = async function (limit: number = 10) {
   return pool
     .query(
       `

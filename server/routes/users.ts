@@ -330,8 +330,8 @@ router.post("/users", checkCloudflareTurnstile, async (ctx: Context) => {
 
   // In background, see if user is using a bad IP address
   const ipAddress =
-    config.NODE_ENV === "development" && ctx.cookies.get("ip-override")
-      ? ctx.cookies.get("ip-override")
+    config.NODE_ENV === "development"
+      ? ctx.cookies.get("ip-override") || ctx.ip
       : ctx.ip;
 
   ipintel

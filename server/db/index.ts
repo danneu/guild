@@ -140,7 +140,7 @@ export async function updateTopicStatus(
 // Same as findTopic but takes a userid so that it can return a topic
 // with an is_subscribed boolean for the user
 // Keep in sync with db.findTopicById
-export const findTopicWithIsSubscribed = async function (userId, topicId) {
+export const findTopicWithIsSubscribed = async function (userId: number, topicId: number) {
   debug("[findTopicWithIsSubscribed] userId %s, topicId %s:", userId, topicId);
 
   return pool
@@ -274,7 +274,7 @@ export async function deleteResetTokens(userId: number) {
 
 ////////////////////////////////////////////////////////////
 
-export const findLatestActiveResetToken = async function (userId) {
+export const findLatestActiveResetToken = async function (userId: number) {
   assert(_.isNumber(userId));
 
   return pool
@@ -293,7 +293,7 @@ export const findLatestActiveResetToken = async function (userId) {
 
 ////////////////////////////////////////////////////////////
 
-export const createResetToken = async function (userId) {
+export const createResetToken = async function (userId: number) {
   debug("[createResetToken] userId: " + userId);
 
   const uuid = uuidv7();
@@ -312,7 +312,7 @@ export const createResetToken = async function (userId) {
 
 ////////////////////////////////////////////////////////////
 
-export const findUserById = async function (id) {
+export const findUserById = async function (id: number) {
   return pool
     .query(
       `
@@ -414,7 +414,7 @@ export const findUserWithRatingsBySlug = async function (slug) {
 ////////////////////////////////////////////////////////////
 
 // Also tries historical unames
-export const findUserByUnameOrEmail = async function (unameOrEmail) {
+export const findUserByUnameOrEmail = async function (unameOrEmail: string) {
   assert(_.isString(unameOrEmail));
 
   const slug = belt.slugifyUname(unameOrEmail);
@@ -441,7 +441,7 @@ export const findUserByUnameOrEmail = async function (unameOrEmail) {
 ////////////////////////////////////////////////////////////
 
 // Note: Case-insensitive
-export const findUserByEmail = async function (email) {
+export const findUserByEmail = async function (email: string) {
   debug("[findUserByEmail] email: " + email);
 
   return pool
@@ -459,7 +459,7 @@ export const findUserByEmail = async function (email) {
 ////////////////////////////////////////////////////////////
 
 // Note: Case-insensitive
-export const findUserByUname = async function (uname) {
+export const findUserByUname = async function (uname: string) {
   debug("[findUserByUname] uname: " + uname);
 
   const slug = belt.slugifyUname(uname);
@@ -850,7 +850,7 @@ OFFSET $6
 
 ////////////////////////////////////////////////////////////
 
-export const updateUserPassword = async function (userId, password) {
+export const updateUserPassword = async function (userId: number, password: string) {
   assert(_.isNumber(userId));
   assert(_.isString(password));
 
@@ -957,7 +957,7 @@ WHERE p.id = $1
 ////////////////////////////////////////////////////////////
 
 // Keep findPost and findPm in sync
-export const findPostById = async function (postId) {
+export const findPostById = async function (postId: number) {
   return pool
     .query(
       `
@@ -978,7 +978,7 @@ WHERE p.id = $1
 
 ////////////////////////////////////////////////////////////
 
-export const findPmById = async function findPm(id) {
+export const findPmById = async function findPm(id: number) {
   return pool
     .query(
       `
@@ -1523,7 +1523,7 @@ export const updateUserRole = async function (userId, role) {
 ////////////////////////////////////////////////////////////
 
 // @fast
-export const findForumById = async function (forumId) {
+export const findForumById = async function (forumId: number) {
   return pool
     .query(
       `
@@ -3664,7 +3664,7 @@ export async function findLatestStatusesForUserId(user_id: number) {
 
 ////////////////////////////////////////////////////////////
 
-export const findStatusById = async function (id) {
+export const findStatusById = async function (id: number) {
   return pool
     .query(
       `
@@ -3989,7 +3989,7 @@ export const deleteNotificationForUserIdAndId = async function (userId, id) {
   );
 };
 
-export const findNotificationById = async function (id) {
+export const findNotificationById = async function (id: number) {
   debug(`[findNotification] id=${id}`);
   return pool
     .query(

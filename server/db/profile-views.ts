@@ -7,7 +7,7 @@ import { pool } from "./util.js";
 
 ////////////////////////////////////////////////////////////
 
-export const insertView = async function (viewerId, viewedId) {
+export const insertView = async function (viewerId: number, viewedId: number) {
   assert(Number.isInteger(viewerId));
   assert(Number.isInteger(viewedId));
   return pool.query(
@@ -19,7 +19,7 @@ export const insertView = async function (viewerId, viewedId) {
   );
 };
 
-export const getLatestViews = async function (viewedId) {
+export const getLatestViews = async function (viewedId: number) {
   assert(Number.isInteger(viewedId));
 
   return pool

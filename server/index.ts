@@ -8,9 +8,6 @@ import Router from "@koa/router";
 
 import Koa, { Context, Next } from "koa";
 const app = new Koa();
-if (config.NODE_ENV === "production") {
-  app.proxy = true;
-}
 
 import koaBetterStatic from "@ladjs/koa-better-static";
 import koaSend from "koa-send";
@@ -37,6 +34,12 @@ import topicsRoutes from "./routes/topics.js";
 import adminRoutes from "./routes/admin.js";
 import verifyEmailRoutes from "./routes/verify-email.js";
 import guildbot from "./guildbot.js";
+
+// ip address: get it from cloudflare header
+app.use((ctx: Context, next: Next) => {
+  ctx.ip = ctx.get("cf-connecting-ip") || ctx.ip;
+  return next();
+});
 
 // static assets
 

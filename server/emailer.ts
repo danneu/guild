@@ -88,7 +88,7 @@ export const sendAutoNukeEmail = (() => {
     </blockquote>
   `);
 
-  return (slug, markup) => {
+  return (slug: string, markup: string) => {
     assert(config.HOST, "HOST must be set to send emails");
     assert(
       URL.canParse(config.HOST),
