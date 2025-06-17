@@ -840,12 +840,10 @@ router.get("/me/vms/:id", async (ctx: Context) => {
   ctx.validateParam("id").toInt();
   await db.clearVmNotification(ctx.currUser.id, ctx.vals.id);
 
-  ctx.redirect(
-    "/users/" +
-      (await db.vms.getVmById(ctx.vals.id)).to_user.slug +
-      "/vms#vm-" +
-      ctx.vals.id,
-  );
+  const vm = await db.vms.getVmById(ctx.vals.id);
+  ctx.assert(vm, 404);
+
+  ctx.redirect(`/users/${vm.to_user.slug}/vms#vm-${vm.id}`);
 });
 
 ////////////////////////////////////////////////////////////

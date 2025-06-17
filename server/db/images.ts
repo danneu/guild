@@ -7,13 +7,14 @@ const knex = Knex({ client: "pg" });
 import _ from "lodash";
 // 1st
 import { pool, maybeOneRow } from "./util.js";
+import { DbAlbum, DbImage, DbUser } from "../dbtypes.js";
 
 ////////////////////////////////////////////////////////////
 
-export const getImage = async function (uuid) {
+export async function getImage(uuid: string) {
   assert(typeof uuid === "string");
   return pool
-    .query(
+    .query<DbImage & { user: Pick<DbUser, "uname" | "slug"> }>(
       `
     SELECT
       images.*,
@@ -29,12 +30,12 @@ export const getImage = async function (uuid) {
       [uuid],
     )
     .then(maybeOneRow);
-};
+}
 
-export const getLatestImages = async function (limit = 10) {
+export async function getLatestImages(limit = 10) {
   debug(`[getLatestImages]`);
   return pool
-    .query(
+    .query<DbImage & { user: Pick<DbUser, "uname" | "slug"> }>(
       `
     SELECT
       images.*,
@@ -51,12 +52,12 @@ export const getLatestImages = async function (limit = 10) {
       [limit],
     )
     .then((res) => res.rows);
-};
+}
 
-export const getUserAlbums = async function (userId) {
+export async function getUserAlbums(userId: number) {
   assert(Number.isInteger(userId));
   return pool
-    .query(
+    .query<DbAlbum & { user: Pick<DbUser, "uname" | "slug"> }>(
       `
     SELECT
       albums.*,
@@ -72,12 +73,12 @@ export const getUserAlbums = async function (userId) {
       [userId],
     )
     .then((res) => res.rows);
-};
+}
 
-export const getUserImages = async function (userId) {
+export async function getUserImages(userId: number) {
   assert(Number.isInteger(userId));
   return pool
-    .query(
+    .query<DbImage & { user: Pick<DbUser, "uname" | "slug"> }>(
       `
     SELECT
       images.*,
@@ -94,12 +95,12 @@ export const getUserImages = async function (userId) {
       [userId],
     )
     .then((res) => res.rows);
-};
+}
 
-export const getAlbumImages = async function (albumId) {
+export async function getAlbumImages(albumId: number) {
   assert(Number.isInteger(albumId));
   return pool
-    .query(
+    .query<DbImage & { user: Pick<DbUser, "uname" | "slug"> }>(
       `
     SELECT
       images.*,
@@ -116,17 +117,24 @@ export const getAlbumImages = async function (albumId) {
       [albumId],
     )
     .then((res) => res.rows);
-};
+}
 
 // description is optional
-export const insertImage = async function (
+export async function insertImage({
   imageId,
   albumId,
   userId,
   src,
   mime,
   description,
-) {
+}: {
+  imageId: string;
+  albumId: number;
+  userId: number;
+  src: string;
+  mime: string;
+  description: string | null;
+}) {
   assert(typeof imageId === "string");
   assert(Number.isInteger(userId));
   assert(Number.isInteger(albumId));
@@ -141,10 +149,10 @@ export const insertImage = async function (
   `,
     [imageId, albumId, userId, src, mime, description],
   );
-};
+}
 
 // TODO: Also delete from S3
-export const deleteImage = async function (imageId) {
+export async function deleteImage(imageId: string) {
   assert(typeof imageId === "string");
   return pool.query(
     `
@@ -154,10 +162,18 @@ export const deleteImage = async function (imageId) {
   `,
     [imageId],
   );
-};
+}
 
 // markup is optional
-export const insertAlbum = async function (userId, title, markup) {
+export async function insertAlbum({
+  userId,
+  title,
+  markup,
+}: {
+  userId: number;
+  title: string;
+  markup: string | null;
+}) {
   assert(Number.isInteger(userId));
   assert(typeof title === "string");
   return pool
@@ -170,9 +186,9 @@ export const insertAlbum = async function (userId, title, markup) {
       [userId, title, markup],
     )
     .then(maybeOneRow);
-};
+}
 
-export const getAlbum = async function (albumId) {
+export async function getAlbum(albumId: number) {
   assert(albumId);
   return pool
     .query(
@@ -187,11 +203,14 @@ export const getAlbum = async function (albumId) {
       [albumId],
     )
     .then(maybeOneRow);
-};
+}
 
 // Generalized update function that takes an object of
 // field/values to be updated.
-export const updateAlbum = async function (albumId, fields) {
+export async function updateAlbum(
+  albumId: number,
+  fields: Partial<Pick<DbAlbum, "title" | "markup">>,
+) {
   assert(albumId);
   assert(_.isPlainObject(fields));
   // Validate fields
@@ -204,4 +223,4 @@ export const updateAlbum = async function (albumId, fields) {
   // Build SQL string
   const str = knex("albums").where({ id: albumId }).update(fields).toString();
   return pool.query(str);
-};
+}

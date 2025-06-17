@@ -136,3 +136,23 @@ export type DbRating = {
   type: DbRatingType;
   created_at: Date;
 };
+
+export type DbImage = {
+  id: string;
+  user_id: number;
+  src: string;
+  mime: string;
+  description: string | null;
+  deleted_at: Date | null;
+  is_private: boolean;
+  created_at: Date;
+};
+
+export type DbAlbum = {
+  id: number;
+  user_id: number;
+  title: string;
+  markup: string | null;
+  updated_at: Date;
+  created_at: Date;
+};

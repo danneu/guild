@@ -1,5 +1,5 @@
 // 3rd
-import Router from "@koa/router";
+import Router, { RouterContext } from "@koa/router";
 // 1st
 import * as db from "../db";
 import * as pre from "../presenters";
@@ -10,7 +10,7 @@ const router = new Router();
 ////////////////////////////////////////////////////////////
 
 // Only admin can manage tags until I improve the form
-router.use(async (ctx: Context, next: Next) => {
+router.use(async (ctx: RouterContext, next: Next) => {
   ctx.assert(ctx.currUser, 404);
   ctx.assert(ctx.currUser.role === "admin", 404);
   return next();
