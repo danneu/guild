@@ -113,12 +113,6 @@ export type DbVm = {
   parent_vm_id: number | null;
 };
 
-export type DbTag = {
-  id: number;
-  name: string;
-  tag_group_id: number;
-};
-
 export const DbRatingType = {
   like: "like",
   laugh: "laugh",
@@ -176,4 +170,18 @@ export type DbForum = {
   // Extensions sometimes done in db fns
   parent_forum?: DbForum;
   child_forum?: DbForum;
+};
+
+export type DbTagGroup = {
+  id: number;
+  title: string;
+};
+
+export type DbTag = {
+  id: number;
+  tag_group_id: number;
+  title: string;
+  slug: string;
+  description: string | null;
+  created_at: Date;
 };

@@ -1,15 +1,16 @@
 // 3rd
 import assert from "assert";
 // 1st
-import { pool, maybeOneRow } from "./util";
+import { pool, maybeOneRow, exactlyOneRow } from "./util";
+import { DbTag, DbTagGroup } from "../dbtypes";
 
 ////////////////////////////////////////////////////////////
 
-export const getTag = async (id: number) => {
+export async function getTag(id: number) {
   assert(Number.isInteger(id));
 
   return pool
-    .query(
+    .query<DbTag>(
       `
     SELECT *
     FROM tags
@@ -18,13 +19,13 @@ export const getTag = async (id: number) => {
       [id],
     )
     .then(maybeOneRow);
-};
+}
 
 ////////////////////////////////////////////////////////////
 
-export const getGroup = async (id: number) => {
+export async function getGroup(id: number) {
   return pool
-    .query(
+    .query<DbTagGroup & { tags: DbTag[] }>(
       `
     SELECT
       tg.*,
@@ -43,11 +44,11 @@ export const getGroup = async (id: number) => {
       x.tags = x.tags.filter(Boolean);
       return x;
     });
-};
+}
 
-export const listGroups = async () => {
+export async function listGroups() {
   return pool
-    .query(
+    .query<DbTagGroup & { tags: DbTag[] }>(
       `
     SELECT
       tg.*,
@@ -66,13 +67,13 @@ export const listGroups = async () => {
         return x;
       }),
     );
-};
+}
 
 ////////////////////////////////////////////////////////////
 
 export const insertTagGroup = async (title: string) => {
   return pool
-    .query(
+    .query<DbTagGroup>(
       `
     INSERT INTO tag_groups (title)
     VALUES ($1)
@@ -80,41 +81,59 @@ export const insertTagGroup = async (title: string) => {
   `,
       [title],
     )
-    .then(maybeOneRow);
+    .then(exactlyOneRow);
 };
 
 ////////////////////////////////////////////////////////////
 
-export const insertTag = async (groupId: number, title: string, desc: string) => {
+export async function insertTag({
+  groupId,
+  title,
+  slug,
+  desc,
+}: {
+  groupId: number;
+  title: string;
+  slug: string;
+  desc?: string | void;
+}) {
   assert(Number.isInteger(groupId));
   assert(typeof title === "string");
+  assert(typeof slug === "string");
 
   return pool
-    .query(
+    .query<DbTag>(
       `
-    INSERT INTO tags (tag_group_id, title, description)
-    VALUES ($1, $2, $3)
+    INSERT INTO tags (tag_group_id, title, slug, description)
+    VALUES ($1, $2, $3, $4)
     RETURNING *
   `,
-      [groupId, title, desc],
+      [groupId, title, slug, desc],
     )
-    .then(maybeOneRow);
-};
+    .then(exactlyOneRow);
+}
 
 ////////////////////////////////////////////////////////////
 
-export const moveTag = async (tagId: number, toGroupId: number) => {
+export const moveTag = async ({
+  tagId,
+  toGroupId,
+}: {
+  tagId: number;
+  toGroupId: number;
+}) => {
   assert(Number.isInteger(tagId));
   assert(Number.isInteger(toGroupId));
 
   return pool
-    .query(
+    .query<DbTag>(
       `
     UPDATE tags
     SET tag_group_id = $1
     WHERE id = $2
+    RETURNING *
   `,
       [toGroupId, tagId],
     )
-    .then(maybeOneRow);
+    .then(exactlyOneRow);
 };
