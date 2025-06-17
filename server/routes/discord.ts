@@ -64,7 +64,9 @@ function createRouter() {
 
   const redirect_uri = `${config.HOST}/discord/callback`;
 
-  const discord = new DiscordClient({ botToken: config.DISCORD_BOT_TOKEN });
+  const discord = config.DISCORD_BOT_TOKEN
+    ? new DiscordClient({ botToken: config.DISCORD_BOT_TOKEN })
+    : null;
 
   ////////////////////////////////////////////////////////////
 
@@ -83,6 +85,10 @@ function createRouter() {
   ////////////////////////////////////////////////////////////
 
   router.get("/discord/channels/:channelName", async (ctx: Context) => {
+    if (!discord) {
+      ctx.body = "Discord is not configured";
+      return;
+    }
     const channels = await discord.listChannels(config.DISCORD_GUILD_ID);
     const channel = channels.find((c) => {
       return c.name.toLowerCase() === ctx.params.channelName.toLowerCase();
@@ -99,6 +105,10 @@ function createRouter() {
 
   // FIXME: Race conditions
   router.get("/discord/callback", async (ctx: Context) => {
+    if (!discord) {
+      ctx.body = "Discord is not configured";
+      return;
+    }
     if (ctx.query.error) {
       ctx.body = `
       Error received from Discord API: ${ctx.query.error}

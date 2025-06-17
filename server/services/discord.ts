@@ -12,7 +12,10 @@ import * as pre from "../presenters";
 
 ////////////////////////////////////////////////////////////
 
-function makeClient() {
+function makeClient(): Client | null {
+  if (!config.DISCORD_BOT_TOKEN) {
+    return null;
+  }
   return new Client({ botToken: config.DISCORD_BOT_TOKEN });
 }
 
@@ -26,6 +29,12 @@ export const broadcastManualNuke = async ({ nuker, spambot }) => {
   pre.presentUser(spambot);
 
   const client = makeClient();
+  if (!client) {
+    console.warn(
+      "Called services.discord.js#broadcastManualNuke but Discord is not configured.",
+    );
+    return;
+  }
 
   const channel = await client
     .listGuildChannels(config.DISCORD_GUILD_ID)
@@ -51,6 +60,12 @@ export const broadcastManualUnnuke = async ({ nuker, spambot }) => {
   pre.presentUser(spambot);
 
   const client = makeClient();
+  if (!client) {
+    console.warn(
+      "Called services.discord.js#broadcastManualUnnuke but Discord is not configured.",
+    );
+    return;
+  }
 
   const channel = await client
     .listGuildChannels(config.DISCORD_GUILD_ID)
@@ -75,6 +90,12 @@ export const broadcastIpAddressAutoNuke = async (user, ipAddress) => {
   pre.presentUser(user);
 
   const client = makeClient();
+  if (!client) {
+    console.warn(
+      "Called services.discord.js#broadcastIpAddressAutoNuke but Discord is not configured.",
+    );
+    return;
+  }
 
   const channel = await client
     .listGuildChannels(config.DISCORD_GUILD_ID)
@@ -110,6 +131,12 @@ export const broadcastAutoNuke = async (user, postId, info) => {
   }
 
   const client = makeClient();
+  if (!client) {
+    console.warn(
+      "Called services.discord.js#broadcastAutoNuke but Discord is not configured.",
+    );
+    return;
+  }
 
   const channel = await client
     .listGuildChannels(config.DISCORD_GUILD_ID)
@@ -145,6 +172,12 @@ export const broadcastUserJoin = async (user) => {
   }
 
   const client = makeClient();
+  if (!client) {
+    console.warn(
+      "Called services.discord.js#broadcastUserJoin but Discord is not configured.",
+    );
+    return;
+  }
 
   const channel = await client
     .listGuildChannels(config.DISCORD_GUILD_ID)
@@ -164,6 +197,12 @@ export const broadcastIntroTopic = async (user, topic) => {
   pre.presentTopic(topic);
 
   const client = makeClient();
+  if (!client) {
+    console.warn(
+      "Called services.discord.js#broadcastIntroTopic but Discord is not configured.",
+    );
+    return;
+  }
 
   const channel = await client
     .listGuildChannels(config.DISCORD_GUILD_ID)
@@ -193,6 +232,12 @@ export const broadcastBioUpdate = async (user, bioMarkup) => {
   pre.presentUser(user);
 
   const client = makeClient();
+  if (!client) {
+    console.warn(
+      "Called services.discord.js#broadcastBioUpdate but Discord is not configured.",
+    );
+    return;
+  }
 
   const channel = await client
     .listGuildChannels(config.DISCORD_GUILD_ID)
