@@ -843,7 +843,7 @@ var XBBCODE = (function () {
     table: {
       openTag: function (params, content) {
         if (params && params.slice(1) === "bordered")
-          return '<table class="bb-table table table-bordered">';
+          return '<table class="bb-table bb-table-bordered">';
         return '<table class="bb-table">';
       },
       closeTag: function (params, content) {

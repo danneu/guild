@@ -385,10 +385,30 @@ blockquote footer {
     margin-bottom: 0;
 }
 
-.bb-table { 
+/* bbcode table bordered */
+.bb-table-bordered {
+  border-collapse: collapse;
+  border: 1px solid #dee2e6;
+}
+.bb-table-bordered th,
+.bb-table-bordered td {
+  border: 1px solid #dee2e6;
+  padding: 0.75rem;
+}
+/* end bbcode table bordered */
+  
+.bb-table-bordered thead th {
+  border-bottom-width: 2px;
+}
+
+.bb-table .bb-table {
+    /* undo .table .table white bg */
     background-color: inherit;
+}
+.bb-table { 
     width: 100%;
  }
+.bb-table td { padding: 8px; }
 .bb-table tr.bb-active td,
 .bb-table td.bb-active {background-color: #666 !important;}
 .bb-table tr.bb-success td,
