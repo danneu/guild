@@ -1001,12 +1001,12 @@ router.get("/forums/:forumSlug/topics/new", async (ctx: Context) => {
 //
 // @koa2
 router.get("/forums/:forumSlug", async (ctx: Context) => {
-  var forumId = belt.extractId(ctx.params.forumSlug);
+  const forumId = belt.extractId(ctx.params.forumSlug);
   ctx.assert(forumId, 404);
 
   ctx.validateQuery("page").optional().toInt();
 
-  var forum = await db.findForum2(forumId).then(pre.presentForum);
+  const forum = await db.findForum2(forumId).then(pre.presentForum);
   ctx.assert(forum, 404);
 
   forum.mods = cache3.get("forum-mods")[forum.id] || [];

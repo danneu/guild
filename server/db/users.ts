@@ -13,7 +13,7 @@ import { pool } from "./util.js";
 
 ////////////////////////////////////////////////////////////
 
-export const getUserByEmail = async (email) => {
+export const getUserByEmail = async (email: string) => {
   const str = knex("users").where("email", email).first().toString();
   const result = await pool.query(str);
   return result.rows[0];
@@ -21,7 +21,7 @@ export const getUserByEmail = async (email) => {
 
 // Generalized update function that takes an object of
 // field/values to be updated.
-export const updateUser = async function (userId, fields) {
+export const updateUser = async function (userId: number, fields: Record<string, any>) {
   assert(Number.isInteger(userId));
   assert(_.isPlainObject(fields));
   // Validate fields
@@ -38,7 +38,7 @@ export const updateUser = async function (userId, fields) {
 
 ////////////////////////////////////////////////////////////
 
-export const unapproveUser = async (userId) => {
+export const unapproveUser = async (userId: number) => {
   assert(Number.isInteger(userId));
 
   return pool.query(
@@ -54,7 +54,7 @@ export const unapproveUser = async (userId) => {
 
 ////////////////////////////////////////////////////////////
 
-export const approveUser = async ({ approvedBy, targetUser }) => {
+export const approveUser = async ({ approvedBy, targetUser }: { approvedBy: number; targetUser: number }) => {
   assert(Number.isInteger(approvedBy));
   assert(Number.isInteger(targetUser));
 

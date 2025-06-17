@@ -22,6 +22,9 @@ export default class Client {
   constructor({
     botToken,
     userAgent = "GuildBot (roleplayerguild.com, 0.0.1)",
+  }: {
+    botToken: string;
+    userAgent?: string;
   }) {
     assert(typeof botToken === "string");
     assert(typeof userAgent === "string");

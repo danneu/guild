@@ -7,7 +7,7 @@ import bbcode from "../bbcode";
 import * as dice from "../dice";
 import { pool, maybeOneRow } from "./util";
 
-export const getCampaign = async function (campaignId) {
+export const getCampaign = async function (campaignId: number) {
   return pool
     .query(
       `
@@ -42,7 +42,7 @@ export const listCampaignsByActivity = async function () {
 };
 
 // Ordered by newest first
-export const getCampaignsForUser = async function (userId) {
+export const getCampaignsForUser = async function (userId: number) {
   assert(userId);
   return pool
     .query(
@@ -63,7 +63,7 @@ export const getCampaignsForUser = async function (userId) {
     .then((res) => res.rows);
 };
 
-export const getCampaignRolls = async function (campaignId) {
+export const getCampaignRolls = async function (campaignId: number) {
   assert(campaignId);
   return pool
     .query(
@@ -83,7 +83,7 @@ export const getCampaignRolls = async function (campaignId) {
 };
 
 // markup is optional
-export const updateCampaign = async function (campaignId, title, markup) {
+export const updateCampaign = async function (campaignId: number, title: string, markup?: string) {
   assert(Number.isInteger(campaignId));
   assert(typeof title === "string");
   let html;
@@ -105,7 +105,7 @@ export const updateCampaign = async function (campaignId, title, markup) {
 };
 
 // markup is optional
-export const insertCampaign = async function (userId, title, markup) {
+export const insertCampaign = async function (userId: number, title: string, markup?: string) {
   assert(Number.isInteger(userId));
   assert(typeof title === "string");
   let html;
@@ -125,7 +125,7 @@ export const insertCampaign = async function (userId, title, markup) {
 };
 
 // note is optional
-export const insertRoll = async function (userId, campaignId, syntax, note) {
+export const insertRoll = async function (userId: number, campaignId: number, syntax: string, note?: string) {
   assert(Number.isInteger(userId));
   assert(Number.isInteger(campaignId));
   assert(typeof syntax === "string");
@@ -165,7 +165,7 @@ export const insertRoll = async function (userId, campaignId, syntax, note) {
   });
 };
 
-export const getRoll = async function (rollId) {
+export const getRoll = async function (rollId: number) {
   assert(rollId);
   return pool
     .query(

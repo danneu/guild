@@ -156,3 +156,24 @@ export type DbAlbum = {
   updated_at: Date;
   created_at: Date;
 };
+
+export type DbForum = {
+  id: number;
+  category_id: number;
+  parent_forum_id: number | null;
+  title: string;
+  description: string | null;
+  pos: number;
+  is_roleplay: boolean;
+  has_tags_enabled: boolean;
+  tab_title: string | null;
+  is_check: boolean;
+  is_hidden: boolean;
+  // Cache
+  topics_count: number;
+  posts_count: number;
+
+  // Extensions sometimes done in db fns
+  parent_forum?: DbForum;
+  child_forum?: DbForum;
+};

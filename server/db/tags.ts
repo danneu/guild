@@ -5,7 +5,7 @@ import { pool, maybeOneRow } from "./util";
 
 ////////////////////////////////////////////////////////////
 
-export const getTag = async (id) => {
+export const getTag = async (id: number) => {
   assert(Number.isInteger(id));
 
   return pool
@@ -22,7 +22,7 @@ export const getTag = async (id) => {
 
 ////////////////////////////////////////////////////////////
 
-export const getGroup = async (id) => {
+export const getGroup = async (id: number) => {
   return pool
     .query(
       `
@@ -70,7 +70,7 @@ export const listGroups = async () => {
 
 ////////////////////////////////////////////////////////////
 
-export const insertTagGroup = async (title) => {
+export const insertTagGroup = async (title: string) => {
   return pool
     .query(
       `
@@ -85,7 +85,7 @@ export const insertTagGroup = async (title) => {
 
 ////////////////////////////////////////////////////////////
 
-export const insertTag = async (groupId, title, desc) => {
+export const insertTag = async (groupId: number, title: string, desc: string) => {
   assert(Number.isInteger(groupId));
   assert(typeof title === "string");
 
@@ -103,7 +103,7 @@ export const insertTag = async (groupId, title, desc) => {
 
 ////////////////////////////////////////////////////////////
 
-export const moveTag = async (tagId, toGroupId) => {
+export const moveTag = async (tagId: number, toGroupId: number) => {
   assert(Number.isInteger(tagId));
   assert(Number.isInteger(toGroupId));
 

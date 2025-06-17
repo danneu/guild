@@ -4,11 +4,11 @@ import Router from "@koa/router";
 // 1st
 import * as db from "../db";
 import * as pre from "../presenters";
-import { Context } from "koa";
+import { Context, Next } from "koa";
 
 // HELPERS
 
-async function loadCampaign(ctx: Context, next) {
+async function loadCampaign(ctx: Context, next: Next) {
   const campaign = await db.dice.getCampaign(ctx.params.campaign_id);
   ctx.assert(campaign, 404);
   pre.presentCampaign(campaign);
@@ -16,7 +16,7 @@ async function loadCampaign(ctx: Context, next) {
   return next();
 }
 
-async function loadRoll(ctx: Context, next) {
+async function loadRoll(ctx: Context, next: Next) {
   const roll = await db.dice.getRoll(ctx.params.roll_id);
   ctx.assert(roll, 404);
   pre.presentRoll(roll);
