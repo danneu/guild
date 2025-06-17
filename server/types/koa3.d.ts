@@ -9,6 +9,12 @@ declare module "koa" {
   }
 }
 
+declare module "@koa/router" {
+  interface RouterContext {
+    back(url: string): void;
+  }
+}
+
 // This empty export makes the file a module instead of a script,
 // which is required for declare module augmentation to work properly
 export {};

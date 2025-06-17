@@ -1,5 +1,5 @@
 // 3rd
-import Router from "@koa/router";
+import Router, { RouterContext } from "@koa/router";
 import SimpleOauth2 from "simple-oauth2";
 import { v7 as uuidv7 } from "uuid";
 // 1st
@@ -12,7 +12,7 @@ import { Context, Next } from "koa";
 function createRouter() {
   const router = new Router();
 
-  router.use(async (ctx: Context, next: Next) => {
+  router.use(async (ctx: RouterContext, next: Next) => {
     // Ensure Discord is configured
     ctx.assert(config.IS_DISCORD_CONFIGURED, 404, "Discord is not configured");
 
