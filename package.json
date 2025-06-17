@@ -1,6 +1,6 @@
 {
   "name": "guild",
-  "version": "0.0.22",
+  "version": "0.0.23",
   "private": true,
   "scripts": {
     "test": "vitest run",
