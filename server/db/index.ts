@@ -3159,34 +3159,26 @@ export async function findAllTagGroups(): Promise<unknown[]> {
 
 // topicId :: String | Int
 // tagIds :: [Int]
-export const updateTopicTags = async function (topicId, tagIds) {
+export async function updateTopicTags(topicId: number, tagIds: number[]) {
   assert(topicId);
-  assert(_.isArray(tagIds));
+  assert(Array.isArray(tagIds));
 
-  return pool.withTransaction(async (client) => {
-    await client.query(
-      `
-      DELETE FROM tags_topics
-      WHERE topic_id = $1
-    `,
-      [topicId],
-    );
-    // Now create the new bridge links in parallel
-    // FIXME: Can't make parallel requests on a single connection, so
-    // make it explicitly serial.
-    return Promise.all(
-      tagIds.map((tagId) => {
-        return client.query(
-          `
-        INSERT INTO tags_topics (topic_id, tag_id)
-        VALUES ($1, $2)
-      `,
-          [topicId, tagId],
-        );
-      }),
-    );
+  return pool.withTransaction(async (pgClient) => {
+    // Delete existing tags
+    await pgClient.query("DELETE FROM tags_topics WHERE topic_id = $1", [
+      topicId,
+    ]);
+
+    // Bulk insert using unnest
+    if (tagIds.length > 0) {
+      await pgClient.query(
+        `INSERT INTO tags_topics (topic_id, tag_id) 
+         SELECT $1, unnest($2::int[])`,
+        [topicId, tagIds],
+      );
+    }
   });
-};
+}
 
 // Returns latest 5 unhidden checks
 export async function findLatestChecks() {
