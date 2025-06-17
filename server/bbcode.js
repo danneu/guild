@@ -18,7 +18,7 @@ if (isServer) {
   cache3 = require("./cache3").default;
 }
 
-export const escapeHtml = (() => {
+const escapeHtml = (() => {
   const escapeMap = {
     "&": "&amp;",
     "<": "&lt;",
