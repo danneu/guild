@@ -17,6 +17,9 @@ importers:
       '@aws-sdk/lib-storage':
         specifier: ^3.830.0
         version: 3.830.0(@aws-sdk/client-s3@3.830.0)
+      '@koa/etag':
+        specifier: ^5.0.1
+        version: 5.0.1(koa@3.0.0)
       '@koa/router':
         specifier: ^13.1.0
         version: 13.1.0
@@ -56,9 +59,6 @@ importers:
       koa-conditional-get:
         specifier: ^3.0.0
         version: 3.0.0
-      koa-etag:
-        specifier: ^5.0.0
-        version: 5.0.0(koa@3.0.0)
       koa-logger:
         specifier: ^4.0.0
         version: 4.0.0
@@ -653,6 +653,11 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
+
+  '@koa/etag@5.0.1':
+    resolution: {integrity: sha512-14NloEhoMNCGRwVbbTjCuDeD/Fyf1oqiTc4fPrQvbQ+6t2cNr368BoDFzyi8iJFP8VOS9iRt8eI2yBz9wE1VUQ==}
+    peerDependencies:
+      koa: '>= 2'
 
   '@koa/router@13.1.0':
     resolution: {integrity: sha512-mNVu1nvkpSd8Q8gMebGbCkDWJ51ODetrFvLKYusej+V0ByD4btqHYnPIzTBLXnQMVUlm/oxVwqmWBY3zQfZilw==}
@@ -2290,11 +2295,6 @@ packages:
 
   koa-conditional-get@3.0.0:
     resolution: {integrity: sha512-VKyPS7SuNH26TjTV2IRz+oh0HV/jc2lYAo51PTQTkj0XFn8ebNZW9riczmrW7ZVBFSnls1Z88DPUYKnvVymruA==}
-
-  koa-etag@5.0.0:
-    resolution: {integrity: sha512-0zzyT9tz9dgutmv9mal1zZ7lNguvAmKLN7u+N5DfODmedq+clAkxvLC2MdtfIlthvgYooMdU6L3VwCPzJ5SlGg==}
-    peerDependencies:
-      koa: '>= 2'
 
   koa-is-json@1.0.0:
     resolution: {integrity: sha512-+97CtHAlWDx0ndt0J8y3P12EWLwTLMXIfMnYDev3wOTwH/RpBGMlfn4bDXlMEg1u73K6XRE9BbUp+5ZAYoRYWw==}
@@ -4155,6 +4155,12 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
 
+  '@koa/etag@5.0.1(koa@3.0.0)':
+    dependencies:
+      '@types/etag': 1.8.4
+      etag: 1.8.1
+      koa: 3.0.0
+
   '@koa/router@13.1.0':
     dependencies:
       http-errors: 2.0.0
@@ -5929,12 +5935,6 @@ snapshots:
       koa-is-json: 1.0.0
 
   koa-conditional-get@3.0.0: {}
-
-  koa-etag@5.0.0(koa@3.0.0):
-    dependencies:
-      '@types/etag': 1.8.4
-      etag: 1.8.1
-      koa: 3.0.0
 
   koa-is-json@1.0.0: {}
 

@@ -16,6 +16,8 @@ import koaBetterStatic from "@ladjs/koa-better-static";
 import koaSend from "koa-send";
 import koaLogger from "koa-logger";
 import { koaBody } from "koa-body";
+import koaConditionalGet from "koa-conditional-get";
+import koaEtag from "@koa/etag";
 
 // Routes
 import legacyRouter from "./legacy_router.js";
@@ -113,8 +115,6 @@ app.use(
   }),
 );
 
-import koaConditionalGet from "koa-conditional-get";
-import koaEtag from "koa-etag";
 app.use(koaConditionalGet()); // Works with koa-etag
 app.use(koaEtag());
 
