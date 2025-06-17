@@ -2315,10 +2315,17 @@ router.delete("/me/ratings/:postId", async (ctx: Context) => {
     return;
   }
 
-  await db.deleteRatingByFromUserIdAndPostId(
-    ctx.currUser.id,
-    ctx.params.postId,
-  );
+  await withPgPoolTransaction(pool, async (pgClient) => {
+    await db.deleteRatingByFromUserIdAndPostId(
+      pgClient,
+      ctx.currUser.id,
+      ctx.params.postId,
+    );
+    await db.notifications.deleteRatingNotification(pgClient, {
+      fromUserId: ctx.currUser.id,
+      postId: ctx.params.postId,
+    });
+  });
 
   ctx.response.redirect("/posts/" + ctx.params.postId);
 });

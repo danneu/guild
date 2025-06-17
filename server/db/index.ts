@@ -3029,13 +3029,14 @@ export async function findRatingByFromUserIdAndPostId(from_user_id, post_id) {
 }
 
 export async function deleteRatingByFromUserIdAndPostId(
+  pgClient: PgClientInTransaction,
   from_user_id: number,
   post_id: number,
 ) {
   assert(from_user_id);
   assert(post_id);
 
-  return pool.query(
+  return pgClient.query(
     `
     DELETE FROM ratings
     WHERE from_user_id = $1 AND post_id = $2
@@ -3102,12 +3103,10 @@ export async function createRatingNotification(props: {
     .query<DbNotification>(
       `
 INSERT INTO notifications
-(type, from_user_id, to_user_id, meta, post_id, topic_id, count)
-VALUES ('RATING', $1, $2, $3, $4, $5, 1)
-ON CONFLICT (to_user_id, post_id) WHERE type = 'RATING'
-  DO UPDATE
-    SET count = COALESCE(notifications.count, 0) + 1,
-        updated_at = NOW(),
+(type, from_user_id, to_user_id, meta, post_id, topic_id)
+VALUES ('RATING', $1, $2, $3, $4, $5)
+ON CONFLICT (from_user_id, post_id) WHERE type = 'RATING' DO UPDATE
+    SET updated_at = NOW(),
         meta = $3
 RETURNING *
   `,
@@ -4698,3 +4697,4 @@ export * as revs from "./revs";
 export * as unames from "./unames";
 export * as hits from "./hits";
 export * as admin from "./admin";
+export * as notifications from "./notifications";

@@ -27,9 +27,11 @@ create unique index notifications_convo_unique on notifications (to_user_id, con
   where type = 'CONVO';
 -- and convo_id is not null; (convo_id is always set if we create a convo)
 
--- One RATING per post (PMs can't have ratings)
+-- One RATING per post per user sending a rating (PMs can't have ratings)
 -- We'd have to change this if we allow ratings on PMs which is a reasonable possibility
-create unique index notifications_rating_unique on notifications (to_user_id, post_id) 
+drop index if exists notifications_rating_unique;
+
+create unique index notifications_rating_unique on notifications (from_user_id, post_id) 
   where type = 'RATING';
 -- and post_id is not null; (post_id is always set if we create a rating)
 
