@@ -213,7 +213,7 @@ app.use(middleware.flash());
 app.use(async (ctx: Context, next: Next) => {
   // Must become before koa-router
   ctx.can = cancan.can;
-  ctx.assertAuthorized = (user, action, target) => {
+  ctx.assertAuthorized = (user: any, action: cancan.CanAction, target: any) => {
     const canResult = cancan.can(user, action, target);
     // ctx.log.info('[assertAuthorized] Can %s %s: %s',
     //              (user && user.uname) || '<Guest>', action, canResult);

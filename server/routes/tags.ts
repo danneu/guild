@@ -85,13 +85,19 @@ router.post("/tag-groups/:id/tags", async (ctx: Context) => {
 
 // Body { tag_group_id: Int }
 router.post("/tags/:id/move", async (ctx: Context) => {
-  ctx.validateParam("id").toInt();
-
-  const tag = await db.tags.getTag(ctx.vals.id);
+  const ParamsSchema = z.object({
+    id: z.coerce.number().int(),
+  });
+  const params = ParamsSchema.parse(ctx.params);
+  const tag = await db.tags.getTag(params.id);
   ctx.assert(tag, 404);
 
-  ctx.validateBody("tag_group_id").toInt();
-  const newGroup = await db.tags.getGroup(ctx.vals.tag_group_id);
+  const BodySchema = z.object({
+    tag_group_id: z.coerce.number().int(),
+  });
+  const body = BodySchema.parse(ctx.request.body);
+
+  const newGroup = await db.tags.getGroup(body.tag_group_id);
 
   if (!newGroup) {
     ctx.flash = { message: ["danger", "No tag group found with that ID"] };
