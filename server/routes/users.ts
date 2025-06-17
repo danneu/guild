@@ -726,7 +726,7 @@ router.get("/users/:userIdOrSlug", async (ctx: Context) => {
     // insert in the background
     db.profileViews
       .insertView(ctx.currUser.id, user.id)
-      .catch((err) => console.error("insertView error", err, err.stack));
+      .catch((err) => console.error("insertView error", err));
   }
 
   const [statuses, friendship, latestViewers, unames] = await Promise.all([

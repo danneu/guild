@@ -250,7 +250,7 @@ export default class Client {
     return this.botRequest("GET", url);
   }
 
-  async listChannels(guildId) {
+  async listChannels(guildId: string) {
     assert(typeof guildId === "string");
     const url = `/guilds/${guildId}/channels`;
     return this.botRequest("GET", url);

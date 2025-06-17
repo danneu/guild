@@ -605,3 +605,7 @@ export const withinGhostRange = (() => {
     return Date.now() - lastOnlineAt.getTime() < hours24;
   };
 })();
+
+export function last<T>(xs: T[]): T | undefined {
+  return xs.length > 0 ? xs[xs.length - 1] : undefined;
+}

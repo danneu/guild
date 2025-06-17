@@ -67,6 +67,7 @@
     "zod": "^3.25.65"
   },
   "devDependencies": {
+    "@total-typescript/ts-reset": "^0.6.1",
     "@types/debug": "^4.1.12",
     "@types/gulp": "^4.0.17",
     "@types/gulp-concat": "^0.0.37",

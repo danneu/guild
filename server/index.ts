@@ -63,7 +63,10 @@ const dist: { css: string; js: string } | undefined = (() => {
       throw err;
     }
   }
-  const manifest = JSON.parse(body);
+  const manifest = JSON.parse(body) as {
+    "all.css": string;
+    "all.js": string;
+  };
   const dist = {
     css: manifest["all.css"],
     js: manifest["all.js"],
@@ -561,7 +564,7 @@ router.post("/posts/:postId/rate", async (ctx: Context) => {
       post_id: post.id,
       topic_id: post.topic_id,
       rating_type: rating.type,
-    }).catch((err) => console.error(err, err.stack));
+    }).catch(console.error);
   }
 
   ctx.type = "json";
@@ -1051,7 +1054,7 @@ router.get("/forums/:forumSlug", async (ctx: Context) => {
   ].filter(Boolean);
 
   // update viewers in background
-  db.upsertViewer(ctx, forum.id).catch((err) => console.error(err, err.stack));
+  db.upsertViewer(ctx, forum.id).catch(console.error);
 
   await ctx.render("show_forum", {
     ctx,
@@ -1987,7 +1990,7 @@ router.get("/topics/:slug/:postType/first-unread", async (ctx: Context) => {
   var topicId = belt.extractId(ctx.params.slug);
   ctx.assert(topicId, 404);
 
-  var topic;
+  let topic;
   if (ctx.currUser) {
     topic = await db.findTopicWithIsSubscribed(ctx.currUser.id, topicId);
   } else {
@@ -2089,8 +2092,10 @@ router.get("/topics/:slug/:postType", async (ctx: Context) => {
 
   if (ctx.currUser) {
     posts.forEach((post) => {
-      var rating = post.ratings.find((x) => x.from_user_id === ctx.currUser.id);
-      post.has_rated = rating;
+      const rating = post.ratings.find(
+        (x) => x.from_user_id === ctx.currUser.id,
+      );
+      (post as any).has_rated = rating;
     });
   }
 
@@ -2101,7 +2106,7 @@ router.get("/topics/:slug/:postType", async (ctx: Context) => {
         topic_id: topic.id,
         user_id: ctx.currUser.id,
         post_type: ctx.params.postType,
-        post_id: _.last(posts).id,
+        post_id: belt.last(posts)!.id,
       })
       .catch((err) => console.error("error updating topic watermark", err));
   }
@@ -2132,9 +2137,7 @@ router.get("/topics/:slug/:postType", async (ctx: Context) => {
   var postType = ctx.params.postType;
 
   // update viewers in background
-  db.upsertViewer(ctx, topic.forum_id, topic.id).catch((err) =>
-    console.error(err, err.stack),
-  );
+  db.upsertViewer(ctx, topic.forum_id, topic.id).catch(console.error);
 
   await ctx.render("show_topic", {
     ctx,

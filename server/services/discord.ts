@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 // 3rd
 import assert from "assert";
 // 1st

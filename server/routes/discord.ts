@@ -1,3 +1,4 @@
+// @ts-nocheck
 // 3rd
 import Router, { RouterContext } from "@koa/router";
 import SimpleOauth2 from "simple-oauth2";
@@ -146,7 +147,7 @@ function createRouter() {
     const roleMap = await discord
       .listRoles(config.DISCORD_GUILD_ID)
       .then((roles) => {
-        const mapping: Record<string, string> = {};
+        const mapping: Record<string, string> = Object.create(null);
         roles.forEach((role) => {
           mapping[role.name] = role.id;
         });

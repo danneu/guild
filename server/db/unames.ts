@@ -136,7 +136,7 @@ export async function changeUname({
         [userId, changedById, newUname, belt.slugifyUname(newUname)],
       )
       .catch((err) => {
-        if (err.code === "23505") {
+        if (err instanceof Error && "code" in err && err.code === "23505") {
           if (/unique_unrecyclable_slug/.test(err.toString()))
             throw "UNAME_TAKEN";
         }

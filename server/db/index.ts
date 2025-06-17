@@ -646,7 +646,7 @@ export async function createConvo(
   const results = await Promise.all(tasks);
 
   // Assoc firstPm to the returned convo
-  (convo as any).firstPm = _.last(results).rows[0];
+  (convo as any).firstPm = belt.last(results)!.rows[0];
   convo.pms_count++; // This is a stale copy so we need to manually inc
   return convo;
 }
@@ -850,7 +850,10 @@ OFFSET $6
 
 ////////////////////////////////////////////////////////////
 
-export const updateUserPassword = async function (userId: number, password: string) {
+export const updateUserPassword = async function (
+  userId: number,
+  password: string,
+) {
   assert(_.isNumber(userId));
   assert(_.isString(password));
 
@@ -1495,7 +1498,7 @@ export const updateUser = async (userId, attrs) => {
     )
     .then(maybeOneRow)
     .catch((err) => {
-      if (err.code === "23505") {
+      if (err instanceof Error && "code" in err && err.code === "23505") {
         if (/"unique_email"/.test(err.toString())) {
           throw "EMAIL_TAKEN";
         }
@@ -3811,7 +3814,7 @@ export const likeStatus = async function ({ user_id, status_id }) {
       );
     })
     .catch((err) => {
-      if (err.code === "23505") {
+      if (err instanceof Error && "code" in err && err.code === "23505") {
         return;
       }
       throw err;
@@ -3840,7 +3843,12 @@ export const latestStatusLikeAt = async function (user_id) {
 
 ////////////////////////////////////////////////////////////
 
-export const updateTopicWatermark = async function (props) {
+export async function updateTopicWatermark(props: {
+  topic_id: number;
+  user_id: number;
+  post_type: string;
+  post_id: number;
+}) {
   debug("[updateTopicWatermark] props:", props);
   assert(props.topic_id);
   assert(props.user_id);
@@ -3865,7 +3873,7 @@ export const updateTopicWatermark = async function (props) {
       props.post_id,
     ],
   );
-};
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -4177,7 +4185,7 @@ export async function createFriendship(from_id: number, to_id: number) {
     .catch((err) => {
       // Ignore unique violation, like if user double-clicks
       // the add-friend button
-      if (err.code === "23505") {
+      if (err instanceof Error && "code" in err && err.code === "23505") {
         return;
       }
       throw err;
@@ -4542,7 +4550,7 @@ export async function nukeUser({
       // await client.query(sqls.updateTopics);
     })
     .catch((err) => {
-      if (err.code === "23505") {
+      if (err instanceof Error && "code" in err && err.code === "23505") {
         throw "ALREADY_NUKED";
       }
       throw err;
@@ -4620,7 +4628,7 @@ export const insertTopicBan = async (topicId, gmId, bannedId) => {
       [topicId, gmId, bannedId],
     )
     .catch((err) => {
-      if (err.code === "23505") {
+      if (err instanceof Error && "code" in err && err.code === "23505") {
         return;
       }
       throw err;

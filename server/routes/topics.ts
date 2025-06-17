@@ -62,7 +62,7 @@ router.post("/topics/:topicId/:postType/0th", async (ctx: Context) => {
         idx: -1,
       })
       .catch((err) => {
-        if (err.code === "23505") {
+        if (err instanceof Error && "code" in err && err.code === "23505") {
           ctx.flash = {
             message: ["danger", `0th post for this tab already exists.`],
           };
