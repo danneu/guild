@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 // 3rd
 import assert from "assert";
 // 1st
@@ -25,6 +23,13 @@ function makeClient(): Client | null {
 
 // nuker and spambot are users
 export const broadcastManualNuke = async ({ nuker, spambot }) => {
+  if (!config.IS_DISCORD_CONFIGURED) {
+    console.warn(`
+      Called services.discord.js#broadcastManualNuke but Discord
+      is not configured.
+    `);
+    return;
+  }
   assert(nuker);
   assert(spambot);
   pre.presentUser(nuker);
@@ -39,8 +44,13 @@ export const broadcastManualNuke = async ({ nuker, spambot }) => {
   }
 
   const channel = await client
-    .listGuildChannels(config.DISCORD_GUILD_ID)
+    .listGuildChannels(config.DISCORD_GUILD_ID!)
     .then((cs) => cs.find((c) => c.name === "forum-activity"));
+
+  if (!channel) {
+    console.warn(`Could not find a #forum-activity channel for broadcast.`);
+    return;
+  }
 
   const content = `:hammer: **${nuker.uname}** nuked ${config.HOST}${
     spambot.url
@@ -70,8 +80,13 @@ export const broadcastManualUnnuke = async ({ nuker, spambot }) => {
   }
 
   const channel = await client
-    .listGuildChannels(config.DISCORD_GUILD_ID)
+    .listGuildChannels(config.DISCORD_GUILD_ID!)
     .then((cs) => cs.find((c) => c.name === "forum-activity"));
+
+  if (!channel) {
+    console.warn(`Could not find a #forum-activity channel for broadcast.`);
+    return;
+  }
 
   const content = `:white_check_mark: **${nuker.uname}** UN-nuked ${
     config.HOST
@@ -100,8 +115,13 @@ export const broadcastIpAddressAutoNuke = async (user, ipAddress) => {
   }
 
   const channel = await client
-    .listGuildChannels(config.DISCORD_GUILD_ID)
+    .listGuildChannels(config.DISCORD_GUILD_ID!)
     .then((cs) => cs.find((c) => c.name === "forum-activity"));
+
+  if (!channel) {
+    console.warn(`Could not find a #forum-activity channel for broadcast.`);
+    return;
+  }
 
   const content = `@here :spy: User ${config.HOST}${
     user.url
@@ -141,8 +161,13 @@ export const broadcastAutoNuke = async (user, postId, info) => {
   }
 
   const channel = await client
-    .listGuildChannels(config.DISCORD_GUILD_ID)
+    .listGuildChannels(config.DISCORD_GUILD_ID!)
     .then((cs) => cs.find((c) => c.name === "forum-activity"));
+
+  if (!channel) {
+    console.warn(`Could not find a #forum-activity channel for broadcast.`);
+    return;
+  }
 
   const content = `@here :robot: User ${config.HOST}${
     user.url
@@ -182,8 +207,13 @@ export const broadcastUserJoin = async (user) => {
   }
 
   const channel = await client
-    .listGuildChannels(config.DISCORD_GUILD_ID)
+    .listGuildChannels(config.DISCORD_GUILD_ID!)
     .then((cs) => cs.find((c) => c.name === "forum-activity"));
+
+  if (!channel) {
+    console.warn(`Could not find a #forum-activity channel for broadcast.`);
+    return;
+  }
 
   // Broadcast
   await client.createMessage(channel.id, {
@@ -207,7 +237,7 @@ export const broadcastIntroTopic = async (user, topic) => {
   }
 
   const channel = await client
-    .listGuildChannels(config.DISCORD_GUILD_ID)
+    .listGuildChannels(config.DISCORD_GUILD_ID!)
     .then((cs) => cs.find((c) => c.name === "general"));
 
   if (!channel) {
@@ -227,7 +257,7 @@ export const broadcastIntroTopic = async (user, topic) => {
 
 ////////////////////////////////////////////////////////////
 
-export const broadcastBioUpdate = async (user, bioMarkup) => {
+export async function broadcastBioUpdate(user, bioMarkup) {
   assert(user);
   assert(typeof bioMarkup === "string");
 
@@ -242,7 +272,7 @@ export const broadcastBioUpdate = async (user, bioMarkup) => {
   }
 
   const channel = await client
-    .listGuildChannels(config.DISCORD_GUILD_ID)
+    .listGuildChannels(config.DISCORD_GUILD_ID!)
     .then((cs) => cs.find((c) => c.name === "forum-activity"));
 
   if (!channel) {
@@ -256,4 +286,4 @@ export const broadcastBioUpdate = async (user, bioMarkup) => {
 Snippet: \`${bioMarkup.slice(0, 140)}\`
 `,
   });
-};
+}

@@ -82,6 +82,7 @@
     "@types/react-dom": "^19.1.6",
     "@types/vinyl-paths": "^5.0.0",
     "del": "^8.0.0",
+    "discord-api-types": "^0.38.12",
     "gulp": "^5.0.1",
     "gulp-concat": "^2.6.1",
     "gulp-cssnano": "^2.1.3",

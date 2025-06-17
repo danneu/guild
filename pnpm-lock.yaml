@@ -162,6 +162,9 @@ importers:
       del:
         specifier: ^8.0.0
         version: 8.0.0
+      discord-api-types:
+        specifier: ^0.38.12
+        version: 0.38.12
       gulp:
         specifier: ^5.0.1
         version: 5.0.1
