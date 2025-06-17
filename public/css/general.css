@@ -401,13 +401,23 @@ blockquote footer {
   border-bottom-width: 2px;
 }
 
+/* bootstrap table behavior replays 
+
+since we're not using bootstrap's .table class anymore, we'll
+have to add back the good bits of its behavior to our .bb-table class.
+*/
+.bb-table { 
+  width: 100%;
+}
+.bb-table th, .bb-table td {
+  vertical-align: top;
+}
+/* end bootstrap table behavior replays */
+
 .bb-table .bb-table {
     /* undo .table .table white bg */
     background-color: inherit;
 }
-.bb-table { 
-    width: 100%;
- }
 .bb-table td { padding: 8px; }
 .bb-table tr.bb-active td,
 .bb-table td.bb-active {background-color: #666 !important;}
