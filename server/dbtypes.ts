@@ -185,3 +185,30 @@ export type DbTag = {
   description: string | null;
   created_at: Date;
 };
+
+export type DbPost = {
+  id: number;
+  text: string | null;
+  markup: string | null;
+  html: string | null;
+  legacy_html: string | null;
+  topic_id: number;
+  user_id: number;
+  created_at: Date;
+  updated_at: Date | null;
+  is_roleplay: boolean;
+  type: string;
+  ip_address: string | null;
+  is_hidden: boolean;
+  rev_count: number;
+  idx: number | null;
+};
+
+export type DbStatus = {
+  id: number;
+  user_id: number;
+  text: string;
+  html: string;
+  liked_user_ids: number[];
+  created_at: Date;
+};
