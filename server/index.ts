@@ -37,7 +37,7 @@ import guildbot from "./guildbot.js";
 
 // ip address: get it from cloudflare header
 app.use((ctx: Context, next: Next) => {
-  ctx.ip = ctx.get("cf-connecting-ip") || ctx.ip;
+  ctx.request.ip = ctx.get("cf-connecting-ip") || ctx.ip;
   return next();
 });
 
