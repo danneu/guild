@@ -4464,7 +4464,13 @@ export const unnukeUser = async function (userId) {
 //
 // Takes an object to prevent mistakes.
 // { spambot: UserId, nuker: UserId  }
-export const nukeUser = async function ({ spambot, nuker }) {
+export async function nukeUser({
+  spambot,
+  nuker,
+}: {
+  spambot: number;
+  nuker: number;
+}) {
   assert(Number.isInteger(spambot));
   assert(Number.isInteger(nuker));
 
@@ -4477,6 +4483,9 @@ export const nukeUser = async function ({ spambot, nuker }) {
       text: `UPDATE topics SET is_hidden = true WHERE user_id = $1`,
       values: [spambot],
     },
+    // FIXME: This triggers the post_hidden trigger on EVERY post that we hide.
+    // It would be better to delete the trigger and instead call some bulk update db fn
+    // every time we hide posts.
     hidePosts: {
       text: `UPDATE posts SET is_hidden = true WHERE user_id = $1`,
       values: [spambot],
@@ -4491,27 +4500,36 @@ export const nukeUser = async function ({ spambot, nuker }) {
     // TODO: Undo this in `unnukeUser`.
     //
     // FIXME: This is too slow.
-    updateTopics: {
-      text: `
-      UPDATE topics
-      SET
-        latest_post_id = sub2.latest_post_id
-      FROM (
-        SELECT sub.topic_id, MAX(posts.id) latest_post_id
-        FROM posts
-        JOIN (
-          SELECT t.id topic_id
-          FROM posts p
-          JOIN topics t ON p.id = t.latest_post_id
-          WHERE p.user_id = $1
-        ) sub on posts.topic_id = sub.topic_id
-        WHERE posts.is_hidden = false
-        GROUP BY sub.topic_id
-      ) sub2
-      WHERE id = sub2.topic_id
-    `,
-      values: [spambot],
-    },
+    //   updateTopics: {
+    //     text: `
+    //   UPDATE topics t
+    //   SET
+    //     latest_post_id = latest_posts.id,
+    //     latest_post_at = latest_posts.created_at
+    //   FROM (
+    //     -- Find the new latest post for each affected topic
+    //     SELECT DISTINCT ON (affected.topic_id)
+    //       affected.topic_id,
+    //       p.id,
+    //       p.created_at
+    //     FROM (
+    //       -- Get topics where the nuked user has the latest post
+    //       SELECT t.id as topic_id
+    //       FROM topics t
+    //       JOIN posts p ON t.latest_post_id = p.id
+    //       WHERE p.user_id = $1
+    //     ) affected
+    //     JOIN posts p ON p.topic_id = affected.topic_id
+    //     -- Don't exclude the nuked user's posts - they're already hidden
+    //     ORDER BY
+    //       affected.topic_id,
+    //       p.is_hidden ASC,     -- Prefer non-hidden posts
+    //       p.created_at DESC    -- Get the most recent
+    //   ) latest_posts
+    //   WHERE t.id = latest_posts.topic_id
+    // `,
+    //     values: [spambot],
+    //   },
   };
 
   return pool
@@ -4520,7 +4538,7 @@ export const nukeUser = async function ({ spambot, nuker }) {
       await client.query(sqls.hideTopics);
       await client.query(sqls.hidePosts);
       await client.query(sqls.insertNukelist);
-      //await client.query(sqls.updateTopics)
+      // await client.query(sqls.updateTopics);
     })
     .catch((err) => {
       if (err.code === "23505") {
@@ -4528,7 +4546,7 @@ export const nukeUser = async function ({ spambot, nuker }) {
       }
       throw err;
     });
-};
+}
 
 ////////////////////////////////////////////////////////////
 

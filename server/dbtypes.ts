@@ -79,12 +79,29 @@ export type DbSession = {
 export type DbTopic = {
   id: number;
   title: string;
-  slug: string;
-  forum_id: number;
   user_id: number;
+  forum_id: number;
+  created_at: Date;
+  is_roleplay: boolean;
   co_gm_ids: number[];
-  banned_ids: number[];
-  join_status: string;
+  join_status: "jump-in" | "apply" | "full" | null;
+  is_hidden: boolean;
+  is_closed: boolean;
+  is_sticky: boolean;
+  // Counter cache
+  posts_count: number;
+  ic_posts_count: number;
+  ooc_posts_count: number;
+  char_posts_count: number;
+  // Moving
+  moved_from_forum_id: number | null;
+  moved_at: Date | null;
+  latest_post_at: Date | null;
+
+  latest_post_id: number | null;
+  latest_ic_post_id: number | null;
+  latest_ooc_post_id: number | null;
+  latest_char_post_id: number | null;
 };
 
 export type DbVm = {

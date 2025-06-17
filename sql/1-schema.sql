@@ -180,8 +180,6 @@ CREATE INDEX ON posts (ip_address);
 CREATE UNIQUE INDEX posts_topic_id_type_idx_idx ON posts (topic_id, type, idx DESC);
 
 -- Last post cache
-ALTER TABLE forums ADD COLUMN latest_post_id
-  int NULL REFERENCES posts(id)  ON DELETE SET NULL;
 ALTER TABLE topics ADD COLUMN latest_post_id
   int NULL REFERENCES posts(id)  ON DELETE SET NULL;
 ALTER TABLE topics ADD COLUMN latest_ic_post_id
