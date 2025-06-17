@@ -347,17 +347,6 @@ app.use(nunjucksRender("views", nunjucksOptions));
 
 app.use(bouncer.middleware());
 
-// tell typescript that ctx.response.back(url) exists
-// new in koa v3 but @types/koa are old
-declare module "koa" {
-  interface Response {
-    back(url: string): void;
-  }
-  interface Context {
-    back(url: string): void;
-  }
-}
-
 app.use(async (ctx: Context, next: Next) => {
   try {
     await next();

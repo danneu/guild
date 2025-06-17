@@ -4432,7 +4432,7 @@ export const updateConvoFolder = async function (userId, convoId, folder) {
 
 // Remember to also approve an unnuked user. Didn't do it
 // here because i don't currently pass in unnuker_id
-export const unnukeUser = async function (userId) {
+export async function unnukeUser(userId: number) {
   assert(Number.isInteger(userId));
   const sqls = {
     unbanUser: {
@@ -4443,6 +4443,7 @@ export const unnukeUser = async function (userId) {
       text: `UPDATE topics SET is_hidden = false WHERE user_id = $1`,
       values: [userId],
     },
+    // Triggers post_hidden on every post that we unhide which updates each topic's latest post
     unhidePosts: {
       text: `UPDATE posts SET is_hidden = false WHERE user_id = $1`,
       values: [userId],
@@ -4458,7 +4459,7 @@ export const unnukeUser = async function (userId) {
     await client.query(sqls.unhidePosts);
     await client.query(sqls.deleteFromNukelist);
   });
-};
+}
 
 // In one fell motion, bans a user, hides all their stuff.
 //
@@ -4551,7 +4552,7 @@ export async function nukeUser({
 ////////////////////////////////////////////////////////////
 
 // Delete topic ban for given topic+user combo
-export const deleteUserTopicBan = async (topicId, userId) => {
+export async function deleteUserTopicBan(topicId: number, userId: number) {
   assert(Number.isInteger(topicId));
   assert(Number.isInteger(userId));
 
@@ -4563,7 +4564,7 @@ export const deleteUserTopicBan = async (topicId, userId) => {
   `,
     [topicId, userId],
   );
-};
+}
 
 export const deleteTopicBan = async (banId) => {
   assert(Number.isInteger(banId));
