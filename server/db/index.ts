@@ -140,7 +140,10 @@ export async function updateTopicStatus(
 // Same as findTopic but takes a userid so that it can return a topic
 // with an is_subscribed boolean for the user
 // Keep in sync with db.findTopicById
-export const findTopicWithIsSubscribed = async function (userId: number, topicId: number) {
+export const findTopicWithIsSubscribed = async function (
+  userId: number,
+  topicId: number,
+) {
   debug("[findTopicWithIsSubscribed] userId %s, topicId %s:", userId, topicId);
 
   return pool
@@ -572,8 +575,7 @@ export async function findUsersByUnames(unames: string[]) {
 
 ////////////////////////////////////////////////////////////
 
-// If toUsrIds is not given, then it's a self-convo
-// TODO: Wrap in transaction, Document the args of this fn
+// If toUserIds is not given, then it's a self-convo
 export async function createConvo(
   pgClient: PgClientInTransaction,
   args: {
@@ -587,11 +589,11 @@ export async function createConvo(
 ) {
   debug("[createConvo] args: ", args);
   assert(pgClient._inTransaction, "pgClient must be in a transaction");
-  assert(_.isNumber(args.userId));
-  assert(_.isUndefined(args.toUserIds) || _.isArray(args.toUserIds));
-  assert(_.isString(args.title));
-  assert(_.isString(args.markup));
-  assert(_.isString(args.html));
+  assert(typeof args.userId === "number");
+  assert(Array.isArray(args.toUserIds));
+  assert(typeof args.title === "string");
+  assert(typeof args.markup === "string");
+  assert(typeof args.html === "string");
 
   // Create convo
   const convo = await pgClient
@@ -605,31 +607,20 @@ export async function createConvo(
     )
     .then(exactlyOneRow);
 
-  // Insert participants and the PM in parallel
+  // Bulk-insert all participants
+  const participantIds = [...new Set([args.userId, ...args.toUserIds])];
+  await pgClient.query(
+    `
+    INSERT INTO convos_participants (convo_id, user_id)
+    SELECT $1, unnest($2::int[])
+  `,
+    [convo.id, participantIds],
+  );
 
-  const tasks = args.toUserIds
-    .map((toUserId) => {
-      // insert each receiving participant
-      return pgClient.query(
-        `
-        INSERT INTO convos_participants (convo_id, user_id)
-        VALUES ($1, $2)
-      `,
-        [convo.id, toUserId],
-      );
-    })
-    .concat([
-      // insert the sending participant
-      pgClient.query(
-        `
-        INSERT INTO convos_participants (convo_id, user_id)
-        VALUES ($1, $2)
-      `,
-        [convo.id, args.userId],
-      ),
-      // insert the PM
-      pgClient.query(
-        `
+  // insert the PM
+  const pm = await pgClient
+    .query(
+      `
         INSERT INTO pms
           (convo_id, user_id, ip_address, markup, html, idx)
         VALUES (
@@ -639,14 +630,12 @@ export async function createConvo(
         )
         RETURNING *
       `,
-        [convo.id, args.userId, args.ipAddress, args.markup, args.html],
-      ),
-    ]);
-
-  const results = await Promise.all(tasks);
+      [convo.id, args.userId, args.ipAddress, args.markup, args.html],
+    )
+    .then(exactlyOneRow);
 
   // Assoc firstPm to the returned convo
-  (convo as any).firstPm = belt.last(results)!.rows[0];
+  (convo as any).firstPm = pm;
   convo.pms_count++; // This is a stale copy so we need to manually inc
   return convo;
 }
