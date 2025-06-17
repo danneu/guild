@@ -12,8 +12,8 @@ if (config.NODE_ENV === "production") {
   app.proxy = true;
 }
 
-import convert from "koa-convert";
-import koaBetterStatic from "koa-better-static";
+import koaBetterStatic from "@ladjs/koa-better-static";
+import koaSend from "koa-send";
 import koaLogger from "koa-logger";
 import { koaBody } from "koa-body";
 
@@ -38,22 +38,79 @@ import guildbot from "./guildbot.js";
 
 // static assets
 
-app.use(
-  convert(
-    koaBetterStatic("public", {
-      maxage: 1000 * 60 * 60 * 24 * 365,
-      gzip: false,
-    }),
-  ),
-);
+// Upon app boot, check for compiled assets
+// in the `dist` folder. If found, attach their
+// paths to the context so the view layer can render
+// them.
+//
+// Example value of `dist`:
+// { css: 'all-ab42cf1.css', js: 'all-d181a21.js' }'
+const dist: { css: string; js: string } | undefined = (() => {
+  const manifestPath = "./dist/rev-manifest.json";
+  let body: string;
+  try {
+    body = fs.readFileSync(manifestPath, "utf8");
+  } catch (err: any) {
+    if (err.code === "ENOENT") {
+      console.log("assets not compiled (dist/rev-manifest.json not found)");
+      return;
+    } else {
+      throw err;
+    }
+  }
+  const manifest = JSON.parse(body);
+  const dist = {
+    css: manifest["all.css"],
+    js: manifest["all.js"],
+  };
+  console.log("dist set", dist);
+  return dist;
+})();
+
+app.use(async (ctx: Context, next: Next) => {
+  ctx.dist = dist;
+  return next();
+});
 
 app.use(
-  convert(
-    koaBetterStatic("dist", {
-      maxage: 1000 * 60 * 60 * 24 * 365,
-      gzip: false,
-    }),
-  ),
+  koaBetterStatic("public", {
+    maxage: 1000 * 60 * 60 * 24 * 365,
+    gzip: false,
+  }),
+);
+
+// Handle blue/green deployment issue where browser requests asset file
+// that doesn't exist anymore. We'll just serve them the current file.
+if (dist) {
+  const ASSET_FILE_REGEX = /\/all-[0-9a-f]+\.(css|js)$/;
+
+  const distPath = join(__dirname, "..", "dist");
+
+  app.use(async (ctx: Context, next: Next) => {
+    await next();
+    if (
+      ctx.response.status === 404 &&
+      ASSET_FILE_REGEX.test(ctx.request.path)
+    ) {
+      const options = {
+        root: distPath,
+      };
+      // serve current css file
+      if (ctx.request.path.endsWith(".css")) {
+        return koaSend(ctx, dist.css, options);
+      } else if (ctx.request.path.endsWith(".js")) {
+        return koaSend(ctx, dist.js, options);
+      } else {
+      }
+    }
+  });
+}
+
+app.use(
+  koaBetterStatic("dist", {
+    maxage: 1000 * 60 * 60 * 24 * 365,
+    gzip: false,
+  }),
 );
 
 import koaConditionalGet from "koa-conditional-get";
@@ -100,6 +157,7 @@ import cache3 from "./cache3";
 import makeAgo from "./ago";
 import protectCsrf from "./middleware/protect-csrf";
 import { pool, withPgPoolTransaction } from "./db/util";
+import { join } from "path";
 
 app.use(middleware.methodOverride());
 
@@ -112,60 +170,9 @@ app.use(
   ]),
 );
 
-// Catch and log all errors that bubble up to koa
-// app.on('error', function(err) {
-//   log.error(err, 'Error');
-//   console.error('Error:', err, err.stack);
-// });
-
-// app.use(function*(next) {
-//   var start = Date.now();
-//   ctx.log = log.child({ req_id: uuid.v1() });  // time-based uuid
-//   ctx.log.info({ req: ctx.request }, '--> %s %s', ctx.method, ctx.path);
-//   await next;
-//   var diff = Date.now() - start;
-//   ctx.log.info({ ms: diff, res: ctx.response },
-//                 '<-- %s %s %s %s',
-//                 ctx.method, ctx.path, ctx.status, diff + 'ms');
-// });
-
-// Upon app boot, check for compiled assets
-// in the `dist` folder. If found, attach their
-// paths to the context so the view layer can render
-// them.
-//
-// Example value of `dist`:
-// { css: 'all-ab42cf1.css', js: 'all-d181a21.js' }'
-const dist = (() => {
-  const manifestPath = "./dist/rev-manifest.json";
-  let body;
-  try {
-    body = fs.readFileSync(manifestPath, "utf8");
-  } catch (err: any) {
-    if (err.code === "ENOENT") {
-      console.log("assets not compiled (dist/rev-manifest.json not found)");
-      return;
-    } else {
-      throw err;
-    }
-  }
-  const manifest = JSON.parse(body);
-  const dist = {
-    css: manifest["all.css"],
-    js: manifest["all.js"],
-  };
-  console.log("dist set", dist);
-  return dist;
-})();
-
 // Only allow guild to be iframed from same domain
 app.use(async (ctx: Context, next: Next) => {
   ctx.set("X-Frame-Options", "SAMEORIGIN");
-  return next();
-});
-
-app.use(async (ctx: Context, next: Next) => {
-  ctx.dist = dist;
   return next();
 });
 

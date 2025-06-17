@@ -2012,7 +2012,8 @@ export async function createSubNotificationsBulk(
     ON CONFLICT (to_user_id, topic_id) WHERE type = 'TOPIC_SUB'
       DO UPDATE
       SET count = COALESCE(notifications.count, 0) + 1,
-          meta = notifications.meta || EXCLUDED.meta
+          meta = notifications.meta || EXCLUDED.meta,
+          updated_at = CURRENT_TIMESTAMP
     RETURNING *
     `,
       [fromUserIds, toUserIds, topicIds, metas],
