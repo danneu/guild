@@ -1,5 +1,5 @@
 // 3rd
-import Discord from "discord.js";
+import { Client as DiscordClient, GatewayIntentBits } from "discord.js";
 // 1st
 import * as config from "./config";
 import * as dice from "./dice";
@@ -22,26 +22,34 @@ export default {
 
     // Ensure only one bot is running
 
-    const client = getClient();
-    client.connect();
+    const pgClient = getClient();
+    pgClient.connect();
 
-    const { lock } = await client
+    const { lock } = await pgClient
       .query<{ lock: boolean }>(`SELECT pg_try_advisory_lock(1337) "lock"`)
       .then(exactlyOneRow);
 
     if (!lock) {
       // Release the losing clients
-      client.end();
+      pgClient.end();
       return;
     }
 
-    const bot = new Discord.Client();
-
-    bot.on("ready", () => {
-      console.log(`Logged in as ${bot.user.username}!`);
+    const bot = new DiscordClient({
+      intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers,
+      ],
     });
 
-    bot.on("message", (msg) => {
+    bot.on("ready", () => {
+      console.log(`Logged in as ${bot.user?.username}!`);
+    });
+
+    bot.on("messageCreate", (msg) => {
+      console.log("GuildBot sees message:", msg.content);
       if (msg.content === "!ping") {
         msg.reply("pong");
         return;
