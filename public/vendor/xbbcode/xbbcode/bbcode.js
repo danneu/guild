@@ -18,14 +18,20 @@ if (isServer) {
   cache3 = require("./cache3").default;
 }
 
-function escapeHtml(unsafe) {
-  return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+const escapeHtml = (() => {
+  const escapeMap = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  };
+  const escapeRegex = /[&<>"']/g;
+
+  return function escapeHtml(unsafe) {
+    return unsafe.replace(escapeRegex, (char) => escapeMap[char]);
+  };
+})();
 
 // String -> Maybe String
 function extractYoutubeId(url) {
