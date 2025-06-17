@@ -32,11 +32,11 @@ const PW_FORUMS = [49, 50, 51];
 // access) I don't want to include conmods. But I would still consider them staff.
 // I think I should replace this function with explicitly inlining the
 // [x, y, z].includes(role) call and removing this function.
-export const isStaffRole = function isStaffRole(role) {
+export const isStaffRole = function isStaffRole(role: string) {
   return ["mod", "smod", "admin"].includes(role);
 };
 
-export const isTopicGm = (user, topic) => {
+export const isTopicGm = (user: any, topic: any) => {
   assert(topic);
   assert(Array.isArray(topic.co_gm_ids));
   if (!user) return false;
@@ -47,7 +47,7 @@ export const isTopicGm = (user, topic) => {
 
 // TODO: Actually write tests for these
 // TODO: Implement rules for all rules, not just member and admin
-export const can = function (user, action, target) {
+export const can = function (user: any, action: CanAction, target?: any) {
   var result = _can(user, action, target);
   debug(
     "[cancan] %s %s %s %s %s: %s",
@@ -60,7 +60,11 @@ export const can = function (user, action, target) {
   );
   return result;
 };
-function _can(user, action, target: any | undefined = undefined) {
+function _can(
+  user: any,
+  action: CanAction,
+  target: any | undefined = undefined,
+) {
   switch (action) {
     case "ACCESS_TOPIC_MODKIT": // target is topic
       if (!user) return false;
@@ -742,6 +746,97 @@ function _can(user, action, target: any | undefined = undefined) {
   }
 }
 
-export const cannot = function (user, action, target) {
+export const cannot = function (user: any, action: CanAction, target?: any) {
   return !can(user, action, target);
 };
+
+export const CanAction = {
+  // Topic Management
+  ACCESS_TOPIC_MODKIT: "ACCESS_TOPIC_MODKIT",
+  UPDATE_TOPIC: "UPDATE_TOPIC",
+  UPDATE_TOPIC_JOIN_STATUS: "UPDATE_TOPIC_JOIN_STATUS",
+  UPDATE_TOPIC_TAGS: "UPDATE_TOPIC_TAGS",
+  UPDATE_TOPIC_CO_GMS: "UPDATE_TOPIC_CO_GMS",
+  UPDATE_TOPIC_TITLE: "UPDATE_TOPIC_TITLE",
+  CREATE_TOPIC: "CREATE_TOPIC",
+  READ_TOPIC: "READ_TOPIC",
+  MOVE_TOPIC: "MOVE_TOPIC",
+  STICK_TOPIC: "STICK_TOPIC",
+  UNSTICK_TOPIC: "UNSTICK_TOPIC",
+  HIDE_TOPIC: "HIDE_TOPIC",
+  UNHIDE_TOPIC: "UNHIDE_TOPIC",
+  CLOSE_TOPIC: "CLOSE_TOPIC",
+  OPEN_TOPIC: "OPEN_TOPIC",
+  SUBSCRIBE_TOPIC: "SUBSCRIBE_TOPIC",
+  UNSUBSCRIBE_TOPIC: "UNSUBSCRIBE_TOPIC",
+  TOPIC_BAN: "TOPIC_BAN",
+
+  // Post Management
+  CREATE_POST: "CREATE_POST",
+  READ_POST: "READ_POST",
+  UPDATE_POST: "UPDATE_POST",
+  HIDE_POST: "HIDE_POST",
+  UNHIDE_POST: "UNHIDE_POST",
+  RATE_POST: "RATE_POST",
+
+  // User Management
+  UPDATE_USER: "UPDATE_USER",
+  UPDATE_USER_ROLE: "UPDATE_USER_ROLE",
+  UPDATE_USER_CUSTOM_TITLE: "UPDATE_USER_CUSTOM_TITLE",
+  DELETE_USER: "DELETE_USER",
+  READ_USER_ONLINE_STATUS: "READ_USER_ONLINE_STATUS",
+  READ_USER_PM_SENT_COUNT: "READ_USER_PM_SENT_COUNT",
+  READ_USER_RATINGS_TABLE: "READ_USER_RATINGS_TABLE",
+  READ_USER_IP: "READ_USER_IP",
+  READ_USER_LIST: "READ_USER_LIST",
+  NUKE_USER: "NUKE_USER",
+  CHANGE_UNAME: "CHANGE_UNAME",
+
+  // Status Management
+  CREATE_USER_STATUS: "CREATE_USER_STATUS",
+  DELETE_USER_STATUS: "DELETE_USER_STATUS",
+  MANAGE_USER_STATUS: "MANAGE_USER_STATUS",
+  LIKE_STATUS: "LIKE_STATUS",
+
+  // Trophy System
+  MANAGE_TROPHY_SYSTEM: "MANAGE_TROPHY_SYSTEM",
+  UPDATE_TROPHY: "UPDATE_TROPHY",
+  CREATE_TROPHY_GROUP: "CREATE_TROPHY_GROUP",
+  UPDATE_TROPHY_GROUP: "UPDATE_TROPHY_GROUP",
+
+  // Private Messages & Conversations
+  CREATE_CONVO: "CREATE_CONVO",
+  READ_CONVO: "READ_CONVO",
+  DELETE_CONVO: "DELETE_CONVO",
+  CREATE_PM: "CREATE_PM",
+  READ_PM: "READ_PM",
+  UPDATE_PM: "UPDATE_PM",
+
+  // Visitor Messages
+  CREATE_VM: "CREATE_VM",
+  DELETE_VM: "DELETE_VM",
+
+  // Forums & Categories
+  READ_FORUM: "READ_FORUM",
+  READ_CATEGORY: "READ_CATEGORY",
+  LEXUS_LOUNGE: "LEXUS_LOUNGE",
+
+  // Notifications
+  DELETE_NOTIFICATION: "DELETE_NOTIFICATION",
+
+  // Images
+  MANAGE_IMAGES: "MANAGE_IMAGES",
+  UPLOAD_IMAGE: "UPLOAD_IMAGE",
+
+  // Dice/Campaign System
+  CREATE_CAMPAIGN: "CREATE_CAMPAIGN",
+  READ_CAMPAIGN: "READ_CAMPAIGN",
+  UPDATE_CAMPAIGN: "UPDATE_CAMPAIGN",
+  CREATE_ROLL: "CREATE_ROLL",
+
+  // Chat
+  READ_CHATLOGS: "READ_CHATLOGS",
+} as const;
+
+// Type for the action strings
+export type CanAction = (typeof CanAction)[keyof typeof CanAction];
