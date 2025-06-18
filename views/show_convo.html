@@ -262,9 +262,7 @@ $(function() {
       $reply_textarea.focus().val('').val(prev_content + padding + quote_markup + '\n');
       $reply_textarea.scrollTop($reply_textarea[0].scrollHeight);
 
-      $('html, body').animate({
-        scrollTop: $reply_textarea.offset().top
-      }, 100);
+      window.scrollTo({ top: $reply_textarea.offset().top, behavior: 'smooth' });
 
     });
   });
@@ -341,10 +339,8 @@ $(function() {
         // .markdown() escapes html entities.
         $post_body.find('textarea').val(post_text)
 
-        // Scroll to editor over 500ms so user can re-orient themselves
-        $('body').animate({
-            scrollTop: $post_body.offset().top
-        }, 500);
+        // Smooth-scroll to editor so user can re-orient themselves
+        window.scrollTo({ top: $post_body.offset().top, behavior: 'smooth' });
 
         $cancel_btn.insertAfter(
           $('#post-' + post_id + ' .md-footer button[data-handler="cmdSave"]')
