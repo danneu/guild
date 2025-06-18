@@ -51,6 +51,14 @@ async function resetDb() {
     console.log("Reset 3-drop-plv8.sql");
   })();
 
+  // Run 4-better-notif-indexes.sql
+  console.log("-- 4-better-notif-indexes.sql");
+  await (async () => {
+    const str = slurpSqlSync("4-better-notif-indexes.sql");
+    await pool.query(str);
+    console.log("Reset 4-better-notif-indexes.sql");
+  })();
+
   // Seed data
   await (async () => {
     const str = slurpSqlSync("dev_seeds.sql");

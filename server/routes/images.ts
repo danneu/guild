@@ -21,7 +21,7 @@ async function loadUser(ctx: Context, next: Next) {
   return next();
 }
 
-async function loadImage(ctx: Context, next) {
+async function loadImage(ctx: Context, next: Next) {
   ctx.assert(belt.isValidUuid(ctx.params.image_id), 404);
   const image = await db.images.getImage(ctx.params.image_id);
   pre.presentImage(image);
@@ -30,7 +30,7 @@ async function loadImage(ctx: Context, next) {
   return next();
 }
 
-async function loadAlbum(ctx: Context, next) {
+async function loadAlbum(ctx: Context, next: Next) {
   ctx.assert(/^[0-9]+$/.test(ctx.params.album_id), 404);
   const album = await db.images.getAlbum(ctx.params.album_id);
   pre.presentAlbum(album);
@@ -174,14 +174,14 @@ router.post("/users/:user_slug/images", loadUser, async (ctx: Context) => {
 
   // INSERT
 
-  await db.images.insertImage(
-    uuid,
-    album.id,
-    ctx.state.user.id,
-    imageResult.publicUrl,
-    "image/avif",
+  await db.images.insertImage({
+    imageId: uuid,
+    albumId: album.id,
+    userId: ctx.state.user.id,
+    src: imageResult.publicUrl,
+    mime: "image/avif",
     description,
-  );
+  });
 
   // RESPOND
 
@@ -256,11 +256,11 @@ router.post("/users/:user_slug/albums", loadUser, async (ctx: Context) => {
   ctx
     .validateBody("markup")
     .isLength(0, 10000, "Description cannot be more than 10k chars");
-  const album = await db.images.insertAlbum(
-    ctx.state.user.id,
-    ctx.vals.title,
-    ctx.vals.markup,
-  );
+  const album = await db.images.insertAlbum({
+    userId: ctx.state.user.id,
+    title: ctx.vals.title,
+    markup: ctx.vals.markup,
+  });
   pre.presentAlbum(album);
   ctx.flash = { message: ["success", "Album created"] };
   ctx.redirect(album.url);

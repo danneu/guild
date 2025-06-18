@@ -12,7 +12,7 @@ import { isValidUuid } from "../belt";
 ////////////////////////////////////////////////////////////
 
 // hits is array of {user_id, ip_address, track}
-export const insertHits = async (hits) => {
+export const insertHits = async (hits: Array<{ user_id: number; ip_address: string; track: string }>) => {
   debug("[insertHits] hits: %j", hits);
 
   hits.forEach((hit) => {
@@ -29,7 +29,7 @@ export const insertHits = async (hits) => {
 ////////////////////////////////////////////////////////////
 
 // TODO: Search within last 30 days or so.
-export const findAltsFromRequest = async (ipAddress, track) => {
+export const findAltsFromRequest = async (ipAddress: string, track: string) => {
   debug(`[findAltsFromRequest] ipAddress=%j track=%j`, ipAddress, track);
   assert(typeof ipAddress === "string");
   assert(isValidUuid(track));
@@ -104,7 +104,7 @@ export const findAltsFromRequest = async (ipAddress, track) => {
 // TODO: Search within last 30 days or so.
 //
 // http://sqlfiddle.com/#!17/e3e74/1/0
-export const findAltsFromUserId = async (userId) => {
+export const findAltsFromUserId = async (userId: number) => {
   debug(`[findAltsFromUserId] userId=%j`, userId);
   assert(Number.isInteger(userId));
 

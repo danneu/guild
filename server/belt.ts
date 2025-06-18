@@ -430,14 +430,20 @@ export const autolink = function (text) {
 };
 
 // String -> String
-export const escapeHtml = function (unsafe) {
-  return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-};
+export const escapeHtml = (() => {
+  const escapeMap: Record<string, string> = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  };
+  const escapeRegex = /[&<>"']/g;
+
+  return function escapeHtml(unsafe: string): string {
+    return unsafe.replace(escapeRegex, (char) => escapeMap[char]!);
+  };
+})();
 
 // Apparently the Expires date string needs to have hyphens between the dd-mmm-yyyy.
 // Koa's underlying cookie library just uses .toUTCString() which does not
@@ -599,3 +605,7 @@ export const withinGhostRange = (() => {
     return Date.now() - lastOnlineAt.getTime() < hours24;
   };
 })();
+
+export function last<T>(xs: T[]): T | undefined {
+  return xs.length > 0 ? xs[xs.length - 1] : undefined;
+}

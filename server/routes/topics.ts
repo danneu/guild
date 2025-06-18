@@ -1,16 +1,15 @@
-"use strict";
 // 3rd
 import Router from "@koa/router";
 // import createDebug from 'debug'
 // const debug = createDebug('app:routes:topics')
 // 1st
-// import * as cancan from '../cancan'
 import * as db from "../db";
 import * as pre from "../presenters";
 import * as config from "../config";
 import bbcode from "../bbcode";
 import { Context } from "koa";
 import { pool, withPgPoolTransaction } from "../db/util";
+import z from "zod";
 
 ////////////////////////////////////////////////////////////
 
@@ -23,47 +22,47 @@ const router = new Router();
 // Body:
 // - markup
 router.post("/topics/:topicId/:postType/0th", async (ctx: Context) => {
-  const { postType } = ctx.params;
-  ctx.assert(["ic", "ooc", "char"].includes(postType), 404);
+  console.log("params is", ctx.params);
+  const ParamsSchema = z.object({
+    topicId: z.string().transform((val) => parseInt(val, 10)),
+    postType: z.enum(["ic", "ooc", "char"]),
+  });
+  const params = ParamsSchema.parse(ctx.params);
 
-  const topicId = Number.parseInt(ctx.params.topicId, 10);
-  ctx.assert(!Number.isNaN(topicId), 404);
-
-  const topic = await db.findTopicById(topicId).then(pre.presentTopic);
+  const topic = await db.findTopicById(params.topicId).then(pre.presentTopic);
   ctx.assert(topic, 404);
 
   ctx.assertAuthorized(ctx.currUser, "UPDATE_TOPIC", topic);
 
-  ctx
-    .validateBody("markup")
-    .isString("Post is required")
-    .trim()
-    .isLength(
-      config.MIN_POST_LENGTH,
-      config.MAX_POST_LENGTH,
-      "Post must be between " +
-        config.MIN_POST_LENGTH +
-        " and " +
-        config.MAX_POST_LENGTH +
-        " chars",
-    );
+  const BodySchema = z.object({
+    markup: z
+      .string({ message: "Post is required" })
+      .trim()
+      .min(config.MIN_POST_LENGTH, {
+        message: `Post must be at least ${config.MIN_POST_LENGTH} chars`,
+      })
+      .max(config.MAX_POST_LENGTH, {
+        message: `Post must be at most ${config.MAX_POST_LENGTH} chars`,
+      }),
+  });
+  const body = BodySchema.parse(ctx.request.body);
 
-  const redirectTo = `${topic.url}/${postType}`;
+  const redirectTo = `${topic.url}/${params.postType}`;
 
   await withPgPoolTransaction(pool, async (pgClient) => {
     await db
       .createPost(pgClient, {
         userId: ctx.currUser.id,
         ipAddress: ctx.ip,
-        markup: ctx.vals.markup,
-        html: bbcode(ctx.vals.markup),
+        markup: body.markup,
+        html: bbcode(body.markup),
         topicId: topic.id,
         isRoleplay: true,
-        type: postType,
+        type: params.postType,
         idx: -1,
       })
       .catch((err) => {
-        if (err.code === "23505") {
+        if (err instanceof Error && "code" in err && err.code === "23505") {
           ctx.flash = {
             message: ["danger", `0th post for this tab already exists.`],
           };
@@ -74,7 +73,9 @@ router.post("/topics/:topicId/:postType/0th", async (ctx: Context) => {
       });
   });
 
-  ctx.flash = { message: ["success", `Created 0th post for ${postType} tab`] };
+  ctx.flash = {
+    message: ["success", `Created 0th post for ${params.postType} tab`],
+  };
   ctx.redirect(redirectTo);
 });
 

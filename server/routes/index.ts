@@ -222,15 +222,68 @@ async function listRoleplays(
       "t.*",
       knex.raw("to_json(f.*) as forum"),
       knex.raw(`json_build_object('uname', u.uname, 'slug', u.slug) as user`),
-      // ... all the other CASE statements
+      knex.raw(`
+      CASE
+        WHEN ic_posts IS NULL THEN NULL
+        ELSE json_build_object(
+          'id', ic_posts.id,
+          'created_at', ic_posts.created_at
+        )
+      END as latest_ic_post
+    `),
+      knex.raw(`
+      CASE
+        WHEN ic_users IS NULL THEN NULL
+        ELSE json_build_object(
+          'uname', ic_users.uname,
+          'slug', ic_users.slug
+        )
+      END as latest_ic_user
+    `),
+      knex.raw(`
+      CASE
+        WHEN ooc_posts IS NULL THEN NULL
+        ELSE json_build_object(
+          'id', ooc_posts.id,
+          'created_at', ooc_posts.created_at
+        )
+      END as latest_ooc_post
+    `),
+      knex.raw(`
+      CASE
+        WHEN ooc_users IS NULL THEN NULL
+        ELSE json_build_object(
+          'uname', ooc_users.uname,
+          'slug', ooc_users.slug
+        )
+      END as latest_ooc_user
+    `),
+      knex.raw(`
+      CASE
+        WHEN char_posts IS NULL THEN NULL
+        ELSE json_build_object(
+          'id', char_posts.id,
+          'created_at', char_posts.created_at
+        )
+      END as latest_char_post
+    `),
+      knex.raw(`
+      CASE
+        WHEN char_users IS NULL THEN NULL
+        ELSE json_build_object(
+          'uname', char_users.uname,
+          'slug', char_users.slug
+        )
+      END as latest_char_user
+    `),
       knex.raw(`(
-                SELECT json_agg(tags.*)
-                FROM tags
-                JOIN tags_topics ON tags.id = tags_topics.tag_id
-                JOIN topics ON tags_topics.topic_id = topics.id
-                WHERE topics.id = t.id
-            ) as tags`),
+      SELECT json_agg(tags.*)
+      FROM tags
+      JOIN tags_topics ON tags.id = tags_topics.tag_id
+      WHERE tags_topics.topic_id = t.id
+    ) as tags`),
     )
+
     .from("t")
     .join("users as u", "t.user_id", "u.id")
     .join("forums as f", "t.forum_id", "f.id")

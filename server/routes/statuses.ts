@@ -17,7 +17,7 @@ const router = new Router();
 //
 
 // expects :status_id url param
-function loadStatus(key = "status_id") {
+function loadStatus(key: string = "status_id") {
   return async (ctx: Context, next: Next) => {
     ctx.state.status = await db.findStatusById(ctx.params[key]);
     ctx.assert(ctx.state.status, 404);

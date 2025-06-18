@@ -13,7 +13,7 @@ import { pool, maybeOneRow } from "./util";
 //
 // If user is ratelimited, it throws the JSDate that the ratelimit expires
 // that can be shown to the user (e.g. try again in 24 seconds)
-export const bump = async function (userId, ipAddress, maxDate) {
+export const bump = async function (userId: number, ipAddress: string, maxDate: Date) {
   debug(
     "[bump] userId=%j, ipAddress=%j, maxDate=%j",
     userId,
@@ -46,7 +46,7 @@ export const bump = async function (userId, ipAddress, maxDate) {
     // If it's too soon, throw the Date when ratelimit expires
     if (row && row.created_at > maxDate) {
       const elapsed = Date.now() - row.created_at.getTime(); // since ratelimit
-      const duration = Date.now() - maxDate; // ratelimit length
+      const duration = Date.now() - maxDate.getTime(); // ratelimit length
       const expires = new Date(Date.now() + duration - elapsed);
       throw expires;
     }

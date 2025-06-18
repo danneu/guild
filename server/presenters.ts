@@ -201,9 +201,11 @@ export function presentConvo(convo: DbConvo): PresentedConvo | null {
 export const presentPost = function (post) {
   if (!post) return null;
 
-  if (_.isString(post.created_at)) post.created_at = new Date(post.created_at);
+  if (typeof post.created_at === "string")
+    post.created_at = new Date(post.created_at);
   // updated_at is null if post hasn't been edited
-  if (_.isString(post.updated_at)) post.updated_at = new Date(post.updated_at);
+  if (typeof post.updated_at === "string")
+    post.updated_at = new Date(post.updated_at);
   if (post.updated_at) post.formattedUpdatedAt = formatDate(post.updated_at);
   post.url = "/posts/" + post.id;
   presentUser(post.user);

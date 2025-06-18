@@ -16,7 +16,7 @@ type PaginatorItem =
 // perPage is optional override, defaults to config
 //
 // Returns falsey if no paginator needs to be displayed
-export const makeFullPaginator = function (
+export function makeFullPaginator(
   currPage: number,
   totalItems: number,
   perPage: number = config.CONVOS_PER_PAGE,
@@ -79,4 +79,4 @@ export const makeFullPaginator = function (
   }
 
   return innerItems;
-};
+}

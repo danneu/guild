@@ -1,10 +1,11 @@
+import { DbUser, DbVm } from "../dbtypes.js";
 import { pool, maybeOneRow } from "./util.js";
 
 ////////////////////////////////////////////////////////////
 
-export const getVmById = async (id) => {
+export async function getVmById(id: number) {
   return pool
-    .query(
+    .query<DbVm & { to_user: DbUser; from_user: DbUser }>(
       `
     SELECT
       vms.*,
@@ -16,11 +17,11 @@ export const getVmById = async (id) => {
       [id],
     )
     .then(maybeOneRow);
-};
+}
 
 ////////////////////////////////////////////////////////////
 
-export const deleteVm = async (id) => {
+export async function deleteVm(id: number) {
   return pool.query(
     `
     DELETE FROM vms
@@ -28,11 +29,11 @@ export const deleteVm = async (id) => {
   `,
     [id],
   );
-};
+}
 
 ////////////////////////////////////////////////////////////
 
-export const deleteVmChildren = async (parentId) => {
+export async function deleteVmChildren(parentId: number) {
   return pool.query(
     `
     DELETE FROM vms
@@ -40,11 +41,11 @@ export const deleteVmChildren = async (parentId) => {
   `,
     [parentId],
   );
-};
+}
 
 ////////////////////////////////////////////////////////////
 
-export const deleteNotificationsForVmId = async (id) => {
+export async function deleteNotificationsForVmId(id: number) {
   return pool.query(
     `
     DELETE FROM notifications
@@ -52,4 +53,4 @@ export const deleteNotificationsForVmId = async (id) => {
   `,
     [id],
   );
-};
+}

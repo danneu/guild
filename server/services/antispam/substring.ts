@@ -16,13 +16,13 @@ function longestRepeatingSubstring(input: string): string {
 }
 
 // Returns the number of times substring appears in fullstring
-function countSubstringOccurrences(substring, fullstring) {
+function countSubstringOccurrences(substring: string, fullstring: string) {
   const count = (fullstring.match(new RegExp(substring, "g")) || []).length;
   return count;
 }
 
 // Returns { longest: String, count: Int, isSpam: Boolean }
-function analyze(fullstring) {
+function analyze(fullstring: string) {
   const longest = longestRepeatingSubstring(fullstring);
   const length = longest.length;
   const count = countSubstringOccurrences(longest, fullstring);

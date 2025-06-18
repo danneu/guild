@@ -4,14 +4,14 @@
     "module": "node16",
     "moduleResolution": "node16",
     "lib": ["ES2022"],
-    
+
     "allowJs": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
-    
+
     // Enable these one at a time
     "strict": false,
     "noImplicitAny": false,
@@ -29,19 +29,15 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
-    
+
     "noEmit": true,
     "skipLibCheck": true
   },
   "include": [
+    "server/types/**/*.d.ts",
     "server/**/*",
     "lib/**/*",
     "tasks/**/*"
   ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "**/*.test.ts",
-    "**/*.spec.ts"
-  ]
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
 }

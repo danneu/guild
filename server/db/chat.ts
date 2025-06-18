@@ -26,7 +26,7 @@ export const getChatLogDays = async function () {
 ////////////////////////////////////////////////////////////
 
 // `when` is string 'YYYY-MM-DD'
-export const findLogByDateTrunc = async function (when) {
+export const findLogByDateTrunc = async function (when: string) {
   assert(typeof when === "string");
   return pool
     .query(

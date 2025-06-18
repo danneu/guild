@@ -382,7 +382,7 @@ router.get("/convos/:convoId", async (ctx: Context) => {
 
 ////////////////////////////////////////////////////////////
 
-function showConvosHandler(folder) {
+function showConvosHandler(folder: string) {
   return async function _showConvosHandler(ctx: Context) {
     if (!config.IS_PM_SYSTEM_ONLINE) {
       ctx.body = "PM system currently disabled";

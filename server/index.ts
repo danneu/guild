@@ -8,9 +8,6 @@ import Router from "@koa/router";
 
 import Koa, { Context, Next } from "koa";
 const app = new Koa();
-if (config.NODE_ENV === "production") {
-  app.proxy = true;
-}
 
 import koaBetterStatic from "@ladjs/koa-better-static";
 import koaSend from "koa-send";
@@ -39,6 +36,12 @@ import altRoutes from "./routes/alts.ts";
 import verifyEmailRoutes from "./routes/verify-email.js";
 import guildbot from "./guildbot.js";
 
+// ip address: get it from cloudflare header
+app.use((ctx: Context, next: Next) => {
+  ctx.request.ip = ctx.get("cf-connecting-ip") || ctx.ip;
+  return next();
+});
+
 // static assets
 
 // Upon app boot, check for compiled assets
@@ -61,7 +64,10 @@ const dist: { css: string; js: string } | undefined = (() => {
       throw err;
     }
   }
-  const manifest = JSON.parse(body);
+  const manifest = JSON.parse(body) as {
+    "all.css": string;
+    "all.js": string;
+  };
   const dist = {
     css: manifest["all.css"],
     js: manifest["all.js"],
@@ -211,7 +217,7 @@ app.use(middleware.flash());
 app.use(async (ctx: Context, next: Next) => {
   // Must become before koa-router
   ctx.can = cancan.can;
-  ctx.assertAuthorized = (user, action, target) => {
+  ctx.assertAuthorized = (user: any, action: cancan.CanAction, target: any) => {
     const canResult = cancan.can(user, action, target);
     // ctx.log.info('[assertAuthorized] Can %s %s: %s',
     //              (user && user.uname) || '<Guest>', action, canResult);
@@ -352,17 +358,6 @@ app.use(nunjucksRender("views", nunjucksOptions));
 /// /////////////////////////////////////////////////////////
 
 app.use(bouncer.middleware());
-
-// tell typescript that ctx.response.back(url) exists
-// new in koa v3 but @types/koa are old
-declare module "koa" {
-  interface Response {
-    back(url: string): void;
-  }
-  interface Context {
-    back(url: string): void;
-  }
-}
 
 app.use(async (ctx: Context, next: Next) => {
   try {
@@ -576,7 +571,7 @@ router.post("/posts/:postId/rate", async (ctx: Context) => {
       post_id: post.id,
       topic_id: post.topic_id,
       rating_type: rating.type,
-    }).catch((err) => console.error(err, err.stack));
+    }).catch(console.error);
   }
 
   ctx.type = "json";
@@ -1019,12 +1014,12 @@ router.get("/forums/:forumSlug/topics/new", async (ctx: Context) => {
 //
 // @koa2
 router.get("/forums/:forumSlug", async (ctx: Context) => {
-  var forumId = belt.extractId(ctx.params.forumSlug);
+  const forumId = belt.extractId(ctx.params.forumSlug);
   ctx.assert(forumId, 404);
 
   ctx.validateQuery("page").optional().toInt();
 
-  var forum = await db.findForum2(forumId).then(pre.presentForum);
+  const forum = await db.findForum2(forumId).then(pre.presentForum);
   ctx.assert(forum, 404);
 
   forum.mods = cache3.get("forum-mods")[forum.id] || [];
@@ -1066,7 +1061,7 @@ router.get("/forums/:forumSlug", async (ctx: Context) => {
   ].filter(Boolean);
 
   // update viewers in background
-  db.upsertViewer(ctx, forum.id).catch((err) => console.error(err, err.stack));
+  db.upsertViewer(ctx, forum.id).catch(console.error);
 
   await ctx.render("show_forum", {
     ctx,
@@ -2002,7 +1997,7 @@ router.get("/topics/:slug/:postType/first-unread", async (ctx: Context) => {
   var topicId = belt.extractId(ctx.params.slug);
   ctx.assert(topicId, 404);
 
-  var topic;
+  let topic;
   if (ctx.currUser) {
     topic = await db.findTopicWithIsSubscribed(ctx.currUser.id, topicId);
   } else {
@@ -2104,8 +2099,10 @@ router.get("/topics/:slug/:postType", async (ctx: Context) => {
 
   if (ctx.currUser) {
     posts.forEach((post) => {
-      var rating = post.ratings.find((x) => x.from_user_id === ctx.currUser.id);
-      post.has_rated = rating;
+      const rating = post.ratings.find(
+        (x) => x.from_user_id === ctx.currUser.id,
+      );
+      (post as any).has_rated = rating;
     });
   }
 
@@ -2116,7 +2113,7 @@ router.get("/topics/:slug/:postType", async (ctx: Context) => {
         topic_id: topic.id,
         user_id: ctx.currUser.id,
         post_type: ctx.params.postType,
-        post_id: _.last(posts).id,
+        post_id: belt.last(posts)!.id,
       })
       .catch((err) => console.error("error updating topic watermark", err));
   }
@@ -2147,9 +2144,7 @@ router.get("/topics/:slug/:postType", async (ctx: Context) => {
   var postType = ctx.params.postType;
 
   // update viewers in background
-  db.upsertViewer(ctx, topic.forum_id, topic.id).catch((err) =>
-    console.error(err, err.stack),
-  );
+  db.upsertViewer(ctx, topic.forum_id, topic.id).catch(console.error);
 
   await ctx.render("show_topic", {
     ctx,

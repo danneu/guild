@@ -333,8 +333,8 @@ router.post("/users", checkCloudflareTurnstile, async (ctx: Context) => {
 
   // In background, see if user is using a bad IP address
   const ipAddress =
-    config.NODE_ENV === "development" && ctx.cookies.get("ip-override")
-      ? ctx.cookies.get("ip-override")
+    config.NODE_ENV === "development"
+      ? ctx.cookies.get("ip-override") || ctx.ip
       : ctx.ip;
 
   ipintel
@@ -729,7 +729,7 @@ router.get("/users/:userIdOrSlug", async (ctx: Context) => {
     // insert in the background
     db.profileViews
       .insertView(ctx.currUser.id, user.id)
-      .catch((err) => console.error("insertView error", err, err.stack));
+      .catch((err) => console.error("insertView error", err));
   }
 
   const [statuses, friendship, latestViewers, unames] = await Promise.all([
@@ -843,12 +843,10 @@ router.get("/me/vms/:id", async (ctx: Context) => {
   ctx.validateParam("id").toInt();
   await db.clearVmNotification(ctx.currUser.id, ctx.vals.id);
 
-  ctx.redirect(
-    "/users/" +
-      (await db.vms.getVmById(ctx.vals.id)).to_user.slug +
-      "/vms#vm-" +
-      ctx.vals.id,
-  );
+  const vm = await db.vms.getVmById(ctx.vals.id);
+  ctx.assert(vm, 404);
+
+  ctx.redirect(`/users/${vm.to_user.slug}/vms#vm-${vm.id}`);
 });
 
 ////////////////////////////////////////////////////////////

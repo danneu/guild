@@ -8,7 +8,7 @@ import * as db from "../../db";
 import { Context } from "koa";
 
 // Returns { test: 'SUBSTRING' | 'AKISMET', isSpam: Boolean, info: ... }
-async function analyze(ctx: Context, text) {
+async function analyze(ctx: Context, text: string) {
   // SUBSTRING check is too aggressive, too many false positives.
 
   // ;{
@@ -35,7 +35,7 @@ async function analyze(ctx: Context, text) {
 }
 
 // Returns falsey if they are not a spammer
-async function process(ctx: Context, markup, postId) {
+async function process(ctx: Context, markup: string, postId: number) {
   assert(ctx.currUser);
   assert(typeof markup === "string");
   assert(Number.isInteger(postId));

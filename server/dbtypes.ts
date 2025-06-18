@@ -79,12 +79,29 @@ export type DbSession = {
 export type DbTopic = {
   id: number;
   title: string;
-  slug: string;
-  forum_id: number;
   user_id: number;
+  forum_id: number;
+  created_at: Date;
+  is_roleplay: boolean;
   co_gm_ids: number[];
-  banned_ids: number[];
-  join_status: string;
+  join_status: "jump-in" | "apply" | "full" | null;
+  is_hidden: boolean;
+  is_closed: boolean;
+  is_sticky: boolean;
+  // Counter cache
+  posts_count: number;
+  ic_posts_count: number;
+  ooc_posts_count: number;
+  char_posts_count: number;
+  // Moving
+  moved_from_forum_id: number | null;
+  moved_at: Date | null;
+  latest_post_at: Date | null;
+
+  latest_post_id: number | null;
+  latest_ic_post_id: number | null;
+  latest_ooc_post_id: number | null;
+  latest_char_post_id: number | null;
 };
 
 export type DbVm = {
@@ -94,12 +111,6 @@ export type DbVm = {
   markup: string;
   html: string;
   parent_vm_id: number | null;
-};
-
-export type DbTag = {
-  id: number;
-  name: string;
-  tag_group_id: number;
 };
 
 export const DbRatingType = {
@@ -117,5 +128,87 @@ export type DbRating = {
   to_user_id: number;
   post_id: number;
   type: DbRatingType;
+  created_at: Date;
+};
+
+export type DbImage = {
+  id: string;
+  user_id: number;
+  src: string;
+  mime: string;
+  description: string | null;
+  deleted_at: Date | null;
+  is_private: boolean;
+  created_at: Date;
+};
+
+export type DbAlbum = {
+  id: number;
+  user_id: number;
+  title: string;
+  markup: string | null;
+  updated_at: Date;
+  created_at: Date;
+};
+
+export type DbForum = {
+  id: number;
+  category_id: number;
+  parent_forum_id: number | null;
+  title: string;
+  description: string | null;
+  pos: number;
+  is_roleplay: boolean;
+  has_tags_enabled: boolean;
+  tab_title: string | null;
+  is_check: boolean;
+  is_hidden: boolean;
+  // Cache
+  topics_count: number;
+  posts_count: number;
+
+  // Extensions sometimes done in db fns
+  parent_forum?: DbForum;
+  child_forum?: DbForum;
+};
+
+export type DbTagGroup = {
+  id: number;
+  title: string;
+};
+
+export type DbTag = {
+  id: number;
+  tag_group_id: number;
+  title: string;
+  slug: string;
+  description: string | null;
+  created_at: Date;
+};
+
+export type DbPost = {
+  id: number;
+  text: string | null;
+  markup: string | null;
+  html: string | null;
+  legacy_html: string | null;
+  topic_id: number;
+  user_id: number;
+  created_at: Date;
+  updated_at: Date | null;
+  is_roleplay: boolean;
+  type: string;
+  ip_address: string | null;
+  is_hidden: boolean;
+  rev_count: number;
+  idx: number | null;
+};
+
+export type DbStatus = {
+  id: number;
+  user_id: number;
+  text: string;
+  html: string;
+  liked_user_ids: number[];
   created_at: Date;
 };

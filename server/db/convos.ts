@@ -9,12 +9,12 @@ import { pool, maybeOneRow } from "./util";
 
 ////////////////////////////////////////////////////////////
 
-export const getConvo = async (id) => {
+export const getConvo = async (id: number) => {
   assert(id);
   return getConvos([id]).then(([x]) => x);
 };
 
-export const getConvos = async (ids) => {
+export const getConvos = async (ids: number[]) => {
   debug("[getConvos] ids=%j", ids);
   assert(Array.isArray(ids));
 

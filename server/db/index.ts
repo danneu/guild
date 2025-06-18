@@ -140,7 +140,10 @@ export async function updateTopicStatus(
 // Same as findTopic but takes a userid so that it can return a topic
 // with an is_subscribed boolean for the user
 // Keep in sync with db.findTopicById
-export const findTopicWithIsSubscribed = async function (userId, topicId) {
+export const findTopicWithIsSubscribed = async function (
+  userId: number,
+  topicId: number,
+) {
   debug("[findTopicWithIsSubscribed] userId %s, topicId %s:", userId, topicId);
 
   return pool
@@ -274,7 +277,7 @@ export async function deleteResetTokens(userId: number) {
 
 ////////////////////////////////////////////////////////////
 
-export const findLatestActiveResetToken = async function (userId) {
+export const findLatestActiveResetToken = async function (userId: number) {
   assert(_.isNumber(userId));
 
   return pool
@@ -293,7 +296,7 @@ export const findLatestActiveResetToken = async function (userId) {
 
 ////////////////////////////////////////////////////////////
 
-export const createResetToken = async function (userId) {
+export const createResetToken = async function (userId: number) {
   debug("[createResetToken] userId: " + userId);
 
   const uuid = uuidv7();
@@ -312,7 +315,7 @@ export const createResetToken = async function (userId) {
 
 ////////////////////////////////////////////////////////////
 
-export const findUserById = async function (id) {
+export const findUserById = async function (id: number) {
   return pool
     .query(
       `
@@ -431,7 +434,7 @@ export const findUserWithRatingsBySlug = async function (slug) {
 ////////////////////////////////////////////////////////////
 
 // Also tries historical unames
-export const findUserByUnameOrEmail = async function (unameOrEmail) {
+export const findUserByUnameOrEmail = async function (unameOrEmail: string) {
   assert(_.isString(unameOrEmail));
 
   const slug = belt.slugifyUname(unameOrEmail);
@@ -458,7 +461,7 @@ export const findUserByUnameOrEmail = async function (unameOrEmail) {
 ////////////////////////////////////////////////////////////
 
 // Note: Case-insensitive
-export const findUserByEmail = async function (email) {
+export const findUserByEmail = async function (email: string) {
   debug("[findUserByEmail] email: " + email);
 
   return pool
@@ -476,7 +479,7 @@ export const findUserByEmail = async function (email) {
 ////////////////////////////////////////////////////////////
 
 // Note: Case-insensitive
-export const findUserByUname = async function (uname) {
+export const findUserByUname = async function (uname: string) {
   debug("[findUserByUname] uname: " + uname);
 
   const slug = belt.slugifyUname(uname);
@@ -589,8 +592,7 @@ export async function findUsersByUnames(unames: string[]) {
 
 ////////////////////////////////////////////////////////////
 
-// If toUsrIds is not given, then it's a self-convo
-// TODO: Wrap in transaction, Document the args of this fn
+// If toUserIds is not given, then it's a self-convo
 export async function createConvo(
   pgClient: PgClientInTransaction,
   args: {
@@ -604,11 +606,11 @@ export async function createConvo(
 ) {
   debug("[createConvo] args: ", args);
   assert(pgClient._inTransaction, "pgClient must be in a transaction");
-  assert(_.isNumber(args.userId));
-  assert(_.isUndefined(args.toUserIds) || _.isArray(args.toUserIds));
-  assert(_.isString(args.title));
-  assert(_.isString(args.markup));
-  assert(_.isString(args.html));
+  assert(typeof args.userId === "number");
+  assert(Array.isArray(args.toUserIds));
+  assert(typeof args.title === "string");
+  assert(typeof args.markup === "string");
+  assert(typeof args.html === "string");
 
   // Create convo
   const convo = await pgClient
@@ -622,31 +624,20 @@ export async function createConvo(
     )
     .then(exactlyOneRow);
 
-  // Insert participants and the PM in parallel
+  // Bulk-insert all participants
+  const participantIds = [...new Set([args.userId, ...args.toUserIds])];
+  await pgClient.query(
+    `
+    INSERT INTO convos_participants (convo_id, user_id)
+    SELECT $1, unnest($2::int[])
+  `,
+    [convo.id, participantIds],
+  );
 
-  const tasks = args.toUserIds
-    .map((toUserId) => {
-      // insert each receiving participant
-      return pgClient.query(
-        `
-        INSERT INTO convos_participants (convo_id, user_id)
-        VALUES ($1, $2)
-      `,
-        [convo.id, toUserId],
-      );
-    })
-    .concat([
-      // insert the sending participant
-      pgClient.query(
-        `
-        INSERT INTO convos_participants (convo_id, user_id)
-        VALUES ($1, $2)
-      `,
-        [convo.id, args.userId],
-      ),
-      // insert the PM
-      pgClient.query(
-        `
+  // insert the PM
+  const pm = await pgClient
+    .query(
+      `
         INSERT INTO pms
           (convo_id, user_id, ip_address, markup, html, idx)
         VALUES (
@@ -656,14 +647,12 @@ export async function createConvo(
         )
         RETURNING *
       `,
-        [convo.id, args.userId, args.ipAddress, args.markup, args.html],
-      ),
-    ]);
-
-  const results = await Promise.all(tasks);
+      [convo.id, args.userId, args.ipAddress, args.markup, args.html],
+    )
+    .then(exactlyOneRow);
 
   // Assoc firstPm to the returned convo
-  (convo as any).firstPm = _.last(results).rows[0];
+  (convo as any).firstPm = pm;
   convo.pms_count++; // This is a stale copy so we need to manually inc
   return convo;
 }
@@ -884,7 +873,10 @@ OFFSET $6
 
 ////////////////////////////////////////////////////////////
 
-export const updateUserPassword = async function (userId, password) {
+export const updateUserPassword = async function (
+  userId: number,
+  password: string,
+) {
   assert(_.isNumber(userId));
   assert(_.isString(password));
 
@@ -991,7 +983,7 @@ WHERE p.id = $1
 ////////////////////////////////////////////////////////////
 
 // Keep findPost and findPm in sync
-export const findPostById = async function (postId) {
+export const findPostById = async function (postId: number) {
   return pool
     .query(
       `
@@ -1012,7 +1004,7 @@ WHERE p.id = $1
 
 ////////////////////////////////////////////////////////////
 
-export const findPmById = async function findPm(id) {
+export const findPmById = async function findPm(id: number) {
   return pool
     .query(
       `
@@ -1529,7 +1521,7 @@ export const updateUser = async (userId, attrs) => {
     )
     .then(maybeOneRow)
     .catch((err) => {
-      if (err.code === "23505") {
+      if (err instanceof Error && "code" in err && err.code === "23505") {
         if (/"unique_email"/.test(err.toString())) {
           throw "EMAIL_TAKEN";
         }
@@ -1557,7 +1549,7 @@ export const updateUserRole = async function (userId, role) {
 ////////////////////////////////////////////////////////////
 
 // @fast
-export const findForumById = async function (forumId) {
+export const findForumById = async function (forumId: number) {
   return pool
     .query(
       `
@@ -3199,34 +3191,26 @@ export async function findAllTagGroups(): Promise<unknown[]> {
 
 // topicId :: String | Int
 // tagIds :: [Int]
-export const updateTopicTags = async function (topicId, tagIds) {
+export async function updateTopicTags(topicId: number, tagIds: number[]) {
   assert(topicId);
-  assert(_.isArray(tagIds));
+  assert(Array.isArray(tagIds));
 
-  return pool.withTransaction(async (client) => {
-    await client.query(
-      `
-      DELETE FROM tags_topics
-      WHERE topic_id = $1
-    `,
-      [topicId],
-    );
-    // Now create the new bridge links in parallel
-    // FIXME: Can't make parallel requests on a single connection, so
-    // make it explicitly serial.
-    return Promise.all(
-      tagIds.map((tagId) => {
-        return client.query(
-          `
-        INSERT INTO tags_topics (topic_id, tag_id)
-        VALUES ($1, $2)
-      `,
-          [topicId, tagId],
-        );
-      }),
-    );
+  return pool.withTransaction(async (pgClient) => {
+    // Delete existing tags
+    await pgClient.query("DELETE FROM tags_topics WHERE topic_id = $1", [
+      topicId,
+    ]);
+
+    // Bulk insert using unnest
+    if (tagIds.length > 0) {
+      await pgClient.query(
+        `INSERT INTO tags_topics (topic_id, tag_id) 
+         SELECT $1, unnest($2::int[])`,
+        [topicId, tagIds],
+      );
+    }
   });
-};
+}
 
 // Returns latest 5 unhidden checks
 export async function findLatestChecks() {
@@ -3712,7 +3696,7 @@ export async function findLatestStatusesForUserId(user_id: number) {
 
 ////////////////////////////////////////////////////////////
 
-export const findStatusById = async function (id) {
+export const findStatusById = async function (id: number) {
   return pool
     .query(
       `
@@ -3859,7 +3843,7 @@ export const likeStatus = async function ({ user_id, status_id }) {
       );
     })
     .catch((err) => {
-      if (err.code === "23505") {
+      if (err instanceof Error && "code" in err && err.code === "23505") {
         return;
       }
       throw err;
@@ -3888,7 +3872,12 @@ export const latestStatusLikeAt = async function (user_id) {
 
 ////////////////////////////////////////////////////////////
 
-export const updateTopicWatermark = async function (props) {
+export async function updateTopicWatermark(props: {
+  topic_id: number;
+  user_id: number;
+  post_type: string;
+  post_id: number;
+}) {
   debug("[updateTopicWatermark] props:", props);
   assert(props.topic_id);
   assert(props.user_id);
@@ -3913,7 +3902,7 @@ export const updateTopicWatermark = async function (props) {
       props.post_id,
     ],
   );
-};
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -4037,7 +4026,7 @@ export const deleteNotificationForUserIdAndId = async function (userId, id) {
   );
 };
 
-export const findNotificationById = async function (id) {
+export const findNotificationById = async function (id: number) {
   debug(`[findNotification] id=${id}`);
   return pool
     .query(
@@ -4225,7 +4214,7 @@ export async function createFriendship(from_id: number, to_id: number) {
     .catch((err) => {
       // Ignore unique violation, like if user double-clicks
       // the add-friend button
-      if (err.code === "23505") {
+      if (err instanceof Error && "code" in err && err.code === "23505") {
         return;
       }
       throw err;
@@ -4480,7 +4469,7 @@ export const updateConvoFolder = async function (userId, convoId, folder) {
 
 // Remember to also approve an unnuked user. Didn't do it
 // here because i don't currently pass in unnuker_id
-export const unnukeUser = async function (userId) {
+export async function unnukeUser(userId: number) {
   assert(Number.isInteger(userId));
   const sqls = {
     unbanUser: {
@@ -4491,6 +4480,7 @@ export const unnukeUser = async function (userId) {
       text: `UPDATE topics SET is_hidden = false WHERE user_id = $1`,
       values: [userId],
     },
+    // Triggers post_hidden on every post that we unhide which updates each topic's latest post
     unhidePosts: {
       text: `UPDATE posts SET is_hidden = false WHERE user_id = $1`,
       values: [userId],
@@ -4506,13 +4496,19 @@ export const unnukeUser = async function (userId) {
     await client.query(sqls.unhidePosts);
     await client.query(sqls.deleteFromNukelist);
   });
-};
+}
 
 // In one fell motion, bans a user, hides all their stuff.
 //
 // Takes an object to prevent mistakes.
 // { spambot: UserId, nuker: UserId  }
-export const nukeUser = async function ({ spambot, nuker }) {
+export async function nukeUser({
+  spambot,
+  nuker,
+}: {
+  spambot: number;
+  nuker: number;
+}) {
   assert(Number.isInteger(spambot));
   assert(Number.isInteger(nuker));
 
@@ -4525,6 +4521,9 @@ export const nukeUser = async function ({ spambot, nuker }) {
       text: `UPDATE topics SET is_hidden = true WHERE user_id = $1`,
       values: [spambot],
     },
+    // FIXME: This triggers the post_hidden trigger on EVERY post that we hide.
+    // It would be better to delete the trigger and instead call some bulk update db fn
+    // every time we hide posts.
     hidePosts: {
       text: `UPDATE posts SET is_hidden = true WHERE user_id = $1`,
       values: [spambot],
@@ -4539,27 +4538,36 @@ export const nukeUser = async function ({ spambot, nuker }) {
     // TODO: Undo this in `unnukeUser`.
     //
     // FIXME: This is too slow.
-    updateTopics: {
-      text: `
-      UPDATE topics
-      SET
-        latest_post_id = sub2.latest_post_id
-      FROM (
-        SELECT sub.topic_id, MAX(posts.id) latest_post_id
-        FROM posts
-        JOIN (
-          SELECT t.id topic_id
-          FROM posts p
-          JOIN topics t ON p.id = t.latest_post_id
-          WHERE p.user_id = $1
-        ) sub on posts.topic_id = sub.topic_id
-        WHERE posts.is_hidden = false
-        GROUP BY sub.topic_id
-      ) sub2
-      WHERE id = sub2.topic_id
-    `,
-      values: [spambot],
-    },
+    //   updateTopics: {
+    //     text: `
+    //   UPDATE topics t
+    //   SET
+    //     latest_post_id = latest_posts.id,
+    //     latest_post_at = latest_posts.created_at
+    //   FROM (
+    //     -- Find the new latest post for each affected topic
+    //     SELECT DISTINCT ON (affected.topic_id)
+    //       affected.topic_id,
+    //       p.id,
+    //       p.created_at
+    //     FROM (
+    //       -- Get topics where the nuked user has the latest post
+    //       SELECT t.id as topic_id
+    //       FROM topics t
+    //       JOIN posts p ON t.latest_post_id = p.id
+    //       WHERE p.user_id = $1
+    //     ) affected
+    //     JOIN posts p ON p.topic_id = affected.topic_id
+    //     -- Don't exclude the nuked user's posts - they're already hidden
+    //     ORDER BY
+    //       affected.topic_id,
+    //       p.is_hidden ASC,     -- Prefer non-hidden posts
+    //       p.created_at DESC    -- Get the most recent
+    //   ) latest_posts
+    //   WHERE t.id = latest_posts.topic_id
+    // `,
+    //     values: [spambot],
+    //   },
   };
 
   return pool
@@ -4568,20 +4576,20 @@ export const nukeUser = async function ({ spambot, nuker }) {
       await client.query(sqls.hideTopics);
       await client.query(sqls.hidePosts);
       await client.query(sqls.insertNukelist);
-      //await client.query(sqls.updateTopics)
+      // await client.query(sqls.updateTopics);
     })
     .catch((err) => {
-      if (err.code === "23505") {
+      if (err instanceof Error && "code" in err && err.code === "23505") {
         throw "ALREADY_NUKED";
       }
       throw err;
     });
-};
+}
 
 ////////////////////////////////////////////////////////////
 
 // Delete topic ban for given topic+user combo
-export const deleteUserTopicBan = async (topicId, userId) => {
+export async function deleteUserTopicBan(topicId: number, userId: number) {
   assert(Number.isInteger(topicId));
   assert(Number.isInteger(userId));
 
@@ -4593,7 +4601,7 @@ export const deleteUserTopicBan = async (topicId, userId) => {
   `,
     [topicId, userId],
   );
-};
+}
 
 export const deleteTopicBan = async (banId) => {
   assert(Number.isInteger(banId));
@@ -4649,7 +4657,7 @@ export const insertTopicBan = async (topicId, gmId, bannedId) => {
       [topicId, gmId, bannedId],
     )
     .catch((err) => {
-      if (err.code === "23505") {
+      if (err instanceof Error && "code" in err && err.code === "23505") {
         return;
       }
       throw err;

@@ -121,7 +121,7 @@ const cache = createIntervalCache({
     initialValue: null,
     interval: 1000 * 60 * 60,
     fetch: async () => {
-      return db.findPostById(config.FAQ_POST_ID);
+      return db.findPostById(config.FAQ_POST_ID!);
     },
   },
 
@@ -130,7 +130,7 @@ const cache = createIntervalCache({
     initialValue: null,
     interval: Infinity,
     fetch: async () => {
-      return db.findPostById(config.WELCOME_POST_ID);
+      return db.findPostById(config.WELCOME_POST_ID!);
     },
   },
 

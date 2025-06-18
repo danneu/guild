@@ -12,7 +12,10 @@ import * as pre from "../presenters";
 
 ////////////////////////////////////////////////////////////
 
-function makeClient() {
+function makeClient(): Client | null {
+  if (!config.DISCORD_BOT_TOKEN) {
+    return null;
+  }
   return new Client({ botToken: config.DISCORD_BOT_TOKEN });
 }
 
@@ -20,16 +23,34 @@ function makeClient() {
 
 // nuker and spambot are users
 export const broadcastManualNuke = async ({ nuker, spambot }) => {
+  if (!config.IS_DISCORD_CONFIGURED) {
+    console.warn(`
+      Called services.discord.js#broadcastManualNuke but Discord
+      is not configured.
+    `);
+    return;
+  }
   assert(nuker);
   assert(spambot);
   pre.presentUser(nuker);
   pre.presentUser(spambot);
 
   const client = makeClient();
+  if (!client) {
+    console.warn(
+      "Called services.discord.js#broadcastManualNuke but Discord is not configured.",
+    );
+    return;
+  }
 
   const channel = await client
-    .listGuildChannels(config.DISCORD_GUILD_ID)
+    .listGuildChannels(config.DISCORD_GUILD_ID!)
     .then((cs) => cs.find((c) => c.name === "forum-activity"));
+
+  if (!channel) {
+    console.warn(`Could not find a #forum-activity channel for broadcast.`);
+    return;
+  }
 
   const content = `:hammer: **${nuker.uname}** nuked ${config.HOST}${
     spambot.url
@@ -51,10 +72,21 @@ export const broadcastManualUnnuke = async ({ nuker, spambot }) => {
   pre.presentUser(spambot);
 
   const client = makeClient();
+  if (!client) {
+    console.warn(
+      "Called services.discord.js#broadcastManualUnnuke but Discord is not configured.",
+    );
+    return;
+  }
 
   const channel = await client
-    .listGuildChannels(config.DISCORD_GUILD_ID)
+    .listGuildChannels(config.DISCORD_GUILD_ID!)
     .then((cs) => cs.find((c) => c.name === "forum-activity"));
+
+  if (!channel) {
+    console.warn(`Could not find a #forum-activity channel for broadcast.`);
+    return;
+  }
 
   const content = `:white_check_mark: **${nuker.uname}** UN-nuked ${
     config.HOST
@@ -75,10 +107,21 @@ export const broadcastIpAddressAutoNuke = async (user, ipAddress) => {
   pre.presentUser(user);
 
   const client = makeClient();
+  if (!client) {
+    console.warn(
+      "Called services.discord.js#broadcastIpAddressAutoNuke but Discord is not configured.",
+    );
+    return;
+  }
 
   const channel = await client
-    .listGuildChannels(config.DISCORD_GUILD_ID)
+    .listGuildChannels(config.DISCORD_GUILD_ID!)
     .then((cs) => cs.find((c) => c.name === "forum-activity"));
+
+  if (!channel) {
+    console.warn(`Could not find a #forum-activity channel for broadcast.`);
+    return;
+  }
 
   const content = `@here :spy: User ${config.HOST}${
     user.url
@@ -110,10 +153,21 @@ export const broadcastAutoNuke = async (user, postId, info) => {
   }
 
   const client = makeClient();
+  if (!client) {
+    console.warn(
+      "Called services.discord.js#broadcastAutoNuke but Discord is not configured.",
+    );
+    return;
+  }
 
   const channel = await client
-    .listGuildChannels(config.DISCORD_GUILD_ID)
+    .listGuildChannels(config.DISCORD_GUILD_ID!)
     .then((cs) => cs.find((c) => c.name === "forum-activity"));
+
+  if (!channel) {
+    console.warn(`Could not find a #forum-activity channel for broadcast.`);
+    return;
+  }
 
   const content = `@here :robot: User ${config.HOST}${
     user.url
@@ -145,10 +199,21 @@ export const broadcastUserJoin = async (user) => {
   }
 
   const client = makeClient();
+  if (!client) {
+    console.warn(
+      "Called services.discord.js#broadcastUserJoin but Discord is not configured.",
+    );
+    return;
+  }
 
   const channel = await client
-    .listGuildChannels(config.DISCORD_GUILD_ID)
+    .listGuildChannels(config.DISCORD_GUILD_ID!)
     .then((cs) => cs.find((c) => c.name === "forum-activity"));
+
+  if (!channel) {
+    console.warn(`Could not find a #forum-activity channel for broadcast.`);
+    return;
+  }
 
   // Broadcast
   await client.createMessage(channel.id, {
@@ -164,9 +229,15 @@ export const broadcastIntroTopic = async (user, topic) => {
   pre.presentTopic(topic);
 
   const client = makeClient();
+  if (!client) {
+    console.warn(
+      "Called services.discord.js#broadcastIntroTopic but Discord is not configured.",
+    );
+    return;
+  }
 
   const channel = await client
-    .listGuildChannels(config.DISCORD_GUILD_ID)
+    .listGuildChannels(config.DISCORD_GUILD_ID!)
     .then((cs) => cs.find((c) => c.name === "general"));
 
   if (!channel) {
@@ -186,16 +257,22 @@ export const broadcastIntroTopic = async (user, topic) => {
 
 ////////////////////////////////////////////////////////////
 
-export const broadcastBioUpdate = async (user, bioMarkup) => {
+export async function broadcastBioUpdate(user, bioMarkup) {
   assert(user);
   assert(typeof bioMarkup === "string");
 
   pre.presentUser(user);
 
   const client = makeClient();
+  if (!client) {
+    console.warn(
+      "Called services.discord.js#broadcastBioUpdate but Discord is not configured.",
+    );
+    return;
+  }
 
   const channel = await client
-    .listGuildChannels(config.DISCORD_GUILD_ID)
+    .listGuildChannels(config.DISCORD_GUILD_ID!)
     .then((cs) => cs.find((c) => c.name === "forum-activity"));
 
   if (!channel) {
@@ -209,4 +286,4 @@ export const broadcastBioUpdate = async (user, bioMarkup) => {
 Snippet: \`${bioMarkup.slice(0, 140)}\`
 `,
   });
-};
+}

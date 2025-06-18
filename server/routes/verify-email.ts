@@ -64,7 +64,7 @@ router.get("/verify-email", async (ctx: Context) => {
 });
 
 // mapping of user id -> Date of email send
-const sent = new Map();
+const sent = new Map<number, Date>();
 
 // Generates an email verification token AND sends verification email.
 router.post("/api/verify-email", async (ctx: Context) => {
