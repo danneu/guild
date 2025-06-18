@@ -1,0 +1,13 @@
+name = "guild-proxy"
+main = "src/index.ts"
+compatibility_date = "2023-12-01"
+
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "guild-img-dev"
+
+[observability] # Enable logs
+enabled = true
+head_sampling_rate = 1 # optional. default = 1.
+
+[env.production]
