@@ -1186,8 +1186,9 @@ router.post(
 
     ctx.response.redirect(post.url + "?created=true");
 
+    // DISABLED: Is Akismet even useful?
     // Check if post is spam in the background
-    services.antispam.process(ctx, post.markup, post.id);
+    // services.antispam.process(ctx, post.markup, post.id);
   },
 );
 
@@ -1400,15 +1401,16 @@ router.post(
 
     ctx.response.redirect(topic.url);
 
+    // DISABLED: Is Akismet even useful?
     // Check if post is spam after response is sent
-    const result = await services.antispam.process(
-      ctx,
-      ctx.vals.markup,
-      topic.post.id,
-    );
+    // const result = await services.antispam.process(
+    //   ctx,
+    //   ctx.vals.markup,
+    //   topic.post.id,
+    // );
 
     // Don't broadcast to discord if they tripped the spam detector
-    if (!result && topic.forum_id === 2) {
+    if (topic.forum_id === 2) {
       services.discord
         .broadcastIntroTopic(ctx.currUser, topic)
         .catch((err) => console.error("broadcastIntroTopic failed", err));
