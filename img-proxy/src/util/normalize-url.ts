@@ -18,11 +18,8 @@ export function validateAndNormalizeUrl(
       return Result.err(new Error("Invalid URL"));
     }
 
-    // Decode the URL if it's encoded
-    const decodedUrl = decodeURIComponent(urlString.trim());
-
-    // Parse URL
-    const url = new URL(decodedUrl);
+    // Parse URL directly (should already be decoded by caller)
+    const url = new URL(urlString.trim());
 
     // Only allow http(s)
     if (!["http:", "https:"].includes(url.protocol)) {

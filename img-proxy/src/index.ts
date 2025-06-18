@@ -20,7 +20,8 @@ const router: Record<
       return new Response(
         `<!doctype html>
         <h1>Guild's image proxy</h1>
-        <p>Usage: <code>/proxy?url=https://example.com/image.jpg</code></p>
+        <p>Usage: <code>/proxy?url=https%3A%2F%2Fexample.com%2Fimage.jpg</code></p>
+        <p><strong>Note:</strong> The URL parameter must be URL encoded.</p>
         `,
         {
           headers: {

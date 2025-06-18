@@ -10,10 +10,13 @@ const securityHeaders = {
 };
 
 // In-memory cache for pending image fetches to deduplicate concurrent requests
-const pendingFetches = new Map<string, Promise<{
-  imageData: ArrayBuffer;
-  contentType: string;
-}>>();
+const pendingFetches = new Map<
+  string,
+  Promise<{
+    imageData: ArrayBuffer;
+    contentType: string;
+  }>
+>();
 
 async function fetchImageWithDeduplication(
   validatedUrl: URL,
@@ -45,7 +48,9 @@ async function fetchImageWithDeduplication(
       });
 
       if (!imageResponse.ok) {
-        throw new Error(`HTTP ${imageResponse.status}: ${imageResponse.statusText}`);
+        throw new Error(
+          `HTTP ${imageResponse.status}: ${imageResponse.statusText}`,
+        );
       }
 
       // Validate content type
@@ -93,12 +98,11 @@ export default async function handleGetProxy(
   env: Env,
   ctx: ExecutionContext,
 ) {
-  const imageUrl = url.searchParams.get("url");
-  console.log(
-    `imageUrl: ${typeof imageUrl === "string" ? `"${imageUrl}"` : "<none>"}`,
-  );
-
-  if (!imageUrl) {
+  // Get the raw query string to check for proper encoding
+  const rawQuery = url.search;
+  const urlMatch = rawQuery.match(/[?&]url=([^&]*)/);
+  
+  if (!urlMatch || !urlMatch[1]) {
     // If no URL, Return the "not-found.webp" file from the bucket root
     const notFound = await env.R2_BUCKET.get("not-found.webp");
     if (notFound) {
@@ -111,9 +115,30 @@ export default async function handleGetProxy(
     }
   }
 
+  const encodedImageUrl = urlMatch[1];
+  console.log(`encodedImageUrl: "${encodedImageUrl}"`);
+
   try {
+    // Decode the URL parameter - require it to be URL encoded
+    let decodedImageUrl: string;
+    try {
+      decodedImageUrl = decodeURIComponent(encodedImageUrl);
+    } catch (decodeError) {
+      return new Response("URL parameter must be properly URL encoded", {
+        status: 400,
+      });
+    }
+
+    // Verify that the URL was actually encoded by checking if decoded differs from original
+    // or if the original contains unencoded characters that should be encoded
+    if (decodedImageUrl === encodedImageUrl && encodedImageUrl.includes("://")) {
+      return new Response("URL parameter must be URL encoded", { status: 400 });
+    }
+
+    console.log(`decodedImageUrl: "${decodedImageUrl}"`);
+
     // Validate URL
-    const result = validateAndNormalizeUrl(imageUrl);
+    const result = validateAndNormalizeUrl(decodedImageUrl);
     if (!result.ok) {
       return new Response("Invalid URL", { status: 400 });
     }
@@ -178,7 +203,9 @@ export default async function handleGetProxy(
       if (error.message.startsWith("HTTP ")) {
         const statusMatch = error.message.match(/HTTP (\d+):/);
         const status = statusMatch ? parseInt(statusMatch[1]) : 500;
-        return new Response(`Failed to fetch image: ${error.message}`, { status });
+        return new Response(`Failed to fetch image: ${error.message}`, {
+          status,
+        });
       }
 
       if (error.message === "URL does not point to an image") {
