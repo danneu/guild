@@ -308,6 +308,11 @@ export const presentImage = function (x) {
 
   presentUser(x.user);
 
+  // Set the URL for viewing individual images
+  if (x.user) {
+    x.url = `/users/${x.user.slug}/images/${x.id}`;
+  }
+
   // Legacy image url: https://s3.amazonaws.com/img.roleplayerguild.com/prod/users/0001999e-ac95-468b-a526-0fd8ffc8591b.png
   // New image url: https://img.roleplayerguild.com/prod/users/0001999e-ac95-468b-a526-0fd8ffc8591b.avif
 
