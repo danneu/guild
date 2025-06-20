@@ -607,7 +607,7 @@
             {% if lastUnameChange and lastUnameChange.changed_by_id %}
               <div class="alert alert-warning text-center">
                 Last username change:
-                {{ macros.timeago(lastUnameChange.created_at) }}
+                {{ macros.timeago(lastUnameChange.updated_at) }}
               </div>
             {% endif %}
 

@@ -6,11 +6,11 @@ const debug = createDebug("app:db:unames");
 // 1st
 import { pool, maybeOneRow } from "./util";
 import * as belt from "../belt";
-import { User } from "discord.js";
 import { DbUser } from "../dbtypes";
 
 ////////////////////////////////////////////////////////////
 
+// Get the latest uname change by updated_at
 export const lastUnameChange = async function (userId: number) {
   return pool
     .query(
@@ -19,7 +19,7 @@ export const lastUnameChange = async function (userId: number) {
     FROM unames
     WHERE user_id = $1
       AND recycle = false
-    ORDER BY id DESC
+    ORDER BY updated_at DESC
     LIMIT 1
   `,
       [userId],
@@ -135,7 +135,7 @@ export async function changeUname({
 
     // Check if user changed username within the last month
     const lastChange = await client
-      .query(
+      .query<{ updated_at: Date }>(
         `
         SELECT updated_at
         FROM unames

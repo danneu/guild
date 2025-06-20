@@ -120,7 +120,7 @@ router.get(
       cancan.isStaffRole(ctx.currUser.role) ||
       // If change_by_id is falsey, then this is the user's first uname history item (initial uname)
       !lastUnameChange.changed_by_id ||
-      belt.isOlderThan(lastUnameChange.created_at, { months: 3 });
+      belt.isOlderThan(lastUnameChange.updated_at, { months: 3 });
 
     await ctx.render("edit_user", {
       ctx,
