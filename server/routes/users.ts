@@ -25,7 +25,7 @@ import {
   broadcastManualUnnuke,
   broadcastBioUpdate,
 } from "../services/discord";
-import ipintel from "../services/ipintel";
+// import ipintel from "../services/ipintel";
 import { Context, Next } from "koa";
 import { pool, withPgPoolTransaction } from "../db/util";
 
@@ -172,28 +172,39 @@ router.post("/users/:slug/unames", async (ctx: Context) => {
     ctx.validateBody("recycle").toBoolean();
   }
 
-  try {
-    user = await db.unames
-      // Will fail if userId is not found
-      .changeUname({
-        userId: user.id,
-        changedById: ctx.currUser.id,
-        oldUname: user.uname,
-        newUname: ctx.vals.uname,
-        recycle: ctx.vals.recycle,
-      })
-      .then((user) => pre.presentUser(user)!);
-  } catch (err) {
-    if (err === "UNAME_TAKEN") {
+  const result = await db.unames.changeUname({
+    userId: user.id,
+    changedById: ctx.currUser.id,
+    oldUname: user.uname,
+    newUname: ctx.vals.uname,
+    recycle: ctx.vals.recycle,
+  });
+
+  switch (result.type) {
+    case "SUCCESS": {
+      user = pre.presentUser(result.user)!;
+      ctx.flash = { message: ["success", "Username updated"] };
+      ctx.redirect(user.url);
+      return;
+    }
+    case "UNAME_TAKEN":
       ctx.flash = { message: ["danger", "Username taken"] };
       ctx.redirect(user.url + "/edit");
       return;
+    case "RATE_LIMITED":
+      ctx.flash = {
+        message: [
+          "danger",
+          "You can only change your username once every 3 months",
+        ],
+      };
+      ctx.redirect(user.url + "/edit");
+      return;
+    default: {
+      const exhaustive: never = result;
+      throw exhaustive;
     }
-    throw err;
   }
-
-  ctx.flash = { message: ["success", "Username updated"] };
-  ctx.redirect(user.url);
 });
 
 ////////////////////////////////////////////////////////////
