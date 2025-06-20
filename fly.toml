@@ -61,11 +61,17 @@ handlers = ["tls", "http"]
 port = 443
 
 [[services.http_checks]]
-interval = "30s"
-grace_period = "10s"
+# Time to wait before checking machine health (give it chance to boot and listen)
+# For some reason my start takes 12 seconds. If I fix this I can lower the grace period
+grace_period = "20s"
+# How often to check machine health AFTER grace period
+interval = "10s"
+# How long to wait for response from /health check
+timeout = "5s"
+
 method = "get"
 path = "/health"
 protocol = "http"
-timeout = "3s"
+
 [services.http_checks.headers]
 X-Forwarded-Proto = "https" # Helps with CF health checks
