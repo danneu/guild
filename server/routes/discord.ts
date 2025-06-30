@@ -96,7 +96,7 @@ function createRouter() {
 
     ctx.cookies.set("oauth2_state", state, {
       httpOnly: true,
-      secure: config.NODE_ENV === "production",
+      secure: config.NODE_ENV === "production" && ctx.protocol === "https",
     });
     ctx.redirect(authzUri);
   });
