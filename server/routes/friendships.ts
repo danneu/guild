@@ -29,8 +29,15 @@ router.post("/me/friendships", async (ctx: Context) => {
 
   let redirectTo;
   if (typeof ctx.query["redirect-to"] === "string") {
-    const parsed = new URL(decodeURIComponent(ctx.query["redirect-to"]));
-    redirectTo = parsed.pathname;
+    try {
+      const decodedUrl = decodeURIComponent(ctx.query["redirect-to"]);
+      // Handle relative URLs by providing a base URL
+      const parsed = new URL(decodedUrl, `http://localhost`);
+      redirectTo = parsed.pathname;
+    } catch (err) {
+      // If URL parsing fails, ignore the redirect parameter
+      console.warn('Failed to parse redirect URL:', err);
+    }
   }
 
   // update db
