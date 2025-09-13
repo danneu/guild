@@ -72,6 +72,7 @@ export const approveUser = async ({ approvedBy, targetUser }: { approvedBy: numb
 ////////////////////////////////////////////////////////////
 
 //Updates alts table: First guarantees that the user is part of an alts pool (creating a pool and assigning it to the user if not) then merges the second account and all other accounts in its pool with the first.
+//We have to use an empty select (SELECT WHERE (SELECT alt_group_id...) in order to only generate a new alt group on the condition that the user doesn't already have one
 export const linkUserAlts = async function(userId: number, altId: number) {
   return pool.query(`
     WITH current_group AS (
