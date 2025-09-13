@@ -25,7 +25,7 @@ import {
   broadcastManualUnnuke,
   broadcastBioUpdate,
 } from "../services/discord";
-import ipintel from "../services/ipintel";
+// import ipintel from "../services/ipintel";
 import { Context, Next } from "koa";
 import { pool, withPgPoolTransaction } from "../db/util";
 
@@ -123,7 +123,7 @@ router.get(
       cancan.isStaffRole(ctx.currUser.role) ||
       // If change_by_id is falsey, then this is the user's first uname history item (initial uname)
       !lastUnameChange.changed_by_id ||
-      belt.isOlderThan(lastUnameChange.created_at, { months: 3 });
+      belt.isOlderThan(lastUnameChange.updated_at, { months: 3 });
 
     await ctx.render("edit_user", {
       ctx,
@@ -175,28 +175,39 @@ router.post("/users/:slug/unames", async (ctx: Context) => {
     ctx.validateBody("recycle").toBoolean();
   }
 
-  try {
-    user = await db.unames
-      // Will fail if userId is not found
-      .changeUname({
-        userId: user.id,
-        changedById: ctx.currUser.id,
-        oldUname: user.uname,
-        newUname: ctx.vals.uname,
-        recycle: ctx.vals.recycle,
-      })
-      .then((user) => pre.presentUser(user)!);
-  } catch (err) {
-    if (err === "UNAME_TAKEN") {
+  const result = await db.unames.changeUname({
+    userId: user.id,
+    changedById: ctx.currUser.id,
+    oldUname: user.uname,
+    newUname: ctx.vals.uname,
+    recycle: ctx.vals.recycle,
+  });
+
+  switch (result.type) {
+    case "SUCCESS": {
+      user = pre.presentUser(result.user)!;
+      ctx.flash = { message: ["success", "Username updated"] };
+      ctx.redirect(user.url);
+      return;
+    }
+    case "UNAME_TAKEN":
       ctx.flash = { message: ["danger", "Username taken"] };
       ctx.redirect(user.url + "/edit");
       return;
+    case "RATE_LIMITED":
+      ctx.flash = {
+        message: [
+          "danger",
+          "You can only change your username once every 3 months",
+        ],
+      };
+      ctx.redirect(user.url + "/edit");
+      return;
+    default: {
+      const exhaustive: never = result;
+      throw exhaustive;
     }
-    throw err;
   }
-
-  ctx.flash = { message: ["success", "Username updated"] };
-  ctx.redirect(user.url);
 });
 
 ////////////////////////////////////////////////////////////
@@ -331,15 +342,13 @@ router.post("/users", checkCloudflareTurnstile, async (ctx: Context) => {
     .broadcastUserJoin(user)
     .catch((err) => console.error("broadcastUserJoin failed", err));
 
+  // Cloudflare should already give bots a captcha. I think ipintel will mostly punish humans.
+  //
   // In background, see if user is using a bad IP address
-  const ipAddress =
-    config.NODE_ENV === "development"
-      ? ctx.cookies.get("ip-override") || ctx.ip
-      : ctx.ip;
-
-  ipintel
-    .process(ipAddress, user)
-    .catch((err) => console.error("ipintel.process failed", err));
+  // const ipAddress = config.NODE_ENV === "development" ? ctx.cookies.get("ip-override") || ctx.ip : ctx.ip;
+  // ipintel
+  //   .process(ipAddress, user)
+  //   .catch((err) => console.error("ipintel.process failed", err));
 
   ctx.flash = { message: ["success", "Registered successfully"] };
   return ctx.response.redirect("/");

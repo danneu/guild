@@ -17,8 +17,18 @@ async function loadCampaign(ctx: Context, next: Next) {
 }
 
 async function loadRoll(ctx: Context, next: Next) {
-  const roll = await db.dice.getRoll(ctx.params.roll_id);
+  // Handle bad urls like "/rolls/123]"
+  const id = Number.parseInt(ctx.params.roll_id, 10);
+  ctx.assert(!isNaN(id), 404); // if it can't parsed as number
+  const roll = await db.dice.getRoll(id);
   ctx.assert(roll, 404);
+
+  // redirect weird urls like "/rolls/123]" to canonical url "/rolls/123"
+  if (ctx.params.roll_id !== id.toString()) {
+    ctx.redirect(`/rolls/${id}`);
+    return;
+  }
+
   pre.presentRoll(roll);
   ctx.state.roll = roll;
   return next();

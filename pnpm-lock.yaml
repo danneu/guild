@@ -193,6 +193,15 @@ importers:
         specifier: ^3.2.3
         version: 3.2.3(@types/debug@4.1.12)(@types/node@24.0.3)(tsx@4.20.3)
 
+  img-proxy:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.3
+        version: 24.0.3
+      vitest:
+        specifier: ^3.2.3
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@24.0.3)(tsx@4.20.3)
+
 packages:
 
   '@aws-crypto/crc32@5.2.0':
