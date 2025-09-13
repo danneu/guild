@@ -1069,7 +1069,7 @@
       {% endif %}
     </a>
 
-  {% if ctx.currUser.alts %}
+  {% if ctx.currUser.alts.length %}
     <button style="width: 35px" name="accounts" onclick='this.querySelector("#accountsElement").classList.toggle("show")' class="btn btn-default navbar-btn dropdown">▼
       <div class="dropdown-content" id="accountsElement">
         {% for account in ctx.currUser.alts %}
