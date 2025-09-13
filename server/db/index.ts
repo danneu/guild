@@ -336,7 +336,7 @@ export async function findUserBySlug(
 
   slug = slug.toLowerCase();
 
-  return pool
+  let user = await pool
     .query<DbUser>(
       `
     SELECT u.*
@@ -352,7 +352,22 @@ export async function findUserBySlug(
       [slug, slug],
     )
     .then(maybeOneRow);
-}
+  if (user && user.id){
+      //Get all users from the database where the user ID is any account owned by the same user as our account
+    const altList = await pool.query(`
+      SELECT json_agg(u ORDER BY u.uname ASC) AS alts
+      FROM (
+        SELECT * FROM users
+        WHERE alt_group_id = (
+          SELECT alt_group_id FROM users WHERE id = $1           
+        )
+        AND id != $1
+      ) u;
+    `, [user.id]).then(maybeOneRow);
+    user.alts = altList?.alts ?? [];
+  }
+  return user
+};
 
 ////////////////////////////////////////////////////////////
 
@@ -693,6 +708,21 @@ export const findUserBySessionId = async function (sessionId) {
 
   if (user && user.roles) {
     user.roles = pgArray.parse(user.roles, _.identity);
+  }
+
+   if (user && user.id){
+    //Get all users from the database with the same alt group as the target user
+    const altList = await pool.query(`
+      SELECT json_agg(u ORDER BY u.uname ASC) AS alts
+      FROM (
+        SELECT * FROM users
+        WHERE alt_group_id = (
+          SELECT alt_group_id FROM users WHERE id = $1
+        )
+        AND id != $1
+      ) u;
+    `, [user.id]).then(maybeOneRow);
+    user.alts = altList?.alts ?? [];
   }
 
   return user;

@@ -70,3 +70,42 @@ export const approveUser = async ({ approvedBy, targetUser }: { approvedBy: numb
 };
 
 ////////////////////////////////////////////////////////////
+
+//Updates alts table: First guarantees that the user is part of an alts pool (creating a pool and assigning it to the user if not) then merges the second account and all other accounts in its pool with the first.
+//We have to use an empty select (SELECT WHERE (SELECT alt_group_id...) in order to only generate a new alt group on the condition that the user doesn't already have one
+export const linkUserAlts = async function(userId: number, altId: number) {
+  return pool.query(`
+    WITH current_group AS (
+      SELECT alt_group_id FROM users WHERE id = $1
+    ),
+    new_group AS (
+      INSERT INTO alt_groups
+      SELECT
+      WHERE (SELECT alt_group_id FROM current_group) IS NULL
+      RETURNING id
+    ),
+    updated_user AS (
+      UPDATE users
+      SET alt_group_id = COALESCE(
+        (SELECT alt_group_id FROM current_group),
+        (SELECT id FROM new_group)
+      )
+      WHERE id = $1
+      RETURNING alt_group_id
+    )
+    UPDATE users
+    SET alt_group_id = (SELECT alt_group_id FROM updated_user)
+    WHERE id = $2 OR alt_group_id = (SELECT alt_group_id FROM users WHERE id = $2);
+  `, [userId, altId]);
+};
+
+////////////////////////////////////////////////////////////
+//When a user unlinks their account, it removes it from the alt pool but leaves the rest of the pool intact.
+export const unlinkUserAlts = async function(userId: number) {
+  return pool.query(`
+    UPDATE users
+    SET alt_group_id = NULL
+    WHERE id = $1`,
+    [userId]
+  );
+};
