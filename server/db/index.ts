@@ -1821,12 +1821,6 @@ export async function createUserWithSession(props: {
       interval: "1 year", // TODO: Decide how long to log user in upon registration
     });
 
-    await pool.query(`
-      INSERT INTO alts
-      VALUES ($1, $1)`,
-      [user.id]
-    );
-    //Register user alt
     return { user, session };
   });
 }
