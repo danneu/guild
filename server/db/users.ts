@@ -71,9 +71,7 @@ export const approveUser = async ({ approvedBy, targetUser }: { approvedBy: numb
 
 ////////////////////////////////////////////////////////////
 
-//Updates alts table: looks up the row with the alt's ID, then finds its owner ID, then updates all rows with the same owner ID. This merges two alt chains into one.
-//SET: Grabs the owner_id of the user registering the alt (in case they're an alt of some other account)
-//WHERE: Everyone owned by the same account as the current alt
+//Updates alts table: First guarantees that the user is part of an alts pool (creating a pool and assigning it to the user if not) then merges the second account and all other accounts in its pool with the first.
 export const linkUserAlts = async function(userId: number, altId: number) {
   return pool.query(`
     WITH ensure_group AS (
@@ -93,8 +91,7 @@ export const linkUserAlts = async function(userId: number, altId: number) {
 };
 
 ////////////////////////////////////////////////////////////
-//First runs a query to find all accounts owned by the unlinked account. It sets the owner of all of those accounts to one of the other accounts in the pool (since there's no legit hierarchy)
-//Then we set the ID of the unlinked account to itself, marking it as unowned. And due to the previous query, it won't be part of any pool.
+//When a user unlinks their account, it removes it from the alt pool but leaves the rest of the pool intact.
 export const unlinkUserAlts = async function(userId: number) {
   return pool.query(`
     UPDATE users
