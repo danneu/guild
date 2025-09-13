@@ -74,20 +74,27 @@ export const approveUser = async ({ approvedBy, targetUser }: { approvedBy: numb
 //Updates alts table: First guarantees that the user is part of an alts pool (creating a pool and assigning it to the user if not) then merges the second account and all other accounts in its pool with the first.
 export const linkUserAlts = async function(userId: number, altId: number) {
   return pool.query(`
-    WITH ensure_group AS (
-        UPDATE users 
-        SET alt_group_id = COALESCE(
-            alt_group_id, 
-            (INSERT INTO alt_groups DEFAULT VALUES RETURNING id)
-        )
-        WHERE id = $1
-        RETURNING alt_group_id
+    WITH current_group AS (
+      SELECT alt_group_id FROM users WHERE id = $1
+    ),
+    new_group AS (
+      INSERT INTO alt_groups DEFAULT VALUES
+      WHERE (SELECT alt_group_id FROM current_group) IS NULL
+      RETURNING id
+    ),
+    updated_user AS (
+      UPDATE users
+      SET alt_group_id = COALESCE(
+        (SELECT alt_group_id FROM current_group),
+        (SELECT id FROM new_group)
+      )
+      WHERE id = $1
+      RETURNING alt_group_id
     )
-    UPDATE users 
-    SET alt_group_id = (SELECT alt_group_id FROM ensure_group)
+    UPDATE users
+    SET alt_group_id = (SELECT alt_group_id FROM updated_user)
     WHERE id = $2 OR alt_group_id = (SELECT alt_group_id FROM users WHERE id = $2);
-  `,
-    [userId, altId]);
+  `, [userId, altId]);
 };
 
 ////////////////////////////////////////////////////////////
