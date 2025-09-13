@@ -359,7 +359,7 @@ export async function findUserBySlug(
       FROM (
         SELECT * FROM users
         WHERE alt_group_id = (
-          SELECT alt_group_id FROM users WHERE id = $           
+          SELECT alt_group_id FROM users WHERE id = $1           
         )
         AND id != $1
       ) u;
