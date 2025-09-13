@@ -354,19 +354,17 @@ export async function findUserBySlug(
     .then(maybeOneRow);
   if (user && user.id){
       //Get all users from the database where the user ID is any account owned by the same user as our account
-      const altList = await pool.query(`SELECT json_agg(users.* ORDER BY users.uname ASC)
-      FROM users
-      WHERE id IN (SELECT
-        id
-        FROM alts
-        WHERE owner_id = (
-          SELECT owner_id
-          FROM alts
-          WHERE id = ${user.id}
+    const altList = await pool.query(`
+      SELECT json_agg(u ORDER BY u.uname ASC) AS alts
+      FROM (
+        SELECT * FROM users
+        WHERE alt_group_id = (
+          SELECT alt_group_id FROM users WHERE id = $           
         )
-        AND id != ${user.id}
-      )`).then(maybeOneRow);
-      user.alts = altList.json_agg;
+        AND id != $1
+      ) u;
+    `, [user.id]).then(maybeOneRow);
+    user.alts = altList?.alts ?? [];
   }
   return user
 };
@@ -724,7 +722,7 @@ export const findUserBySessionId = async function (sessionId) {
         AND id != $1
       ) u;
     `, [user.id]).then(maybeOneRow);
-    user.alts = altList?.alts ?? []
+    user.alts = altList?.alts ?? [];
   }
 
   return user;
