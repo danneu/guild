@@ -74,34 +74,32 @@ export const approveUser = async ({ approvedBy, targetUser }: { approvedBy: numb
 //Updates alts table: looks up the row with the alt's ID, then finds its owner ID, then updates all rows with the same owner ID. This merges two alt chains into one.
 //SET: Grabs the owner_id of the user registering the alt (in case they're an alt of some other account)
 //WHERE: Everyone owned by the same account as the current alt
-export const linkUserAlts = async function(userId, altId) {
+export const linkUserAlts = async function(userId: number, altId: number) {
   return pool.query(`
-    UPDATE alts
-    SET owner_id = (SELECT owner_id from alts WHERE id=$1)
-    WHERE owner_id = (SELECT owner_id FROM alts WHERE id = $2)`,
+    WITH ensure_group AS (
+        UPDATE users 
+        SET alt_group_id = COALESCE(
+            alt_group_id, 
+            (INSERT INTO alt_groups DEFAULT VALUES RETURNING id)
+        )
+        WHERE id = $1
+        RETURNING alt_group_id
+    )
+    UPDATE users 
+    SET alt_group_id = (SELECT alt_group_id FROM ensure_group)
+    WHERE id = $2 OR alt_group_id = (SELECT alt_group_id FROM users WHERE id = $2);
+  `,
     [userId, altId]);
 };
 
 ////////////////////////////////////////////////////////////
 //First runs a query to find all accounts owned by the unlinked account. It sets the owner of all of those accounts to one of the other accounts in the pool (since there's no legit hierarchy)
 //Then we set the ID of the unlinked account to itself, marking it as unowned. And due to the previous query, it won't be part of any pool.
-export const unlinkUserAlts = async function(userId) {
-  await pool.query(`
-    UPDATE alts
-    SET owner_id = (
-      SELECT MIN(id)
-      FROM alts
-      WHERE owner_id = $1
-      AND id <> $1
-    )
-    WHERE owner_id = $1 AND id <> $1`,
-    [userId]
-  );
-
+export const unlinkUserAlts = async function(userId: number) {
   return pool.query(`
-    UPDATE alts
-    SET owner_id = $1
-    WHERE id=$1`,
+    UPDATE users
+    SET alt_group_id = NULL
+    WHERE id = $1`,
     [userId]
   );
 };
