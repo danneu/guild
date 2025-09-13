@@ -78,7 +78,8 @@ export const linkUserAlts = async function(userId: number, altId: number) {
       SELECT alt_group_id FROM users WHERE id = $1
     ),
     new_group AS (
-      INSERT INTO alt_groups DEFAULT VALUES
+      INSERT INTO alt_groups
+      SELECT
       WHERE (SELECT alt_group_id FROM current_group) IS NULL
       RETURNING id
     ),
