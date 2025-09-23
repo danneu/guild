@@ -21,6 +21,7 @@ export const currUser = function () {
 
     const user = await db.findUserBySessionId(sessionId);
     ctx.currUser = pre.presentUser(user);
+    if(ctx.currUser) ctx.currUser.subforum_bans = await fetchSubforumBansByUserId(ctx.currUser.id);
     ctx.state.session_id = sessionId;
     return next();
   };
