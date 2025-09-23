@@ -70,3 +70,11 @@ export const approveUser = async ({ approvedBy, targetUser }: { approvedBy: numb
 };
 
 ////////////////////////////////////////////////////////////
+
+export const fetchSubforumBansByUserId = async function(userId: number) {
+  return pool.query(`
+    SELECT subforum_id FROM subforum_bans
+    WHERE user_id = $1`,
+    [userId]
+  );
+};
