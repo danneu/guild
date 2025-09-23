@@ -163,6 +163,7 @@ function _can(
         return true;
       // If non-staff, then cannot if topic is hidden/closed
       if (target.is_closed || target.is_hidden) return false;
+      if ((user.subforum_bans || []).includes(target.category_id)) return false;
       // GMs can
       if (isTopicGm(user, target)) {
         return true;
@@ -402,6 +403,7 @@ function _can(
         if (target.is_closed) return false;
         if (target.is_hidden) return false;
         if ((target.banned_ids || []).includes(user.id)) return false;
+        if ((user.subforum_bans || []).includes(target.category_id)) return false;
 
         // Topic latest_post_at must be newer than 1 month
         // if in certain forums where necro'ing is disruptive
@@ -561,6 +563,7 @@ function _can(
       assert(target);
       if (!user) return false;
       if (user.role === "banned") return false;
+      if ((user.subforum_bans || []).includes(target.category_id)) return false;
       // Members can create topics in any category that's not Lexus Lounge
       if (user.role === "member") return target.category_id !== 4;
       // Only staff can create topics in lexus lounge
@@ -591,6 +594,8 @@ function _can(
       // from sabotaging posts after getting banned from a topic.
       if (!user) return false;
       if (user.role === "banned") return false;
+      // We can grab the category id equivalent from target.topic
+      if ((user.subforum_bans || []).includes(target.topic.forum_id)) return false;
       // Admin can update any post
       if (user.role === "admin") return true;
       // GM and Co-GM can edit the 0th post
@@ -694,6 +699,9 @@ function _can(
     case "UPDATE_CAMPAIGN": // target is campaign
       if (!user) return false;
       if (user.role === "banned") return false;
+      subforum_bans = user.subforum_bans || []
+      // Ban from tabletop and tabletop interest checks
+      if (subforum_bans.includes(39) || subforum_bans.includes(40)) return false;
       // people can update their own campaigns
       if (user.id === target.user_id) return true;
       // staff can update any campaign
@@ -711,6 +719,8 @@ function _can(
     case "CREATE_ROLL": // target is campaign
       if (!user) return false;
       if (user.role === "banned") return false;
+      // Users who are banned from tabletop cannot roll
+      if (subforum_bans.includes(39) || subforum_bans.includes(40)) return false;
       // can if they own the campaign
       if (user.id === target.user_id) return true;
       return false;
