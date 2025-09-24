@@ -163,7 +163,7 @@ function _can(
         return true;
       // If non-staff, then cannot if topic is hidden/closed
       if (target.is_closed || target.is_hidden) return false;
-      if ((user.subforum_bans || []).includes(target.category_id)) return false;
+      if ((user.subforum_bans || []).includes(target.forum_id)) return false;
       // GMs can
       if (isTopicGm(user, target)) {
         return true;
@@ -403,7 +403,7 @@ function _can(
         if (target.is_closed) return false;
         if (target.is_hidden) return false;
         if ((target.banned_ids || []).includes(user.id)) return false;
-        if ((user.subforum_bans || []).includes(target.category_id)) return false;
+        if ((user.subforum_bans || []).includes(target.forum_id)) return false;
 
         // Topic latest_post_at must be newer than 1 month
         // if in certain forums where necro'ing is disruptive
@@ -563,10 +563,11 @@ function _can(
       assert(target);
       if (!user) return false;
       if (user.role === "banned") return false;
-      if ((user.subforum_bans || []).includes(target.category_id)) return false;
+      if ((user.subforum_bans || []).includes(target.id)) return false;
       // Members can create topics in any category that's not Lexus Lounge
       if (user.role === "member") return target.category_id !== 4;
       // Only staff can create topics in lexus lounge
+      //TODO: I think the below line is a bug. Target ID 4 is Casual Roleplay. Maybe supposed to be target.category_id === 4?
       if (target.id === 4)
         return (
           isStaffRole(user.role) || ["conmod", "arenamod"].includes(user.role)

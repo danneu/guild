@@ -649,6 +649,69 @@
       </form>
       {% endif %}
 
+      {% if ctx.can(ctx.currUser, 'UPDATE_USER_ROLE', user) %}
+        <form action="{{ user.url }}/subforum_bans" method="post" class="form-horizontal" id="subforum-ban-form">
+          <input type="hidden" name="_method" value="PUT">
+
+          <div class="panel panel-default no-select" style="border-color: #000">
+            <div class="panel-heading">Update Subforum Bans</div>
+
+            <div class="panel-body">
+              <div class="form-group">
+                <label class="col-sm-3 control-label">Select Banned Subforums:</label>
+                <div class="col-sm-9">
+                  <div class="checkbox-grid">
+                    {% for category in categories %}
+                      <div class="category-section">
+                        <!-- CATEGORY LEVEL -->
+                        <label>
+                          <strong>{{ category.title }}</strong>
+                        </label>
+                        {% for forum in category.forums %}
+                          <div class="forum-section subforum-ban-tree-children" style="margin-left: 20px;">
+                            <!-- FORUM LEVEL -->
+                            <label>
+                              <input type="checkbox"
+                                    class="forum-checkbox"
+                                    data-category-id="{{ category.id | replace(' ', '_') }}"
+                                    data-forum-id="{{ forum.id }}"
+                                    {% if subforum_bans.includes(forum.id) %}checked{% endif %}>
+                              {{ forum.title }}
+                            </label>
+
+                            {% if forum.forums and forum.forums.length > 0 %}
+                              {% for child in forum.forums %}
+                                <div class="subforum-section subforum-ban-tree-children" style="margin-left: 20px;">
+                                  <!-- SUBFORUM LEVEL -->
+                                  <label>
+                                    <input type="checkbox"
+                                          class="subforum-checkbox"
+                                          name="banned_forums"
+                                          value="{{ child.id }}"
+                                          data-category-id="{{ category.id | replace(' ', '_') }}"
+                                          data-parent-id="{{ forum.id }}"
+                                          {% if subforum_bans.includes(child.id) %}checked{% endif %}>
+                                    {{ child.title }}
+                                  </label>
+                                </div>
+                              {% endfor %}
+                            {% endif %}
+                          </div>
+                        {% endfor %}
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel-footer text-right">
+              <button type="submit" class="btn btn-primary">Update</button>
+            </div>
+          </div>
+        </form>
+      {% endif %}
+
     </div> <!-- /col -->
   </div> <!-- /.row -->
 
@@ -706,5 +769,11 @@
         button.addEventListener('click', handler)
     }
 
+  </script>
+  <script>
+    // Don't save the previous state of the subforum ban form
+    window.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('subforum-ban-form').reset();
+    });
   </script>
 {% endblock %}

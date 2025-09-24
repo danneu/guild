@@ -6,7 +6,7 @@ import Knex from "knex";
 const knex = Knex({ client: "pg" });
 import _ from "lodash";
 // 1st
-import { pool, maybeOneRow } from "./util.js";
+import { pool } from "./util.js";
 
 // Note: The db/*.js files are an ongoing effort to
 // split apart the db/index.js monolith.
@@ -76,5 +76,5 @@ export const fetchSubforumBansByUserId = async function(userId: number) {
     SELECT subforum_id FROM subforum_bans
     WHERE user_id = $1`,
     [userId]
-  ).then(maybeOneRow);
+  ).then(res => res.rows.map(row => row.subforum_id));
 };

@@ -20,6 +20,7 @@ import * as avatar from "../avatar";
 import cache3 from "../cache3";
 import bbcode from "../bbcode";
 import services from "../services";
+
 import {
   broadcastManualNuke,
   broadcastManualUnnuke,
@@ -107,6 +108,7 @@ router.get(
   loadUserFromSlug("slug", "/users/<>/edit"),
   async (ctx: Context) => {
     const { user } = ctx.state;
+    const subforum_bans = await db.users.fetchSubforumBansByUserId(user.id);
     ctx.assertAuthorized(ctx.currUser, "UPDATE_USER", user);
 
     const lastUnameChange = await db.unames.lastUnameChange(user.id);
@@ -122,11 +124,43 @@ router.get(
       !lastUnameChange.changed_by_id ||
       belt.isOlderThan(lastUnameChange.updated_at, { months: 3 });
 
+    // Below largely copied from index.ts for homepage
+    const categories = cache3.get("categories");
+      // We don't show the mod forum on the homepage.
+      // Nasty, but just delete it for now
+      // TODO: Abstract
+      _.remove(categories, { id: 4 });
+
+      const allForums = _.flatten(categories.map((c) => c.forums));
+
+      var topLevelForums = _.reject(allForums, "parent_forum_id");
+      var childForums = _.filter(allForums, "parent_forum_id");
+
+      // Map of {CategoryId: [Forums...]}
+      childForums.forEach((childForum) => {
+        var parentIdx = _.findIndex(topLevelForums, {
+          id: childForum.parent_forum_id,
+        });
+        if (_.isArray(topLevelForums[parentIdx].forums)) {
+          topLevelForums[parentIdx].forums.push(childForum);
+        } else {
+          topLevelForums[parentIdx].forums = [childForum];
+        }
+      });
+      var groupedTopLevelForums = _.groupBy(topLevelForums, "category_id");
+      categories.forEach((category) => {
+        category.forums = (groupedTopLevelForums[category.id] || []).map(
+          pre.presentForum,
+        );
+      });
+
     await ctx.render("edit_user", {
       ctx,
       user,
       lastUnameChange,
       eligibleForUnameChange,
+      categories,
+      subforum_bans,
       title: "Edit " + user.uname,
     });
   },
