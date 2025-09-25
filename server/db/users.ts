@@ -78,3 +78,26 @@ export const fetchSubforumBansByUserId = async function(userId: number) {
     [userId]
   ).then(res => res.rows.map(row => row.subforum_id));
 };
+
+////////////////////////////////////////////////////////////
+
+//When a mod sets a series of subforum bans, it's easiest to just clear the bans and reset them.
+export const setSubforumBans = async function(userId: number, subforum_ids: number[]) {
+  //The below generates a safe string with an ID for every index in subforum_ids (index being 0, 1, 2... not the ID itself)
+  //Generates ($1, $2), ($1, $3) and so on so we can ban the user from all the target subforums in one fell swoop
+  const values = subforum_ids.map((_, i) => `($1, $${i + 2})`).join(', ');
+  const params = [userId, ...subforum_ids];
+  await pool.query(`
+    DELETE FROM subforum_bans
+    WHERE user_id = $1`,
+    [userId]
+  );
+  
+  if (subforum_ids.length === 0) return;
+  
+  return pool.query(`
+    INSERT INTO subforum_bans (user_id, subforum_id)
+    VALUES ${values}`,
+    params
+  );
+};

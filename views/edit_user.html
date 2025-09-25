@@ -661,6 +661,7 @@
                 <label class="col-sm-3 control-label">Select Banned Subforums:</label>
                 <div class="col-sm-9">
                   <div class="checkbox-grid">
+                    <input type="hidden" name="banned_forums" value="">
                     {% for category in categories %}
                       <div class="category-section">
                         <!-- CATEGORY LEVEL -->
@@ -673,6 +674,8 @@
                             <label>
                               <input type="checkbox"
                                     class="forum-checkbox"
+                                    name="banned_forums"
+                                    value="{{ forum.id }}"
                                     data-category-id="{{ category.id | replace(' ', '_') }}"
                                     data-forum-id="{{ forum.id }}"
                                     {% if subforum_bans.includes(forum.id) %}checked{% endif %}>

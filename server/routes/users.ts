@@ -1242,4 +1242,36 @@ router.post("/users/:slug/unnuke", async (ctx: Context) => {
 
 ////////////////////////////////////////////////////////////
 
+// Change user's subforum bans
+//
+router.put(
+  "/users/:slug/subforum_bans",
+  loadUserFromSlug("slug"),
+  async (ctx: Context) => {
+    
+    ctx.assert(ctx.currUser && cancan.isStaffRole(ctx.currUser.role), 403);
+    const { user } = ctx.state;
+    ctx.assert(user, 404);
+
+    //Handle zero or one value being submitted by the client
+    ctx.validateBody('banned_forums').required('Malformed body');
+    let bannedForumsRaw = ctx.vals.banned_forums || [];
+    bannedForumsRaw = Array.isArray(bannedForumsRaw) ? bannedForumsRaw : [bannedForumsRaw];
+    
+    //Next we validate that they actually passed us a real list of numbers
+    if (!Array.isArray(bannedForumsRaw) || !bannedForumsRaw.every(v => Number.isInteger(+v))) {
+      ctx.throw(400, 'banned_forums must be an array of integers');
+    }
+    //Now that we've validated, let's convert them to numbers (we have to filter out empty string)
+    const bannedForums: number[] = bannedForumsRaw.filter(v => v !== "").map(Number);
+    
+    await db.users.setSubforumBans(user.id, bannedForums);
+    const presentedUser = pre.presentUser(user)!;
+    ctx.flash = { message: ['success', 'Subforum bans updated.'] };
+    ctx.response.redirect(presentedUser.url + "/edit");
+  },
+);
+
+////////////////////////////////////////////////////////////
+
 export default router;
