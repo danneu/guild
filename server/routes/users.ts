@@ -20,6 +20,7 @@ import * as avatar from "../avatar";
 import cache3 from "../cache3";
 import bbcode from "../bbcode";
 import services from "../services";
+
 import {
   broadcastManualNuke,
   broadcastManualUnnuke,
@@ -107,6 +108,7 @@ router.get(
   loadUserFromSlug("slug", "/users/<>/edit"),
   async (ctx: Context) => {
     const { user } = ctx.state;
+    const subforum_bans = await db.users.fetchSubforumBansByUserId(user.id);
     ctx.assertAuthorized(ctx.currUser, "UPDATE_USER", user);
 
     const lastUnameChange = await db.unames.lastUnameChange(user.id);
@@ -122,11 +124,43 @@ router.get(
       !lastUnameChange.changed_by_id ||
       belt.isOlderThan(lastUnameChange.updated_at, { months: 3 });
 
+    // Below largely copied from index.ts for homepage
+    const categories = cache3.get("categories");
+      // We don't show the mod forum on the homepage.
+      // Nasty, but just delete it for now
+      // TODO: Abstract
+      _.remove(categories, { id: 4 });
+
+      const allForums = _.flatten(categories.map((c) => c.forums));
+
+      var topLevelForums = _.reject(allForums, "parent_forum_id");
+      var childForums = _.filter(allForums, "parent_forum_id");
+
+      // Map of {CategoryId: [Forums...]}
+      childForums.forEach((childForum) => {
+        var parentIdx = _.findIndex(topLevelForums, {
+          id: childForum.parent_forum_id,
+        });
+        if (_.isArray(topLevelForums[parentIdx].forums)) {
+          topLevelForums[parentIdx].forums.push(childForum);
+        } else {
+          topLevelForums[parentIdx].forums = [childForum];
+        }
+      });
+      var groupedTopLevelForums = _.groupBy(topLevelForums, "category_id");
+      categories.forEach((category) => {
+        category.forums = (groupedTopLevelForums[category.id] || []).map(
+          pre.presentForum,
+        );
+      });
+
     await ctx.render("edit_user", {
       ctx,
       user,
       lastUnameChange,
       eligibleForUnameChange,
+      categories,
+      subforum_bans,
       title: "Edit " + user.uname,
     });
   },
@@ -1205,6 +1239,38 @@ router.post("/users/:slug/unnuke", async (ctx: Context) => {
   ctx.flash = { message: ["success", "Un-nuked the user"] };
   ctx.redirect(user.url);
 });
+
+////////////////////////////////////////////////////////////
+
+// Change user's subforum bans
+//
+router.put(
+  "/users/:slug/subforum_bans",
+  loadUserFromSlug("slug"),
+  async (ctx: Context) => {
+    
+    ctx.assert(ctx.currUser && cancan.isStaffRole(ctx.currUser.role), 403);
+    const { user } = ctx.state;
+    ctx.assert(user, 404);
+
+    //Handle zero or one value being submitted by the client
+    ctx.validateBody('banned_forums').required('Malformed body');
+    let bannedForumsRaw = ctx.vals.banned_forums || [];
+    bannedForumsRaw = Array.isArray(bannedForumsRaw) ? bannedForumsRaw : [bannedForumsRaw];
+    
+    //Next we validate that they actually passed us a real list of numbers
+    if (!Array.isArray(bannedForumsRaw) || !bannedForumsRaw.every(v => Number.isInteger(+v))) {
+      ctx.throw(400, 'banned_forums must be an array of integers');
+    }
+    //Now that we've validated, let's convert them to numbers (we have to filter out empty string)
+    const bannedForums: number[] = bannedForumsRaw.filter(v => v !== "").map(Number);
+    
+    await db.users.setSubforumBans(user.id, bannedForums);
+    const presentedUser = pre.presentUser(user)!;
+    ctx.flash = { message: ['success', 'Subforum bans updated.'] };
+    ctx.response.redirect(presentedUser.url + "/edit");
+  },
+);
 
 ////////////////////////////////////////////////////////////
 

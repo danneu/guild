@@ -1498,3 +1498,14 @@ fieldset.cyberpunk {
 /*   color: #ff6b5c; */
 /*   text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; */
 /* } */
+
+/* Subforum Bans */
+
+/* Make a nice directory tree for moderation subforum bans tool /*
+
+/* Vertical tree line from parent to children */
+.subforum-ban-tree-children {
+  margin-left: 20px;
+  padding-left: 10px;
+  border-left: 1px solid #ccc;
+}
