@@ -45,7 +45,7 @@ STAFF_REPRESENTATIVE_ID = "8231"
 [[services]]
 internal_port = 3000
 protocol = "tcp"
-auto_stop_machines = "off"  # Never stop machines: cold boot (~30s via tsx) is slower than the proxy's connect timeout
+auto_stop_machines = "off"  # Keep warm capacity despite faster precompiled boots
 auto_start_machines = true
 min_machines_running = 3    # Only relevant if auto_stop is ever re-enabled
 
@@ -61,9 +61,8 @@ handlers = ["tls", "http"]
 port = 443
 
 [[services.http_checks]]
-# Time to wait before checking machine health (give it chance to boot and listen)
-# For some reason my start takes 12 seconds. If I fix this I can lower the grace period
-grace_period = "20s"
+# Time to wait before checking machine health; precompiled server boot should be well under this.
+grace_period = "10s"
 # How often to check machine health AFTER grace period
 interval = "10s"
 # How long to wait for response from /health check

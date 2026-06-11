@@ -64,11 +64,16 @@ handlers = ["tls", "http"]
 port = 443
 
 [[services.http_checks]]
-interval = "30s"
+# Time to wait before checking machine health; precompiled server boot should be well under this.
 grace_period = "10s"
+# How often to check machine health AFTER grace period
+interval = "10s"
+# How long to wait for response from /health check
+timeout = "5s"
+
 method = "get"
 path = "/health"
 protocol = "http"
-timeout = "3s"
+
 [services.http_checks.headers]
 X-Forwarded-Proto = "https" # Helps with CF health checks

@@ -9,6 +9,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # Build artifacts (will be rebuilt)
+build
 dist
 
 # Documentation

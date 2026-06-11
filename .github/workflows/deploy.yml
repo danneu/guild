@@ -31,7 +31,7 @@ jobs:
         run: pnpm test
 
       - name: Build
-        run: pnpm run build && pnpm prune --prod
+        run: pnpm run build && pnpm run build:server && pnpm prune --prod
 
   deploy:
     needs: test

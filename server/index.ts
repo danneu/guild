@@ -4,6 +4,7 @@ import { z } from "zod";
 
 // Node
 import fs from "fs";
+import { join } from "path";
 import Router from "@koa/router";
 
 import Koa, { Context, Next } from "koa";
@@ -163,7 +164,6 @@ import cache3 from "./cache3";
 import makeAgo from "./ago";
 import protectCsrf from "./middleware/protect-csrf";
 import { pool, withPgPoolTransaction } from "./db/util";
-import { join } from "path";
 
 app.use(middleware.methodOverride());
 

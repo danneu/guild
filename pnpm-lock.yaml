@@ -107,9 +107,6 @@ importers:
       tsafe:
         specifier: ^1.8.5
         version: 1.8.5
-      tsx:
-        specifier: ^4.20.3
-        version: 4.20.3
       uuid:
         specifier: ^11.1.0
         version: 11.1.0
@@ -183,21 +180,15 @@ importers:
       gulp-uglify:
         specifier: ^3.0.2
         version: 3.0.2
+      tsx:
+        specifier: ^4.20.3
+        version: 4.20.3
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
       vinyl-paths:
         specifier: ^5.0.0
         version: 5.0.0
-      vitest:
-        specifier: ^3.2.3
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@24.0.3)(tsx@4.20.3)
-
-  img-proxy:
-    devDependencies:
-      '@types/node':
-        specifier: ^24.0.3
-        version: 24.0.3
       vitest:
         specifier: ^3.2.3
         version: 3.2.3(@types/debug@4.1.12)(@types/node@24.0.3)(tsx@4.20.3)

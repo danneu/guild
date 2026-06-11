@@ -88,18 +88,14 @@ export async function uploadToS3(
   switch (uploadable.type) {
     case "album_image": {
       // https://img.roleplayerguild.com/{prod|dev}/users/{uuid}.avif
-      console.log("s3Url", s3Url);
       const guildUrl = new URL("https://img.roleplayerguild.com");
-      console.log("guildUrl before", guildUrl);
       guildUrl.pathname = s3Url.pathname;
-      console.log("guildUrl after", guildUrl);
       publicUrl = guildUrl.toString();
       break;
     }
     case "avatar": {
       // normal: https://avatars.roleplayerguild.com/{production|development}/{uuid}.avif
       // small:  https://avatars.roleplayerguild.com/{production|development}/32/{uuid}.avif
-      console.log("s3Url", s3Url);
       const guildUrl = new URL("https://avatars.roleplayerguild.com");
       guildUrl.pathname = s3Url.pathname;
       publicUrl = guildUrl.toString();
