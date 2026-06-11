@@ -45,9 +45,9 @@ STAFF_REPRESENTATIVE_ID = "8231"
 [[services]]
 internal_port = 3000
 protocol = "tcp"
-auto_stop_machines = "stop" # Stop idle machines
+auto_stop_machines = "off"  # Never stop machines: cold boot (~30s via tsx) is slower than the proxy's connect timeout
 auto_start_machines = true
-min_machines_running = 1    # Always keep 1 running
+min_machines_running = 3    # Only relevant if auto_stop is ever re-enabled
 
 [[services.ports]]
 handlers = ["http"]
