@@ -38,7 +38,7 @@ export const handleAvatarTransformAndUpload = async (
         withoutEnlargement: true,
       })
       .webp({
-        quality: 80,
+        quality: 100,
         effort: 4, // 0-6, higher = better compression but slower
         // Additional options for better results:
         nearLossless: false, // Set true for higher quality at larger size
