@@ -1,7 +1,11 @@
 .DS_Store
 bower_components
-.env
+.env*
+!.env.example
 .test-env
+# secrets / keys (keep the tracked CA bundle)
+*.pem
+!us-east-1-bundle.pem
 .projectile
 db-backup.tar.gz
 node_modules
