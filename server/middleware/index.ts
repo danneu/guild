@@ -8,6 +8,7 @@ import * as db from "../db";
 import * as pre from "../presenters";
 import * as belt from "../belt";
 import { Context, Next } from "koa";
+import { fetchSubforumBansByUserId } from "../db/users"
 
 // Assoc ctx.currUser if the sessionId cookie (UUIDv4 String)
 // is an active session.
@@ -21,6 +22,7 @@ export const currUser = function () {
 
     const user = await db.findUserBySessionId(sessionId);
     ctx.currUser = pre.presentUser(user);
+    if(ctx.currUser) ctx.currUser.subforum_bans = await fetchSubforumBansByUserId(ctx.currUser.id);
     ctx.state.session_id = sessionId;
     return next();
   };
