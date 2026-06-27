@@ -67,7 +67,28 @@ export async function checkComment({
     form.append("comment_author_email", commentAuthorEmail);
   }
 
-  return fetch(url, { method: "POST", body: form })
-    .then((res) => res.text())
-    .then((text) => text === "true");
+  const res = await fetch(url, { method: "POST", body: form });
+
+  // Akismet signals account/request problems via response headers, NOT the
+  // HTTP status. A suspended or invalid key still returns 200 with a body of
+  // "false" (i.e. "not spam"), which would silently disable spam filtering --
+  // every post sails through as ham and nobody notices. Surface these loudly
+  // so a dead subscription screams in the logs instead of failing open in
+  // silence. (Seen in the wild: x-akismet-error: suspended / alert code 10402
+  // when the Akismet subscription lapses.)
+  const akismetError = res.headers.get("x-akismet-error");
+  const debugHelp = res.headers.get("x-akismet-debug-help");
+  if (akismetError || debugHelp) {
+    console.error("[checkComment] Akismet returned an error response", {
+      error: akismetError,
+      alertCode: res.headers.get("x-akismet-alert-code"),
+      alertMsg: res.headers.get("x-akismet-alert-msg"),
+      debugHelp,
+    });
+  }
+
+  // "true" => spam. Anything else (incl. "invalid", or "false" returned
+  // alongside an error header) is treated as not-spam: fail open.
+  const text = await res.text();
+  return text === "true";
 }
