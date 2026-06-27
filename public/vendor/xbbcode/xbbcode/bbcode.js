@@ -849,12 +849,12 @@ var XBBCODE = (function () {
     table: {
       openTag: function (params, content) {
         if (params && params.slice(1) === "bordered")
-          return '<table class="bb-table bb-table-bordered">';
-        return '<table class="bb-table">';
+          return '<div class="table-responsive"><table class="bb-table bb-table-bordered">';
+        return '<div class="table-responsive"><table class="bb-table">';
       },
       closeTag: function (params, content) {
         // isFirstTableRow = true;
-        return "</table>";
+        return "</table></div>";
       },
       // restrictChildrenTo: ["tbody","thead", "tfoot", "tr"]
       restrictChildrenTo: ["row"],
