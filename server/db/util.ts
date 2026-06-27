@@ -3,24 +3,36 @@ import { QueryConfig, QueryResult, QueryResultRow } from "pg";
 import pg from "pg";
 import * as config from "../config";
 import assert from "assert";
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import path from "path";
 
-const rdsRootCert = readFileSync(
-  path.join(__dirname, "../../us-east-1-bundle.pem"),
-  "utf8",
-);
+function readRdsRootCert() {
+  const certPaths = [
+    path.join(__dirname, "../../us-east-1-bundle.pem"),
+    path.join(process.cwd(), "us-east-1-bundle.pem"),
+  ];
+
+  const certPath = certPaths.find(existsSync);
+  assert(
+    certPath,
+    `Could not find us-east-1-bundle.pem. Checked: ${certPaths.join(", ")}`,
+  );
+
+  return readFileSync(certPath, "utf8");
+}
+
+const usesLocalDatabase =
+  config.DATABASE_URL.includes("localhost") ||
+  config.DATABASE_URL.includes("host.docker.internal");
 
 const connectionConfig: pg.ClientConfig = {
   connectionString: config.DATABASE_URL,
-  ssl:
-    config.DATABASE_URL.includes("localhost") ||
-    config.DATABASE_URL.includes("host.docker.internal")
-      ? false
-      : {
-          rejectUnauthorized: true,
-          ca: rdsRootCert,
-        },
+  ssl: usesLocalDatabase
+    ? false
+    : {
+        rejectUnauthorized: true,
+        ca: readRdsRootCert(),
+      },
 };
 
 // TODO: Update db/index.js to use this module,
