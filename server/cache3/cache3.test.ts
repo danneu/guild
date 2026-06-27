@@ -1,6 +1,10 @@
 import { describe, it, beforeEach, afterEach, vi } from "vitest";
 import { deepEqual, ok } from "node:assert";
-import { createIntervalCache, CacheFetchError, CacheTimeoutError } from "./index";
+import {
+  createIntervalCache,
+  CacheFetchError,
+  CacheTimeoutError,
+} from "./index";
 
 describe("createIntervalCache", () => {
   beforeEach(() => {
@@ -37,26 +41,29 @@ describe("createIntervalCache", () => {
     let usersFetchCount = 0;
     let settingsFetchCount = 0;
 
-    const cache = createIntervalCache({
-      users: {
-        enabled: true,
-        initialValue: [],
-        interval: 100, // Short interval for testing
-        fetch: async (prevValue) => {
-          usersFetchCount++;
-          return [{ id: usersFetchCount, name: `User ${usersFetchCount}` }];
+    const cache = createIntervalCache(
+      {
+        users: {
+          enabled: true,
+          initialValue: [],
+          interval: 100, // Short interval for testing
+          fetch: async (prevValue) => {
+            usersFetchCount++;
+            return [{ id: usersFetchCount, name: `User ${usersFetchCount}` }];
+          },
+        },
+        settings: {
+          enabled: false, // This should not be populated
+          initialValue: { theme: "dark" },
+          interval: 100,
+          fetch: async (prevValue) => {
+            settingsFetchCount++;
+            return { theme: "light" };
+          },
         },
       },
-      settings: {
-        enabled: false, // This should not be populated
-        initialValue: { theme: "dark" },
-        interval: 100,
-        fetch: async (prevValue) => {
-          settingsFetchCount++;
-          return { theme: "light" };
-        },
-      },
-    }, { loopInterval: 50 });
+      { loopInterval: 50 },
+    );
 
     // Before start(), should have initial values
     deepEqual(cache.get("users"), []);
@@ -81,18 +88,21 @@ describe("createIntervalCache", () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const errorEvents: CacheFetchError[] = [];
 
-    const cache = createIntervalCache({
-      data: {
-        enabled: true,
-        initialValue: "initial",
-        interval: 100,
-        fetch: async (prevValue) => {
-          throw new Error("Update failed");
+    const cache = createIntervalCache(
+      {
+        data: {
+          enabled: true,
+          initialValue: "initial",
+          interval: 100,
+          fetch: async (prevValue) => {
+            throw new Error("Update failed");
+          },
         },
       },
-    }, { loopInterval: 50 });
+      { loopInterval: 50 },
+    );
 
-    cache.on('error', (error: CacheFetchError) => {
+    cache.on("error", (error: CacheFetchError) => {
       errorEvents.push(error);
     });
 
@@ -142,7 +152,7 @@ describe("createIntervalCache", () => {
 
     // Start the cache (this will begin the update loop)
     cache.start();
-    
+
     // Wait for updateLoop to run and populate enabled keys
     await vi.advanceTimersByTimeAsync(150);
 
@@ -161,7 +171,7 @@ describe("createIntervalCache", () => {
 
     // Reset counter for cleaner test
     const countBeforeRequest = enabledFetchCount;
-    
+
     // Wait for next update cycle (interval needs to pass)
     await vi.advanceTimersByTimeAsync(1050);
 
@@ -249,23 +259,25 @@ describe("createIntervalCache", () => {
 
     // Start the cache (begins update loop)
     cache.start();
-    
+
     // Wait for updateLoop to run once
     await vi.advanceTimersByTimeAsync(150);
     const initialValue = cache.get("data");
     const initialCount = fetchCount;
 
-    // The robust logic now auto-requests when intervals pass, 
+    // The robust logic now auto-requests when intervals pass,
     // so we need to verify that updates happen on schedule
     const countBeforeInterval = fetchCount;
-    
+
     // Wait for interval to pass - the cache should auto-update
     await vi.advanceTimersByTimeAsync(2100); // Wait for full interval + some margin
-    ok(fetchCount > countBeforeInterval, "Should have updated automatically when interval passed");
+    ok(
+      fetchCount > countBeforeInterval,
+      "Should have updated automatically when interval passed",
+    );
 
     cache.stop();
   });
-
 
   it("automatic updates happen based on interval", async () => {
     let fetchCount = 0;
@@ -283,7 +295,7 @@ describe("createIntervalCache", () => {
 
     // Start the cache (begins update loop)
     cache.start();
-    
+
     // Wait for updateLoop to run once
     await vi.advanceTimersByTimeAsync(150);
     ok(fetchCount > 0);
@@ -291,14 +303,20 @@ describe("createIntervalCache", () => {
     // The robust logic automatically requests updates when intervals pass
     const valueAfterFirstUpdate = cache.get("data");
     const countAfterFirstUpdate = fetchCount;
-    
+
     // Wait for next interval - should auto-update
     await vi.advanceTimersByTimeAsync(2100); // Wait for full interval + margin
-    
+
     // Should have updated again automatically
-    ok(fetchCount > countAfterFirstUpdate, "Should have updated automatically on interval");
+    ok(
+      fetchCount > countAfterFirstUpdate,
+      "Should have updated automatically on interval",
+    );
     const valueAfterSecondUpdate = cache.get("data");
-    ok(valueAfterSecondUpdate !== valueAfterFirstUpdate, "Value should have changed");
+    ok(
+      valueAfterSecondUpdate !== valueAfterFirstUpdate,
+      "Value should have changed",
+    );
 
     cache.stop();
   });
@@ -377,9 +395,9 @@ describe("createIntervalCache", () => {
       { loopInterval: 25 },
     ); // Very fast loop
 
-    // Start the cache (begins update loop) 
+    // Start the cache (begins update loop)
     cache.start();
-    
+
     // Wait for initial update
     await vi.advanceTimersByTimeAsync(75);
     ok(updateCount >= 1);
@@ -391,7 +409,7 @@ describe("createIntervalCache", () => {
 
     // Let updates process
     await vi.advanceTimersByTimeAsync(200);
-    
+
     // Should only have limited updates despite multiple requests due to concurrency protection
     const initialCount = updateCount;
     ok(updateCount >= 1, `Expected at least 1 update, got ${updateCount}`);
@@ -401,7 +419,7 @@ describe("createIntervalCache", () => {
 
   it("returns undefined and warns when accessing non-existent key", () => {
     const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    
+
     const cache = createIntervalCache({
       data: {
         enabled: true,
@@ -415,7 +433,9 @@ describe("createIntervalCache", () => {
     const result = cache.get("nonexistent");
     deepEqual(result, undefined);
     ok(consoleSpy.mock.calls.length > 0);
-    ok(consoleSpy.mock.calls[0][0].includes("Cache key 'nonexistent' not found"));
+    ok(
+      consoleSpy.mock.calls[0][0].includes("Cache key 'nonexistent' not found"),
+    );
 
     try {
       // @ts-expect-error - Testing invalid key
@@ -445,7 +465,7 @@ describe("createIntervalCache", () => {
 
     // Start and wait for updateLoop to run
     cache.start();
-    
+
     // Wait for updateLoop to run once
     await vi.advanceTimersByTimeAsync(150);
     const valueAfterStart = cache.get("data");
@@ -477,25 +497,28 @@ describe("createIntervalCache", () => {
 
   it("emits error events during updateLoop failures", async () => {
     const errorEvents: CacheFetchError[] = [];
-    
-    const cache = createIntervalCache({
-      failing: {
-        enabled: true,
-        initialValue: "initial",
-        interval: 100,
-        fetch: async (prevValue) => {
-          throw new Error("Update failed");
+
+    const cache = createIntervalCache(
+      {
+        failing: {
+          enabled: true,
+          initialValue: "initial",
+          interval: 100,
+          fetch: async (prevValue) => {
+            throw new Error("Update failed");
+          },
+        },
+        working: {
+          enabled: true,
+          initialValue: "initial",
+          interval: 100,
+          fetch: async (prevValue) => "success",
         },
       },
-      working: {
-        enabled: true,
-        initialValue: "initial", 
-        interval: 100,
-        fetch: async (prevValue) => "success",
-      },
-    }, { loopInterval: 50 });
+      { loopInterval: 50 },
+    );
 
-    cache.on('error', (error: CacheFetchError) => {
+    cache.on("error", (error: CacheFetchError) => {
       errorEvents.push(error);
     });
 
@@ -522,27 +545,30 @@ describe("createIntervalCache", () => {
     const errorEvents: CacheFetchError[] = [];
     let shouldFail = false;
 
-    const cache = createIntervalCache({
-      data: {
-        enabled: true,
-        initialValue: "initial",
-        interval: 1000, // Use valid interval
-        fetch: async (prevValue) => {
-          if (shouldFail) {
-            throw new Error("Update failed");
-          }
-          return "success";
+    const cache = createIntervalCache(
+      {
+        data: {
+          enabled: true,
+          initialValue: "initial",
+          interval: 1000, // Use valid interval
+          fetch: async (prevValue) => {
+            if (shouldFail) {
+              throw new Error("Update failed");
+            }
+            return "success";
+          },
         },
       },
-    }, { loopInterval: 50 });
+      { loopInterval: 50 },
+    );
 
-    cache.on('error', (error: CacheFetchError) => {
+    cache.on("error", (error: CacheFetchError) => {
       errorEvents.push(error);
     });
 
     cache.start();
-    
-    // Wait for updateLoop to run once successfully  
+
+    // Wait for updateLoop to run once successfully
     await vi.advanceTimersByTimeAsync(1100);
     deepEqual(cache.get("data"), "success");
     deepEqual(errorEvents.length, 0);
@@ -580,7 +606,7 @@ describe("createIntervalCache", () => {
       },
     });
 
-    cache.on('error', (error: CacheFetchError) => {
+    cache.on("error", (error: CacheFetchError) => {
       errorEvents.push(error);
     });
 
@@ -616,7 +642,7 @@ describe("createIntervalCache", () => {
       },
     });
 
-    cache.on('error', (error: CacheFetchError) => {
+    cache.on("error", (error: CacheFetchError) => {
       errorEvents.push(error);
     });
 
@@ -631,7 +657,7 @@ describe("createIntervalCache", () => {
 
   it("forceUpdate() warns and returns undefined for non-existent keys", async () => {
     const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    
+
     const cache = createIntervalCache({
       data: {
         enabled: true,
@@ -643,10 +669,12 @@ describe("createIntervalCache", () => {
 
     // @ts-expect-error - Testing invalid key
     const result = await cache.forceUpdate("nonexistent");
-    
+
     deepEqual(result, undefined);
     ok(consoleSpy.mock.calls.length > 0);
-    ok(consoleSpy.mock.calls[0][0].includes("Cache key 'nonexistent' not found"));
+    ok(
+      consoleSpy.mock.calls[0][0].includes("Cache key 'nonexistent' not found"),
+    );
 
     cache.stop();
     consoleSpy.mockRestore();
@@ -654,7 +682,7 @@ describe("createIntervalCache", () => {
 
   it("validates and normalizes cache entry intervals", () => {
     const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    
+
     const cache = createIntervalCache({
       tooShort: {
         enabled: true,
@@ -664,7 +692,7 @@ describe("createIntervalCache", () => {
       },
       justRight: {
         enabled: true,
-        initialValue: "value2", 
+        initialValue: "value2",
         interval: 1000, // Just right
         fetch: async (prevValue) => "updated2",
       },
@@ -684,9 +712,13 @@ describe("createIntervalCache", () => {
 
     // Should have warned about short intervals
     ok(consoleSpy.mock.calls.length >= 2);
-    ok(consoleSpy.mock.calls.some(call => call[0].includes("tooShort")));
-    ok(consoleSpy.mock.calls.some(call => call[0].includes("veryShort")));
-    ok(consoleSpy.mock.calls.some(call => call[0].includes("defaulting to 1000ms")));
+    ok(consoleSpy.mock.calls.some((call) => call[0].includes("tooShort")));
+    ok(consoleSpy.mock.calls.some((call) => call[0].includes("veryShort")));
+    ok(
+      consoleSpy.mock.calls.some((call) =>
+        call[0].includes("defaulting to 1000ms"),
+      ),
+    );
 
     cache.stop();
     consoleSpy.mockRestore();
@@ -695,38 +727,53 @@ describe("createIntervalCache", () => {
   it("implements exponential backoff on fetch failures", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    const cache = createIntervalCache({
-      data: {
-        enabled: true,
-        initialValue: "initial",
-        interval: 1000,
-        fetch: async (prevValue) => {
-          throw new Error("Always fails");
+    const cache = createIntervalCache(
+      {
+        data: {
+          enabled: true,
+          initialValue: "initial",
+          interval: 1000,
+          fetch: async (prevValue) => {
+            throw new Error("Always fails");
+          },
         },
       },
-    }, { 
-      loopInterval: 50,
-      backoff: {
-        maxBackoffMs: 10000,
-        multiplier: 2,
-      }
-    });
+      {
+        loopInterval: 50,
+        backoff: {
+          maxBackoffMs: 10000,
+          multiplier: 2,
+        },
+      },
+    );
 
     // Test using forceUpdate to bypass timing complexities
     await cache.forceUpdate("data"); // 1st failure
-    await cache.forceUpdate("data"); // 2nd failure  
+    await cache.forceUpdate("data"); // 2nd failure
     await cache.forceUpdate("data"); // 3rd failure
 
     // Verify the exponential backoff pattern in the logs
-    ok(consoleSpy.mock.calls.some(call => 
-      call[0].includes("attempt 1") && call[0].includes("backing off 1000ms")
-    ));
-    ok(consoleSpy.mock.calls.some(call => 
-      call[0].includes("attempt 2") && call[0].includes("backing off 2000ms")
-    ));
-    ok(consoleSpy.mock.calls.some(call => 
-      call[0].includes("attempt 3") && call[0].includes("backing off 4000ms")
-    ));
+    ok(
+      consoleSpy.mock.calls.some(
+        (call) =>
+          call[0].includes("attempt 1") &&
+          call[0].includes("backing off 1000ms"),
+      ),
+    );
+    ok(
+      consoleSpy.mock.calls.some(
+        (call) =>
+          call[0].includes("attempt 2") &&
+          call[0].includes("backing off 2000ms"),
+      ),
+    );
+    ok(
+      consoleSpy.mock.calls.some(
+        (call) =>
+          call[0].includes("attempt 3") &&
+          call[0].includes("backing off 4000ms"),
+      ),
+    );
 
     cache.stop();
     consoleSpy.mockRestore();
@@ -735,32 +782,39 @@ describe("createIntervalCache", () => {
   it("respects maxBackoffMs setting", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    const cache = createIntervalCache({
-      data: {
-        enabled: true,
-        initialValue: "initial",
-        interval: 1000,
-        fetch: async (prevValue) => {
-          throw new Error("Always fails");
+    const cache = createIntervalCache(
+      {
+        data: {
+          enabled: true,
+          initialValue: "initial",
+          interval: 1000,
+          fetch: async (prevValue) => {
+            throw new Error("Always fails");
+          },
         },
       },
-    }, { 
-      loopInterval: 50,
-      backoff: {
-        maxBackoffMs: 3000, // Cap at 3 seconds
-        multiplier: 2,
-      }
-    });
+      {
+        loopInterval: 50,
+        backoff: {
+          maxBackoffMs: 3000, // Cap at 3 seconds
+          multiplier: 2,
+        },
+      },
+    );
 
     // Use forceUpdate to test the max backoff quickly
     await cache.forceUpdate("data"); // 1st: 1000ms backoff
-    await cache.forceUpdate("data"); // 2nd: 2000ms backoff  
+    await cache.forceUpdate("data"); // 2nd: 2000ms backoff
     await cache.forceUpdate("data"); // 3rd: should be 4000ms but capped at 3000ms
 
     // Verify backoff was capped at maxBackoffMs (3000ms, not 4000ms)
-    ok(consoleSpy.mock.calls.some(call => 
-      call[0].includes("attempt 3") && call[0].includes("backing off 3000ms")
-    ));
+    ok(
+      consoleSpy.mock.calls.some(
+        (call) =>
+          call[0].includes("attempt 3") &&
+          call[0].includes("backing off 3000ms"),
+      ),
+    );
 
     cache.stop();
     consoleSpy.mockRestore();
@@ -769,28 +823,31 @@ describe("createIntervalCache", () => {
   it("resets backoff state on successful update", async () => {
     let shouldFail = true;
 
-    const cache = createIntervalCache({
-      data: {
-        enabled: true,
-        initialValue: "initial",
-        interval: 1000,
-        fetch: async (prevValue) => {
-          if (shouldFail) {
-            throw new Error("Failure");
-          }
-          return `success-${Date.now()}`;
+    const cache = createIntervalCache(
+      {
+        data: {
+          enabled: true,
+          initialValue: "initial",
+          interval: 1000,
+          fetch: async (prevValue) => {
+            if (shouldFail) {
+              throw new Error("Failure");
+            }
+            return `success-${Date.now()}`;
+          },
         },
       },
-    }, { 
-      loopInterval: 50,
-      backoff: { maxBackoffMs: 10000, multiplier: 2 }
-    });
+      {
+        loopInterval: 50,
+        backoff: { maxBackoffMs: 10000, multiplier: 2 },
+      },
+    );
 
     cache.start();
 
     // Let it fail once to set backoff state
     await vi.advanceTimersByTimeAsync(1100);
-    
+
     // Verify failure state exists
     let entry = cache.getEntry("data");
     ok(entry?.failureCount > 0);
@@ -798,7 +855,7 @@ describe("createIntervalCache", () => {
 
     // Now make it succeed
     shouldFail = false;
-    
+
     // Force an update to bypass backoff timing
     await cache.forceUpdate("data");
     ok(cache.get("data").startsWith("success"));
@@ -817,7 +874,9 @@ describe("createIntervalCache", () => {
         enabled: true,
         initialValue: "initial",
         interval: 1000,
-        fetch: async (prevValue) => { throw new Error("Always fails"); },
+        fetch: async (prevValue) => {
+          throw new Error("Always fails");
+        },
       },
     });
 
@@ -832,7 +891,7 @@ describe("createIntervalCache", () => {
 
     // Manual set should NOT reset backoff state
     cache.set("data", "manually set");
-    
+
     const updatedEntry = cache.getEntry("data");
     deepEqual(updatedEntry?.failureCount, 5); // Should remain unchanged
     deepEqual(updatedEntry?.backoffUntil, originalBackoffUntil); // Should remain unchanged
@@ -843,15 +902,18 @@ describe("createIntervalCache", () => {
 
   it("debug option enables verbose logging", () => {
     const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    
-    const cache = createIntervalCache({
-      data: {
-        enabled: true,
-        initialValue: "initial",
-        interval: 1000,
-        fetch: async (prevValue) => "updated",
+
+    const cache = createIntervalCache(
+      {
+        data: {
+          enabled: true,
+          initialValue: "initial",
+          interval: 1000,
+          fetch: async (prevValue) => "updated",
+        },
       },
-    }, { debug: true });
+      { debug: true },
+    );
 
     // These operations should generate debug logs
     cache.start();
@@ -860,25 +922,41 @@ describe("createIntervalCache", () => {
     cache.stop();
 
     // Verify debug logs were called
-    ok(consoleSpy.mock.calls.some(call => 
-      call[0] === "[IntervalCache debug]" && call[1].includes("Starting cache")
-    ));
-    ok(consoleSpy.mock.calls.some(call => 
-      call[0] === "[IntervalCache debug]" && call[1].includes("Requesting update")
-    ));
-    ok(consoleSpy.mock.calls.some(call => 
-      call[0] === "[IntervalCache debug]" && call[1].includes("Manually setting value")
-    ));
-    ok(consoleSpy.mock.calls.some(call => 
-      call[0] === "[IntervalCache debug]" && call[1].includes("Stopping cache")
-    ));
+    ok(
+      consoleSpy.mock.calls.some(
+        (call) =>
+          call[0] === "[IntervalCache debug]" &&
+          call[1].includes("Starting cache"),
+      ),
+    );
+    ok(
+      consoleSpy.mock.calls.some(
+        (call) =>
+          call[0] === "[IntervalCache debug]" &&
+          call[1].includes("Requesting update"),
+      ),
+    );
+    ok(
+      consoleSpy.mock.calls.some(
+        (call) =>
+          call[0] === "[IntervalCache debug]" &&
+          call[1].includes("Manually setting value"),
+      ),
+    );
+    ok(
+      consoleSpy.mock.calls.some(
+        (call) =>
+          call[0] === "[IntervalCache debug]" &&
+          call[1].includes("Stopping cache"),
+      ),
+    );
 
     consoleSpy.mockRestore();
   });
 
   it("debug disabled by default produces no debug logs", () => {
     const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    
+
     const cache = createIntervalCache({
       data: {
         enabled: true,
@@ -893,50 +971,67 @@ describe("createIntervalCache", () => {
     cache.stop();
 
     // Should not have any debug logs (only warn/error logs allowed)
-    ok(!consoleSpy.mock.calls.some(call => call[0] === "[IntervalCache debug]"));
+    ok(
+      !consoleSpy.mock.calls.some(
+        (call) => call[0] === "[IntervalCache debug]",
+      ),
+    );
 
     consoleSpy.mockRestore();
   });
 
   it("robust updateRequested logic works correctly", async () => {
     let fetchCount = 0;
-    const cache = createIntervalCache({
-      data: {
-        enabled: true,
-        initialValue: "initial",
-        interval: 1000,
-        fetch: async (prevValue) => `update-${++fetchCount}`,
+    const cache = createIntervalCache(
+      {
+        data: {
+          enabled: true,
+          initialValue: "initial",
+          interval: 1000,
+          fetch: async (prevValue) => `update-${++fetchCount}`,
+        },
       },
-    }, { loopInterval: 100 });
+      { loopInterval: 100 },
+    );
 
     // Start cache
     cache.start();
-    
+
     // Check initial state - should start with updateRequested = true for enabled entries
     let entry = cache.getEntry("data");
-    ok(entry?.updateRequested, "Should start with updateRequested = true for enabled entries");
-    
+    ok(
+      entry?.updateRequested,
+      "Should start with updateRequested = true for enabled entries",
+    );
+
     // Wait for initial update
     await vi.advanceTimersByTimeAsync(150);
-    
+
     entry = cache.getEntry("data");
-    deepEqual(entry?.updateRequested, false, "Should clear updateRequested after update");
+    deepEqual(
+      entry?.updateRequested,
+      false,
+      "Should clear updateRequested after update",
+    );
     ok(fetchCount >= 1, "Should have fetched at least once");
-    
+
     // Manually test the two-step logic by checking auto-request behavior
     // Wait for enough time that interval should trigger auto-request
     await vi.advanceTimersByTimeAsync(1050); // Just over the 1000ms interval
-    
+
     entry = cache.getEntry("data");
     // At this point, either updateRequested should be true (auto-requested)
     // OR the update should have already happened (which would clear it again)
-    
+
     // Verify that at least we get recurring updates
     const initialCount = fetchCount;
     await vi.advanceTimersByTimeAsync(1100); // Wait for another interval
-    
-    ok(fetchCount > initialCount, "Should have additional updates from auto-request logic");
-    
+
+    ok(
+      fetchCount > initialCount,
+      "Should have additional updates from auto-request logic",
+    );
+
     cache.stop();
   });
 
@@ -944,20 +1039,23 @@ describe("createIntervalCache", () => {
     let updateCount = 0;
     let lastUpdateEvent: any;
 
-    const cache = createIntervalCache({
-      data: {
-        enabled: true,
-        initialValue: "initial",
-        interval: 1000,
-        fetch: async (prevValue) => `updated-${Date.now()}`,
+    const cache = createIntervalCache(
+      {
+        data: {
+          enabled: true,
+          initialValue: "initial",
+          interval: 1000,
+          fetch: async (prevValue) => `updated-${Date.now()}`,
+        },
+        counter: {
+          enabled: true,
+          initialValue: 0,
+          interval: 1000,
+          fetch: async (prevValue) => 42,
+        },
       },
-      counter: {
-        enabled: true,
-        initialValue: 0,
-        interval: 1000,
-        fetch: async (prevValue) => 42,
-      },
-    }, { loopInterval: 100 });
+      { loopInterval: 100 },
+    );
 
     // Listen for update events
     cache.on("update", (event) => {
@@ -967,7 +1065,7 @@ describe("createIntervalCache", () => {
 
     // Force update to trigger event
     const result = await cache.forceUpdate("data");
-    
+
     // Should have received an update event
     deepEqual(updateCount, 1);
     deepEqual(lastUpdateEvent.key, "data");
@@ -976,7 +1074,7 @@ describe("createIntervalCache", () => {
 
     // Test another key
     await cache.forceUpdate("counter");
-    
+
     deepEqual(updateCount, 2);
     deepEqual(lastUpdateEvent.key, "counter");
     deepEqual(lastUpdateEvent.value, 42);
@@ -986,7 +1084,7 @@ describe("createIntervalCache", () => {
 
   it("maintains type-safe error events", async () => {
     const errorEvents: any[] = [];
-    
+
     const cache = createIntervalCache({
       failing: {
         enabled: true,
@@ -1021,7 +1119,7 @@ describe("createIntervalCache", () => {
       },
       key2: {
         enabled: true,
-        initialValue: "value2", 
+        initialValue: "value2",
         interval: 5000,
         fetch: async (prevValue) => "updated2",
       },
@@ -1037,20 +1135,22 @@ describe("createIntervalCache", () => {
     const entry1 = cache.getEntry("key1");
     const entry2 = cache.getEntry("key2");
     const entry3 = cache.getEntry("key3");
-    
+
     ok(entry1?.lastUpdated < 0, "key1 should have negative lastUpdated");
     ok(entry2?.lastUpdated < 0, "key2 should have negative lastUpdated");
     ok(entry3?.lastUpdated < 0, "key3 should have negative lastUpdated");
-    
+
     // They should be within the interval range
     ok(entry1.lastUpdated >= -5000, "key1 jitter should be within interval");
     ok(entry2.lastUpdated >= -5000, "key2 jitter should be within interval");
     ok(entry3.lastUpdated >= -5000, "key3 jitter should be within interval");
-    
+
     // They should likely be different (very low chance of collision)
-    ok(entry1.lastUpdated !== entry2.lastUpdated || 
-       entry2.lastUpdated !== entry3.lastUpdated, 
-       "Jitter should make entries have different lastUpdated values");
+    ok(
+      entry1.lastUpdated !== entry2.lastUpdated ||
+        entry2.lastUpdated !== entry3.lastUpdated,
+      "Jitter should make entries have different lastUpdated values",
+    );
 
     cache.stop();
   });
@@ -1060,47 +1160,56 @@ describe("createIntervalCache", () => {
     let user1FetchCount = 0;
     let user2FetchCount = 0;
 
-    const cache = createIntervalCache({
-      user1: {
-        enabled: true,
-        initialValue: { id: 0, name: "initial" },
-        interval: 1000, // Minimum allowed interval
-        fetch: async (prevValue) => {
-          user1FetchCount++;
-          return { id: user1FetchCount, name: `user1-${user1FetchCount}` };
+    const cache = createIntervalCache(
+      {
+        user1: {
+          enabled: true,
+          initialValue: { id: 0, name: "initial" },
+          interval: 1000, // Minimum allowed interval
+          fetch: async (prevValue) => {
+            user1FetchCount++;
+            return { id: user1FetchCount, name: `user1-${user1FetchCount}` };
+          },
+        },
+        user2: {
+          enabled: true,
+          initialValue: { id: 0, name: "initial" },
+          interval: 1000, // Minimum allowed interval
+          fetch: async (prevValue) => {
+            user2FetchCount++;
+            return { id: user2FetchCount, name: `user2-${user2FetchCount}` };
+          },
+        },
+        disabled: {
+          enabled: false,
+          initialValue: { id: 0, name: "disabled" },
+          interval: 100,
+          fetch: async (prevValue) => ({ id: 999, name: "should-not-fetch" }),
         },
       },
-      user2: {
-        enabled: true,
-        initialValue: { id: 0, name: "initial" },
-        interval: 1000, // Minimum allowed interval
-        fetch: async (prevValue) => {
-          user2FetchCount++;
-          return { id: user2FetchCount, name: `user2-${user2FetchCount}` };
-        },
-      },
-      disabled: {
-        enabled: false,
-        initialValue: { id: 0, name: "disabled" },
-        interval: 100,
-        fetch: async (prevValue) => ({ id: 999, name: "should-not-fetch" }),
-      },
-    }, { loopInterval: 50, debug: true });
+      { loopInterval: 50, debug: true },
+    );
 
     // Start the cache
     cache.start();
 
     // Wait for ready - should resolve when both enabled keys have been fetched
     const readyPromise = cache.waitUntilReady();
-    
+
     // Advance time to trigger fetches (account for jitter)
     await vi.advanceTimersByTimeAsync(1100);
-    
+
     await readyPromise;
 
     // Both enabled keys should have been fetched at least once
-    ok(user1FetchCount >= 1, `user1 should be fetched at least once, got ${user1FetchCount}`);
-    ok(user2FetchCount >= 1, `user2 should be fetched at least once, got ${user2FetchCount}`);
+    ok(
+      user1FetchCount >= 1,
+      `user1 should be fetched at least once, got ${user1FetchCount}`,
+    );
+    ok(
+      user2FetchCount >= 1,
+      `user2 should be fetched at least once, got ${user2FetchCount}`,
+    );
 
     // Values should be updated from initial values
     const user1Value = cache.get("user1");
@@ -1116,20 +1225,23 @@ describe("createIntervalCache", () => {
   });
 
   it("waitUntilReady resolves immediately when no keys are enabled", async () => {
-    const cache = createIntervalCache({
-      disabled1: {
-        enabled: false,
-        initialValue: "value1",
-        interval: 1000,
-        fetch: async (prevValue) => "should-not-fetch",
+    const cache = createIntervalCache(
+      {
+        disabled1: {
+          enabled: false,
+          initialValue: "value1",
+          interval: 1000,
+          fetch: async (prevValue) => "should-not-fetch",
+        },
+        disabled2: {
+          enabled: false,
+          initialValue: "value2",
+          interval: 1000,
+          fetch: async (prevValue) => "should-not-fetch",
+        },
       },
-      disabled2: {
-        enabled: false,
-        initialValue: "value2",
-        interval: 1000,
-        fetch: async (prevValue) => "should-not-fetch",
-      },
-    }, { debug: true });
+      { debug: true },
+    );
 
     // Should resolve immediately since no keys are enabled
     const startTime = Date.now();
@@ -1144,14 +1256,17 @@ describe("createIntervalCache", () => {
 
   it("multiple calls to waitUntilReady return the same promise", async () => {
     vi.useFakeTimers();
-    const cache = createIntervalCache({
-      data: {
-        enabled: true,
-        initialValue: "initial",
-        interval: 1000,
-        fetch: async (prevValue) => "fetched",
+    const cache = createIntervalCache(
+      {
+        data: {
+          enabled: true,
+          initialValue: "initial",
+          interval: 1000,
+          fetch: async (prevValue) => "fetched",
+        },
       },
-    }, { loopInterval: 50, debug: true });
+      { loopInterval: 50, debug: true },
+    );
 
     cache.start();
 
@@ -1161,11 +1276,14 @@ describe("createIntervalCache", () => {
     const promise3 = cache.waitUntilReady();
 
     ok(promise1 === promise2, "First two calls should return same promise");
-    ok(promise2 === promise3, "Second and third calls should return same promise");
+    ok(
+      promise2 === promise3,
+      "Second and third calls should return same promise",
+    );
 
     // Advance time to trigger fetch
     await vi.advanceTimersByTimeAsync(1100);
-    
+
     await promise1;
     deepEqual(cache.get("data"), "fetched");
 
@@ -1175,19 +1293,22 @@ describe("createIntervalCache", () => {
 
   it("waitUntilReady rejects with CacheTimeoutError on timeout", async () => {
     vi.useFakeTimers();
-    
-    const cache = createIntervalCache({
-      slowKey: {
-        enabled: true,
-        initialValue: "initial",
-        interval: 5000, // Long interval
-        fetch: async (prevValue) => {
-          // Simulate a very slow fetch that won't complete in time
-          await new Promise(resolve => setTimeout(resolve, 20000));
-          return "slow-value";
+
+    const cache = createIntervalCache(
+      {
+        slowKey: {
+          enabled: true,
+          initialValue: "initial",
+          interval: 5000, // Long interval
+          fetch: async (prevValue) => {
+            // Simulate a very slow fetch that won't complete in time
+            await new Promise((resolve) => setTimeout(resolve, 20000));
+            return "slow-value";
+          },
         },
       },
-    }, { loopInterval: 100, debug: true });
+      { loopInterval: 100, debug: true },
+    );
 
     cache.start();
 
@@ -1203,7 +1324,10 @@ describe("createIntervalCache", () => {
       throw new Error("Should have thrown CacheTimeoutError");
     } catch (error) {
       ok(error instanceof CacheTimeoutError, "Should throw CacheTimeoutError");
-      ok(error.message.includes("Cache not ready within 1000ms timeout"), "Should include timeout message");
+      ok(
+        error.message.includes("Cache not ready within 1000ms timeout"),
+        "Should include timeout message",
+      );
       deepEqual(error.name, "CacheTimeoutError");
     }
 
@@ -1213,15 +1337,18 @@ describe("createIntervalCache", () => {
 
   it("waitUntilReady resolves before timeout when ready event occurs", async () => {
     vi.useFakeTimers();
-    
-    const cache = createIntervalCache({
-      fastKey: {
-        enabled: true,
-        initialValue: "initial",
-        interval: 1000,
-        fetch: async (prevValue) => "fast-value",
+
+    const cache = createIntervalCache(
+      {
+        fastKey: {
+          enabled: true,
+          initialValue: "initial",
+          interval: 1000,
+          fetch: async (prevValue) => "fast-value",
+        },
       },
-    }, { loopInterval: 50, debug: true });
+      { loopInterval: 50, debug: true },
+    );
 
     cache.start();
 
@@ -1233,7 +1360,7 @@ describe("createIntervalCache", () => {
 
     // Should resolve successfully before timeout
     await readyPromise;
-    
+
     deepEqual(cache.get("fastKey"), "fast-value");
 
     cache.stop();
@@ -1242,25 +1369,28 @@ describe("createIntervalCache", () => {
 
   it("waitUntilReady uses default timeout when none specified", async () => {
     vi.useFakeTimers();
-    
+
     // This test verifies the default timeout is 10_000ms by checking it doesn't throw immediately
-    const cache = createIntervalCache({
-      data: {
-        enabled: true,
-        initialValue: "initial",
-        interval: 1000,
-        fetch: async (prevValue) => "updated",
+    const cache = createIntervalCache(
+      {
+        data: {
+          enabled: true,
+          initialValue: "initial",
+          interval: 1000,
+          fetch: async (prevValue) => "updated",
+        },
       },
-    }, { loopInterval: 50 });
+      { loopInterval: 50 },
+    );
 
     cache.start();
 
     // Should not throw immediately with default timeout
     const readyPromise = cache.waitUntilReady(); // Using default timeout
-    
+
     // Advance time to trigger the fetch
     await vi.advanceTimersByTimeAsync(1100);
-    
+
     // Should resolve quickly since we have enabled keys
     await readyPromise;
 

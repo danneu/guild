@@ -10,7 +10,13 @@ import { pool } from "./util";
 // using it in production.
 //
 // Husk user is merged into main user
-export const mergeUsers = async ({ mainId, huskId }: { mainId: number; huskId: number }) => {
+export const mergeUsers = async ({
+  mainId,
+  huskId,
+}: {
+  mainId: number;
+  huskId: number;
+}) => {
   return;
 
   return pool.withTransaction(async (client) => {
@@ -173,7 +179,10 @@ export const mergeUsers = async ({ mainId, huskId }: { mainId: number; huskId: n
 // blurb is optional string
 //
 // Returns number of notifications created
-export const createGuildUpdateNotifications = async (postId: number, blurb: string) => {
+export const createGuildUpdateNotifications = async (
+  postId: number,
+  blurb: string,
+) => {
   return;
 
   assert(Number.isInteger(postId));

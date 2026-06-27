@@ -12,7 +12,9 @@ import { isValidUuid } from "../belt";
 ////////////////////////////////////////////////////////////
 
 // hits is array of {user_id, ip_address, track}
-export const insertHits = async (hits: Array<{ user_id: number; ip_address: string; track: string }>) => {
+export const insertHits = async (
+  hits: Array<{ user_id: number; ip_address: string; track: string }>,
+) => {
   debug("[insertHits] hits: %j", hits);
 
   hits.forEach((hit) => {

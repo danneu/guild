@@ -21,7 +21,10 @@ export const getUserByEmail = async (email: string) => {
 
 // Generalized update function that takes an object of
 // field/values to be updated.
-export const updateUser = async function (userId: number, fields: Record<string, any>) {
+export const updateUser = async function (
+  userId: number,
+  fields: Record<string, any>,
+) {
   assert(Number.isInteger(userId));
   assert(_.isPlainObject(fields));
   // Validate fields
@@ -54,7 +57,13 @@ export const unapproveUser = async (userId: number) => {
 
 ////////////////////////////////////////////////////////////
 
-export const approveUser = async ({ approvedBy, targetUser }: { approvedBy: number; targetUser: number }) => {
+export const approveUser = async ({
+  approvedBy,
+  targetUser,
+}: {
+  approvedBy: number;
+  targetUser: number;
+}) => {
   assert(Number.isInteger(approvedBy));
   assert(Number.isInteger(targetUser));
 

@@ -83,7 +83,11 @@ export const getCampaignRolls = async function (campaignId: number) {
 };
 
 // markup is optional
-export const updateCampaign = async function (campaignId: number, title: string, markup?: string) {
+export const updateCampaign = async function (
+  campaignId: number,
+  title: string,
+  markup?: string,
+) {
   assert(Number.isInteger(campaignId));
   assert(typeof title === "string");
   let html;
@@ -105,7 +109,11 @@ export const updateCampaign = async function (campaignId: number, title: string,
 };
 
 // markup is optional
-export const insertCampaign = async function (userId: number, title: string, markup?: string) {
+export const insertCampaign = async function (
+  userId: number,
+  title: string,
+  markup?: string,
+) {
   assert(Number.isInteger(userId));
   assert(typeof title === "string");
   let html;
@@ -125,7 +133,12 @@ export const insertCampaign = async function (userId: number, title: string, mar
 };
 
 // note is optional
-export const insertRoll = async function (userId: number, campaignId: number, syntax: string, note?: string) {
+export const insertRoll = async function (
+  userId: number,
+  campaignId: number,
+  syntax: string,
+  note?: string,
+) {
   assert(Number.isInteger(userId));
   assert(Number.isInteger(campaignId));
   assert(typeof syntax === "string");

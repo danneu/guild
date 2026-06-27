@@ -140,7 +140,10 @@ ORDER BY t.latest_post_id DESC
 ////////////////////////////////////////////////////////////
 
 // Do nothing if subscription already exists
-export const subscribeToTopic = async function (userId: number, topicId: number) {
+export const subscribeToTopic = async function (
+  userId: number,
+  topicId: number,
+) {
   assert(userId);
   assert(topicId);
   return pool.query(
@@ -156,7 +159,11 @@ export const subscribeToTopic = async function (userId: number, topicId: number)
 ////////////////////////////////////////////////////////////
 
 // unsub/archive should delete any existing notifications
-export const massUpdate = async function (userId: number, topicIds: number[], action: string) {
+export const massUpdate = async function (
+  userId: number,
+  topicIds: number[],
+  action: string,
+) {
   assert(["unsub", "archive", "unarchive"].includes(action));
 
   if (action === "archive") {
@@ -208,7 +215,10 @@ export const massUpdate = async function (userId: number, topicIds: number[], ac
 ////////////////////////////////////////////////////////////
 
 // Delete any existing notifications for topic
-export const unsubscribeFromTopic = async function (userId: number, topicId: number) {
+export const unsubscribeFromTopic = async function (
+  userId: number,
+  topicId: number,
+) {
   return Promise.all([
     pool.query(
       `

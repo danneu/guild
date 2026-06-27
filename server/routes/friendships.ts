@@ -36,7 +36,7 @@ router.post("/me/friendships", async (ctx: Context) => {
       redirectTo = parsed.pathname;
     } catch (err) {
       // If URL parsing fails, ignore the redirect parameter
-      console.warn('Failed to parse redirect URL:', err);
+      console.warn("Failed to parse redirect URL:", err);
     }
   }
 

@@ -13,7 +13,11 @@ import { pool, maybeOneRow } from "./util";
 //
 // If user is ratelimited, it throws the JSDate that the ratelimit expires
 // that can be shown to the user (e.g. try again in 24 seconds)
-export const bump = async function (userId: number, ipAddress: string, maxDate: Date) {
+export const bump = async function (
+  userId: number,
+  ipAddress: string,
+  maxDate: Date,
+) {
   debug(
     "[bump] userId=%j, ipAddress=%j, maxDate=%j",
     userId,
