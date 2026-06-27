@@ -1,41 +1,24 @@
 // 3rd
 import assert from "assert";
 // 1st
-import akismet from "./akismet";
+import claude from "./claude";
+import { decideAction } from "./policy";
 import * as config from "../../config";
-import { broadcastAutoNuke } from "../discord";
+import { broadcastAutoNuke, broadcastSpamReview } from "../discord";
 import * as db from "../../db";
 import { Context } from "koa";
 
-// Returns { test: 'SUBSTRING' | 'AKISMET', isSpam: Boolean, info: ... }
-async function analyze(ctx: Context, text: string) {
-  // SUBSTRING check is too aggressive, too many false positives.
-
-  // ;{
-  //   const info = await substring.analyze(text)
-  //
-  //   console.log('antispam analyze (substring):', info)
-  //
-  //   if (info.isSpam) {
-  //     return { isSpam: true, test: 'SUBSTRING', info }
-  //   }
-  // }
-
-  {
-    const info = await akismet.analyze(ctx, text);
-
-    console.log("antispam analyze (akismet):", info);
-
-    if (info === "SPAM") {
-      return { isSpam: true, test: "AKISMET", info };
-    }
-  }
-
-  return { isSpam: false };
-}
-
-// Returns falsey if they are not a spammer
-async function process(ctx: Context, markup: string, postId: number) {
+// Returns falsey if they are not a spammer (or if we fail open). Returns the
+// verdict (truthy) for both NUKE and REVIEW so the caller suppresses the
+// intro-topic broadcast for a suspected spammer.
+//
+// `title` is only passed for topic creation; replies and edits omit it.
+async function process(
+  ctx: Context,
+  markup: string,
+  postId: number,
+  title?: string,
+) {
   assert(ctx.currUser);
   assert(typeof markup === "string");
   assert(Number.isInteger(postId));
@@ -45,36 +28,51 @@ async function process(ctx: Context, markup: string, postId: number) {
     return;
   }
 
-  const result = await analyze(ctx, markup);
+  const result = await claude.analyze(ctx, markup, title);
+  const action = decideAction(result);
 
-  console.log("antispam process:", result);
+  console.log("antispam process:", { action, result });
 
-  // Not spam? Then nothing to do.
-  if (!result.isSpam) {
+  if (action === "ALLOW") {
     return;
   }
 
-  // It's spam, so nuke user, send email, and post in Discord
-  await db.nukeUser({
-    spambot: ctx.currUser.id,
-    nuker: config.STAFF_REPRESENTATIVE_ID || 1,
-  });
+  // NUKE and REVIEW both imply a successful, spam verdict.
+  assert(result.ok);
+  const { verdict } = result;
 
-  // Send email (Turned off for now since it's redundant)
-  // emailer.sendAutoNukeEmail(ctx.currUser.slug, markup)
+  if (action === "NUKE") {
+    // It's high-confidence spam, so nuke user and post in Discord.
+    await db.nukeUser({
+      spambot: ctx.currUser.id,
+      nuker: config.STAFF_REPRESENTATIVE_ID || 1,
+    });
 
-  // Broadcast to Discord
-  broadcastAutoNuke(ctx.currUser, postId, result).catch((err) => {
-    console.error("broadcastAutoNuke failed", err);
-  });
+    // Send email (Turned off for now since it's redundant)
+    // emailer.sendAutoNukeEmail(ctx.currUser.slug, markup)
 
-  return result;
+    broadcastAutoNuke(ctx.currUser, postId, verdict).catch((err) => {
+      console.error("broadcastAutoNuke failed", err);
+    });
+  } else {
+    // REVIEW: mid-confidence spam. Alert Discord for a human to review, but do
+    // not nuke.
+    broadcastSpamReview(ctx.currUser, postId, verdict).catch((err) => {
+      console.error("broadcastSpamReview failed", err);
+    });
+  }
+
+  return verdict;
 }
 
 export default {
-  analyze,
-  process: async (ctx: Context, markup: string, postId: number) => {
-    return process(ctx, markup, postId)
+  process: async (
+    ctx: Context,
+    markup: string,
+    postId: number,
+    title?: string,
+  ) => {
+    return process(ctx, markup, postId, title)
       .then((result) => {
         if (result) {
           console.log("antispam process detected a spammer:", result);

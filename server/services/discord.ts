@@ -186,6 +186,56 @@ ${JSON.stringify(info, null, 2)}
 
 ////////////////////////////////////////////////////////////
 
+// When a post is flagged as mid-confidence (possible) spam: post a lightweight
+// "please review" note (no @here, no nuke). verdict is the SpamVerdict object,
+// sent along for the reviewer's context.
+export const broadcastSpamReview = async (user, postId, verdict) => {
+  assert(user);
+  assert(Number.isInteger(postId));
+
+  // Need url
+  pre.presentUser(user);
+
+  if (!config.IS_DISCORD_CONFIGURED) {
+    console.error(`
+      Called services.discord.js#broadcastSpamReview but Discord
+      is not configured.
+    `);
+    return;
+  }
+
+  const client = makeClient();
+  if (!client) {
+    console.warn(
+      "Called services.discord.js#broadcastSpamReview but Discord is not configured.",
+    );
+    return;
+  }
+
+  const channel = await client
+    .listGuildChannels(config.DISCORD_GUILD_ID!)
+    .then((cs) => cs.find((c) => c.name === "forum-activity"));
+
+  if (!channel) {
+    console.warn(`Could not find a #forum-activity channel for broadcast.`);
+    return;
+  }
+
+  const content = `:mag: Possible spam (conf ${verdict.confidence}) by ${
+    config.HOST
+  }${user.url} -- please review ${config.HOST}/posts/${postId}/raw
+
+\`\`\`
+${JSON.stringify(verdict, null, 2)}
+\`\`\`
+  `.trim();
+
+  // Broadcast
+  await client.createMessage(channel.id, { content });
+};
+
+////////////////////////////////////////////////////////////
+
 export const broadcastUserJoin = async (user) => {
   // Need url
   pre.presentUser(user);

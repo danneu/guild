@@ -1401,13 +1401,14 @@ router.post(
     ctx.response.redirect(topic.url);
 
     // Check if post is spam. Only unapproved users with <= 5 posts are
-    // actually sent to Akismet (see antispam.process); a SPAM verdict
-    // auto-nukes them. Awaited so we can skip the Discord intro broadcast
-    // for anyone who tripped the spam detector.
+    // actually sent to the spam classifier (see antispam.process); a
+    // high-confidence spam verdict auto-nukes them. Awaited so we can skip the
+    // Discord intro broadcast for anyone who tripped the spam detector.
     const result = await services.antispam.process(
       ctx,
       ctx.vals.markup,
       topic.post.id,
+      ctx.vals.title,
     );
 
     // Don't broadcast to discord if they tripped the spam detector
