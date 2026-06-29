@@ -5,7 +5,7 @@ primary_region = "dfw"
 dockerfile = "Dockerfile"
 
 [[vm]]
-size = "shared-cpu-1x"
+size = "shared-cpu-2x"
 memory = "512mb"
 
 [deploy]
