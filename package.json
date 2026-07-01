@@ -18,6 +18,7 @@
     "// ==================": "prod ==================================",
     "prod:deploy": "pnpm version patch -m '%s [deploy]' && git push origin --follow-tags",
     "prod:logs": "fly logs --app rpguild",
+    "prod:logs:history": "bash scripts/fly-logs.sh",
     "prod:ssh": "fly ssh console --app rpguild",
     "// ===================": "staging ==================================",
     "staging:deploy": "fly deploy --config fly.staging.toml --app rpguild-staging",
