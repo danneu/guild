@@ -48,9 +48,6 @@ async function process(
       nuker: config.STAFF_REPRESENTATIVE_ID || 1,
     });
 
-    // Send email (Turned off for now since it's redundant)
-    // emailer.sendAutoNukeEmail(ctx.currUser.slug, markup)
-
     broadcastAutoNuke(ctx.currUser, postId, verdict).catch((err) => {
       console.error("broadcastAutoNuke failed", err);
     });

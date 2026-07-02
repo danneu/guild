@@ -76,42 +76,6 @@ export async function sendResetTokenEmail(
     });
 }
 
-// Return promise
-export const sendAutoNukeEmail = (() => {
-  const template = nunjucks.compile(`
-    <p>
-      Akismet detected spammer:
-      <a href="{{ userUrl }}">{{ slug }}</a>
-    </p>
-    <blockquote>
-      {{ markup }}
-    </blockquote>
-  `);
-
-  return (slug: string, markup: string) => {
-    assert(config.HOST, "HOST must be set to send emails");
-    assert(
-      URL.canParse(config.HOST),
-      "HOST must be a valid URL to send emails",
-    );
-
-    const userUrl = new URL(config.HOST);
-    userUrl.pathname = `/users/${slug}`;
-
-    return getTransporter()
-      .sendMail({
-        from: FROM,
-        to: "danrodneu@gmail.com",
-        subject: `Guild Auto-Nuke: ${slug}`,
-        html: template.render({ userUrl: userUrl.toString(), slug, markup }),
-      })
-      .catch((err) => {
-        console.error(`Failed to send auto-nuke email`, err);
-        throw err;
-      });
-  };
-})();
-
 const NEW_CONVO_TEMPLATE = nunjucks.compile(`
 <p>Hello {{ toUname }},</p>
 

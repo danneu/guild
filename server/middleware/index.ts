@@ -78,7 +78,7 @@ export function flash(cookieName = "flash") {
 function postCountToMaxDate(postCount: number) {
   assert(Number.isInteger(postCount));
   // postCount to seconds of waiting
-  // Now that we have akismet, 10 seconds is long enough.
+  // Now that we have the antispam classifier, 10 seconds is long enough.
   const lookup = {
     1: 10,
     2: 10,

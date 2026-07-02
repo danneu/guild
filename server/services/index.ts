@@ -7,8 +7,6 @@
 // thing into a service function so that client initialization is
 // implemeneted in one place.
 //
-// TODO: Move akismet spam-check here.
-//
 
 import * as discord from "./discord";
 import antispam from "./antispam";

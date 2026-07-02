@@ -45,7 +45,7 @@ Key directories:
   convos.ts, ...), with custom query builders abstracting SQL.
 - `server/middleware/` - Koa middleware (auth, CSRF, etc.)
 - `server/services/` - Cross-cutting services
-- `server/discord/`, `server/akismet/`, `server/cache3/` - integrations/subsystems
+- `server/discord/`, `server/cache3/` - integrations/subsystems
 - `server/types/` - shared TypeScript types
 - `views/` - Nunjucks templates (`.html`): layouts, macros, partials
 - `public/` - Static assets (CSS, JS, vendored libs, images)
@@ -62,8 +62,8 @@ into `public/vendor/` by Gulp (`copyVendorDeps`) -- do not hand-vendor them.
 
 **Config:** Environment variables are defined and validated in
 `server/config.ts`. For local dev, create a `.env` file. The app runs with
-defaults, but some features need API keys (email/SES, S3 uploads, Akismet,
-Turnstile CAPTCHA, Discord).
+defaults, but some features need API keys (email/SES, S3 uploads, Claude
+antispam, Turnstile CAPTCHA, Discord).
 
 **Database:** Complex forum schema -- users, topics, posts, private messages
 (convos), subscriptions, plus roleplay-specific tables.
@@ -83,7 +83,7 @@ There is nothing structurally special about these tabs or their posts; all three
 behave like normal posts. Non-roleplay forums have only the single OOC tab.
 
 Other forum features: BBCode parser for posts (formatting, links, mentions,
-quotes), dice rolling and character management for roleplay, Akismet spam
+quotes), dice rolling and character management for roleplay, Claude-based spam
 detection + user reporting + mod tools, and integrations with Discord (bot),
 AWS S3 (file storage), AWS SES (email), and Cloudflare Turnstile (CAPTCHA).
 

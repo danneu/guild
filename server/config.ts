@@ -137,9 +137,6 @@ export const NEW_RELIC_LICENSE_KEY = process.env.NEW_RELIC_LICENSE_KEY;
 export const NEW_RELIC_APP_NAME =
   process.env.NEW_RELIC_APP_NAME || "localhost-guild";
 
-// akismet (legacy first-post spam backend, kept importable for rollback)
-export const AKISMET_KEY = process.env.AKISMET_KEY;
-
 // anthropic (Claude first-post spam classifier)
 export const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 export const IS_ANTISPAM_CONFIGURED = !!ANTHROPIC_API_KEY;
