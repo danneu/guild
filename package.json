@@ -1,6 +1,6 @@
 {
   "name": "guild",
-  "version": "0.0.33",
+  "version": "0.0.34",
   "private": true,
   "packageManager": "pnpm@10.27.0",
   "scripts": {
