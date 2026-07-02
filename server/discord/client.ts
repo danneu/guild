@@ -6,6 +6,8 @@ import type {
   APIChannel,
   APIUser,
   APIMessage,
+  APIAllowedMentions,
+  AllowedMentionsTypes,
   RESTPostAPIChannelMessageJSONBody,
   RESTPostAPIGuildRoleJSONBody,
   RESTPatchAPIGuildJSONBody,
@@ -33,6 +35,19 @@ class ResponseNotOkError extends Error {
 type RequestOptions = {
   headers?: Record<string, string>;
   body?: any;
+};
+
+type AllowedMentionWireValue = `${AllowedMentionsTypes}`;
+
+export type CreateMessageAllowedMentions = Omit<APIAllowedMentions, "parse"> & {
+  parse?: AllowedMentionWireValue[];
+};
+
+type CreateMessageBody = Omit<
+  RESTPostAPIChannelMessageJSONBody,
+  "allowed_mentions"
+> & {
+  allowed_mentions?: CreateMessageAllowedMentions;
 };
 
 export default class Client {
@@ -254,7 +269,7 @@ export default class Client {
 
   async createMessage(
     channelId: string,
-    body: RESTPostAPIChannelMessageJSONBody,
+    body: CreateMessageBody,
   ): Promise<APIMessage> {
     assert(typeof channelId === "string");
     const url = `/channels/${channelId}/messages`;

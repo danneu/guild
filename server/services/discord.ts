@@ -1,11 +1,7 @@
 // 3rd
 import assert from "assert";
-import {
-  AllowedMentionsTypes,
-  type APIAllowedMentions,
-} from "discord-api-types/v10";
 // 1st
-import Client from "../discord/client";
+import Client, { type CreateMessageAllowedMentions } from "../discord/client";
 import * as config from "../config";
 import * as pre from "../presenters";
 import * as belt from "../belt";
@@ -25,8 +21,12 @@ function makeClient(): Client | null {
 }
 
 type BroadcastOpts = {
-  allowedMentions?: APIAllowedMentions;
+  allowedMentions?: CreateMessageAllowedMentions;
 };
+
+const EVERYONE_ALLOWED_MENTIONS = {
+  parse: ["everyone"],
+} satisfies CreateMessageAllowedMentions;
 
 async function postToChannel(
   channelName: string,
@@ -111,7 +111,7 @@ export const broadcastIpAddressAutoNuke = async (user, ipAddress) => {
   }) :radioactive:`;
 
   await postToChannel("forum-activity", content, {
-    allowedMentions: { parse: [AllowedMentionsTypes.Everyone] },
+    allowedMentions: EVERYONE_ALLOWED_MENTIONS,
   });
 };
 
@@ -138,7 +138,7 @@ ${JSON.stringify(info, null, 2)}
   `.trim();
 
   await postToChannel("forum-activity", content, {
-    allowedMentions: { parse: [AllowedMentionsTypes.Everyone] },
+    allowedMentions: EVERYONE_ALLOWED_MENTIONS,
   });
 };
 
