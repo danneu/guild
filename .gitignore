@@ -10,6 +10,7 @@ bower_components
 db-backup.tar.gz
 node_modules
 build
+/dist
 server/sandbox.js
 test
 prevguild*
