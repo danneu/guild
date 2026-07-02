@@ -19,7 +19,6 @@ import * as cancan from "../cancan";
 import * as avatar from "../avatar";
 import cache3 from "../cache3";
 import bbcode from "../bbcode";
-import services from "../services";
 import {
   broadcastManualNuke,
   broadcastManualUnnuke,
@@ -334,10 +333,13 @@ router.post("/users", checkCloudflareTurnstile, async (ctx: Context) => {
     });
   }
 
-  // Broadcast user join to Discord #staff-only
-  services.discord
-    .broadcastUserJoin(user)
-    .catch((err) => console.error("broadcastUserJoin failed", err));
+  // Registration events are no longer broadcast to Discord: bots now defeat the
+  // CAPTCHA and register en masse, which drowned #forum-activity in spam. Mods
+  // instead get a new user's first actions via broadcastFirstPost and
+  // broadcastFirstConvo.
+  // services.discord
+  //   .broadcastUserJoin(user)
+  //   .catch((err) => console.error("broadcastUserJoin failed", err));
 
   // Cloudflare should already give bots a captcha. I think ipintel will mostly punish humans.
   //

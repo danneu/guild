@@ -5,7 +5,7 @@ import createDebug from "debug";
 const debug = createDebug("app:db:convos");
 // 1st
 import * as config from "../config";
-import { pool, maybeOneRow } from "./util";
+import { pool, maybeOneRow, type PgClientInTransaction } from "./util";
 
 ////////////////////////////////////////////////////////////
 
@@ -37,6 +37,38 @@ export const getConvos = async (ids: number[]) => {
     )
     .then((res) => res.rows);
 };
+
+////////////////////////////////////////////////////////////
+
+export async function isFirstStartedConvo(
+  pgClient: PgClientInTransaction,
+  userId: number,
+): Promise<boolean> {
+  assert(pgClient._inTransaction, "pgClient must be in a transaction");
+  assert(Number.isInteger(userId));
+
+  await pgClient.query(
+    `
+    SELECT 1
+    FROM users
+    WHERE id = $1
+    FOR UPDATE
+  `,
+    [userId],
+  );
+
+  const { rows } = await pgClient.query(
+    `
+    SELECT 1
+    FROM convos
+    WHERE user_id = $1
+    LIMIT 1
+  `,
+    [userId],
+  );
+
+  return rows.length === 0;
+}
 
 ////////////////////////////////////////////////////////////
 

@@ -4,7 +4,11 @@ import assert from "assert";
 import claude from "./claude";
 import { decideAction } from "./policy";
 import * as config from "../../config";
-import { broadcastAutoNuke, broadcastSpamReview } from "../discord";
+import {
+  broadcastAutoNuke,
+  broadcastFirstPost,
+  broadcastSpamReview,
+} from "../discord";
 import * as db from "../../db";
 import { Context } from "koa";
 
@@ -34,6 +38,14 @@ async function process(
   console.log("antispam process:", { action, result });
 
   if (action === "ALLOW") {
+    if (ctx.currUser.posts_count === 0) {
+      const antispam = result.ok
+        ? ({ ran: true } as const)
+        : ({ ran: false, error: result.error } as const);
+      broadcastFirstPost(ctx.currUser, postId, antispam, markup).catch((err) =>
+        console.error("broadcastFirstPost failed", err),
+      );
+    }
     return;
   }
 
