@@ -173,6 +173,9 @@
         {% if can(ctx.currUser, 'READ_USER_IP', user) %}
           <li><a href="{{ user.url }}/alts">Find Alt Accounts</a></li>
         {% endif %}
+        {% if registrationIp %}
+          <li>Registration IP: <code>{{ registrationIp }}</code></li>
+        {% endif %}
       </ul>
     </div>
   {% endif %}

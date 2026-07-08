@@ -1751,11 +1751,11 @@ export async function createUserWithSession(props: {
       user = await client
         .query<DbUser>(
           `
-        INSERT INTO users (uname, digest, email, slug, hide_sigs)
-        VALUES ($1, $2, $3, $4, true)
+        INSERT INTO users (uname, digest, email, slug, hide_sigs, registration_ip)
+        VALUES ($1, $2, $3, $4, true, $5)
         RETURNING *
       `,
-          [props.uname, digest, props.email, slug],
+          [props.uname, digest, props.email, slug, props.ipAddress],
         )
         .then(exactlyOneRow);
     } catch (err) {

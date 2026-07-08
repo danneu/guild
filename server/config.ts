@@ -146,6 +146,9 @@ console.log("Antispam (Claude) configured:", IS_ANTISPAM_CONFIGURED);
 export const RULES_POST_ID =
   Number.parseInt(process.env.RULES_POST_ID || "fail", 10) || null;
 
+// Only surface registration IPs for users who registered on/after this date.
+export const REGISTRATION_IP_MILESTONE = new Date("2026-07-04T00:00:00Z");
+
 // Discord / OAuth
 export const DISCORD_APP_CLIENTID = process.env.DISCORD_APP_CLIENTID;
 export const DISCORD_APP_CLIENTSECRET = process.env.DISCORD_APP_CLIENTSECRET;

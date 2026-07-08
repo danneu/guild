@@ -4,6 +4,7 @@ import _ from "lodash";
 // const debug = createDebug('app:presenters')
 // 1st party
 import * as belt from "./belt.js";
+import * as cancan from "./cancan.js";
 import * as config from "./config.js";
 import { DbConvo, DbPm, DbUser } from "./dbtypes.js";
 
@@ -130,6 +131,23 @@ export function presentUser(user: DbUser | void): PresentedUser | null {
     user.last_online_at = new Date(user.last_online_at);
 
   return user as PresentedUser;
+}
+
+export function presentUserForApi(user: DbUser, viewer: DbUser | null | void) {
+  return {
+    id: user.id,
+    uname: user.uname,
+    slug: user.slug,
+    role: user.role,
+    url: "/users/" + user.slug,
+    created_at: user.created_at,
+    last_online_at: user.last_online_at,
+    avatar_url: user.avatar_url,
+    custom_title: user.custom_title,
+    posts_count: user.posts_count,
+    is_nuked: user.is_nuked,
+    registration_ip: cancan.visibleRegistrationIp(viewer, user),
+  };
 }
 
 export const presentTopic = function (topic) {

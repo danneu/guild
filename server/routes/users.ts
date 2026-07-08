@@ -467,6 +467,28 @@ router.put("/api/users/:id/bio", async (ctx: Context) => {
   }
 });
 
+router.get("/api/users/:userIdOrSlug", async (ctx: Context) => {
+  ctx.assert(ctx.currUser && cancan.isStaffRole(ctx.currUser.role), 404);
+
+  const userIdOrSlug = ctx.params.userIdOrSlug;
+  let user;
+
+  if (/^\d+$/.test(userIdOrSlug)) {
+    user = await db.findUserBySlug(userIdOrSlug);
+
+    if (!user) {
+      user = await db.findUser(Number(userIdOrSlug));
+    }
+  } else {
+    user = await db.findUserBySlug(userIdOrSlug);
+  }
+
+  ctx.assert(user, 404);
+
+  ctx.type = "json";
+  ctx.body = pre.presentUserForApi(user, ctx.currUser);
+});
+
 //
 // Update user
 //
@@ -778,6 +800,7 @@ router.get("/users/:userIdOrSlug", async (ctx: Context) => {
   user.posts_per_day = (
     user.posts_count / (belt.daysAgo(user.created_at) || 1)
   ).toFixed(2);
+  const registrationIp = cancan.visibleRegistrationIp(ctx.currUser, user);
 
   await ctx.render("show_user", {
     ctx,
@@ -790,6 +813,7 @@ router.get("/users/:userIdOrSlug", async (ctx: Context) => {
     friendship,
     approver,
     latestViewers,
+    registrationIp,
     // Pagination
     nextBeforeId,
     recentPostsPerPage: config.RECENT_POSTS_PER_PAGE,

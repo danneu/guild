@@ -750,6 +750,13 @@ export const cannot = function (user: any, action: CanAction, target?: any) {
   return !can(user, action, target);
 };
 
+export function visibleRegistrationIp(currUser: any, user: any): string | null {
+  if (!user.registration_ip) return null;
+  if (user.created_at < config.REGISTRATION_IP_MILESTONE) return null;
+  if (!can(currUser, "READ_USER_IP", user)) return null;
+  return user.registration_ip;
+}
+
 export const CanAction = {
   // Topic Management
   ACCESS_TOPIC_MODKIT: "ACCESS_TOPIC_MODKIT",

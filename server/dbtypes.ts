@@ -7,6 +7,7 @@ export type DbUser = {
   uname: string;
   email: string;
   email_verified: boolean;
+  registration_ip: string | null;
   eflags: number;
   created_at: Date;
   updated_at: Date;
