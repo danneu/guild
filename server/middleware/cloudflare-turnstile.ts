@@ -24,7 +24,9 @@ export default async function checkCloudflareTurnstile(
   const body = BodySchema.parse(ctx.request.body);
 
   const token = body["cf-turnstile-response"];
-  const ip = ctx.request.headers["cf-connecting-ip"];
+  // The IP-resolution middleware runs first, so this is the trusted value
+  // rather than the raw, spoofable cf-connecting-ip header.
+  const ip = ctx.request.ip;
   const idempotencyKey = crypto.randomUUID();
   const url = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 

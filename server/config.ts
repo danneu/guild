@@ -167,6 +167,11 @@ console.log("Discord configured:", IS_DISCORD_CONFIGURED);
 export const IS_PM_SYSTEM_ONLINE = process.env.IS_PM_SYSTEM_ONLINE === "true";
 console.log("PM system online:", IS_PM_SYSTEM_ONLINE);
 
+// Reject requests that bypass Cloudflare and hit the Fly origin directly
+// (rpguild.fly.dev). Prod fly.toml only -- staging is direct-access by design.
+export const REJECT_ORIGIN_BYPASS = process.env.REJECT_ORIGIN_BYPASS === "true";
+console.log("Reject origin bypass:", REJECT_ORIGIN_BYPASS);
+
 export const IS_EMAIL_CONFIGURED = !!(HOST && AWS_KEY && AWS_SECRET);
 console.log("Email is configured:", IS_EMAIL_CONFIGURED);
 

@@ -14,6 +14,9 @@ strategy = "bluegreen"
 [env]
 PORT = "3000"
 NODE_ENV = "production"
+# Reject requests that bypass Cloudflare and hit rpguild.fly.dev directly.
+# Deliberately absent from fly.staging.toml (staging is accessed directly).
+REJECT_ORIGIN_BYPASS = "true"
 # Only non-sensitive config vars
 FAQ_POST_ID = "4301082"
 MIN_TOPIC_TITLE_LENGTH = "3"

@@ -16,6 +16,7 @@ import * as belt from "../belt";
 import * as pre from "../presenters";
 import * as config from "../config";
 import * as cancan from "../cancan";
+import { ipStaffNote } from "../cloudflare_ip";
 import * as avatar from "../avatar";
 import cache3 from "../cache3";
 import bbcode from "../bbcode";
@@ -801,6 +802,9 @@ router.get("/users/:userIdOrSlug", async (ctx: Context) => {
     user.posts_count / (belt.daysAgo(user.created_at) || 1)
   ).toFixed(2);
   const registrationIp = cancan.visibleRegistrationIp(ctx.currUser, user);
+  // Derived from the already-gated visible IP, so the note inherits its
+  // visibility and can never leak when the IP is hidden.
+  const registrationIpNote = ipStaffNote(registrationIp);
 
   await ctx.render("show_user", {
     ctx,
@@ -814,6 +818,7 @@ router.get("/users/:userIdOrSlug", async (ctx: Context) => {
     approver,
     latestViewers,
     registrationIp,
+    registrationIpNote,
     // Pagination
     nextBeforeId,
     recentPostsPerPage: config.RECENT_POSTS_PER_PAGE,

@@ -5,6 +5,7 @@ import _ from "lodash";
 // 1st party
 import * as belt from "./belt.js";
 import * as cancan from "./cancan.js";
+import { ipStaffNote } from "./cloudflare_ip.js";
 import * as config from "./config.js";
 import { DbConvo, DbPm, DbUser } from "./dbtypes.js";
 
@@ -134,6 +135,7 @@ export function presentUser(user: DbUser | void): PresentedUser | null {
 }
 
 export function presentUserForApi(user: DbUser, viewer: DbUser | null | void) {
+  const registrationIp = cancan.visibleRegistrationIp(viewer, user);
   return {
     id: user.id,
     uname: user.uname,
@@ -146,7 +148,10 @@ export function presentUserForApi(user: DbUser, viewer: DbUser | null | void) {
     custom_title: user.custom_title,
     posts_count: user.posts_count,
     is_nuked: user.is_nuked,
-    registration_ip: cancan.visibleRegistrationIp(viewer, user),
+    // Note is derived from the already-gated registrationIp, so it can never
+    // leak when the IP is hidden.
+    registration_ip: registrationIp,
+    registration_ip_note: ipStaffNote(registrationIp),
   };
 }
 

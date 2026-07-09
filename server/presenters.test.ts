@@ -41,6 +41,7 @@ describe("presentUserForApi", () => {
       posts_count: 12,
       is_nuked: false,
       registration_ip: registrationIp,
+      registration_ip_note: null,
     });
     expect(presented).not.toHaveProperty("email");
     expect(presented).not.toHaveProperty("digest");
@@ -61,5 +62,35 @@ describe("presentUserForApi", () => {
         user({ id: 2, role: "admin" }),
       ).registration_ip,
     ).toBeNull();
+  });
+
+  it("annotates a Cloudflare egress IP for staff", () => {
+    const presented = presentUserForApi(
+      user({ registration_ip: "104.28.203.54" }),
+      user({ id: 2, role: "admin" }),
+    );
+    expect(presented.registration_ip).toBe("104.28.203.54");
+    expect(presented.registration_ip_note).toMatch(/not unique/);
+  });
+
+  it("hides the note whenever the IP is hidden", () => {
+    // Member viewer: IP gated off, so the note must be null too.
+    const forMember = presentUserForApi(
+      user({ registration_ip: "104.28.203.54" }),
+      user({ id: 2, role: "member" }),
+    );
+    expect(forMember.registration_ip).toBeNull();
+    expect(forMember.registration_ip_note).toBeNull();
+
+    // Pre-milestone user: IP gated off, note null.
+    const preMilestone = presentUserForApi(
+      user({
+        registration_ip: "104.28.203.54",
+        created_at: new Date("2026-07-03T23:59:59Z"),
+      }),
+      user({ id: 2, role: "admin" }),
+    );
+    expect(preMilestone.registration_ip).toBeNull();
+    expect(preMilestone.registration_ip_note).toBeNull();
   });
 });

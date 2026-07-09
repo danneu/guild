@@ -35,11 +35,49 @@ import topicsRoutes from "./routes/topics.js";
 import adminRoutes from "./routes/admin.js";
 import verifyEmailRoutes from "./routes/verify-email.js";
 import guildbot from "./guildbot.js";
+import {
+  resolveClientIp,
+  shouldRejectOriginBypass,
+  startCloudflareIpRangeRefresh,
+} from "./cloudflare_ip.js";
 
-// ip address: get it from cloudflare header
+// Resolve the trusted client IP. cf-connecting-ip is honored only when the TCP
+// peer (fly-client-ip) is a Cloudflare proxy edge, so a direct origin hit at
+// rpguild.fly.dev cannot forge an IP. Assigning ctx.request.ip shadows the
+// getter and ctx.ip delegates to it, so every downstream reader sees this
+// resolved value. This is the first app.use; nothing reads IPs before it.
 app.use((ctx: Context, next: Next) => {
-  ctx.request.ip = ctx.get("cf-connecting-ip") || ctx.ip;
+  if (config.NODE_ENV === "development" && ctx.get("cf-connecting-ip")) {
+    // Local-dev escape hatch: fake an IP for testing, e.g.
+    //   curl -H "CF-Connecting-IP: 6.6.6.6" localhost:3000/register
+    // Unreachable on Fly: both fly.toml and fly.staging.toml pin
+    // NODE_ENV=production.
+    ctx.request.ip = ctx.get("cf-connecting-ip");
+    return next();
+  }
+  ctx.request.ip = resolveClientIp({
+    flyClientIp: ctx.get("fly-client-ip"),
+    cfConnectingIp: ctx.get("cf-connecting-ip"),
+    socketIp: ctx.ip,
+  });
   return next();
+});
+
+// Reject requests that bypass Cloudflare and hit the Fly origin directly
+// (rpguild.fly.dev). Prod only -- staging is direct-access by design, so the
+// flag stays unset there. Decision logic lives in the unit-tested
+// shouldRejectOriginBypass; this middleware is a thin shell.
+app.use((ctx: Context, next: Next) => {
+  const reject = shouldRejectOriginBypass({
+    enabled: config.REJECT_ORIGIN_BYPASS,
+    path: ctx.path,
+    flyClientIp: ctx.get("fly-client-ip"),
+  });
+  if (!reject) return next();
+  ctx.status = 403;
+  ctx.body =
+    "Direct origin access is not allowed. Use https://www.roleplayerguild.com";
+  return;
 });
 
 // static assets
@@ -168,12 +206,7 @@ import { pool, withPgPoolTransaction } from "./db/util";
 app.use(middleware.methodOverride());
 
 app.use(
-  protectCsrf([
-    "roleplayerguild.com",
-    "localhost",
-    "rpguild.fly.dev",
-    "rpguild-staging.fly.dev",
-  ]),
+  protectCsrf(["roleplayerguild.com", "localhost", "rpguild-staging.fly.dev"]),
 );
 
 // Only allow guild to be iframed from same domain
@@ -203,10 +236,6 @@ app.use(async (ctx: Context, next: Next) => {
 
   return next();
 });
-
-// TODO: Since app.proxy === true (we trust X-Proxy-* headers), we want to
-// reject all requests that hit origin. app.proxy should only be turned on
-// when app is behind trusted proxy like Cloudflare.
 
 /// /////////////////////////////////////////////////////////
 
@@ -2877,5 +2906,6 @@ cache3.start();
 cache3.waitUntilReady().then(() => {
   app.listen(config.PORT, () => {
     console.log("Listening on", config.PORT);
+    startCloudflareIpRangeRefresh();
   });
 });

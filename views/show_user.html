@@ -174,7 +174,12 @@
           <li><a href="{{ user.url }}/alts">Find Alt Accounts</a></li>
         {% endif %}
         {% if registrationIp %}
-          <li>Registration IP: <code>{{ registrationIp }}</code></li>
+          <li>
+            Registration IP: <code>{{ registrationIp }}</code>
+            {% if registrationIpNote %}
+              <br><span class="text-muted">{{ registrationIpNote }}</span>
+            {% endif %}
+          </li>
         {% endif %}
       </ul>
     </div>
