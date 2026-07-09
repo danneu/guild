@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  classifyIp,
   DEFAULT_EGRESS_CIDRS,
   DEFAULT_PROXY_CIDRS,
-  ipStaffNote,
   isCloudflareEgressIp,
   isCloudflareProxyIp,
   normalizeIp,
@@ -229,26 +229,26 @@ describe("resolveClientIp", () => {
   });
 });
 
-describe("ipStaffNote", () => {
-  it("labels an egress IP as a shared VPN exit", () => {
-    expect(ipStaffNote("104.28.203.54")).toMatch(/not unique/);
+describe("classifyIp", () => {
+  it("classifies an egress IP as cloudflare_egress", () => {
+    expect(classifyIp("104.28.203.54")).toBe("cloudflare_egress");
   });
 
-  it("labels a proxy IP as pre-fix data", () => {
-    expect(ipStaffNote("104.16.0.1")).toMatch(/not a real client/);
+  it("classifies a proxy IP as cloudflare_proxy", () => {
+    expect(classifyIp("104.16.0.1")).toBe("cloudflare_proxy");
   });
 
   it("returns null for ordinary, null, and garbage IPs", () => {
-    expect(ipStaffNote("8.8.8.8")).toBeNull();
-    expect(ipStaffNote(null)).toBeNull();
-    expect(ipStaffNote(undefined)).toBeNull();
-    expect(ipStaffNote("banana")).toBeNull();
+    expect(classifyIp("8.8.8.8")).toBeNull();
+    expect(classifyIp(null)).toBeNull();
+    expect(classifyIp(undefined)).toBeNull();
+    expect(classifyIp("banana")).toBeNull();
   });
 
-  it("prefers the proxy note even when the egress source includes proxy space", () => {
+  it("prefers cloudflare_proxy even when the egress source includes proxy space", () => {
     // Simulate an unfiltered geofeed that mixes in a proxy-space CIDR.
     setEgressRanges(["104.16.0.0/13", "104.28.0.0/14"]);
-    expect(ipStaffNote("104.16.0.1")).toMatch(/not a real client/);
+    expect(classifyIp("104.16.0.1")).toBe("cloudflare_proxy");
   });
 });
 

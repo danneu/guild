@@ -51,11 +51,6 @@ export const DEFAULT_EGRESS_CIDRS = [
   "2606:54c0::/28",
 ];
 
-const PROXY_NOTE =
-  "Cloudflare proxy IP -- likely recorded before trusted IP resolution shipped, not a real client address";
-const EGRESS_NOTE =
-  "Cloudflare WARP / iCloud Private Relay egress -- shared VPN exit used by many users, not unique to this account";
-
 // -------------------------------------------------------------------------
 // Interval representation
 // -------------------------------------------------------------------------
@@ -332,16 +327,23 @@ export function resolveClientIp({
   return peer;
 }
 
-// Staff annotation for a stored IP. Proxy match is checked FIRST: the geofeed
-// mixes proxy-edge rows into the egress source, so egress-first would mislabel
-// proxy IPs as WARP exits after a refresh. (The effective egress set derived by
-// the setters is disjoint from proxy space anyway; this ordering is defense in
-// depth.) Returns null for ordinary/garbage/absent IPs. Never throws.
-export function ipStaffNote(ip: string | null | undefined): string | null {
+// Machine-readable classification code for a stored IP. Named cloudflare_* so a
+// future provider (e.g. apple_private_relay) is a pure addition, and "egress"
+// rather than "warp" because the range covers WARP AND iCloud Private Relay,
+// which the detection cannot distinguish. This module returns only the code; the
+// human-readable label lives in the view layer (views/show_user.html).
+export type IpCategory = "cloudflare_proxy" | "cloudflare_egress";
+
+// Classify a stored IP for staff annotation. Proxy match is checked FIRST: the
+// geofeed mixes proxy-edge rows into the egress source, so egress-first would
+// mislabel proxy IPs as WARP exits after a refresh. (The effective egress set
+// derived by the setters is disjoint from proxy space anyway; this ordering is
+// defense in depth.) Returns null for ordinary/garbage/absent IPs. Never throws.
+export function classifyIp(ip: string | null | undefined): IpCategory | null {
   const normalized = normalizeIp(ip);
   if (!normalized) return null;
-  if (isCloudflareProxyIp(normalized)) return PROXY_NOTE;
-  if (isCloudflareEgressIp(normalized)) return EGRESS_NOTE;
+  if (isCloudflareProxyIp(normalized)) return "cloudflare_proxy";
+  if (isCloudflareEgressIp(normalized)) return "cloudflare_egress";
   return null;
 }
 

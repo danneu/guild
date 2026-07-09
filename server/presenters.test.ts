@@ -41,7 +41,7 @@ describe("presentUserForApi", () => {
       posts_count: 12,
       is_nuked: false,
       registration_ip: registrationIp,
-      registration_ip_note: null,
+      registration_ip_category: null,
     });
     expect(presented).not.toHaveProperty("email");
     expect(presented).not.toHaveProperty("digest");
@@ -70,7 +70,7 @@ describe("presentUserForApi", () => {
       user({ id: 2, role: "admin" }),
     );
     expect(presented.registration_ip).toBe("104.28.203.54");
-    expect(presented.registration_ip_note).toMatch(/not unique/);
+    expect(presented.registration_ip_category).toBe("cloudflare_egress");
   });
 
   it("hides the note whenever the IP is hidden", () => {
@@ -80,7 +80,7 @@ describe("presentUserForApi", () => {
       user({ id: 2, role: "member" }),
     );
     expect(forMember.registration_ip).toBeNull();
-    expect(forMember.registration_ip_note).toBeNull();
+    expect(forMember.registration_ip_category).toBeNull();
 
     // Pre-milestone user: IP gated off, note null.
     const preMilestone = presentUserForApi(
@@ -91,6 +91,6 @@ describe("presentUserForApi", () => {
       user({ id: 2, role: "admin" }),
     );
     expect(preMilestone.registration_ip).toBeNull();
-    expect(preMilestone.registration_ip_note).toBeNull();
+    expect(preMilestone.registration_ip_category).toBeNull();
   });
 });

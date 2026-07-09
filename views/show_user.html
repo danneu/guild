@@ -174,10 +174,14 @@
           <li><a href="{{ user.url }}/alts">Find Alt Accounts</a></li>
         {% endif %}
         {% if registrationIp %}
+          {% set registrationIpNotes = {
+            "cloudflare_proxy": "Cloudflare proxy IP -- likely recorded before trusted IP resolution shipped, not a real client address",
+            "cloudflare_egress": "Cloudflare WARP / iCloud Private Relay egress -- shared VPN exit used by many users, not unique to this account"
+          } %}
           <li>
             Registration IP: <code>{{ registrationIp }}</code>
-            {% if registrationIpNote %}
-              <br><span class="text-muted">{{ registrationIpNote }}</span>
+            {% if registrationIpCategory and registrationIpNotes[registrationIpCategory] %}
+              <br><span class="text-muted">{{ registrationIpNotes[registrationIpCategory] }}</span>
             {% endif %}
           </li>
         {% endif %}

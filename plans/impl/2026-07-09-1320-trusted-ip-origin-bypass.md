@@ -43,7 +43,11 @@ Topology and header facts (researched, verified 2026-07-09):
 
 - Origin-bypass rejection responds **403** with a short plain-text body.
 - The staff JSON API (`GET /api/users/:userIdOrSlug`) **does** get a
-  `registration_ip_note: string | null` field alongside `registration_ip`.
+  `registration_ip_category: IpCategory | null` field alongside
+  `registration_ip`. It carries a machine-readable code
+  (`"cloudflare_proxy"` | `"cloudflare_egress"`), NOT prose: the API is a
+  stable contract callers can branch on, and the human-readable label lives
+  only in the HTML view (single source of the sentences).
 - Detection scope is Cloudflare egress only (no Apple/Akamai/Fastly Private
   Relay lists), **but the range lists must update automatically** -- no
   frozen hardcoded list. Hardcoded defaults act as boot values and
@@ -98,17 +102,25 @@ Exported API (top-level `function` declarations, `type` not `interface`):
   `peer = normalizeIp(flyClientIp) ?? normalizeIp(socketIp) ?? socketIp`;
   return `cfConnectingIp` (normalized) only if present AND
   `isCloudflareProxyIp(peer)`; else return `peer`. Never throws.
-- `ipStaffNote(ip: string | null | undefined): string | null` -- **proxy
-  match checked FIRST** -> "Cloudflare proxy IP -- likely recorded before
-  trusted IP resolution shipped, not a real client address"; else egress
-  match -> "Cloudflare WARP / iCloud Private Relay egress -- shared VPN exit
-  used by many users, not unique to this account"; else null. Proxy-first
-  ordering matters: the geofeed mixes proxy-edge rows into the egress source
-  (1,424 proxy-space rows today, e.g. `103.22.200.0/24`), so egress-first
-  would mislabel proxy IPs as WARP exits after a refresh. The effective egress
-  set derived by both setters below (`rawEgressIntervals - proxyIntervals`) is
-  disjoint from proxy space anyway; the ordering is defense in depth. Document
-  both on the function.
+- `type IpCategory = "cloudflare_proxy" | "cloudflare_egress"` -- a
+  machine-readable classification code (no `null` baked into the union, mirroring
+  `SpamAction`; nullability is expressed at the call site). Named `cloudflare_*`
+  (provider-namespaced, so an `apple_private_relay` category is a pure addition
+  later) and `egress` not `warp` (the range covers WARP **and** iCloud Private
+  Relay, which the detection cannot tell apart -- and it mirrors the module's own
+  `isCloudflareEgressIp` / `egressIntervals` vocabulary). Lowercase snake_case
+  matches the `role` values (`"admin"`, `"mod"`, ...) and sits beside the
+  snake_case JSON keys.
+- `classifyIp(ip: string | null | undefined): IpCategory | null` -- **proxy
+  match checked FIRST** -> `"cloudflare_proxy"`; else egress match ->
+  `"cloudflare_egress"`; else null. Proxy-first ordering matters: the geofeed
+  mixes proxy-edge rows into the egress source (1,424 proxy-space rows today,
+  e.g. `103.22.200.0/24`), so egress-first would mislabel proxy IPs as WARP
+  exits after a refresh. The effective egress set derived by both setters below
+  (`rawEgressIntervals - proxyIntervals`) is disjoint from proxy space anyway;
+  the ordering is defense in depth. Document both on the function. This module
+  returns only the code -- the human-readable labels live in the view layer
+  (section 7), so `cloudflare_ip.ts` stays pure classification.
 - `setProxyRanges(cidrs: string[]): void` / `setEgressRanges(cidrs: string[]): void`
   -- **replace** the corresponding interval set (no union with defaults:
   Cloudflare's live endpoints are authoritative, and unioning forever would
@@ -300,35 +312,42 @@ REJECT_ORIGIN_BYPASS = "true"
 
 ### 7. Staff annotation wiring
 
-- `server/routes/users.ts` (~line 803, show_user handler):
-  `const registrationIpNote = ipStaffNote(registrationIp);` -- derived from
+- `server/routes/users.ts` (~line 804, show_user handler):
+  `const registrationIpCategory = classifyIp(registrationIp);` -- derived from
   the already-gated `visibleRegistrationIp` output so visibility gating is
-  inherited (the note can never leak when the IP is hidden). Pass
-  `registrationIpNote` into `ctx.render("show_user", ...)`.
-- `views/show_user.html` (modkit block, ~line 176):
+  inherited (the category can never leak when the IP is hidden). Pass
+  `registrationIpCategory` into `ctx.render("show_user", ...)`.
+- `views/show_user.html` (modkit block, ~line 176) -- the **single** home of the
+  human-readable label text, a code->prose map:
 
 ```html
 {% if registrationIp %}
+  {% set registrationIpNotes = {
+    "cloudflare_proxy": "Cloudflare proxy IP -- likely recorded before trusted IP resolution shipped, not a real client address",
+    "cloudflare_egress": "Cloudflare WARP / iCloud Private Relay egress -- shared VPN exit used by many users, not unique to this account"
+  } %}
   <li>
     Registration IP: <code>{{ registrationIp }}</code>
-    {% if registrationIpNote %}
-      <br><span class="text-muted">{{ registrationIpNote }}</span>
+    {% if registrationIpCategory and registrationIpNotes[registrationIpCategory] %}
+      <br><span class="text-muted">{{ registrationIpNotes[registrationIpCategory] }}</span>
     {% endif %}
   </li>
 {% endif %}
 ```
 
+  (Dict literal in `{% set %}` and variable-keyed lookup are both already used in
+  this file, e.g. `user.ratings_received[type]`.)
 - `server/presenters.ts` `presentUserForApi`: hoist
   `const registrationIp = cancan.visibleRegistrationIp(viewer, user);` and
-  return `registration_ip: registrationIp, registration_ip_note: ipStaffNote(registrationIp)`.
+  return `registration_ip: registrationIp, registration_ip_category: classifyIp(registrationIp)`.
 
-Annotation is computed at render time from the stored string, so existing rows
-(including 104.28.203.54) are annotated retroactively -- no backfill.
+Classification is computed at render time from the stored string, so existing
+rows (including 104.28.203.54) are annotated retroactively -- no backfill.
 
 ## Files touched
 
-- `server/cloudflare_ip.ts` (new; matchers, resolver, notes, parsers, refresh
-  job) + `server/cloudflare_ip.test.ts` (new)
+- `server/cloudflare_ip.ts` (new; matchers, resolver, `classifyIp`, parsers,
+  refresh job) + `server/cloudflare_ip.test.ts` (new)
 - `server/index.ts` (middlewares, TODO removal, CSRF list, refresh starter)
 - `server/config.ts` (`REJECT_ORIGIN_BYPASS`)
 - `server/middleware/cloudflare-turnstile.ts` (trusted IP read)
@@ -358,11 +377,12 @@ themselves are exercised by the curl matrix):
   header `104.28.203.54` -> passed through faithfully); IPv6 end-to-end;
   mapped-IPv4 socket normalized to dotted quad; garbage fly-client-ip falls
   back to socket; garbage cf header ignored; never throws on any combination.
-- **`ipStaffNote`:** egress IP -> shared-VPN note (assert stable substring,
-  e.g. `/not unique/`); proxy IP -> pre-fix note; ordinary IP / null /
-  garbage -> null. Proxy-precedence: after `setEgressRanges` with an input
-  that includes a proxy-space CIDR (simulating an unfiltered geofeed),
-  `ipStaffNote` on a proxy IP still returns the proxy note.
+- **`classifyIp`:** egress IP -> `"cloudflare_egress"`; proxy IP ->
+  `"cloudflare_proxy"`; ordinary IP / null / garbage -> null. Proxy-precedence:
+  after `setEgressRanges` with an input that includes a proxy-space CIDR
+  (simulating an unfiltered geofeed), `classifyIp` on a proxy IP still returns
+  `"cloudflare_proxy"`. (Exact-code equality now, not a prose substring -- the
+  category is a first-class stable value.)
 - **`shouldRejectOriginBypass`:** false when `enabled: false` (whatever the
   peer); false for `path: "/health"`; false for empty `flyClientIp` (Fly
   health check shape); false for a CF proxy peer (`104.16.0.1`); **true**
@@ -414,9 +434,10 @@ themselves are exercised by the curl matrix):
   (parse throws, caught, previous kept).
 
 `server/presenters.test.ts`: extend the strict `toEqual` whitelist with
-`registration_ip_note: null` (mandatory -- the existing test uses `toEqual`
-and will fail otherwise); new cases: egress IP + admin viewer -> note string;
-member viewer -> ip and note both null; pre-milestone user -> both null.
+`registration_ip_category: null` (mandatory -- the existing test uses `toEqual`
+and will fail otherwise); new cases: egress IP + admin viewer ->
+`registration_ip_category === "cloudflare_egress"`; member viewer -> ip and
+category both null; pre-milestone user -> both null.
 
 ## Verification
 
@@ -438,8 +459,10 @@ member viewer -> ip and note both null; pre-milestone user -> both null.
 3. Dev mode (`pnpm run dev`): `curl -H "CF-Connecting-IP: 6.6.6.6" ...` still
    fakes the IP (dev hatch); plain requests record `127.0.0.1`/`::1`.
 4. Annotation: seed/register a user, `UPDATE users SET registration_ip = '104.28.203.54' WHERE ...`;
-   staff view of the profile shows the muted WARP note;
-   `GET /api/users/<slug>` as staff shows `registration_ip_note`; as member -> 404.
+   staff view of the profile shows the muted WARP note (mapped from the
+   `cloudflare_egress` code in the template);
+   `GET /api/users/<slug>` as staff shows `registration_ip_category: "cloudflare_egress"`;
+   as member -> 404.
 
 ## Rollout
 
@@ -499,3 +522,10 @@ member viewer -> ip and note both null; pre-milestone user -> both null.
   its proxy-diff log. It is intentionally decoupled from `setProxyRanges` (the
   setter stays pure to intervals), so a manual setter call in tests does not
   perturb the diff baseline -- only a successful refresh advances it.
+- The staff annotation is a machine-readable **code** (`classifyIp ->
+  IpCategory | null`), not prose. Data (which category) is split from
+  presentation (the sentence): the JSON API exposes the code as a stable
+  contract, and the two sentences live once, in `views/show_user.html`'s
+  code->prose map. This replaced an earlier `ipStaffNote(): string | null`
+  that returned the sentence directly (which is why its tests could only
+  assert loose substrings -- there was no stable value to assert).

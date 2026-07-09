@@ -5,7 +5,7 @@ import _ from "lodash";
 // 1st party
 import * as belt from "./belt.js";
 import * as cancan from "./cancan.js";
-import { ipStaffNote } from "./cloudflare_ip.js";
+import { classifyIp } from "./cloudflare_ip.js";
 import * as config from "./config.js";
 import { DbConvo, DbPm, DbUser } from "./dbtypes.js";
 
@@ -148,10 +148,11 @@ export function presentUserForApi(user: DbUser, viewer: DbUser | null | void) {
     custom_title: user.custom_title,
     posts_count: user.posts_count,
     is_nuked: user.is_nuked,
-    // Note is derived from the already-gated registrationIp, so it can never
-    // leak when the IP is hidden.
+    // Category is derived from the already-gated registrationIp, so it can
+    // never leak when the IP is hidden. It is a machine-readable code; the
+    // human-readable label lives in the HTML view.
     registration_ip: registrationIp,
-    registration_ip_note: ipStaffNote(registrationIp),
+    registration_ip_category: classifyIp(registrationIp),
   };
 }
 
