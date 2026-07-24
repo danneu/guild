@@ -690,6 +690,7 @@ packages:
   '@koa/router@13.1.0':
     resolution: {integrity: sha512-mNVu1nvkpSd8Q8gMebGbCkDWJ51ODetrFvLKYusej+V0ByD4btqHYnPIzTBLXnQMVUlm/oxVwqmWBY3zQfZilw==}
     engines: {node: '>= 18'}
+    deprecated: Please upgrade to v13.1.1+ per <https://github.com/koajs/router/pull/181>
 
   '@ladjs/koa-better-static@3.0.0':
     resolution: {integrity: sha512-IOCHM7yXcXzFL9JlsZ/UsA8skpYvDp7bsdmmy9Qvvi/6sKkIJoDH+MKHQCbBx1OxTjkQhY+SE1xD6PCd3eyFqQ==}
