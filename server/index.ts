@@ -33,6 +33,7 @@ import discordRoutes from "./routes/discord.js";
 import searchRoutes from "./routes/search.js";
 import topicsRoutes from "./routes/topics.js";
 import adminRoutes from "./routes/admin.js";
+import altRoutes from "./routes/alts.ts";
 import verifyEmailRoutes from "./routes/verify-email.js";
 import guildbot from "./guildbot.js";
 import {
@@ -371,6 +372,11 @@ const nunjucksOptions = {
     formatChatDate: belt.formatChatDate,
     bitAnd: (input, mask) => input & mask,
     bitOr: (input, mask) => input | mask,
+    getPropertyList: (objList, propertyName) => {
+      return objList.map(function(testObj) {
+        return testObj[propertyName];
+      })
+    },
   },
 };
 
@@ -455,6 +461,7 @@ app.use(searchRoutes.routes());
 app.use(topicsRoutes.routes());
 app.use(adminRoutes.routes());
 app.use(verifyEmailRoutes.routes());
+app.use(altRoutes.routes());
 
 // Useful to redirect users to their own profiles since canonical edit-user
 // url is /users/:slug/edit
