@@ -5,6 +5,11 @@ import * as config from "../config";
 import * as emailer from "../emailer";
 import { isEmailGateSatisfied } from "../middleware/require-confirmed-email";
 import { Context } from "koa";
+import {
+  emailTakenFlashMessage,
+  SEND_FAILED_MESSAGE,
+  trySend,
+} from "./verify-email-messages";
 
 const router = new Router();
 
@@ -28,12 +33,14 @@ function afterEmailAction(ctx: Context): string {
 async function sendVerificationLink(
   row: { email: string; token: string },
   uname: string,
-) {
-  await emailer.sendEmailVerificationLinkEmail({
-    toUname: uname,
-    toEmail: row.email,
-    token: row.token,
-  });
+): Promise<boolean> {
+  return trySend(() =>
+    emailer.sendEmailVerificationLinkEmail({
+      toUname: uname,
+      toEmail: row.email,
+      token: row.token,
+    }),
+  );
 }
 
 ////////////////////////////////////////////////////////////
@@ -93,10 +100,7 @@ router.get("/verify-email", async (ctx: Context) => {
       return;
     case "EMAIL_TAKEN":
       ctx.flash = {
-        message: [
-          "danger",
-          "That email address now belongs to another account, so it could not be confirmed. The address on your account is unchanged. Enter a different address to confirm.",
-        ],
+        message: ["danger", emailTakenFlashMessage(Boolean(ctx.currUser))],
       };
       ctx.redirect(ctx.currUser ? "/confirm-email" : "/login");
       return;
@@ -132,7 +136,19 @@ router.post("/api/verify-email", async (ctx: Context) => {
     return;
   }
 
-  await sendVerificationLink(row, ctx.currUser.uname);
+  const sent = await sendVerificationLink(row, ctx.currUser.uname);
+
+  if (!sent) {
+    // Not a 500: the row is staged and the next resend will reuse it. 503 tells
+    // the (non-2xx-checking) client this is a transient mailer problem.
+    ctx.status = 503;
+    ctx.body = {
+      error: "SEND_FAILED",
+      message: SEND_FAILED_MESSAGE,
+    };
+    return;
+  }
+
   ctx.status = 201;
 });
 
@@ -182,14 +198,23 @@ router.put("/me/email", async (ctx: Context) => {
     return;
   }
 
-  await sendVerificationLink(row, ctx.currUser.uname);
+  const sent = await sendVerificationLink(row, ctx.currUser.uname);
 
-  ctx.flash = {
-    message: [
-      "success",
-      `We sent a confirmation link to ${row.email}. Your account keeps its current address until you click it.`,
-    ],
-  };
+  // Either way the staging stands and users.email is untouched, so the failure
+  // is a mail problem, not a rejected change.
+  ctx.flash = sent
+    ? {
+        message: [
+          "success",
+          `We sent a confirmation link to ${row.email}. Your account keeps its current address until you click it.`,
+        ],
+      }
+    : {
+        message: [
+          "warning",
+          `We are now waiting on confirmation of ${row.email}, but we could not send the email right now. Try resending in a minute.`,
+        ],
+      };
   ctx.redirect(afterEmailAction(ctx));
 });
 

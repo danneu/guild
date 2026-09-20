@@ -219,6 +219,16 @@ export async function consumeEmailVerificationTokenTx(
 // Keys on the exact token value that collided, never on user_id: a user who
 // staged a different address in the meantime owns a *different* token value on
 // the same row, and a delete-by-user would silently discard it.
+//
+// Accepted consequence: this row is also what the 60s issuance throttle
+// compares against, so the staging that immediately follows a collision is a
+// plain INSERT and skips the window. A tombstone (keeping the row, marked
+// consumed) would preserve the throttle but break I3 -- the row *is* the
+// pending state, and findPendingEmailVerification reads the base table, so the
+// user would be shown "awaiting confirmation of X" for an address that now
+// belongs to somebody else, forever. Clearing the row is the behaviour I3
+// wants; the bypass is bounded because reaching it costs a real click on a
+// real mailed link, which already had to pass the throttle when it was issued.
 export async function deleteEmailVerificationTokenByToken(
   db: Queryable,
   token: string,

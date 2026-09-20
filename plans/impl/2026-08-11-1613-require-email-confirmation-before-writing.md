@@ -530,19 +530,24 @@ reconciliation ordering (no test database).
 
 ## Follow Up
 
-- [ ] `EMAIL_TAKEN` cleanup deletes the token row, so the next staging is a plain INSERT that bypasses the 60s throttle. Needs a real link click per cycle, so amplification is negligible; note it in the function comment or stage a tombstone instead of deleting.
-- [ ] `GET /verify-email` on the logged-out branch flashes the `EMAIL_TAKEN` message on `/login`, revealing to an unauthenticated link holder that the address belongs to an account. Use a generic "could not be confirmed" message on that branch.
-- [ ] The phase-2 reconciliation sweep exists only as SQL inside this plan's
+- [x] `EMAIL_TAKEN` cleanup deletes the token row, so the next staging is a plain INSERT that bypasses the 60s throttle. Needs a real link click per cycle, so amplification is negligible; note it in the function comment or stage a tombstone instead of deleting.
+- [x] `GET /verify-email` on the logged-out branch flashes the `EMAIL_TAKEN` message on `/login`, revealing to an unauthenticated link holder that the address belongs to an account. Use a generic "could not be confirmed" message on that branch.
+- [x] The phase-2 reconciliation sweep exists only as SQL inside this plan's
       Rollout section, but `sql/9-email-confirmation.sql` and
       `sql/10-drop-email-verified.sql` both refer operators to it by name.
       Worth landing it as `sql/` file or runbook entry so it is findable from
       the migration directory during an incident.
-- [ ] The edit-user resend script in `views/edit_user.html` and the wall-page
+- [x] The edit-user resend script in `views/edit_user.html` and the wall-page
       resend script in `views/confirm_email.html` are two near-duplicate
       implementations of the same button. Worth collapsing into one shared
       snippet rather than letting the copy drift.
-- [ ] `pnpm run reset-db` fails at `sql/dev_seeds.sql:205` with
+- [x] `pnpm run reset-db` fails at `sql/dev_seeds.sql:205` with
       `column "latest_post_id" of relation "forums" does not exist` -- the
       column is written by triggers in `sql/3-drop-plv8.sql` but is never
       created by `sql/1-schema.sql`. Pre-existing on master, unrelated to this
       plan, but it blocks the local verification steps in ## Verification.
+      Fixed in 58d88d3 (and a second drift, `unames.updated_at`, in 7bbf853).
+- [x] `PUT /me/email` and `POST /api/verify-email` return HTTP 500 when the
+      mail send fails (observed locally with bad SES credentials), even though
+      the token row is staged correctly. Registration catches send failures;
+      these two routes should too.
