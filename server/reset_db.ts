@@ -59,6 +59,14 @@ async function resetDb() {
     console.log("Reset 4-better-notif-indexes.sql");
   })();
 
+  // Run 5-better-post-hidden-trigger-fn.sql
+  console.log("-- 5-better-post-hidden-trigger-fn.sql");
+  await (async () => {
+    const str = slurpSqlSync("5-better-post-hidden-trigger-fn.sql");
+    await pool.query(str);
+    console.log("Reset 5-better-post-hidden-trigger-fn.sql");
+  })();
+
   // Seed data
   await (async () => {
     const str = slurpSqlSync("dev_seeds.sql");
