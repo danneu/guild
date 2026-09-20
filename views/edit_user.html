@@ -51,7 +51,8 @@
             </div>
 
             {#
-              Offered whenever the account has not confirmed an address -- NOT
+              Offered whenever there is a staged address awaiting confirmation,
+              or the account has not confirmed an address at all -- NOT
               only when a pending token row exists. A grandfathered legacy
               account has no token row and is already past the write gate on its
               exemption, so keying this on pendingEmail would leave it with no
@@ -63,7 +64,7 @@
               With no row, POST /api/verify-email falls back to the account's
               own address, which is what the copy promises here.
             #}
-            {% if needsEmailConfirmation(user) %}
+            {% if pendingEmail or needsEmailConfirmation(user) %}
               <div class="form-group">
                 <label class="col-sm-3 control-label">
                   {{ 'Awaiting confirmation:' if pendingEmail else 'Not confirmed yet:' }}
