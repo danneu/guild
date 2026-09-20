@@ -1018,7 +1018,9 @@ CREATE TABLE unames (
   -- from history to see if we should redirect
   slug           text             NOT NULL,
   recycle        boolean          NOT NULL DEFAULT false,
-  created_at     timestamptz      NOT NULL DEFAULT NOW()
+  created_at     timestamptz      NOT NULL DEFAULT NOW(),
+  -- Bumped on recycle/reclaim; the uname-change rate limit sorts by it
+  updated_at     timestamptz      NOT NULL DEFAULT NOW()
 );
 
 -- quickly list all changes for a user
