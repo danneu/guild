@@ -31,12 +31,13 @@ Two independent stamps on `users`, with distinct meanings:
 
 | column | meaning | gates writes | gates mail |
 | --- | --- | --- | --- |
-| `email_verified_at timestamptz NULL` | this address was confirmed by clicking a link | yes | yes (from phase 3) |
+| `email_verified_at timestamptz NULL` | this address was confirmed by clicking a link | yes | yes |
 | `email_gate_exempt_at timestamptz NULL` | this account is excused from the gate | yes | no |
 
 - **Write gate predicate:** `email_verified_at IS NOT NULL OR email_gate_exempt_at IS NOT NULL`
-- **Mailer predicate:** the legacy `email_verified` boolean until phase 3, then
-  `email_verified_at IS NOT NULL`. See Rollout for why the switch is deferred.
+- **Mailer predicate:** `email_verified_at IS NOT NULL`. The legacy boolean is
+  read by nothing in the deployed build; see Rollout for how the sweep keeps
+  the two in agreement until it is dropped.
 
 Exemption is granted to: all pre-existing accounts at migration time, any account
 created while `config.IS_EMAIL_CONFIGURED` is false (see Fail-open), and any
@@ -273,47 +274,45 @@ full-table UPDATE would contend with the `last_online_at` write that runs on eve
 authenticated request. `NOW()` is a grandfather stamp, not a claim about when anyone
 confirmed; note it in the migration comment.
 
-**Phase 2 -- deploy the code.** Five ordered steps: pause registration, deploy,
-wait for the old build to drain, run the reconciliation sweep, re-enable
-registration.
+**Phase 2 -- deploy the code, in the same sitting as phase 1.** The build
+deployed is `master` HEAD, which already reads `email_verified_at` in the mailer
+and never touches the legacy boolean. That makes the boolean-vs-stamp
+reconciliation below time-sensitive, so phases 1 and 2 run back to back inside
+one registration pause: pause registration, run `sql/9`, deploy, wait for the
+old build to drain, run `sql/9b`, re-enable registration. Minutes, not days,
+between the backfill and the sweep.
 
-*Registration is paused for the whole of phase 2* via the existing
+*Registration is paused for the whole of phases 1 and 2* via the existing
 `REGISTRATION_ENABLED` keyval, honored by both builds without a deploy. Both builds
-create accounts with `email_verified = false` and both new columns NULL, so a
-registration is indistinguishable between builds by any column -- and the two need
-opposite treatment (old-build signup grandfathered, new-build signup made to
-confirm). Pausing empties that population, so every unstamped account the sweep
-finds is unambiguously pre-rollout. Without the pause, a spam account registered
-during the deploy window would receive a permanent exemption.
+create accounts with both new columns NULL, so a registration is
+indistinguishable between builds by any column -- and the two need opposite
+treatment (old-build signup grandfathered, new-build signup made to confirm).
+Pausing empties that population, so every unstamped account the sweep finds is
+unambiguously pre-rollout. Without the pause, a spam account registered during
+the deploy window would receive a permanent exemption.
 
-*The mailer keeps reading the legacy boolean throughout phase 2.* The old build
-still clears `email_verified` on every address change without touching
-`email_verified_at`, so from the phase-1 backfill until the sweep has run a verified
-member who changes address through the old build carries a stale stamp on an
-unconfirmed address. If the new build's mailer read the stamp during that window it
-would send PMs to that address. Reading the boolean instead -- which the new build
-dual-writes on confirmation -- keeps mail behavior identical to the old build's on
-every row regardless of which build acted last, so the stale stamp is harmless
-until the sweep repairs it. The mailer switches to the stamp only in the phase 3
-build, after the sweep has made the two agree.
+*Why the window must be short.* The old build still clears `email_verified` on
+every address change without touching `email_verified_at`, so between the
+phase-1 backfill and the sweep a verified member who changes address through the
+old build carries a stale stamp on an unconfirmed address, and the new build's
+mailer would send PMs there until sweep statement (2) repairs it. Keeping the
+gap to minutes bounds that to members who change address inside it.
 
-*Confirmation dual-writes the legacy boolean until phase 3.* This is the only place
-the new build touches the old column. It makes the boolean a last-writer-wins
-marker across the two builds: the old build clears it on every address change, the
-new build sets it on every confirmation, so whichever build acted last is legible
-afterward -- which is what both the phase-2 mailer and the sweep depend on.
-
-*Once the old build is fully drained*, run the reconciliation sweep. Three kinds of
-row, and collapsing any two is wrong:
+*Once the old build is fully drained*, run the reconciliation sweep
+(`sql/9b-email-confirmation-reconcile.sql`, with both placeholders pinned by
+hand). Three kinds of row, and collapsing any two is wrong:
 
 ```sql
 -- 1. Reconcile: anyone the old build verified after their phase-1 batch.
 UPDATE users SET email_verified_at = NOW()
   WHERE email_verified AND email_verified_at IS NULL;
--- 2. Repair: a stale verified stamp on an address the old build replaced.
+-- 2. Repair: a stale backfill stamp on an address the old build replaced.
+--    Stamps written after the deploy came from the new build, which does not
+--    write the boolean; keep those.
 UPDATE users SET email_verified_at = NULL,
                  email_gate_exempt_at = COALESCE(email_gate_exempt_at, NOW())
-  WHERE NOT email_verified AND email_verified_at IS NOT NULL;
+  WHERE NOT email_verified AND email_verified_at IS NOT NULL
+    AND email_verified_at < '<timestamp of the deploy>';
 -- 3. Grandfather the still-unverified remainder: everything that existed while
 --    registration was paused.
 UPDATE users SET email_gate_exempt_at = NOW()
@@ -321,32 +320,31 @@ UPDATE users SET email_gate_exempt_at = NOW()
     AND created_at < '<timestamp registration was paused>';
 ```
 
-All three are idempotent and re-runnable; (3) stays safe on a re-run because its
-timestamp is fixed at the pause. Each is load-bearing:
+All three are idempotent and re-runnable; (2) and (3) stay safe on a re-run
+because their timestamps are fixed literals. Each is load-bearing:
 
 - Skipping (1) would hand a verified legacy account only the exemption: it could
-  still post but would drop out of the phase-3 mailer predicate -- a violation of
+  still post but would drop out of the mailer predicate -- a violation of
   constraint 2.
 - (2) closes the one way the old build can corrupt the new columns' meaning. Left
   alone, the new build would treat the replaced address as confirmed forever: a
   permanent I1 violation. Clearing the stamp restores the old build's own behavior
   (it had already stopped mailing them), and the exemption keeps write access so
   grandfathering is unaffected. They can re-confirm at leisure.
-- (2) is a flag comparison, not a timestamp inference. During the overlap the new
-  build can confirm address B and the old build can then move the account to
-  unconfirmed C; a timestamp guard would read B's post-cutover stamp as genuine and
-  preserve it.
+- The deploy-timestamp guard on (2) exists because the new build never sets the
+  boolean: without it, a legacy member who confirmed through the new build
+  during the overlap would have that confirmation wrongly cleared. See AR5 for
+  the race the guard reopens.
 
 Only registration is paused; the site stays up. During the brief overlap a user who
 confirms through the new build may still see the wall on requests the old build
 serves; it clears when the old build drains. Acceptable.
 
-**Phase 3 -- days later, once rollback is off the table.** Two ordered steps, both
-required: first deploy a build that drops the confirmation dual-write and switches
-the mailer predicate to `email_verified_at IS NOT NULL`, then apply
-`sql/10-drop-email-verified.sql` (`ALTER TABLE users DROP COLUMN email_verified;`)
-and remove the column from `sql/1-schema.sql`. Inverting the two steps makes every
-confirmation and every PM notification throw `42703`.
+**Phase 3 -- days later, once rollback is off the table.** Confirm the agreement
+query in `sql/10` returns 0, then apply `sql/10-drop-email-verified.sql`
+(`ALTER TABLE users DROP COLUMN email_verified;`). No deploy: the running build
+already ignores the column. Rollback before this point is redeploying the
+previous build, which still has the column it expects.
 
 ## Accepted risks
 
@@ -361,6 +359,12 @@ confirmation and every PM notification throw `42703`.
   exemption. Accepted: the outage is not detectable in-process without a health
   probe on SES, and automatic fail-open on send failure would let any transient
   error mint permanent exemptions.
+- **AR5** -- sweep statement (2) keeps any stamp written after the deploy, so a
+  legacy member who confirms address B through the new build during the
+  overlap and then moves to unconfirmed address C through the old build within
+  the same minutes keeps a stamp on C. Accepted: the overlap is the drain time
+  of one deploy, and the deployed build ignores the boolean, so the alternative
+  (no guard) would instead wrongly clear every confirmation made in that window.
 
 ## Implementation discretion
 
@@ -443,10 +447,6 @@ reconciliation ordering (no test database).
   page still shows that address as awaiting confirmation, that the old link is
   rejected, and that resend mails the *staged* address rather than the account's
   current one.
-- Phase-2 mailer: on a row with `email_verified = false` and `email_verified_at`
-  set (the stale-stamp state), send a PM and confirm no notification email is
-  attempted. Then on a row confirmed through the new build (`email_verified =
-  true`), confirm one is.
 - Rollout reconciliation, rehearsed locally against a copy of the phase-1 state:
   set one account `email_verified = true` with both new columns NULL and one
   `email_verified = false` likewise, run the sweep in order, and confirm the first

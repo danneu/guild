@@ -24,15 +24,22 @@
 --
 --   psql -f 9b-email-confirmation-reconcile.sql
 --
--- BEFORE RUNNING, edit statement (3): replace <timestamp registration was paused>
--- with the actual pause timestamp as a literal (e.g. '2026-08-20 14:03:00+00').
--- The file will not run with the placeholder in place -- that is deliberate, the
--- value must be pinned by hand and stay fixed across re-runs.
+-- BEFORE RUNNING, pin two placeholders as literals (e.g. '2026-08-20 14:03:00+00'):
+--   <timestamp of the deploy>            in statement (2)
+--   <timestamp registration was paused>  in statement (3)
+-- The file will not run with the placeholders in place -- that is deliberate,
+-- the values must be pinned by hand and stay fixed across re-runs.
+--
+-- Phases 1 and 2 run in ONE sitting (see the plan's Rollout): the deployed build
+-- reads only email_verified_at and never writes email_verified, so the gap
+-- between the phase-1 backfill and this sweep must be minutes.
 --
 -- IDEMPOTENT. All three statements are re-runnable:
 --   (1) is guarded by email_verified_at IS NULL, so a second pass matches nothing.
 --   (2) is guarded by email_verified_at IS NOT NULL and clears it, so a second
 --       pass matches nothing; COALESCE preserves an exemption already granted.
+--       Its deploy-timestamp cutoff is a fixed literal, so stamps written by
+--       the new build (which does not set the boolean) are never cleared.
 --   (3) is guarded by both columns being NULL, and its created_at cutoff is a
 --       fixed literal pinned at the pause -- not NOW() -- so a later re-run
 --       cannot widen the set and grandfather accounts created after the cutover.
@@ -43,10 +50,13 @@
 -- 1. Reconcile: anyone the old build verified after their phase-1 batch.
 UPDATE users SET email_verified_at = NOW()
   WHERE email_verified AND email_verified_at IS NULL;
--- 2. Repair: a stale verified stamp on an address the old build replaced.
+-- 2. Repair: a stale backfill stamp on an address the old build replaced.
+--    Stamps written after the deploy came from the new build, which does not
+--    write the boolean; keep those (plan AR5).
 UPDATE users SET email_verified_at = NULL,
                  email_gate_exempt_at = COALESCE(email_gate_exempt_at, NOW())
-  WHERE NOT email_verified AND email_verified_at IS NOT NULL;
+  WHERE NOT email_verified AND email_verified_at IS NOT NULL
+    AND email_verified_at < '<timestamp of the deploy>';
 -- 3. Grandfather the still-unverified remainder: everything that existed while
 --    registration was paused.
 UPDATE users SET email_gate_exempt_at = NOW()

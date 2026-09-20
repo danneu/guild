@@ -187,7 +187,7 @@ export async function consumeEmailVerificationTokenTx(
     // plan/2026-08-11-1613). It existed only to keep the boolean legible across
     // the two builds during the rollout; the reconciliation sweep has since
     // made the stamp authoritative, and the column is dropped by
-    // sql/10-drop-email-verified.sql once this build is deployed.
+    // sql/10-drop-email-verified.sql days after this build is deployed.
     await pgClient.query(
       `
       UPDATE users
