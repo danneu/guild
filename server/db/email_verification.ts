@@ -183,16 +183,16 @@ export async function consumeEmailVerificationTokenTx(
   }
 
   try {
-    // email_verified is the legacy boolean. The new build dual-writes it until
-    // phase 3 so that it stays a last-writer-wins marker across the two builds
-    // during the rollout: the mailer and the reconciliation sweep both depend
-    // on it being legible.
+    // The legacy email_verified dual-write is gone (phase 3 of
+    // plan/2026-08-11-1613). It existed only to keep the boolean legible across
+    // the two builds during the rollout; the reconciliation sweep has since
+    // made the stamp authoritative, and the column is dropped by
+    // sql/10-drop-email-verified.sql once this build is deployed.
     await pgClient.query(
       `
       UPDATE users
       SET email = $1,
-          email_verified_at = NOW(),
-          email_verified = true
+          email_verified_at = NOW()
       WHERE id = $2
     `,
       [consumed.email, consumed.user_id],

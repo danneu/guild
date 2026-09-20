@@ -1,0 +1,25 @@
+-- Phase 3 of plan/2026-08-11-1613 (require email confirmation before writing).
+--
+-- ORDERING IS LOAD-BEARING. Apply this file only AFTER the build that stops
+-- touching email_verified is deployed and serving. That build is the one which
+-- drops the confirmation dual-write and switches the PM notification mailer to
+-- `email_verified_at IS NOT NULL`.
+--
+-- Running this first, against the previous build, makes every confirmation and
+-- every PM notification throw 42703 (undefined_column).
+--
+-- This is also the point of no return for the rollback path: from here on,
+-- redeploying a pre-phase-3 build no longer works, because those builds read
+-- and write this column. Do not run it until rollback is genuinely off the
+-- table -- the plan allows days between phase 2 and phase 3 for exactly that
+-- reason.
+--
+-- Before dropping, confirm the reconciliation sweep left the two in agreement.
+-- This must return 0:
+--
+--   SELECT count(*) FROM users WHERE email_verified <> (email_verified_at IS NOT NULL);
+--
+-- A nonzero count means the phase-2 sweep did not finish. Stop and re-run it;
+-- dropping the column now would silently discard the disagreement.
+
+ALTER TABLE users DROP COLUMN email_verified;

@@ -43,7 +43,6 @@ CREATE TABLE users (
   is_grayscale   boolean   NOT NULL  DEFAULT false,
   force_device_width boolean NOT NULL DEFAULT true,
   hide_avatars   boolean   NOT NULL  DEFAULT false,
-  email_verified boolean   NOT NULL DEFAULT false,
   registration_ip inet     NULL,
   -- Bio
   bio_markup     text      NULL,
@@ -69,7 +68,9 @@ CREATE UNIQUE INDEX unique_slug ON users (slug);
 CREATE INDEX users__uname ON users (uname);
 
 -- Email confirmation gates writes; see sql/9-email-confirmation.sql for the
--- meaning of the two stamps and why they are separate columns.
+-- meaning of the two stamps and why they are separate columns. The legacy
+-- email_verified boolean they replaced is gone as of
+-- sql/10-drop-email-verified.sql, so it is not declared above.
 ALTER TABLE users ADD COLUMN email_verified_at timestamptz NULL;
 ALTER TABLE users ADD COLUMN email_gate_exempt_at timestamptz NULL;
 

@@ -465,7 +465,7 @@ reconciliation ordering (no test database).
 
 - [x] 1. Add the email confirmation schema and grandfathering migration
 - [x] 2. Require confirmation for writes with recovery and legacy mail behavior
-- [ ] 3. Switch PM mail to confirmation timestamps and retire the legacy flag
+- [x] 3. Switch PM mail to confirmation timestamps and retire the legacy flag
 
 ## Implementation notes
 
@@ -500,9 +500,25 @@ reconciliation ordering (no test database).
   (`deleteEmailVerificationTokenByToken(db, token)`) called with the pool, which
   is what makes its keying on the token value assertable with the fake-client
   idiom.
+- Phase 3 removes the column from `sql/1-schema.sql` in the same commit as the
+  code, rather than deferring it to match the hand-applied ordering of
+  `sql/10-drop-email-verified.sql`. `reset_db.ts` runs only `1-schema.sql`
+  through `4-better-notif-indexes.sql` plus the seeds -- it never runs the
+  numbered migrations from 5 on -- so `9-email-confirmation.sql`, which still
+  reads `email_verified` in its backfill, is unaffected, and the schema file
+  cannot influence production ordering either way.
+- `sql/9-email-confirmation.sql` is deliberately left referencing
+  `email_verified`. It is the historical phase-1 migration and runs against a
+  database that still has the column; rewriting it would falsify the record of
+  what was applied.
 
 ## Follow Up
 
+- [ ] The phase-2 reconciliation sweep exists only as SQL inside this plan's
+      Rollout section, but `sql/9-email-confirmation.sql` and
+      `sql/10-drop-email-verified.sql` both refer operators to it by name.
+      Worth landing it as `sql/` file or runbook entry so it is findable from
+      the migration directory during an incident.
 - [ ] The edit-user resend script in `views/edit_user.html` and the wall-page
       resend script in `views/confirm_email.html` are two near-duplicate
       implementations of the same button. Worth collapsing into one shared

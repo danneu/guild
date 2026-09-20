@@ -1446,9 +1446,9 @@ export const createTopic = async function (props) {
 // Generic user-update route. Intended to be paired with
 // the generic PUT /users/:userId route.
 // TODO: Use the knex updater instead
-// Note: deliberately has no email or email_verified slot. Confirmation is the
-// sole writer of users.email (plan/2026-08-11-1613/I2); a slot here would be a
-// second writer, able to change the address while email_verified_at stays set.
+// Note: deliberately has no email slot. Confirmation is the sole writer of
+// users.email (plan/2026-08-11-1613/I2); a slot here would be a second writer,
+// able to change the address while email_verified_at stays set.
 export const updateUser = async (userId, attrs) => {
   debug("[updateUser] attrs", attrs);
 

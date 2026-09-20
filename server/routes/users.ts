@@ -648,9 +648,9 @@ router.put("/users/:slug", async (ctx: Context) => {
 
   // TODO: use db.users.updateUser
 
-  // This handler no longer touches email or email_verified. The email field of
-  // the profile editor posts to PUT /me/email, which stages the address on the
-  // token row instead; confirmation is the sole writer of users.email
+  // This handler no longer touches email. The email field of the profile editor
+  // posts to PUT /me/email, which stages the address on the token row instead;
+  // confirmation is the sole writer of users.email
   // (plan/2026-08-11-1613/I2). A surviving email slot here would be a second
   // writer, able to change the address while email_verified_at stays set.
   await db.updateUser(user.id, {

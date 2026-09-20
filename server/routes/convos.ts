@@ -148,8 +148,12 @@ router.post("/convos", async (ctx: Context) => {
 
       // Create email notification for each recipient
       const recipients = users
-        // Only email-verified users
-        .filter((u) => u.email_verified)
+        // Only users who confirmed their address by clicking a link. Reading
+        // the stamp rather than the retired email_verified boolean is phase 3
+        // of plan/2026-08-11-1613; the two agree on every row by now, because
+        // the rollout's reconciliation sweep made them agree before this build
+        // shipped.
+        .filter((u) => u.email_verified_at)
         // Get the users that want to receive emails for new convos
         .filter((user) => user.eflags & eflags.NEW_CONVO);
 
