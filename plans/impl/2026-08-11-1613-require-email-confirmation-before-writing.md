@@ -423,6 +423,9 @@ reconciliation ordering (no test database).
   the welcome-PM notification all still work.
 - Resend: click twice inside 60s, expect a 429; restart the server and confirm the
   limit still holds (the current in-memory limiter does not).
+- Legacy unverified account with no token row: /me/edit shows a
+  send-confirmation button, clicking it mails the account address, and the link
+  confirms it.
 - Verified-user email change: change the address on `/me/edit`, confirm `email` and
   posting are unaffected, that the pending address renders, and that confirming
   swaps it in. Then repeat with an address already belonging to another account and
@@ -466,6 +469,7 @@ reconciliation ordering (no test database).
 - [x] 1. Add the email confirmation schema and grandfathering migration
 - [x] 2. Require confirmation for writes with recovery and legacy mail behavior
 - [x] 3. Switch PM mail to confirmation timestamps and retire the legacy flag
+- [x] 4. Let unconfirmed accounts without a pending address request a confirmation link
 
 ## Implementation notes
 
@@ -511,9 +515,23 @@ reconciliation ordering (no test database).
   `email_verified`. It is the historical phase-1 migration and runs against a
   database that still has the column; rewriting it would falsify the record of
   what was applied.
+- The profile editor's confirmation control is keyed on `email_verified_at`
+  (via `needsEmailConfirmation`), not on whether a pending token row exists.
+  Keying it on the pending row is what broke grandfathered accounts: they carry
+  `email_gate_exempt_at` with no `email_verified_at` and no token row, so they
+  are past the write gate -- which sends `GET /confirm-email` away again -- and
+  the same-address short-circuit in `PUT /me/email` refuses their own address.
+  With the control hidden they had no remaining path to confirm at all, and
+  would have dropped out of PM mail permanently once phase 3 shipped.
+  `needsEmailConfirmation` is a sibling of `isEmailGateSatisfied` in the same
+  module for the same reason the plan gives for that one: it keeps the template
+  and the predicate from drifting, and it makes "an exemption is not a
+  confirmation" a unit-testable claim rather than a template detail.
 
 ## Follow Up
 
+- [ ] `EMAIL_TAKEN` cleanup deletes the token row, so the next staging is a plain INSERT that bypasses the 60s throttle. Needs a real link click per cycle, so amplification is negligible; note it in the function comment or stage a tombstone instead of deleting.
+- [ ] `GET /verify-email` on the logged-out branch flashes the `EMAIL_TAKEN` message on `/login`, revealing to an unauthenticated link holder that the address belongs to an account. Use a generic "could not be confirmed" message on that branch.
 - [ ] The phase-2 reconciliation sweep exists only as SQL inside this plan's
       Rollout section, but `sql/9-email-confirmation.sql` and
       `sql/10-drop-email-verified.sql` both refer operators to it by name.

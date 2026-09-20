@@ -203,6 +203,7 @@ import makeAgo from "./ago";
 import protectCsrf from "./middleware/protect-csrf";
 import {
   isEmailGateSatisfied,
+  needsEmailConfirmation,
   requireConfirmedEmail,
 } from "./middleware/require-confirmed-email";
 import { pool, withPgPoolTransaction } from "./db/util";
@@ -300,6 +301,9 @@ const nunjucksOptions = {
     // The site-wide banner reads the same predicate the middleware enforces,
     // so the two cannot drift.
     isEmailGateSatisfied,
+    // The profile editor's confirmation control keys on this, not on whether a
+    // pending token row happens to exist.
+    needsEmailConfirmation,
   },
   // filters are functions that we can pipe values to from nunjucks templates.
   // e.g. {{ user.uname | md5 | toAvatarUrl }}

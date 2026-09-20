@@ -51,26 +51,41 @@
             </div>
 
             {#
-              Pending state is read from the token row whether or not it has
-              expired (plan/2026-08-11-1613/I3), so an expired link still tells
-              you which address you were waiting on.
+              Offered whenever the account has not confirmed an address -- NOT
+              only when a pending token row exists. A grandfathered legacy
+              account has no token row and is already past the write gate on its
+              exemption, so keying this on pendingEmail would leave it with no
+              way to confirm at all and it would silently drop out of PM mail.
+
+              Pending state, when there is any, is read from the token row
+              whether or not it has expired (plan/2026-08-11-1613/I3), so an
+              expired link still tells you which address you were waiting on.
+              With no row, POST /api/verify-email falls back to the account's
+              own address, which is what the copy promises here.
             #}
-            {% if pendingEmail %}
+            {% if needsEmailConfirmation(user) %}
               <div class="form-group">
-                <label class="col-sm-3 control-label">Awaiting confirmation:</label>
+                <label class="col-sm-3 control-label">
+                  {{ 'Awaiting confirmation:' if pendingEmail else 'Not confirmed yet:' }}
+                </label>
                 <div class="col-sm-9">
                   <p class="form-control-static">
-                    {{ pendingEmail }}
+                    {{ pendingEmail or user.email }}
                     <span class="pull-right">
                       <button class="btn btn-default btn-xs send-verification-email" type="button">
-                        Resend confirmation email
+                        {{ 'Resend confirmation email' if pendingEmail else 'Send confirmation email' }}
                       </button>
                       <span class="result"></span>
                     </span>
                   </p>
                   <p class="help-block">
-                    Your account keeps its current address until you click the
-                    link we sent to this one.
+                    {% if pendingEmail %}
+                      Your account keeps its current address until you click the
+                      link we sent to this one.
+                    {% else %}
+                      We will send a confirmation link to {{ user.email }}.
+                      Click it to confirm this address.
+                    {% endif %}
                   </p>
                 </div>
               </div>

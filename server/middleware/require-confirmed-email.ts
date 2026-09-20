@@ -23,6 +23,24 @@ export function isEmailGateSatisfied(user: any): boolean {
   return Boolean(user.email_verified_at || user.email_gate_exempt_at);
 }
 
+// Whether this account still has an address to confirm, which is a strictly
+// narrower question than whether it is past the write gate.
+//
+// An exemption is not a confirmation: a grandfathered legacy account carries
+// email_gate_exempt_at with no email_verified_at, so it writes freely and yet
+// has never confirmed anything. It must still be offered a way to confirm --
+// otherwise it silently drops out of PM notification mail once that mail keys
+// on email_verified_at, and constraint 1 of plan/2026-08-11-1613 ("nobody can
+// be locked out with no recovery path") is violated for confirmation itself.
+//
+// Keyed on email_verified_at and NOT on the presence of a pending token row:
+// an account that has never been sent a link has no row, and that is exactly
+// the account that most needs the offer.
+export function needsEmailConfirmation(user: any): boolean {
+  if (!user) return false;
+  return !user.email_verified_at;
+}
+
 // Reads are never gated.
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 

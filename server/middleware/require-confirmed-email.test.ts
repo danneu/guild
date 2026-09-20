@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   isEmailGateExemptRoute,
   isEmailGateSatisfied,
+  needsEmailConfirmation,
 } from "./require-confirmed-email";
 
 describe("isEmailGateSatisfied", () => {
@@ -36,6 +37,43 @@ describe("isEmailGateSatisfied", () => {
         email_gate_exempt_at: new Date(),
       }),
     ).toBe(true);
+  });
+});
+
+describe("needsEmailConfirmation", () => {
+  // The case the profile editor originally got wrong: a grandfathered account
+  // writes freely on its exemption but has still never confirmed an address, so
+  // it must keep being offered the chance. Reading the exemption as a
+  // confirmation drops it out of PM notification mail with no way back.
+  it("still needs confirmation when the account is merely exempt", () => {
+    expect(
+      needsEmailConfirmation({
+        email_verified_at: null,
+        email_gate_exempt_at: new Date(),
+      }),
+    ).toBe(true);
+  });
+
+  it("does not need confirmation once an address was confirmed", () => {
+    expect(
+      needsEmailConfirmation({
+        email_verified_at: new Date(),
+        email_gate_exempt_at: new Date(),
+      }),
+    ).toBe(false);
+  });
+
+  it("needs confirmation when neither stamp is set", () => {
+    expect(
+      needsEmailConfirmation({
+        email_verified_at: null,
+        email_gate_exempt_at: null,
+      }),
+    ).toBe(true);
+  });
+
+  it("asks nothing of guests", () => {
+    expect(needsEmailConfirmation(null)).toBe(false);
   });
 });
 
