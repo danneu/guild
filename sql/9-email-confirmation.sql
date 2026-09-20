@@ -72,7 +72,7 @@ CREATE VIEW active_email_verification_tokens AS
 -- Phase 1 only: do NOT re-run this block after the phase-2 build is deployed.
 -- It would stamp email_gate_exempt_at on genuinely unverified new signups,
 -- minting permanent exemptions. After deploy, use the phase-2 reconciliation
--- sweep instead.
+-- sweep in sql/9b-email-confirmation-reconcile.sql instead.
 DO $$
 DECLARE
   batch_size constant int := 5000;

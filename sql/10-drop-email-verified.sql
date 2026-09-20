@@ -14,12 +14,14 @@
 -- table -- the plan allows days between phase 2 and phase 3 for exactly that
 -- reason.
 --
--- Before dropping, confirm the reconciliation sweep left the two in agreement.
+-- Before dropping, confirm the reconciliation sweep
+-- (sql/9b-email-confirmation-reconcile.sql) left the two in agreement.
 -- This must return 0:
 --
 --   SELECT count(*) FROM users WHERE email_verified <> (email_verified_at IS NOT NULL);
 --
--- A nonzero count means the phase-2 sweep did not finish. Stop and re-run it;
+-- A nonzero count means the phase-2 sweep did not finish. Stop and re-run
+-- sql/9b-email-confirmation-reconcile.sql;
 -- dropping the column now would silently discard the disagreement.
 
 ALTER TABLE users DROP COLUMN email_verified;
