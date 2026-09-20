@@ -1,5 +1,6 @@
 {% extends 'layouts/master.html' %}
 {% import './macros/macros.html' as macros %}
+{% import './macros/verify_email.html' as verifyEmail %}
 
 {% block embed %}
   <ol class="breadcrumb">
@@ -724,44 +725,12 @@
     });
   </script>
 
-  <script>
-    const button = document.querySelector('.send-verification-email')
-    if (button) {
-        const info = document.querySelector('.result')
-
-        const handler = e => {
-            const button = e.target
-            const cloneButton = button.cloneNode(true)
-            button.removeEventListener('click', handler)
-            button.textContent = 'Sending...'
-            button.disabled = true
-            button.style.color = 'white'
-            button.classList.add('disabled')
-            const info = document.createElement('span')
-
-            fetch("{{ config.HOST }}/api/verify-email", {
-                method: 'POST'
-            }).finally(() => {
-                button.replaceWith(info)
-            }).then(res => {
-                if (!res.ok) {
-                    console.error('Error with guild api:', res.status, res.statusText)
-                    info.textContent = res.status === 429 ? 'Rate-limited' : `Error: ${res.status} ${res.statusText}`
-                } else {
-                    info.textContent = 'Check your email'
-                }
-            }).catch(err => {
-                console.error('Error with guild api', err)
-                info.textContent = 'Error'
-            }).finally(() => {
-                setTimeout(() => {
-                    info.replaceWith(cloneButton)
-                    cloneButton.addEventListener('click', handler)
-                }, 10000)
-            })
-        }
-        button.addEventListener('click', handler)
-    }
-
-  </script>
+  {{ verifyEmail.resendScript(
+       url = config.HOST + '/api/verify-email',
+       label = 'Resend confirmation email' if pendingEmail else 'Send confirmation email',
+       successText = 'Check your email',
+       throttleText = 'Rate-limited',
+       errorText = 'Error',
+       showStatus = true
+     ) }}
 {% endblock %}

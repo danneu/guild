@@ -1,4 +1,5 @@
 {% extends 'layouts/master.html' %}
+{% import './macros/verify_email.html' as verifyEmail %}
 
 {% block embed %}
 
@@ -71,37 +72,5 @@
 {% endblock %}
 
 {% block scripts %}
-  <script>
-    // Resend is throttled in the database (60s), so a 429 here is expected and
-    // means "you already have a fresh link", not a failure.
-    const button = document.querySelector('.send-verification-email')
-    if (button) {
-      const info = document.querySelector('.result')
-
-      button.addEventListener('click', () => {
-        button.disabled = true
-        button.textContent = 'Sending...'
-
-        fetch('/api/verify-email', { method: 'POST' })
-          .then(res => {
-            if (res.ok) {
-              info.textContent = ' Sent. Check your email.'
-            } else if (res.status === 429) {
-              info.textContent = ' We just sent one. Please wait a minute before trying again.'
-            } else {
-              info.textContent = ' Something went wrong. Please try again in a moment.'
-            }
-          })
-          .catch(() => {
-            info.textContent = ' Something went wrong. Please try again in a moment.'
-          })
-          .finally(() => {
-            setTimeout(() => {
-              button.disabled = false
-              button.textContent = 'Resend the confirmation email'
-            }, 10000)
-          })
-      })
-    }
-  </script>
+  {{ verifyEmail.resendScript() }}
 {% endblock %}

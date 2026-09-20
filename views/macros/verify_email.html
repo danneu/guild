@@ -1,0 +1,89 @@
+{#
+  Shared resend-confirmation-email button script.
+
+  Both /me/edit and /confirm-email render a `.send-verification-email` button
+  next to an empty `.result` span and POST to /api/verify-email. CSRF is
+  origin/referer-based (server/middleware/protect-csrf.ts), so the fetch needs
+  no token -- it only has to be same-origin, which is why `url` defaults to a
+  relative path.
+
+  Resend is throttled in the database (60s), so a 429 here is expected and
+  means "you already have a fresh link", not a failure.
+
+  Params let each page keep its own copy:
+    url            - endpoint to POST to
+    label          - text restored on the button after the cooldown
+    sendingLabel   - text shown on the button while the request is in flight
+    successText    - shown in `.result` on 2xx
+    throttleText   - shown in `.result` on 429
+    errorText      - shown in `.result` on any other failure
+    showStatus     - append "Error: <status> <statusText>" detail and log to
+                     the console (the /me/edit flavor)
+    cooldownMs     - how long the button stays disabled after a response
+#}
+{% macro resendScript(
+  url = '/api/verify-email',
+  label = 'Resend the confirmation email',
+  sendingLabel = 'Sending...',
+  successText = ' Sent. Check your email.',
+  throttleText = ' We just sent one. Please wait a minute before trying again.',
+  errorText = ' Something went wrong. Please try again in a moment.',
+  showStatus = false,
+  cooldownMs = 10000
+) %}
+  <script>
+    (function () {
+      var button = document.querySelector('.send-verification-email')
+      if (!button) return
+      var info = document.querySelector('.result')
+
+      button.addEventListener('click', function () {
+        button.disabled = true
+        button.textContent = {{ sendingLabel | dump | safe }}
+
+        fetch({{ url | dump | safe }}, { method: 'POST' })
+          .then(function (res) {
+            if (res.ok) {
+              info.textContent = {{ successText | dump | safe }}
+            } else if (res.status === 429) {
+              info.textContent = {{ throttleText | dump | safe }}
+            } else if (res.status === 503) {
+              // Transient mailer failure: the token row is still staged, and
+              // the server sends copy explaining that. Show it verbatim rather
+              // than the generic error.
+              return res
+                .json()
+                .then(function (body) {
+                  info.textContent =
+                    body && body.error === 'SEND_FAILED' && body.message
+                      ? body.message
+                      : {{ errorText | dump | safe }}
+                })
+                .catch(function () {
+                  info.textContent = {{ errorText | dump | safe }}
+                })
+            } else {
+              {% if showStatus %}
+                console.error('Error with guild api:', res.status, res.statusText)
+                info.textContent = 'Error: ' + res.status + ' ' + res.statusText
+              {% else %}
+                info.textContent = {{ errorText | dump | safe }}
+              {% endif %}
+            }
+          })
+          .catch(function (err) {
+            {% if showStatus %}
+              console.error('Error with guild api', err)
+            {% endif %}
+            info.textContent = {{ errorText | dump | safe }}
+          })
+          .finally(function () {
+            setTimeout(function () {
+              button.disabled = false
+              button.textContent = {{ label | dump | safe }}
+            }, {{ cooldownMs }})
+          })
+      })
+    })()
+  </script>
+{% endmacro %}
