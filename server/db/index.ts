@@ -1446,6 +1446,9 @@ export const createTopic = async function (props) {
 // Generic user-update route. Intended to be paired with
 // the generic PUT /users/:userId route.
 // TODO: Use the knex updater instead
+// Note: deliberately has no email or email_verified slot. Confirmation is the
+// sole writer of users.email (plan/2026-08-11-1613/I2); a slot here would be a
+// second writer, able to change the address while email_verified_at stays set.
 export const updateUser = async (userId, attrs) => {
   debug("[updateUser] attrs", attrs);
 
@@ -1454,23 +1457,20 @@ export const updateUser = async (userId, attrs) => {
       `
     UPDATE users
     SET
-      email = COALESCE($1, email),
-      sig = COALESCE($2, sig),
-      avatar_url = COALESCE($3, avatar_url),
-      hide_sigs = COALESCE($4, hide_sigs),
-      is_ghost = COALESCE($5, is_ghost),
-      sig_html = COALESCE($6, sig_html),
-      custom_title = COALESCE($7, custom_title),
-      is_grayscale = COALESCE($8, is_grayscale),
-      force_device_width = COALESCE($9, force_device_width),
-      hide_avatars = COALESCE($10, hide_avatars),
-      email_verified = COALESCE($11, email_verified),
-      eflags = COALESCE($12, eflags)
-    WHERE id = $13
+      sig = COALESCE($1, sig),
+      avatar_url = COALESCE($2, avatar_url),
+      hide_sigs = COALESCE($3, hide_sigs),
+      is_ghost = COALESCE($4, is_ghost),
+      sig_html = COALESCE($5, sig_html),
+      custom_title = COALESCE($6, custom_title),
+      is_grayscale = COALESCE($7, is_grayscale),
+      force_device_width = COALESCE($8, force_device_width),
+      hide_avatars = COALESCE($9, hide_avatars),
+      eflags = COALESCE($10, eflags)
+    WHERE id = $11
     RETURNING *
   `,
       [
-        attrs.email,
         attrs.sig,
         attrs.avatar_url,
         attrs.hide_sigs,
@@ -1480,20 +1480,11 @@ export const updateUser = async (userId, attrs) => {
         attrs.is_grayscale,
         attrs.force_device_width,
         attrs.hide_avatars,
-        attrs.email_verified,
         attrs.eflags,
         userId,
       ],
     )
-    .then(maybeOneRow)
-    .catch((err) => {
-      if (err instanceof Error && "code" in err && err.code === "23505") {
-        if (/"unique_email"/.test(err.toString())) {
-          throw "EMAIL_TAKEN";
-        }
-      }
-      throw err;
-    });
+    .then(maybeOneRow);
 };
 
 ////////////////////////////////////////////////////////////
@@ -1751,11 +1742,21 @@ export async function createUserWithSession(props: {
       user = await client
         .query<DbUser>(
           `
-        INSERT INTO users (uname, digest, email, slug, hide_sigs, registration_ip)
-        VALUES ($1, $2, $3, $4, true, $5)
+        INSERT INTO users (uname, digest, email, slug, hide_sigs, registration_ip, email_gate_exempt_at)
+        VALUES ($1, $2, $3, $4, true, $5, $6)
         RETURNING *
       `,
-          [props.uname, digest, props.email, slug, props.ipAddress],
+          [
+            props.uname,
+            digest,
+            props.email,
+            slug,
+            props.ipAddress,
+            // Fail-open when we cannot mail a confirmation link at all: without
+            // this, local dev and any misconfigured deploy would wall every new
+            // account with no way to unwall it (plan/2026-08-11-1613).
+            config.IS_EMAIL_CONFIGURED ? null : new Date(),
+          ],
         )
         .then(exactlyOneRow);
     } catch (err) {
@@ -4707,3 +4708,4 @@ export * as unames from "./unames";
 export * as hits from "./hits";
 export * as admin from "./admin";
 export * as notifications from "./notifications";
+export * as emailVerification from "./email_verification";

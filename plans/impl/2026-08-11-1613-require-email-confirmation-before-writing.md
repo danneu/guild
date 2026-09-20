@@ -464,7 +464,7 @@ reconciliation ordering (no test database).
 ## Commit progress
 
 - [x] 1. Add the email confirmation schema and grandfathering migration
-- [ ] 2. Require confirmation for writes with recovery and legacy mail behavior
+- [x] 2. Require confirmation for writes with recovery and legacy mail behavior
 - [ ] 3. Switch PM mail to confirmation timestamps and retire the legacy flag
 
 ## Implementation notes
@@ -480,9 +480,33 @@ reconciliation ordering (no test database).
   `UPDATE users SET email_gate_exempt_at = NOW()` instead of adding a column to
   the seed `INSERT`, so the seed rows stay readable and future seed users are
   covered automatically.
+- Issuance is split into two single-statement upserts rather than one
+  parameterized statement: `stageEmailVerification` sets `email =
+  EXCLUDED.email`, `resendEmailVerification` leaves the stored address alone.
+  Both carry the same `ON CONFLICT ... WHERE created_at < NOW() - INTERVAL '60
+  seconds'` throttle, so each remains one atomic statement. Resend takes a
+  fallback address used only when the user has no token row at all.
+- The email panel on `/users/:slug/edit` renders only for the account owner.
+  `PUT /me/email` acts on the logged-in user, so showing the panel while staff
+  edit someone else's profile would stage the wrong account's address.
+- `PUT /me/email` and `POST /api/verify-email` short-circuit when
+  `IS_EMAIL_CONFIGURED` is false, matching how `/forgot` and `/reset-password`
+  already behave. Accounts created in that state are exempt anyway, so there is
+  nothing to confirm and no way to mail a link.
+- Dropped `db.users.getUserByEmail` (discretion granted by the plan): its only
+  caller was the replaced HMAC verification path. `email_verified` also left the
+  `db.users.updateUser` whitelist for the same reason.
+- The collision cleanup is a client-taking function
+  (`deleteEmailVerificationTokenByToken(db, token)`) called with the pool, which
+  is what makes its keying on the token value assertable with the fake-client
+  idiom.
 
 ## Follow Up
 
+- [ ] The edit-user resend script in `views/edit_user.html` and the wall-page
+      resend script in `views/confirm_email.html` are two near-duplicate
+      implementations of the same button. Worth collapsing into one shared
+      snippet rather than letting the copy drift.
 - [ ] `pnpm run reset-db` fails at `sql/dev_seeds.sql:205` with
       `column "latest_post_id" of relation "forums" does not exist` -- the
       column is written by triggers in `sql/3-drop-plv8.sql` but is never

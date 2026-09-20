@@ -201,6 +201,10 @@ import services from "./services";
 import cache3 from "./cache3";
 import makeAgo from "./ago";
 import protectCsrf from "./middleware/protect-csrf";
+import {
+  isEmailGateSatisfied,
+  requireConfirmedEmail,
+} from "./middleware/require-confirmed-email";
 import { pool, withPgPoolTransaction } from "./db/util";
 
 app.use(middleware.methodOverride());
@@ -241,6 +245,14 @@ app.use(async (ctx: Context, next: Next) => {
 
 app.use(middleware.currUser());
 app.use(middleware.flash());
+
+// The email confirmation write gate (plan/2026-08-11-1613). Mounted after
+// currUser (it reads ctx.currUser) and after flash (it sets a flash message),
+// and before nunjucks and bouncer, so neither ctx.render nor ctx.back exists
+// yet -- the gate answers with a plain redirect and never touches the view
+// layer. It is the sole enforcement point and fails closed, so any route added
+// below is gated unless its allowlist entry says otherwise.
+app.use(requireConfirmedEmail());
 
 app.use(async (ctx: Context, next: Next) => {
   // Must become before koa-router
@@ -285,6 +297,9 @@ const nunjucksOptions = {
     cache3,
     ago: makeAgo(),
     currYear: () => new Date().getFullYear(),
+    // The site-wide banner reads the same predicate the middleware enforces,
+    // so the two cannot drift.
+    isEmailGateSatisfied,
   },
   // filters are functions that we can pipe values to from nunjucks templates.
   // e.g. {{ user.uname | md5 | toAvatarUrl }}

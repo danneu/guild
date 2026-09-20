@@ -64,7 +64,15 @@ CREATE VIEW active_email_verification_tokens AS
 -- actually confirmed an address.
 --
 -- The COMMIT inside the block is what makes the batching worth anything, so run
--- this file in autocommit (plain psql), never wrapped in an explicit BEGIN.
+-- this file in autocommit: `psql -f 9-email-confirmation.sql`. Do NOT pass -1 /
+-- --single-transaction, do not wrap it in an explicit BEGIN, and do not run it
+-- through any client that wraps the file in one transaction -- the COMMIT then
+-- fails with SQLSTATE 2D000 (invalid_transaction_termination).
+--
+-- Phase 1 only: do NOT re-run this block after the phase-2 build is deployed.
+-- It would stamp email_gate_exempt_at on genuinely unverified new signups,
+-- minting permanent exemptions. After deploy, use the phase-2 reconciliation
+-- sweep instead.
 DO $$
 DECLARE
   batch_size constant int := 5000;

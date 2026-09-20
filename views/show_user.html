@@ -173,6 +173,34 @@
         {% if can(ctx.currUser, 'READ_USER_IP', user) %}
           <li><a href="{{ user.url }}/alts">Find Alt Accounts</a></li>
         {% endif %}
+        <li>
+          Email confirmation:
+          {% if user.email_verified_at %}
+            <span style="color: #2ecc71">
+              Confirmed {{ macros.timeago(user.email_verified_at) }}
+            </span>
+          {% elif user.email_gate_exempt_at %}
+            <span class="text-muted">
+              Not confirmed, but excused from the write gate
+              {{ macros.timeago(user.email_gate_exempt_at) }}
+            </span>
+          {% else %}
+            <span style="color: #e67e22">Not confirmed -- cannot post</span>
+          {% endif %}
+          {#
+            Grants write access without claiming the address was confirmed, so
+            the PM notification mailer is untouched (plan/2026-08-11-1613).
+          #}
+          {% if not user.email_verified_at and not user.email_gate_exempt_at
+                and can(ctx.currUser, 'GRANT_EMAIL_GATE_EXEMPTION', user) %}
+            <form action="{{ user.url }}/email-gate-exemption" method="post"
+                  style="display: inline;">
+              <button type="submit" class="btn btn-default btn-xs">
+                Excuse from email gate
+              </button>
+            </form>
+          {% endif %}
+        </li>
         {% if registrationIp %}
           {% set registrationIpNotes = {
             "cloudflare_proxy": "Cloudflare proxy IP -- likely recorded before trusted IP resolution shipped, not a real client address",

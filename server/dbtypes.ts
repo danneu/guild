@@ -6,7 +6,13 @@ export type DbUser = {
   slug: string;
   uname: string;
   email: string;
+  // Legacy marker. Still gates PM notification mail until phase 3 of
+  // plan/2026-08-11-1613, and is dual-written on confirmation until then.
   email_verified: boolean;
+  // The address on this row was confirmed by clicking a link.
+  email_verified_at: Date | null;
+  // This account is excused from the write gate. Never affects mail.
+  email_gate_exempt_at: Date | null;
   registration_ip: string | null;
   eflags: number;
   created_at: Date;

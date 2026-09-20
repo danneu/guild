@@ -184,6 +184,20 @@
       </div>
     {% endif %}
 
+    {#
+      Email confirmation gate banner. Post/reply forms are deliberately not
+      hidden from gated users, so this banner is the primary way they find out
+      why a submit bounced. Uses the same predicate the middleware enforces.
+    #}
+    {% if ctx.currUser and not isEmailGateSatisfied(ctx.currUser) %}
+      <div class="alert alert-warning" role="alert">
+        <strong>Confirm your email address to start posting.</strong>
+        You can read anything, but posting is locked until you click the link we
+        emailed you.
+        <a href="/confirm-email" class="alert-link">Confirm your email</a>
+      </div>
+    {% endif %}
+
     <!-- Embedded content is nested here -->
     {% block embed %}{% endblock %}
 

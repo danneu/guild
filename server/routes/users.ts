@@ -18,6 +18,7 @@ import * as config from "../config";
 import * as cancan from "../cancan";
 import { classifyIp } from "../cloudflare_ip";
 import * as avatar from "../avatar";
+import * as emailer from "../emailer";
 import cache3 from "../cache3";
 import bbcode from "../bbcode";
 import {
@@ -122,11 +123,20 @@ router.get(
       !lastUnameChange.changed_by_id ||
       belt.isOlderThan(lastUnameChange.updated_at, { months: 3 });
 
+    // Base table, not the active_* view: an expired staging is still the
+    // address the user is waiting on (plan/2026-08-11-1613/I3). Only the owner
+    // sees the email panel, so only they need it loaded.
+    const pending =
+      ctx.currUser.id === user.id
+        ? await db.emailVerification.findPendingEmailVerification(user.id)
+        : null;
+
     await ctx.render("edit_user", {
       ctx,
       user,
       lastUnameChange,
       eligibleForUnameChange,
+      pendingEmail: pending ? pending.email : null,
       title: "Edit " + user.uname,
     });
   },
@@ -350,6 +360,41 @@ router.post("/users", checkCloudflareTurnstile, async (ctx: Context) => {
   //   .process(ipAddress, user)
   //   .catch((err) => console.error("ipintel.process failed", err));
 
+  // Send the confirmation link and land on the wall page rather than the
+  // homepage (plan/2026-08-11-1613). When email is unconfigured the account was
+  // already stamped exempt at creation, so there is nothing to confirm.
+  if (config.IS_EMAIL_CONFIGURED) {
+    try {
+      const row = await db.emailVerification.stageEmailVerification(
+        user.id,
+        user.email,
+      );
+      // A fresh account cannot be throttled, but guard anyway rather than
+      // assume: mailing is best-effort here either way.
+      if (row) {
+        await emailer.sendEmailVerificationLinkEmail({
+          toUname: user.uname,
+          toEmail: row.email,
+          token: row.token,
+        });
+      }
+    } catch (err) {
+      // A send failure must never surface as an error. The user row and the
+      // session already exist, so a 500 followed by a retry would yield
+      // "Username is taken". The resend button on the wall page is the
+      // recovery path.
+      console.error("Failed to send registration confirmation email", err);
+    }
+
+    ctx.flash = {
+      message: [
+        "success",
+        "Registered successfully. Please confirm your email address to start posting.",
+      ],
+    };
+    return ctx.response.redirect("/confirm-email");
+  }
+
   ctx.flash = { message: ["success", "Registered successfully"] };
   return ctx.response.redirect("/");
 });
@@ -399,6 +444,32 @@ router.put("/users/:slug/role", async (ctx: Context) => {
   const presentedUser = pre.presentUser(user)!;
   ctx.flash = { message: ["success", "User role updated"] };
   ctx.response.redirect(presentedUser.url + "/edit");
+});
+
+////////////////////////////////////////////////////////////
+
+//
+// Excuse a user from the email confirmation write gate.
+//
+// Deliberately not a force-verify (plan/2026-08-11-1613): stamping
+// email_verified_at on an address staff never confirmed would poison the mailer
+// predicate, which is the exact outcome the two-column split exists to prevent.
+// This grants write access and says nothing about the address.
+router.post("/users/:slug/email-gate-exemption", async (ctx: Context) => {
+  const user = await db.findUserBySlug(ctx.params.slug);
+  ctx.assert(user, 404);
+  ctx.assertAuthorized(ctx.currUser, "GRANT_EMAIL_GATE_EXEMPTION", user);
+
+  await db.emailVerification.grantEmailGateExemption(user.id);
+
+  const presentedUser = pre.presentUser(user)!;
+  ctx.flash = {
+    message: [
+      "success",
+      `${presentedUser.uname} can now post without confirming an email address.`,
+    ],
+  };
+  ctx.response.redirect(presentedUser.url);
 });
 
 ////////////////////////////////////////////////////////////
@@ -521,7 +592,6 @@ router.put("/users/:slug", async (ctx: Context) => {
     .tap((xs) => xs.map((x) => Number.parseInt(x, 2)).filter(Boolean))
     .tap((xs) => xs.reduce((acc, curr) => acc | curr, 0));
 
-  ctx.validateBody("email").optional().isEmail("Invalid email address");
   ctx.validateBody("sig").optional();
   ctx.validateBody("avatar-url").optional();
 
@@ -578,53 +648,34 @@ router.put("/users/:slug", async (ctx: Context) => {
 
   // TODO: use db.users.updateUser
 
-  // Reset email_verified when email is changed.
-  const email_verified =
-    typeof ctx.vals.email === "string" && ctx.vals.email !== user.email
-      ? false
-      : user.email_verified;
-
-  try {
-    await db.updateUser(user.id, {
-      email: ctx.vals.email || user.email,
-      email_verified,
-      sig: sig_markup,
-      sig_html: sig_html,
-      custom_title: ctx.vals["custom-title"],
-      avatar_url: ctx.request.body["avatar-url"],
-      hide_sigs: _.isBoolean(ctx.vals["hide-sigs"])
-        ? ctx.vals["hide-sigs"]
-        : user.hide_sigs,
-      hide_avatars: _.isBoolean(ctx.vals["hide-avatars"])
-        ? ctx.vals["hide-avatars"]
-        : user.hide_avatars,
-      is_ghost: _.isBoolean(ctx.vals["is-ghost"])
-        ? ctx.vals["is-ghost"]
-        : user.is_ghost,
-      is_grayscale: _.isBoolean(ctx.vals["is-grayscale"])
-        ? ctx.vals["is-grayscale"]
-        : user.is_grayscale,
-      force_device_width: _.isBoolean(ctx.vals["force-device-width"])
-        ? ctx.vals["force-device-width"]
-        : user.force_device_width,
-      // eflags: typeof ctx.vals.eflags === 'undefined' ? user.eflags : ctx.vals.eflags
-      eflags: ctx.vals.eflags,
-    });
-  } catch (err) {
-    if (err === "EMAIL_TAKEN") {
-      ctx.flash = {
-        message: [
-          "danger",
-          `The email <${
-            ctx.vals.email
-          }> is already in use. Send a PM to Mahz if you want an email address migrated to this account.`,
-        ],
-      };
-      ctx.back("/");
-      return;
-    }
-    throw err;
-  }
+  // This handler no longer touches email or email_verified. The email field of
+  // the profile editor posts to PUT /me/email, which stages the address on the
+  // token row instead; confirmation is the sole writer of users.email
+  // (plan/2026-08-11-1613/I2). A surviving email slot here would be a second
+  // writer, able to change the address while email_verified_at stays set.
+  await db.updateUser(user.id, {
+    sig: sig_markup,
+    sig_html: sig_html,
+    custom_title: ctx.vals["custom-title"],
+    avatar_url: ctx.request.body["avatar-url"],
+    hide_sigs: _.isBoolean(ctx.vals["hide-sigs"])
+      ? ctx.vals["hide-sigs"]
+      : user.hide_sigs,
+    hide_avatars: _.isBoolean(ctx.vals["hide-avatars"])
+      ? ctx.vals["hide-avatars"]
+      : user.hide_avatars,
+    is_ghost: _.isBoolean(ctx.vals["is-ghost"])
+      ? ctx.vals["is-ghost"]
+      : user.is_ghost,
+    is_grayscale: _.isBoolean(ctx.vals["is-grayscale"])
+      ? ctx.vals["is-grayscale"]
+      : user.is_grayscale,
+    force_device_width: _.isBoolean(ctx.vals["force-device-width"])
+      ? ctx.vals["force-device-width"]
+      : user.force_device_width,
+    // eflags: typeof ctx.vals.eflags === 'undefined' ? user.eflags : ctx.vals.eflags
+    eflags: ctx.vals.eflags,
+  });
   const presentedUser = pre.presentUser(user)!;
   ctx.flash = { message: ["success", "User updated"] };
   ctx.response.redirect(presentedUser.url + "/edit");

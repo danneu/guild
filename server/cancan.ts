@@ -299,6 +299,17 @@ function _can(
       if (user.role === "mod")
         return ["banned", "member", "pwmod"].includes(target.role);
       return false;
+    case "GRANT_EMAIL_GATE_EXEMPTION": // target is user
+      // Mirrors UPDATE_USER_ROLE: during a mail-delivery incident the thing
+      // staff need is "let this person post". Note this excuses the account
+      // from the write gate; it never claims the address was confirmed
+      // (plan/2026-08-11-1613).
+      if (!user) return false;
+      if (user.role === "admin") return true;
+      if (user.role === "smod") return target.role !== "admin";
+      if (user.role === "mod")
+        return ["banned", "member", "pwmod"].includes(target.role);
+      return false;
     case "UPDATE_USER": // target is user
       if (!user) return false;
       if (user.role === "banned") return false;
@@ -789,6 +800,7 @@ export const CanAction = {
   // User Management
   UPDATE_USER: "UPDATE_USER",
   UPDATE_USER_ROLE: "UPDATE_USER_ROLE",
+  GRANT_EMAIL_GATE_EXEMPTION: "GRANT_EMAIL_GATE_EXEMPTION",
   UPDATE_USER_CUSTOM_TITLE: "UPDATE_USER_CUSTOM_TITLE",
   DELETE_USER: "DELETE_USER",
   READ_USER_ONLINE_STATUS: "READ_USER_ONLINE_STATUS",

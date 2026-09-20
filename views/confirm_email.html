@@ -1,0 +1,107 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+
+  <div class="page-header" style="border-color: #000">
+    <h3>Confirm your email address</h3>
+  </div>
+
+  <div class="row">
+    <div class="col-md-8 col-md-offset-2">
+
+      <div class="panel panel-default" style="border-color: #000">
+        <div class="panel-body">
+
+          <p class="lead">
+            You can read the forum, but you need to confirm your email address
+            before you can post.
+          </p>
+
+          <p>
+            We sent a confirmation link to
+            <strong>{{ pendingEmail }}</strong>. Click the link in that email
+            and you are done. If it has not turned up, check your spam folder.
+          </p>
+
+          <p>
+            <button class="btn btn-primary send-verification-email" type="button">
+              Resend the confirmation email
+            </button>
+            <span class="result"></span>
+          </p>
+
+        </div> <!-- /.panel-body -->
+      </div> <!-- /.panel -->
+
+      <!-- Wrong address? -->
+      <form action="/me/email" method="post" class="form-horizontal">
+        <input type="hidden" name="_method" value="put">
+        <div class="panel panel-default" style="border-color: #000">
+          <div class="panel-heading">Wrong address?</div>
+          <div class="panel-body">
+
+            <p class="help-block">
+              Enter the address you would rather use and we will send the
+              confirmation link there instead. Your account keeps its current
+              address until you click that link.
+            </p>
+
+            <div class="form-group">
+              <label for="new-email-input" class="col-sm-3 control-label">New email:</label>
+              <div class="col-sm-9">
+                <input id="new-email-input" name="email" type="email"
+                       class="form-control" required>
+              </div>
+            </div>
+
+          </div> <!-- /.panel-body -->
+          <div class="panel-footer" style="border-color: #000">
+            <div class="text-right">
+              <button type="submit" class="btn btn-default">
+                Send the link here instead
+              </button>
+            </div>
+          </div>
+        </div> <!-- /.panel -->
+      </form>
+
+    </div> <!-- /col -->
+  </div> <!-- /.row -->
+
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    // Resend is throttled in the database (60s), so a 429 here is expected and
+    // means "you already have a fresh link", not a failure.
+    const button = document.querySelector('.send-verification-email')
+    if (button) {
+      const info = document.querySelector('.result')
+
+      button.addEventListener('click', () => {
+        button.disabled = true
+        button.textContent = 'Sending...'
+
+        fetch('/api/verify-email', { method: 'POST' })
+          .then(res => {
+            if (res.ok) {
+              info.textContent = ' Sent. Check your email.'
+            } else if (res.status === 429) {
+              info.textContent = ' We just sent one. Please wait a minute before trying again.'
+            } else {
+              info.textContent = ' Something went wrong. Please try again in a moment.'
+            }
+          })
+          .catch(() => {
+            info.textContent = ' Something went wrong. Please try again in a moment.'
+          })
+          .finally(() => {
+            setTimeout(() => {
+              button.disabled = false
+              button.textContent = 'Resend the confirmation email'
+            }, 10000)
+          })
+      })
+    }
+  </script>
+{% endblock %}

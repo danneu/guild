@@ -13,12 +13,6 @@ import { pool } from "./util.js";
 
 ////////////////////////////////////////////////////////////
 
-export const getUserByEmail = async (email: string) => {
-  const str = knex("users").where("email", email).first().toString();
-  const result = await pool.query(str);
-  return result.rows[0];
-};
-
 // Generalized update function that takes an object of
 // field/values to be updated.
 export const updateUser = async function (
@@ -28,7 +22,7 @@ export const updateUser = async function (
   assert(Number.isInteger(userId));
   assert(_.isPlainObject(fields));
   // Validate fields
-  const WHITELIST = ["gender", "email_verified"];
+  const WHITELIST = ["gender"];
   Object.keys(fields).forEach((key) => {
     if (WHITELIST.indexOf(key) === -1) {
       throw new Error("FIELD_NOT_WHITELISTED");

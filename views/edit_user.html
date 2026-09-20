@@ -14,9 +14,14 @@
   <div class="row">
     <div class="col-md-8 col-md-offset-2">
 
-      <!-- Change email form -->
-
-      <form action="{{ user.url }}" method="post" class="form-horizontal">
+      <!-- Manage email form -->
+      {#
+        Only the account owner sees this panel: PUT /me/email acts on the
+        logged-in user, so rendering it while staff edit someone else's profile
+        would stage the wrong account's address.
+      #}
+      {% if ctx.currUser and ctx.currUser.id == user.id %}
+      <form action="/me/email" method="post" class="form-horizontal">
         <input type="hidden" name="_method" value="put">
         <div class="panel panel-default no-select"
              style="border-color: #000"
@@ -32,43 +37,80 @@
           <div class="panel-body">
 
             <div class="form-group">
-              <label for="email-input" class="col-sm-3 control-label">Email:</label>
+              <label class="col-sm-3 control-label">Email:</label>
               <div class="col-sm-9">
-                <input id="email-input" name="email" type="text"
-                       class="form-control" value="{{ user.email }}">
+                <p class="form-control-static">
+                  {{ user.email }}
+                  {% if user.email_verified_at %}
+                    <span class="text-success">&mdash; confirmed</span>
+                  {% else %}
+                    <span class="text-muted">&mdash; not confirmed</span>
+                  {% endif %}
+                </p>
               </div>
             </div>
 
-            <div class="form-group">
-                <label class="col-sm-3 control-label">Verified:</label>
-                <div class="col-sm-9">
-                    <p class="form-control-static">
-                        {% if user.email_verified %}
-                            ✅ Yes
-                        {% else %}
-                            ❌ No
-                            <span class="pull-right">
-                                <button class="btn btn-default btn-xs send-verification-email" type="button">
-                                    Send verification email
-                                </button>
-                                <span class="result"></span>
-                            </span>
-                            <p class="help-block">
-                                Verifying your email will let you receive email notifications.
-                            </p>
-                        {% endif %}
-                    </p>
-                </div>
-              </div>
-
-            <hr>
+            {#
+              Pending state is read from the token row whether or not it has
+              expired (plan/2026-08-11-1613/I3), so an expired link still tells
+              you which address you were waiting on.
+            #}
+            {% if pendingEmail %}
               <div class="form-group">
-                <div class="col-sm-offset-3 col-sm-9">
-                    <h4>
-                        Email notifications
-                    </h4>
+                <label class="col-sm-3 control-label">Awaiting confirmation:</label>
+                <div class="col-sm-9">
+                  <p class="form-control-static">
+                    {{ pendingEmail }}
+                    <span class="pull-right">
+                      <button class="btn btn-default btn-xs send-verification-email" type="button">
+                        Resend confirmation email
+                      </button>
+                      <span class="result"></span>
+                    </span>
+                  </p>
+                  <p class="help-block">
+                    Your account keeps its current address until you click the
+                    link we sent to this one.
+                  </p>
                 </div>
               </div>
+            {% endif %}
+
+            <div class="form-group">
+              <label for="email-input" class="col-sm-3 control-label">Change to:</label>
+              <div class="col-sm-9">
+                <input id="email-input" name="email" type="email"
+                       class="form-control" placeholder="new@example.com">
+                <p class="help-block">
+                  We will send a confirmation link to the new address. A
+                  confirmed address is what lets you post on the forum and
+                  receive the email notifications you opt into below.
+                </p>
+              </div>
+            </div>
+
+          </div> <!-- /.panel-body -->
+          <!-- PANEL FOOTER -->
+          <div class="panel-footer" style="border-color: #000">
+            <div class="text-right">
+              <button id="email-change-submit" type="submit" class="btn btn-primary">
+                Send confirmation link
+              </button>
+            </div>
+          </div> <!-- /.panel-footer -->
+        </div> <!-- /.panel -->
+      </form>
+      {% endif %}
+
+
+      <!-- Email notifications form -->
+
+      <form action="{{ user.url }}" method="post" class="form-horizontal">
+        <input type="hidden" name="_method" value="put">
+        <div class="panel panel-default no-select" style="border-color: #000">
+          <div class="panel-heading">Email notifications</div>
+          <!-- PANEL BODY -->
+          <div class="panel-body">
 
               <div class="form-group">
                 <div class="col-sm-offset-3 col-sm-9">
@@ -98,12 +140,11 @@
                 </div>
               </div>
 
-
           </div> <!-- /.panel-body -->
           <!-- PANEL FOOTER -->
           <div class="panel-footer" style="border-color: #000">
             <div class="text-right">
-              <button id="email-submit" type="submit" class="btn btn-primary">
+              <button id="eflags-submit" type="submit" class="btn btn-primary">
                 Submit
               </button>
             </div>

@@ -130,6 +130,9 @@ export const CHAT_SERVER_URL =
   process.env.CHAT_SERVER_URL || "http://localhost:3001";
 
 // 512-bit (64byte) secret used to generate email verification token
+// Unused since plan/2026-08-11-1613 replaced the deterministic
+// HMAC-SHA512(SECRET, email) verification link with single-use uuid tokens.
+// Left in place so an existing deploy's env var is not suddenly rejected.
 export const SECRET = process.env.SECRET;
 
 // newrelic

@@ -191,21 +191,24 @@ export async function sendNewConvoEmails({
 const VERIFY_EMAIL_TEMPLATE = nunjucks.compile(`
 <p>Hi {{ uname }},</p>
 
-<p>To verify that this is the email address of your roleplayerguild.com account, click the following link:</p>
+<p>To confirm that this is the email address of your roleplayerguild.com account, click the following link:</p>
 
 <a href="{{ verifyEmailUrl }}">
   {{ verifyEmailUrl }}
 </a>
 
-<p>This lets you receive email notifications when other forum members send you messages.</p>
+<p>Confirming your address is what lets you post on the forum, and it lets you receive email notifications when other members send you messages.</p>
 
-<p>If you weren't expecting this email, you can safely delete it. It's possible that someone made a mistake while typing their email address.</p>
+<p>This link is good for 24 hours and can only be used once. If you weren't expecting this email, you can safely delete it. It's possible that someone made a mistake while typing their email address.</p>
 
 <p>
 - @Mahz <mahz@roleplayerguild.com>
 </p>
 `);
 
+// The link carries the token and nothing else. The address it confirms rides on
+// the token row in the database (plan/2026-08-11-1613/I1), so echoing it back in
+// the query string would only invite it to be tampered with.
 export async function sendEmailVerificationLinkEmail({
   toUname,
   toEmail,
@@ -215,17 +218,18 @@ export async function sendEmailVerificationLinkEmail({
   toEmail: string;
   token: string;
 }): Promise<void> {
+  assert(belt.isValidUuid(token));
+
   const transporter = getTransporter();
 
   const verifyEmailUrl = new URL(config.HOST);
   verifyEmailUrl.pathname = "/verify-email";
   verifyEmailUrl.searchParams.set("token", token);
-  verifyEmailUrl.searchParams.set("email", toEmail);
 
   await transporter.sendMail({
     from: FROM,
     to: toEmail,
-    subject: "Verify your email address to enable email notifications",
+    subject: "Confirm your email address - RoleplayerGuild.com",
     html: VERIFY_EMAIL_TEMPLATE.render({ uname: toUname, verifyEmailUrl }),
   });
 }
