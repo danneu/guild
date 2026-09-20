@@ -68,6 +68,11 @@ CREATE UNIQUE INDEX unique_email ON users USING btree (lower(email));
 CREATE UNIQUE INDEX unique_slug ON users (slug);
 CREATE INDEX users__uname ON users (uname);
 
+-- Email confirmation gates writes; see sql/9-email-confirmation.sql for the
+-- meaning of the two stamps and why they are separate columns.
+ALTER TABLE users ADD COLUMN email_verified_at timestamptz NULL;
+ALTER TABLE users ADD COLUMN email_gate_exempt_at timestamptz NULL;
+
 CREATE TABLE reset_tokens (
   user_id int  NOT NULL  REFERENCES users(id)  ON DELETE CASCADE,
   token   uuid NOT NULL,
@@ -93,6 +98,26 @@ CREATE VIEW active_sessions AS
 CREATE VIEW active_reset_tokens AS
   SELECT *
   FROM reset_tokens
+  WHERE expired_at >= NOW()
+;
+
+-- At most one token row per user, and the row carries the address it confirms.
+-- See sql/9-email-confirmation.sql.
+CREATE TABLE email_verification_tokens (
+  user_id    int  NOT NULL  REFERENCES users(id)  ON DELETE CASCADE,
+  token      uuid NOT NULL,
+  email      text NOT NULL,
+  created_at timestamp with time zone NOT NULL  DEFAULT NOW(),
+  expired_at timestamp with time zone NOT NULL  DEFAULT NOW() + INTERVAL '24 hours',
+  UNIQUE (user_id)
+);
+
+CREATE INDEX email_verification_tokens__token
+  ON email_verification_tokens (token);
+
+CREATE VIEW active_email_verification_tokens AS
+  SELECT *
+  FROM email_verification_tokens
   WHERE expired_at >= NOW()
 ;
 

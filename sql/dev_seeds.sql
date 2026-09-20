@@ -20,6 +20,12 @@ VALUES
 ;
 SELECT setval('users_id_seq'::regclass, (SELECT MAX(id) FROM users));
 
+-- Seed users are grandfathered past the email write gate, same as every
+-- pre-existing account is by sql/9-email-confirmation.sql. Without this, a
+-- fresh dev database is bricked: every seed user would be walled with no way
+-- to confirm an example.com address.
+UPDATE users SET email_gate_exempt_at = NOW();
+
 -- foo=1 has more friends than fit on the homepage
 INSERT INTO friendships (from_user_id, to_user_id) VALUES
 (1, 2)
