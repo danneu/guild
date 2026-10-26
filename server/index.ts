@@ -40,12 +40,21 @@ import {
   shouldRejectOriginBypass,
   startCloudflareIpRangeRefresh,
 } from "./cloudflare_ip.js";
+import {
+  retypeUnrenderedHtml,
+  trustRendered,
+} from "./middleware/html-only-from-views.js";
+
+// HTML leaves only through ctx.render; any other HTML-typed body goes out as
+// text/plain. The first app.use, so it sees every response's final body.
+app.use(retypeUnrenderedHtml());
 
 // Resolve the trusted client IP. cf-connecting-ip is honored only when the TCP
 // peer (fly-client-ip) is a Cloudflare proxy edge, so a direct origin hit at
 // rpguild.fly.dev cannot forge an IP. Assigning ctx.request.ip shadows the
 // getter and ctx.ip delegates to it, so every downstream reader sees this
-// resolved value. This is the first app.use; nothing reads IPs before it.
+// resolved value. This is the first middleware that reads IPs; nothing before
+// it does.
 app.use((ctx: Context, next: Next) => {
   if (config.NODE_ENV === "development" && ctx.get("cf-connecting-ip")) {
     // Local-dev escape hatch: fake an IP for testing, e.g.
@@ -215,9 +224,11 @@ app.use(
   protectCsrf(["roleplayerguild.com", "localhost", "rpguild-staging.fly.dev"]),
 );
 
-// Only allow guild to be iframed from same domain
+// Only allow guild to be iframed from same domain, and stop browsers from
+// sniffing a text/plain body (such as a post's raw markup) as HTML.
 app.use(async (ctx: Context, next: Next) => {
   ctx.set("X-Frame-Options", "SAMEORIGIN");
+  ctx.set("X-Content-Type-Options", "nosniff");
   return next();
 });
 
@@ -394,7 +405,9 @@ const nunjucksOptions = {
   },
 };
 
-app.use(nunjucksRender("views", nunjucksOptions));
+// trustRendered marks ctx.render output as the only HTML retypeUnrenderedHtml
+// lets through.
+app.use(trustRendered(nunjucksRender("views", nunjucksOptions)));
 
 /// /////////////////////////////////////////////////////////
 // Routes //////////////////////////////////////////////////

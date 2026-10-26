@@ -418,17 +418,7 @@ router.get("/posts/:postId/revisions/:revId", async (ctx: Context) => {
   const rev = await db.revs.getPostRev(post.id, revId).then(pre.presentPostRev);
   ctx.assert(rev, 404);
 
-  ctx.type = "html";
-  ctx.body = `
-    <head>
-      <link rel="stylesheet" href="/css/general.css">
-    </head>
-    <body style="background-color: #2D2C2C; color: white;">
-      <a href="/posts/${post.id}/revisions/${rev.id}/raw">View Raw</a>
-      <hr>
-      ${rev.html}
-    </body>
-  `;
+  await ctx.render("show_post_rev", { rev });
 });
 
 router.get("/posts/:postId/revisions/:revId/raw", async (ctx: Context) => {
@@ -446,10 +436,7 @@ router.get("/posts/:postId/revisions/:revId/raw", async (ctx: Context) => {
   const markup = await db.revs.getPostRevMarkup(post.id, revId);
   ctx.assert(markup, 404);
 
-  ctx.type = "html";
-  ctx.body = `
-    <pre>${markup}</pre>
-  `;
+  ctx.body = markup;
 });
 
 router.post("/posts/:postId/revisions/:revId/revert", async (ctx: Context) => {

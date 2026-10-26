@@ -1,0 +1,9 @@
+{# A bare page, no layout: one stored revision of a post, rendered. #}
+<head>
+  <link rel="stylesheet" href="/css/general.css">
+</head>
+<body style="background-color: #2D2C2C; color: white;">
+  <a href="{{ rev.url }}/raw">View Raw</a>
+  <hr>
+  {{ rev.html | safe }}
+</body>

@@ -106,3 +106,6 @@ AWS S3 (file storage), AWS SES (email), and Cloudflare Turnstile (CAPTCHA).
   `ago.js` -> `public/js/`). Edit the `server/` source, not the copy.
 - The `img-proxy/` worker runs TypeScript directly via Wrangler -- no separate
   compile step. See `img-proxy/AGENTS.md`.
+- Only `ctx.render` output goes out as HTML. Any other string or Buffer body
+  with an html type, sniffed or set by hand, is sent as text/plain (see
+  `server/middleware/html-only-from-views.ts`). Build new HTML pages as views.
