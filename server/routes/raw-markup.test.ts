@@ -8,7 +8,7 @@ import nunjucksRender from "koa-nunjucks-render";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("../db", () => ({
-  findPostWithTopicAndForum: vi.fn(),
+  findPostById: vi.fn(),
   revs: { getPostRev: vi.fn(), getPostRevMarkup: vi.fn() },
 }));
 // Imported by the routes module; stubbed so no pool or refresh loop is built.
@@ -34,7 +34,7 @@ const MARKUP = "<img src=x onerror=alert(1)>";
 const REV_HTML = "<p>rendered revision</p>";
 const PLAIN = "text/plain; charset=utf-8";
 
-vi.mocked(db.findPostWithTopicAndForum).mockResolvedValue({ id: 1 } as any);
+vi.mocked(db.findPostById).mockResolvedValue({ id: 1 } as any);
 vi.mocked(db.revs.getPostRev).mockResolvedValue({
   id: 2,
   post_id: 1,

@@ -165,6 +165,15 @@ const READ_GATE: Record<CanAction, CanAction | null> = {
   READ_CHATLOGS: null,
 };
 
+// banned_ids is not a topics column: only loaders that select it from
+// topic_bans carry it (server/db/readable.ts#BANNED_IDS_COLUMN). The rules that
+// deny on it assert it before any role branch, so a short row throws instead
+// of reading as "no bans" and letting a banned member through.
+function assertBansLoaded(target: any) {
+  assert(target);
+  assert(Array.isArray(target.banned_ids), "target.banned_ids is not loaded");
+}
+
 // TODO: Actually write tests for these
 // TODO: Implement rules for all rules, not just member and admin
 export const can = function (user: any, action: CanAction, target?: any) {
@@ -510,7 +519,8 @@ function _can(
         return true;
       }
       return false;
-    case "CREATE_POST": // target is topic
+    case "CREATE_POST": // target is topic with banned_ids
+      assertBansLoaded(target);
       if (!user) return false;
       if (user.role === "banned") return false;
       // Staff can always create posts anywhere
@@ -534,7 +544,7 @@ function _can(
       // topics.
       if (user.role === "member") {
         if (target.is_closed) return false;
-        if ((target.banned_ids || []).includes(user.id)) return false;
+        if (target.banned_ids.includes(user.id)) return false;
 
         // Topic latest_post_at must be newer than 1 month
         // if in certain forums where necro'ing is disruptive
@@ -695,10 +705,8 @@ function _can(
       // User can update a PM if they own it
       if (target.user_id === user.id) return true;
       return false;
-    case "UPDATE_POST": // target expected to be a post
-      // target should have target.topic
-      // FIXME: target must have { banned_ids: null | [Int] } to prevent users
-      // from sabotaging posts after getting banned from a topic.
+    case "UPDATE_POST": // target is post with post.topic and banned_ids
+      assertBansLoaded(target);
       if (!user) return false;
       if (user.role === "banned") return false;
       // Admin can update any post
@@ -708,7 +716,7 @@ function _can(
         return true;
       }
       // Cannot update post if banned from topic
-      if ((target.banned_ids || []).includes(user.id)) return false;
+      if (target.banned_ids.includes(user.id)) return false;
       // TODO: Create rules for other staff roles
       // User can edit their own post
       if (user.id === target.user_id) return true;

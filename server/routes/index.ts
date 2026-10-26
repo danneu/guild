@@ -380,9 +380,7 @@ router.get("/roleplays", async (ctx: Context) => {
 ////////////////////////////////////////////////////////////
 
 router.get("/posts/:id/revisions", async (ctx: Context) => {
-  const post = await db
-    .findPostWithTopicAndForum(ctx.params.id)
-    .then(pre.presentPost);
+  const post = await db.findPostById(ctx.params.id).then(pre.presentPost);
   ctx.assert(post, 404);
   ctx.assert(ctx.currUser, 404);
   cancan.isStaffRole(ctx.currUser.role) ||
@@ -407,9 +405,7 @@ router.get("/posts/:postId/revisions/:revId", async (ctx: Context) => {
   const revId = Number.parseInt(ctx.params.revId, 10);
   ctx.assert(!Number.isNaN(revId), 404);
 
-  const post = await db
-    .findPostWithTopicAndForum(ctx.params.postId)
-    .then(pre.presentPost);
+  const post = await db.findPostById(ctx.params.postId).then(pre.presentPost);
   ctx.assert(post, 404);
   ctx.assert(ctx.currUser, 404);
   cancan.isStaffRole(ctx.currUser.role) ||
@@ -425,9 +421,7 @@ router.get("/posts/:postId/revisions/:revId/raw", async (ctx: Context) => {
   const revId = Number.parseInt(ctx.params.revId, 10);
   ctx.assert(!Number.isNaN(revId), 404);
 
-  const post = await db
-    .findPostWithTopicAndForum(ctx.params.postId)
-    .then(pre.presentPost);
+  const post = await db.findPostById(ctx.params.postId).then(pre.presentPost);
   ctx.assert(post, 404);
   ctx.assert(ctx.currUser, 404);
   cancan.isStaffRole(ctx.currUser.role) ||
@@ -443,9 +437,7 @@ router.post("/posts/:postId/revisions/:revId/revert", async (ctx: Context) => {
   const revId = Number.parseInt(ctx.params.revId, 10);
   ctx.assert(!Number.isNaN(revId), 404);
 
-  const post = await db
-    .findPostWithTopicAndForum(ctx.params.postId)
-    .then(pre.presentPost);
+  const post = await db.findPostById(ctx.params.postId).then(pre.presentPost);
   ctx.assert(post, 404);
   ctx.assertAuthorized(ctx.currUser, "UPDATE_POST", post);
 

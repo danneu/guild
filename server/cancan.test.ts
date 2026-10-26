@@ -84,7 +84,7 @@ const forums = {
 };
 
 // loadTopicFor's plain shape (server/db/readable.ts#findTopic): t.*, the
-// forum, and the forum's mods
+// forum, the forum's mods, and the topic's banned_ids
 function topicRow(props: Record<string, unknown> = {}) {
   return {
     id: 1,
@@ -106,6 +106,7 @@ function topicRow(props: Record<string, unknown> = {}) {
     moved_at: null,
     latest_post_at: new Date(),
     forum: plainForumColumns,
+    banned_ids: [] as number[],
     mods: [{ id: actors.forumMod.id, uname: "ForumMod", slug: "forummod" }],
     ...props,
   };
@@ -125,7 +126,7 @@ function postRow(
   topic: ReturnType<typeof topicRow>,
   props: Record<string, unknown> = {},
 ) {
-  const { forum, mods: _mods, ...topicColumns } = topic;
+  const { forum, banned_ids, mods: _mods, ...topicColumns } = topic;
   return {
     id: 1001,
     text: null,
@@ -144,7 +145,7 @@ function postRow(
     idx: 0,
     topic: topicColumns,
     forum,
-    banned_ids: null,
+    banned_ids,
     ...props,
   };
 }
@@ -485,6 +486,7 @@ describe("CREATE_POST", () => {
       is_sticky: false,
       latest_post_at: new Date(),
       forum: { id: 10, category_id: 4, is_roleplay: false },
+      banned_ids: [],
       mods: [],
     };
     const member = { id: 3, uname: "Member", role: "member" };
@@ -594,5 +596,40 @@ describe("visibleRegistrationIp", () => {
         user({ registration_ip: null }),
       ),
     ).toBeNull();
+  });
+});
+
+describe("topic bans", () => {
+  // Everyone a GM could have banned, plus staff, whose ban rows can predate a
+  // promotion.
+  const bannedIds = actorNames
+    .filter((name) => !["guest", "gm", "coGm"].includes(name))
+    .map((name) => actors[name]!.id);
+  const topic = topicRow({ banned_ids: bannedIds });
+
+  it("leaves posting to the GMs and the roles a ban never applied to", () => {
+    expect(allowed("CREATE_POST", topic)).toEqual(
+      only("gm", "coGm", "forumMod", "conmod", "arenamod", "pwmod", ...staff),
+    );
+  });
+
+  it("stops a banned author editing their post, but not an admin", () => {
+    expect(allowed("UPDATE_POST", postRow(topic))).toEqual(only("admin"));
+  });
+
+  // Intent: the ban rules throw on a row that lacks banned_ids.
+  // Why it exists: a missing list used to read as "no bans", so routes whose
+  // loader skipped topic_bans let banned members post and revert
+  // (hunt 261026-0911-022).
+  // Scenario: a loader selects the topic or post without BANNED_IDS_COLUMN.
+  it("fails closed on a row without banned_ids", () => {
+    const { banned_ids: _topicBans, ...shortTopic } = topics.plain;
+    const { banned_ids: _postBans, ...shortPost } = posts.visible;
+
+    for (const name of actorNames) {
+      const actor = actors[name];
+      expect(() => can(actor, "CREATE_POST", shortTopic)).toThrow(/banned_ids/);
+      expect(() => can(actor, "UPDATE_POST", shortPost)).toThrow(/banned_ids/);
+    }
   });
 });

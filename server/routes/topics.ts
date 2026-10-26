@@ -1,3 +1,5 @@
+// Node
+import util from "util";
 // 3rd
 import Router from "@koa/router";
 import bouncer from "koa-bouncer";
@@ -9,8 +11,10 @@ import * as pre from "../presenters";
 import * as config from "../config";
 import * as belt from "../belt";
 import * as cancan from "../cancan";
-import cache3 from "../cache3";
+import * as middleware from "../middleware";
 import bbcode from "../bbcode";
+import cache3 from "../cache3";
+import services from "../services";
 import { Context } from "koa";
 import { pool, withPgPoolTransaction } from "../db/util";
 import z from "zod";
@@ -84,6 +88,129 @@ router.post("/topics/:topicId/:postType/0th", async (ctx: Context) => {
   };
   ctx.redirect(redirectTo);
 });
+
+////////////////////////////////////////////////////////////
+
+// Create post
+// Body params:
+// - post-type
+// - markup
+//
+router.post(
+  "/topics/:topicSlug/posts",
+  middleware.ratelimit(),
+  async (ctx: Context) => {
+    var topicId = belt.extractId(ctx.params.topicSlug);
+    ctx.assert(topicId, 404);
+
+    ctx
+      .validateBody("post-type")
+      .isIn(["ic", "ooc", "char"], "Invalid post-type");
+    ctx
+      .validateBody("markup")
+      .isLength(
+        config.MIN_POST_LENGTH,
+        config.MAX_POST_LENGTH,
+        "Post must be between " +
+          config.MIN_POST_LENGTH +
+          " and " +
+          config.MAX_POST_LENGTH +
+          " chars long. Yours was " +
+          ctx.request.body.markup.length,
+      );
+
+    const postType = ctx.vals["post-type"];
+    const loaded = await db.loadTopicFor(ctx.currUser, topicId, "plain");
+    ctx.assert(loaded.kind === "readable", 404);
+    const { topic } = loaded;
+    ctx.assertAuthorized(ctx.currUser, "CREATE_POST", topic);
+
+    // If non-rp forum, then the post must be 'ooc' type
+    if (!topic.forum.is_roleplay) {
+      ctx.assert(postType === "ooc", 400);
+    }
+
+    // Render the bbcode
+    const html = bbcode(ctx.vals.markup);
+
+    const { post, mentionNotificationsCount, quoteNotificationsCount } =
+      await withPgPoolTransaction(pool, async (pgClient) => {
+        const post = await db
+          .createPost(pgClient, {
+            userId: ctx.currUser.id,
+            ipAddress: ctx.request.ip,
+            topicId: topic.id,
+            markup: ctx.vals.markup,
+            html: html,
+            type: postType,
+            isRoleplay: topic.forum.is_roleplay,
+          })
+          .then(pre.presentPost);
+
+        // Send MENTION and QUOTE notifications
+
+        const mentionNotifications =
+          await db.parseAndCreateMentionNotifications(pgClient, {
+            fromUser: ctx.currUser,
+            markup: ctx.vals.markup,
+            post_id: post.id,
+            topic_id: post.topic_id,
+          });
+
+        const quoteNotifications = await db.parseAndCreateQuoteNotifications(
+          pgClient,
+          {
+            fromUser: ctx.currUser,
+            markup: ctx.vals.markup,
+            post_id: post.id,
+            topic_id: post.topic_id,
+          },
+        );
+
+        const mentionNotificationsCount = mentionNotifications.length;
+        const quoteNotificationsCount = quoteNotifications.length;
+        {
+          // Send subscription notifications
+
+          // Get all people who do not have this sub archived
+          const subscribers = (
+            await db.subscriptions.listActiveSubscribersForTopic(
+              pgClient,
+              post.topic_id,
+            )
+          )
+            // Ignore self
+            .filter((u) => u.user_id !== ctx.currUser.id);
+
+          const subNotifications = subscribers.map(({ user_id }) => ({
+            fromUserId: ctx.currUser.id as number,
+            toUserId: user_id,
+            topicId: post.topic_id as number,
+            postType: postType as "ic" | "ooc" | "char",
+          }));
+          await db.createSubNotificationsBulk(pgClient, subNotifications);
+        }
+
+        return { post, mentionNotificationsCount, quoteNotificationsCount };
+      });
+
+    ctx.flash = {
+      message: [
+        "success",
+        util.format(
+          "Post created. Mentions sent: %s, Quotes sent: %s",
+          mentionNotificationsCount,
+          quoteNotificationsCount,
+        ),
+      ],
+    };
+
+    ctx.response.redirect(post.url + "?created=true");
+
+    // Check if post is spam in the background
+    services.antispam.process(ctx, post.markup, post.id);
+  },
+);
 
 ////////////////////////////////////////////////////////////
 

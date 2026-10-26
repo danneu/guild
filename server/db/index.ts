@@ -19,6 +19,7 @@ import {
 } from "./util";
 import { Client, Pool, PoolClient } from "pg";
 import * as revs from "./revs";
+import { BANNED_IDS_COLUMN } from "./readable";
 import { Context } from "koa";
 import {
   DbConvo,
@@ -826,28 +827,8 @@ RETURNING *
 
 ////////////////////////////////////////////////////////////
 
-// Attaches topic and forum to post for authorization checks
-// See cancan.js 'READ_POST'
-export const findPostWithTopicAndForum = async function (postId) {
-  return pool
-    .query(
-      `
-SELECT
-  p.*,
-  to_json(t.*) "topic",
-  to_json(f.*) "forum"
-FROM posts p
-JOIN topics t ON p.topic_id = t.id
-JOIN forums f ON t.forum_id = f.id
-WHERE p.id = $1
-  `,
-      [postId],
-    )
-    .then(maybeOneRow);
-};
-
-////////////////////////////////////////////////////////////
-
+// Attaches topic, forum and the topic's ban list to the post for the
+// authorization checks in server/cancan.ts ('READ_POST', 'UPDATE_POST').
 // Keep findPost and findPm in sync
 export const findPostById = async function (postId: number) {
   return pool
@@ -857,7 +838,7 @@ SELECT
   p.*,
   to_json(t.*) "topic",
   to_json(f.*) "forum",
-  (SELECT json_agg(tb.banned_id) FROM topic_bans tb WHERE tb.topic_id = t.id) banned_ids
+  ${BANNED_IDS_COLUMN}
 FROM posts p
 JOIN topics t ON p.topic_id = t.id
 JOIN forums f ON t.forum_id = f.id

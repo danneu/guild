@@ -97,6 +97,16 @@ function forumModsColumn(forumId: "t.forum_id" | "f.id") {
   ) "mods"`;
 }
 
+// The topic's banned user ids as a JSON array, empty when it has none. Every
+// topic and post loader that feeds CREATE_POST or UPDATE_POST selects it,
+// since server/cancan.ts#assertBansLoaded refuses a target without it. Expects
+// the topic aliased as t. Exported for server/db/index.ts#findPostById only;
+// server/db/index.ts does not re-export it.
+export const BANNED_IDS_COLUMN = `COALESCE(
+  (SELECT json_agg(tb.banned_id) FROM topic_bans tb WHERE tb.topic_id = t.id),
+  '[]'::json
+) banned_ids`;
+
 function findTopic(topicId: number) {
   return pool
     .query(
@@ -104,7 +114,8 @@ function findTopic(topicId: number) {
     SELECT
       t.*,
       to_json(f.*) "forum",
-      ${forumModsColumn("t.forum_id")}
+      ${forumModsColumn("t.forum_id")},
+      ${BANNED_IDS_COLUMN}
     FROM topics t
     JOIN forums f ON t.forum_id = f.id
     WHERE t.id = $1
@@ -127,7 +138,7 @@ SELECT
   ${forumModsColumn("t.forum_id")},
   (SELECT to_json(u2.*) FROM users u2 WHERE u2.id = t.user_id) "user",
   (SELECT json_agg(u3.uname) FROM users u3 WHERE u3.id = ANY (t.co_gm_ids::int[])) co_gm_unames,
-  (SELECT json_agg(tb.banned_id) FROM topic_bans tb WHERE tb.topic_id = t.id) banned_ids,
+  ${BANNED_IDS_COLUMN},
   (
    SELECT json_agg(tags.*)
    FROM tags
@@ -207,7 +218,7 @@ function findTopicWithIsSubscribed(userId: number, topicId: number) {
       array_agg($1::int) @> Array[ts.user_id::int] "is_subscribed",
       (SELECT to_json(u2.*) FROM users u2 WHERE u2.id = t.user_id) "user",
       (SELECT json_agg(u3.uname) FROM users u3 WHERE u3.id = ANY (t.co_gm_ids::int[])) co_gm_unames,
-      (SELECT json_agg(tb.banned_id) FROM topic_bans tb WHERE tb.topic_id = t.id) banned_ids,
+      ${BANNED_IDS_COLUMN},
       (
       SELECT json_agg(tags.*)
       FROM tags
