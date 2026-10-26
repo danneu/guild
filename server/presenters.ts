@@ -67,7 +67,7 @@ export const presentForum = function (forum) {
     forum.forums.forEach(presentForum);
   }
 
-  // For findForum2
+  // For db.loadForumFor's with-family shape
   if (Array.isArray(forum.child_forums)) {
     forum.child_forums.forEach(presentForum);
   }

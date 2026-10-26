@@ -87,14 +87,14 @@ router.post("/me/subscriptions", async (ctx: Context) => {
     return;
   }
 
-  const topicId = ctx.request.body["topic-id"];
+  const topicId = belt.extractId(ctx.request.body["topic-id"]);
   ctx.assert(topicId, 404);
-  const topic = await db.findTopic(topicId);
-  ctx.assert(topic, 404);
+  const loaded = await db.loadTopicFor(ctx.currUser, topicId, "plain");
+  ctx.assert(loaded.kind === "readable", 404);
+  const { topic } = loaded;
   ctx.assertAuthorized(ctx.currUser, "SUBSCRIBE_TOPIC", topic);
   // TODO: flash
-  await db.subscriptions.subscribeToTopic(ctx.currUser.id, topicId);
-  pre.presentTopic(topic);
+  await db.subscriptions.subscribeToTopic(ctx.currUser.id, topic.id);
   if (ctx.request.body["return-to-topic"]) {
     return ctx.response.redirect(topic.url);
   }
@@ -109,13 +109,13 @@ router.delete("/me/subscriptions/:topicSlug", async (ctx: Context) => {
   const topicId = belt.extractId(ctx.params.topicSlug);
   ctx.assert(topicId, 404);
   ctx.assert(ctx.currUser, 404);
-  const topic = await db.findTopic(topicId);
-  ctx.assertAuthorized(ctx.currUser, "UNSUBSCRIBE_TOPIC", topic);
+  // No topic load: a user may leave a topic they can no longer read, and the
+  // id-only url below names no title. That url's own route checks read.
+  ctx.assertAuthorized(ctx.currUser, "UNSUBSCRIBE_TOPIC");
   await db.subscriptions.unsubscribeFromTopic(ctx.currUser.id, topicId);
   // TODO: flash
-  pre.presentTopic(topic);
   if (ctx.request.body["return-to-topic"]) {
-    return ctx.response.redirect(topic.url);
+    return ctx.response.redirect(`/topics/${topicId}`);
   }
   ctx.flash = { message: ["success", "Successfully unsubscribed"] };
   const redirectTo = ctx.query.redirectTo || "/me/subscriptions";

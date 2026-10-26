@@ -139,90 +139,6 @@ export async function updateTopicStatus(
     .then(maybeOneRow);
 }
 
-// Same as findTopic but takes a userid so that it can return a topic
-// with an is_subscribed boolean for the user
-// Keep in sync with db.findTopicById
-export const findTopicWithIsSubscribed = async function (
-  userId: number,
-  topicId: number,
-) {
-  debug("[findTopicWithIsSubscribed] userId %s, topicId %s:", userId, topicId);
-
-  return pool
-    .query(
-      `
-    SELECT
-      (
-        CASE
-          WHEN t.ic_posts_count = 0 THEN false
-          ELSE
-            (
-              SELECT COALESCE(
-                (
-                  SELECT t.latest_ic_post_id > w.watermark_post_id
-                  FROM topics_users_watermark w
-                  WHERE w.topic_id = t.id AND w.post_type = 'ic' AND w.user_id = $1
-                ),
-                true
-              )
-            )
-        END
-      ) unread_ic,
-      (
-        CASE
-          WHEN t.ooc_posts_count = 0 THEN false
-          ELSE
-            (
-              SELECT COALESCE(
-                (
-                  SELECT COALESCE(t.latest_ooc_post_id, t.latest_post_id) > w.watermark_post_id
-                  FROM topics_users_watermark w
-                  WHERE w.topic_id = t.id AND w.post_type = 'ooc' AND w.user_id = $1
-                ),
-                true
-              )
-            )
-        END
-      ) unread_ooc,
-      (
-        CASE
-          WHEN t.char_posts_count = 0 THEN false
-          ELSE
-            (
-              SELECT COALESCE(
-                (
-                  SELECT t.latest_char_post_id > w.watermark_post_id
-                  FROM topics_users_watermark w
-                  WHERE w.topic_id = t.id AND w.post_type = 'char' AND w.user_id = $1
-                ),
-                true
-              )
-            )
-        END
-      ) unread_char,
-      t.*,
-      to_json(f.*) "forum",
-      array_agg($1::int) @> Array[ts.user_id::int] "is_subscribed",
-      (SELECT to_json(u2.*) FROM users u2 WHERE u2.id = t.user_id) "user",
-      (SELECT json_agg(u3.uname) FROM users u3 WHERE u3.id = ANY (t.co_gm_ids::int[])) co_gm_unames,
-      (SELECT json_agg(tb.banned_id) FROM topic_bans tb WHERE tb.topic_id = t.id) banned_ids,
-      (
-      SELECT json_agg(tags.*)
-      FROM tags
-      JOIN tags_topics ON tags.id = tags_topics.tag_id
-      WHERE tags_topics.topic_id = t.id
-      ) tags
-    FROM topics t
-    JOIN forums f ON t.forum_id = f.id
-    LEFT OUTER JOIN topic_subscriptions ts ON t.id = ts.topic_id AND ts.user_id = $1
-    WHERE t.id = $2
-    GROUP BY t.id, f.id, ts.user_id
-  `,
-      [userId, topicId],
-    )
-    .then(maybeOneRow);
-};
-
 ////////////////////////////////////////////////////////////
 
 export async function updateUserBio(
@@ -241,24 +157,6 @@ export async function updateUserBio(
     RETURNING *
   `,
       [bioMarkup, bioHtml, userId],
-    )
-    .then(maybeOneRow);
-}
-
-////////////////////////////////////////////////////////////
-
-export async function findTopic(topicId: number) {
-  return pool
-    .query(
-      `
-    SELECT
-      t.*,
-      to_json(f.*) "forum"
-    FROM topics t
-    JOIN forums f ON t.forum_id = f.id
-    WHERE t.id = $1
-  `,
-      [topicId],
     )
     .then(maybeOneRow);
 }
@@ -1181,36 +1079,6 @@ export const findPostsByTopicId = async function (topicId, postType, page) {
 
 ////////////////////////////////////////////////////////////
 
-// TODO: Order by
-// TODO: Pagination
-export const findForumWithTopics = async function (forumId) {
-  const forum = await pool
-    .query(
-      `
-    SELECT
-      f.*,
-      to_json(array_agg(t.*)) "topics",
-      to_json(p.*) "latest_post"
-    FROM forums f
-    LEFT OUTER JOIN topics t ON f.id = t.forum_id
-    WHERE f.id = $1
-    GROUP BY f.id
-  `,
-      [forumId],
-    )
-    .then(maybeOneRow);
-
-  if (!forum) return null;
-
-  // The query will set forum.topics to `[null]` if it has
-  // none, so compact it to just `[]`.
-  forum.topics = _.compact(forum.topics);
-
-  return forum;
-};
-
-////////////////////////////////////////////////////////////
-
 // Keep findPostWithTopic and findPmWithConvo in sync
 export const findPostWithTopic = async function (postId) {
   return pool
@@ -1501,64 +1369,6 @@ export const updateUserRole = async function (userId, role) {
     RETURNING *
   `,
       [role, userId],
-    )
-    .then(maybeOneRow);
-};
-
-////////////////////////////////////////////////////////////
-
-// @fast
-export const findForumById = async function (forumId: number) {
-  return pool
-    .query(
-      `
-    SELECT
-      f.*,
-      to_json(f2.*) "child_forum",
-      to_json(f3.*) "parent_forum"
-    FROM forums f
-    LEFT OUTER JOIN forums f2 ON f.id = f2.parent_forum_id
-    LEFT OUTER JOIN forums f3 ON f.parent_forum_id = f3.id
-    WHERE f.id = $1
-    GROUP BY f.id, f2.id, f3.id
-  `,
-      [forumId],
-    )
-    .then(maybeOneRow);
-};
-
-export const findForum2 = async function (forumId) {
-  assert(Number.isInteger(forumId));
-
-  // - child_forums are a list of forums that point to this one
-  // - sibling_forums are all children at this level including curr forum
-
-  return pool
-    .query(
-      `
-    SELECT
-      f.*,
-      (
-        SELECT COALESCE(json_agg(forums.*), '[]')
-        FROM forums
-        WHERE parent_forum_id = $1
-      ) "child_forums",
-      (
-        SELECT COALESCE(json_agg(forums.*), '[]')
-        FROM forums
-        WHERE parent_forum_id = f.parent_forum_id
-           OR id = f.id
-      ) "sibling_forums",
-      (
-        SELECT to_json(forums.*)
-        FROM forums
-        WHERE id = f.parent_forum_id
-      ) "parent_forum"
-    FROM forums f
-    WHERE f.id = $2
-    GROUP BY f.id
-  `,
-      [forumId, forumId],
     )
     .then(maybeOneRow);
 };
@@ -2387,38 +2197,6 @@ JOIN users u ON p.user_id = u.id
 WHERE t.id = $1
   `,
       [topic_id],
-    )
-    .then(maybeOneRow);
-}
-
-////////////////////////////////////////////////////////////
-
-// Keep in sync with findTopicWithHasSubscribed
-export async function findTopicById(topicId: number) {
-  debug(`[findTopicById] topicId=${topicId}`);
-  assert(topicId);
-
-  return pool
-    .query<DbTopic>(
-      `
-SELECT
-  t.*,
-  to_json(f.*) "forum",
-  (SELECT to_json(u2.*) FROM users u2 WHERE u2.id = t.user_id) "user",
-  (SELECT json_agg(u3.uname) FROM users u3 WHERE u3.id = ANY (t.co_gm_ids::int[])) co_gm_unames,
-  (SELECT json_agg(tb.banned_id) FROM topic_bans tb WHERE tb.topic_id = t.id) banned_ids,
-  (
-   SELECT json_agg(tags.*)
-   FROM tags
-   JOIN tags_topics ON tags.id = tags_topics.tag_id
-   WHERE tags_topics.topic_id = t.id
-  ) tags
-FROM topics t
-JOIN forums f ON t.forum_id = f.id
-WHERE t.id = $1
-GROUP BY t.id, f.id
-  `,
-      [topicId],
     )
     .then(maybeOneRow);
 }
@@ -4655,33 +4433,6 @@ export const listTopicBans = async (topicId) => {
     .then((res) => res.rows);
 };
 
-export async function allForumMods(): Promise<
-  Array<{
-    forum_id: number;
-    user: {
-      id: number;
-      uname: string;
-      slug: string;
-    };
-  }>
-> {
-  return pool
-    .query(
-      `
-    SELECT
-      fm.forum_id,
-      json_build_object(
-        'id', u.id,
-        'uname', u.uname,
-        'slug', u.slug
-      ) "user"
-    FROM users u
-    JOIN forum_mods fm ON u.id = fm.user_id
-  `,
-    )
-    .then((res) => res.rows);
-}
-
 ////////////////////////////////////////////////////////////
 
 // Re-exports
@@ -4691,12 +4442,13 @@ export * as ratelimits from "./ratelimits";
 export * as images from "./images";
 export * as dice from "./dice";
 export * as profileViews from "./profile-views";
+// The only by-id topic and forum loaders; see server/db/readable.ts
+export { loadTopicFor, loadForumFor } from "./readable";
 // Function aliases
 export const findUser = findUserById;
 export const getUserBySlug = findUserBySlug;
 export const findPost = findPostById;
 export const findPm = findPmById;
-export const findForum = findForumById;
 
 // Sub-modules
 export * as users from "./users";

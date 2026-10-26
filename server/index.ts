@@ -32,6 +32,7 @@ import tagsRoutes from "./routes/tags.js";
 import discordRoutes from "./routes/discord.js";
 import searchRoutes from "./routes/search.js";
 import topicsRoutes from "./routes/topics.js";
+import forumsRoutes from "./routes/forums.js";
 import adminRoutes from "./routes/admin.js";
 import verifyEmailRoutes from "./routes/verify-email.js";
 import guildbot from "./guildbot.js";
@@ -486,6 +487,7 @@ app.use(tagsRoutes.routes());
 app.use(discordRoutes.routes());
 app.use(searchRoutes.routes());
 app.use(topicsRoutes.routes());
+app.use(forumsRoutes.routes());
 app.use(adminRoutes.routes());
 app.use(verifyEmailRoutes.routes());
 
@@ -506,8 +508,9 @@ router.get("/me/edit", async (ctx: Context) => {
 router.post("/topics/:topicSlug/co-gms", async (ctx: Context) => {
   var topicId = belt.extractId(ctx.params.topicSlug);
   ctx.assert(topicId, 404);
-  var topic = await db.findTopicById(topicId).then(pre.presentTopic);
-  ctx.assert(topic, 404);
+  const loaded = await db.loadTopicFor(ctx.currUser, topicId, "full");
+  ctx.assert(loaded.kind === "readable", 404);
+  const { topic } = loaded;
   ctx.assertAuthorized(ctx.currUser, "UPDATE_TOPIC_CO_GMS", topic);
 
   ctx.validateBody("uname").isString("Username required");
@@ -542,8 +545,9 @@ router.post("/topics/:topicSlug/co-gms", async (ctx: Context) => {
 router.delete("/topics/:topicSlug/co-gms/:userSlug", async (ctx: Context) => {
   var topicId = belt.extractId(ctx.params.topicSlug);
   ctx.assert(topicId, 404);
-  const topic = await db.findTopicById(topicId).then(pre.presentTopic);
-  ctx.assert(topic, 404);
+  const loaded = await db.loadTopicFor(ctx.currUser, topicId, "full");
+  ctx.assert(loaded.kind === "readable", 404);
+  const { topic } = loaded;
   ctx.assertAuthorized(ctx.currUser, "UPDATE_TOPIC_CO_GMS", topic);
 
   const user = await db.findUserBySlug(ctx.params.userSlug);
@@ -1034,109 +1038,6 @@ router.post("/lexus-lounge/registration", async (ctx: Context) => {
 });
 
 //
-// New topic form
-//
-router.get("/forums/:forumSlug/topics/new", async (ctx: Context) => {
-  // Load forum
-  var forumId = belt.extractId(ctx.params.forumSlug);
-  ctx.assert(forumId, 404);
-  var forum = await db.findForum(forumId).then(pre.presentForum);
-  ctx.assert(forum, 404);
-
-  // Ensure user authorized to create topic in this forum
-  ctx.assertAuthorized(ctx.currUser, "CREATE_TOPIC", forum);
-
-  // Get tag groups
-  var tagGroups = forum.has_tags_enabled ? await db.findAllTagGroups() : [];
-
-  var toArray = function (stringOrArray) {
-    return _.isArray(stringOrArray) ? stringOrArray : [stringOrArray];
-  };
-
-  // Render template
-  await ctx.render("new_topic", {
-    ctx,
-    forum: forum,
-    tagGroups: tagGroups,
-    postType: (ctx.flash.params && ctx.flash.params["post-type"]) || "ooc",
-    initTitle: ctx.flash.params && ctx.flash.params.title,
-    selectedTagIds:
-      (ctx.flash.params &&
-        toArray(ctx.flash.params["tag-ids"]).map(function (idStr) {
-          return parseInt(idStr);
-        })) ||
-      [],
-  });
-});
-
-//
-// Canonical show forum
-//
-// @koa2
-router.get("/forums/:forumSlug", async (ctx: Context) => {
-  const forumId = belt.extractId(ctx.params.forumSlug);
-  ctx.assert(forumId, 404);
-
-  ctx.validateQuery("page").optional().toInt();
-
-  const forum = await db.findForum2(forumId).then(pre.presentForum);
-  ctx.assert(forum, 404);
-
-  forum.mods = cache3.get("forum-mods")[forum.id] || [];
-  pre.presentForum(forum);
-
-  // Redirect to canonical slug
-  var expectedSlug = belt.slugify(forum.id, forum.title);
-  if (ctx.params.forumSlug !== expectedSlug) {
-    ctx.status = 301;
-    ctx.response.redirect(forum.url + ctx.request.search);
-    return;
-  }
-
-  ctx.assertAuthorized(ctx.currUser, "READ_FORUM", forum);
-
-  var pager = belt.calcPager(ctx.vals.page, 25, forum.topics_count);
-
-  const [viewers, topics] = await Promise.all([
-    db.findViewersForForumId(forum.id),
-    // Avoids the has_posted subquery if guest
-    ctx.currUser
-      ? db.findTopicsWithHasPostedByForumId(
-          forumId,
-          pager.limit,
-          pager.offset,
-          ctx.currUser.id,
-          cancan.isStaffRole(ctx.currUser.role),
-        )
-      : db.findTopicsByForumId(forumId, pager.limit, pager.offset, false),
-  ]);
-
-  forum.topics = topics;
-  pre.presentForum(forum);
-
-  const tabbedForums = [
-    forum.parent_forum,
-    ...forum.sibling_forums,
-    ...forum.child_forums,
-  ].filter(Boolean);
-
-  // update viewers in background
-  db.upsertViewer(ctx, forum.id).catch(console.error);
-
-  await ctx.render("show_forum", {
-    ctx,
-    forum,
-    tabbedForums,
-    currPage: pager.currPage,
-    totalPages: pager.totalPages,
-    title: forum.title,
-    className: "show-forum",
-    // Viewers
-    viewers,
-  });
-});
-
-//
 // Create post
 // Body params:
 // - post-type
@@ -1166,9 +1067,9 @@ router.post(
       );
 
     const postType = ctx.vals["post-type"];
-    const topic = await db.findTopic(topicId);
-    ctx.assert(topic, 404);
-    topic.mods = cache3.get("forum-mods")[topic.forum_id] || [];
+    const loaded = await db.loadTopicFor(ctx.currUser, topicId, "plain");
+    ctx.assert(loaded.kind === "readable", 404);
+    const { topic } = loaded;
     ctx.assertAuthorized(ctx.currUser, "CREATE_POST", topic);
 
     // If non-rp forum, then the post must be 'ooc' type
@@ -1324,8 +1225,9 @@ router.put("/topics/:topicSlug/tags", async (ctx: Context) => {
   // Load topic
   var topicId = belt.extractId(ctx.params.topicSlug);
   ctx.assert(topicId, 404);
-  var topic = await db.findTopicById(topicId).then(pre.presentTopic);
-  ctx.assert(topic, 404);
+  const loaded = await db.loadTopicFor(ctx.currUser, topicId, "full");
+  ctx.assert(loaded.kind === "readable", 404);
+  const { topic } = loaded;
 
   // Authorize user
   ctx.assertAuthorized(ctx.currUser, "UPDATE_TOPIC_TAGS", topic);
@@ -1376,10 +1278,9 @@ router.post(
     ctx.assert(ctx.currUser, 403);
 
     // Load forum
-    var forum = await db.findForumById(forumId).then(pre.presentForum);
-
-    // Ensure forum exists
-    ctx.assert(forum, 404);
+    const loaded = await db.loadForumFor(ctx.currUser, forumId, "plain");
+    ctx.assert(loaded.kind === "readable", 404);
+    const { forum } = loaded;
 
     // Check user authorization
     ctx.assertAuthorized(ctx.currUser, "CREATE_TOPIC", forum);
@@ -1742,14 +1643,13 @@ router.put("/topics/:topicSlug/status", async (ctx: Context) => {
   ];
   var status = ctx.request.body.status;
   ctx.assert(STATUS_WHITELIST.includes(status), 400, "Invalid status");
-  var topic = await db.findTopic(topicId);
-  topic.mods = cache3.get("forum-mods")[topic.forum_id] || [];
-  ctx.assert(topic, 404);
+  const loaded = await db.loadTopicFor(ctx.currUser, topicId, "plain");
+  ctx.assert(loaded.kind === "readable", 404);
+  const { topic } = loaded;
   var action = status.toUpperCase() + "_TOPIC";
   ctx.assertAuthorized(ctx.currUser, action, topic);
   await db.updateTopicStatus(topicId, status);
   ctx.flash = { message: ["success", "Topic updated"] };
-  pre.presentTopic(topic);
   ctx.response.redirect(topic.url);
 });
 
@@ -1892,8 +1792,9 @@ router.get("/pms/:id", async (ctx: Context) => {
 router.post("/topics/:slug/bans", async (ctx: Context) => {
   const topicId = belt.extractId(ctx.params.slug);
   ctx.assert(topicId, 404);
-  const topic = await db.findTopicById(topicId).then(pre.presentTopic);
-  ctx.assert(topic, 404);
+  const loaded = await db.loadTopicFor(ctx.currUser, topicId, "full");
+  ctx.assert(loaded.kind === "readable", 404);
+  const { topic } = loaded;
   ctx.assertAuthorized(ctx.currUser, "UPDATE_TOPIC", topic);
 
   if (topic.banned_ids && topic.banned_ids.length >= 10) {
@@ -1929,370 +1830,17 @@ router.delete("/topic-bans/:id", async (ctx: Context) => {
   ctx.validateParam("id").toInt();
 
   const ban = await db.getTopicBan(ctx.vals.id).then(pre.presentTopicBan);
-  ctx.assert(404);
+  ctx.assert(ban, 404);
 
-  const topic = await db.findTopicById(ban.topic_id).then(pre.presentTopic);
-  ctx.assert(topic, 404);
+  const loaded = await db.loadTopicFor(ctx.currUser, ban.topic_id, "full");
+  ctx.assert(loaded.kind === "readable", 404);
+  const { topic } = loaded;
   ctx.assertAuthorized(ctx.currUser, "UPDATE_TOPIC", topic);
 
   await db.deleteTopicBan(ban.id);
 
   ctx.flash = { message: ["success", "Unbanned user from topic"] };
   ctx.redirect(topic.url + "/edit#topic-bans");
-});
-
-//
-// Show topic edit form
-// For now it's just used to edit topic title
-// Ensure this comes before /topics/:slug/:xxx so that "edit" is not
-// considered the second param
-//
-router.get("/topics/:slug/edit", async (ctx: Context) => {
-  ctx.assert(ctx.currUser, 403);
-  var topicId = belt.extractId(ctx.params.slug);
-  ctx.assert(topicId, 404);
-  var topic = await db.findTopicById(topicId).then(pre.presentTopic);
-  ctx.assert(topic, 404);
-  ctx.assertAuthorized(ctx.currUser, "UPDATE_TOPIC", topic);
-
-  // Get tag groups
-  var tagGroups = await db.findAllTagGroups();
-
-  // TODO: Only do on RP/IntChk topics
-  const topicBans = (await db.listTopicBans(topic.id)).map(pre.presentTopicBan);
-
-  await ctx.render("edit_topic", {
-    ctx,
-    topic,
-    selectedTagIds: (topic.tags || []).map((tag) => tag.id),
-    tagGroups,
-    className: "edit-topic",
-    topicBans,
-  });
-});
-
-// Update topic
-// Params:
-// - title Required
-router.put("/topics/:slug/edit", async (ctx: Context) => {
-  // Authorization
-  ctx.assert(ctx.currUser, 403);
-  var topicId = belt.extractId(ctx.params.slug);
-  ctx.assert(topicId, 404);
-  const topic = await db.findTopicById(topicId);
-  ctx.assert(topic, 404);
-  const presentedTopic = pre.presentTopic(topic)!;
-  ctx.assertAuthorized(ctx.currUser, "UPDATE_TOPIC_TITLE", topic);
-
-  // Parameter validation
-
-  try {
-    if (ctx.request.body.title) {
-      ctx.assert(cancan.can(ctx.currUser, "UPDATE_TOPIC_TITLE", topic));
-      ctx
-        .validateBody("title")
-        .defaultTo(topic.title)
-        .isLength(
-          config.MIN_TOPIC_TITLE_LENGTH,
-          config.MAX_TOPIC_TITLE_LENGTH,
-          "Title must be " +
-            config.MIN_TOPIC_TITLE_LENGTH +
-            " - " +
-            config.MAX_TOPIC_TITLE_LENGTH +
-            " chars long",
-        );
-    }
-
-    if (ctx.request.body["join-status"]) {
-      ctx.assert(cancan.can(ctx.currUser, "UPDATE_TOPIC_JOIN_STATUS", topic));
-      ctx
-        .validateBody("join-status")
-        .defaultTo(topic.join_status)
-        .isIn(["jump-in", "apply", "full"], "Invalid join-status");
-    }
-  } catch (ex: any) {
-    if (ex instanceof bouncer.ValidationError) {
-      ctx.flash = {
-        message: ["danger", ex.message],
-        params: ctx.request.body,
-      };
-      ctx.response.redirect(presentedTopic.url + "/edit");
-      return;
-    }
-    throw ex;
-  }
-
-  // Validation succeeded, so update topic
-  await db.updateTopic(topic.id, {
-    title: ctx.vals.title,
-    join_status: ctx.vals["join-status"],
-  });
-
-  ctx.flash = { message: ["success", "Topic updated"] };
-  ctx.response.redirect(presentedTopic.url + "/edit");
-});
-
-// Always redirects to the last post of a tab
-router.get("/topics/:slug/:postType/last", async (ctx: Context) => {
-  const { postType } = ctx.params;
-  ctx.assert(["ic", "ooc", "char"].includes(postType), 404);
-
-  // This url should not be indexed
-  ctx.set("X-Robots-Tag", "noindex");
-
-  // Load topic
-  const topicId = belt.extractId(ctx.params.slug);
-  ctx.assert(topicId, 404);
-  const topic = await db.findTopicById(topicId);
-  ctx.assert(topic, 404);
-
-  const lastPostId = topic[`latest_${postType}_post_id`];
-  ctx.assert(lastPostId, 404);
-
-  ctx.redirect(`/posts/${lastPostId}`);
-});
-
-// Go to first unread post in a topic
-router.get("/topics/:slug/:postType/first-unread", async (ctx: Context) => {
-  // This page should not be indexed
-  ctx.set("X-Robots-Tag", "noindex");
-
-  // Load topic
-  var topicId = belt.extractId(ctx.params.slug);
-  ctx.assert(topicId, 404);
-
-  let topic;
-  if (ctx.currUser) {
-    topic = await db.findTopicWithIsSubscribed(ctx.currUser.id, topicId);
-  } else {
-    topic = await db.findTopicById(topicId);
-  }
-  ctx.assert(topic, 404);
-  topic = pre.presentTopic(topic);
-
-  // If user is not logged in, just go to first page
-  if (!ctx.currUser) {
-    return ctx.redirect(topic.url);
-  }
-
-  var postId = await db.findFirstUnreadPostId({
-    topic_id: topic.id,
-    user_id: ctx.currUser.id,
-    post_type: ctx.params.postType,
-  });
-
-  if (postId) {
-    ctx.redirect("/posts/" + postId);
-  } else {
-    ctx.redirect(topic.url + "/" + ctx.params.postType);
-  }
-});
-
-//
-// Canonical show topic
-//
-
-router.get("/topics/:slug/:postType", async (ctx: Context) => {
-  ctx.assert(["ic", "ooc", "char"].includes(ctx.params.postType), 404);
-  ctx
-    .validateQuery("page")
-    .optional()
-    .tap((s) => (typeof s === "string" ? Number(s.replace(/,/g, "")) : 1));
-  const topicId = belt.extractId(ctx.params.slug);
-  ctx.assert(topicId, 404);
-
-  // If ?page=1 was given, then redirect without param
-  // since page 1 is already the canonical destination of a topic url
-  if (ctx.vals.page === 1) {
-    ctx.status = 301;
-    return ctx.response.redirect(ctx.request.path);
-  }
-
-  var page = Math.max(1, ctx.vals.page || 1);
-
-  // Only incur the topic_subscriptions join if currUser exists
-  var topic;
-  if (ctx.currUser) {
-    topic = await db.findTopicWithIsSubscribed(ctx.currUser.id, topicId);
-  } else {
-    topic = await db.findTopicById(topicId);
-  }
-  ctx.assert(topic, 404);
-
-  topic = pre.presentTopic(topic);
-
-  // Redirect to canonical slug
-  var expectedSlug = belt.slugify(topic.id, topic.title);
-  if (ctx.params.slug !== expectedSlug) {
-    ctx.status = 301;
-    ctx.response.redirect(topic.url + ctx.request.search);
-    return;
-  }
-
-  // If user tried to go to ic/char tabs on a non-rp, then 404
-  if (!topic.is_roleplay) {
-    ctx.assert(!["ic", "char"].includes(ctx.params.postType), 404);
-  }
-
-  ctx.assertAuthorized(ctx.currUser, "READ_TOPIC", topic);
-
-  var totalItems = topic[ctx.params.postType + "_posts_count"];
-  var totalPages = belt.calcTotalPostPages(totalItems);
-
-  // Don't need this page when post pages are pre-calc'd in the database
-  // var pager = belt.calcPager(page, config.POSTS_PER_PAGE, totalItems);
-
-  // Redirect to the highest page if page parameter exceeded it
-  if (page > totalPages) {
-    var redirectUrl =
-      page === 1 ? ctx.request.path : ctx.request.path + "?page=" + totalPages;
-    return ctx.response.redirect(redirectUrl);
-  }
-
-  const [viewers, posts] = await Promise.all([
-    db.findViewersForTopicId(topic.id),
-    db.findPostsByTopicId(topicId, ctx.params.postType, page),
-  ]);
-
-  let zeroth;
-  if (posts[0] && posts[0].idx === -1) {
-    zeroth = pre.presentPost(posts.shift());
-  }
-
-  topic.mods = cache3.get("forum-mods")[topic.forum_id] || [];
-
-  if (ctx.currUser) {
-    posts.forEach((post) => {
-      const rating = post.ratings.find(
-        (x) => x.from_user_id === ctx.currUser.id,
-      );
-      (post as any).has_rated = rating;
-    });
-  }
-
-  // Update watermark
-  if (ctx.currUser && posts.length > 0) {
-    await db
-      .updateTopicWatermark({
-        topic_id: topic.id,
-        user_id: ctx.currUser.id,
-        post_type: ctx.params.postType,
-        post_id: belt.last(posts)!.id,
-      })
-      .catch((err) => console.error("error updating topic watermark", err));
-  }
-
-  // Clear sub notifications with this topic_id if they have sub_notes > 0
-  if (ctx.currUser && ctx.currUser.sub_notifications_count > 0) {
-    const notesDeleted = await db.deleteSubNotifications(ctx.currUser.id, [
-      topic.id,
-    ]);
-    ctx.currUser.sub_notifications_count = Math.max(
-      0,
-      ctx.currUser.sub_notifications_count - notesDeleted,
-    );
-    ctx.currUser.notifications_count = Math.max(
-      0,
-      ctx.currUser.notifications_count - notesDeleted,
-    );
-  }
-
-  // If we're on the last page, remove the unread button
-  // Since we update the watermark in the background, the find-topic
-  // query doesn't consider this page read yet
-  if (page === totalPages) {
-    topic["unread_" + ctx.params.postType] = false;
-  }
-
-  topic.posts = posts.map(pre.presentPost);
-  var postType = ctx.params.postType;
-
-  // update viewers in background
-  db.upsertViewer(ctx, topic.forum_id, topic.id).catch(console.error);
-
-  await ctx.render("show_topic", {
-    ctx,
-    topic: topic,
-    postType: postType,
-    title: topic.is_roleplay
-      ? "[" +
-        postType.toUpperCase() +
-        "] " +
-        topic.title +
-        (page > 1 ? " (Page " + page + ")" : "")
-      : topic.title,
-    categories: cache3.get("categories"),
-    zeroth,
-    className: "show-topic",
-    // Pagination
-    currPage: page,
-    totalPages: totalPages,
-    // Viewer tracker
-    viewers: viewers,
-  });
-});
-
-// Legacy URL
-// Redirect to the new, shorter topic URL
-router.get("/topics/:topicId/posts/:postType", async (ctx: Context) => {
-  var redirectUrl = "/topics/" + ctx.params.topicId + "/" + ctx.params.postType;
-  ctx.status = 301;
-  ctx.response.redirect(redirectUrl);
-});
-
-//
-// Redirect topic to canonical url
-//
-// If roleplay (so guaranteed to have a OOC post OR a IC post)
-//   If it has an IC post, go to IC tab
-//   Else it must have an OOC post, so go to OOC tab
-// Else it is a non-roleplay
-//   Go to OOC tab
-//
-router.get("/topics/:slug", async (ctx: Context) => {
-  var topicId = belt.extractId(ctx.params.slug);
-  ctx.assert(topicId, 404);
-
-  var topic = await db.findTopic(topicId);
-  ctx.assert(topic, 404);
-
-  // If user cannot read topic and it's deleted, redirect them to
-  // the forum and explain what happened
-  if (cancan.cannot(ctx.currUser, "READ_TOPIC", topic) && topic.is_hidden) {
-    ctx.flash = {
-      message: [
-        "warning",
-        `
-        The topic you tried to view has been hidden. It was possibly spam.
-      `,
-      ],
-    };
-    ctx.redirect(`/forums/${topic.forum_id}`);
-    return;
-  }
-
-  ctx.assertAuthorized(ctx.currUser, "READ_TOPIC", topic);
-
-  topic = pre.presentTopic(topic);
-
-  // Redirect to canonical slug
-  var expectedSlug = belt.slugify(topic.id, topic.title);
-  if (ctx.params.slug !== expectedSlug) {
-    ctx.status = 301;
-    ctx.response.redirect(topic.url + ctx.request.search);
-    return;
-  }
-
-  // TODO: Should these be 301?
-  if (topic.forum.is_roleplay) {
-    if (topic.ic_posts_count > 0) {
-      ctx.response.redirect(ctx.request.path + "/ic");
-    } else {
-      ctx.response.redirect(ctx.request.path + "/ooc");
-    }
-  } else {
-    ctx.response.redirect(ctx.request.path + "/ooc");
-  }
 });
 
 //
@@ -2334,8 +1882,9 @@ router.get("/me/notifications", async (ctx: Context) => {
 router.post("/topics/:slug/move", async (ctx: Context) => {
   const topicId = belt.extractId(ctx.params.slug);
   ctx.assert(topicId, 404);
-  let topic = await db.findTopicById(topicId).then(pre.presentTopic);
-  ctx.assert(topic, 404);
+  const loaded = await db.loadTopicFor(ctx.currUser, topicId, "full");
+  ctx.assert(loaded.kind === "readable", 404);
+  let { topic } = loaded;
   ctx.assertAuthorized(ctx.currUser, "MOVE_TOPIC", topic);
 
   // Validation

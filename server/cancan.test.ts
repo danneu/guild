@@ -66,14 +66,25 @@ const loungeForumColumns = forumColumns({
   title: "Lexus Lounge",
 });
 
-// db.findForumById rows
+// loadForumFor's plain shape (server/db/readable.ts#findForumById): f.*, the
+// forum's mods, and its child and parent forums
 const forums = {
-  plain: { ...plainForumColumns, child_forum: null, parent_forum: null },
-  lounge: { ...loungeForumColumns, child_forum: null, parent_forum: null },
+  plain: {
+    ...plainForumColumns,
+    mods: [],
+    child_forum: null,
+    parent_forum: null,
+  },
+  lounge: {
+    ...loungeForumColumns,
+    mods: [],
+    child_forum: null,
+    parent_forum: null,
+  },
 };
 
-// db.findTopic rows (t.* plus the forum), with the forum's mods that the
-// routes attach from cache3
+// loadTopicFor's plain shape (server/db/readable.ts#findTopic): t.*, the
+// forum, and the forum's mods
 function topicRow(props: Record<string, unknown> = {}) {
   return {
     id: 1,
@@ -460,7 +471,7 @@ describe("CREATE_POST", () => {
   // never has, so any member could post into the staff forum by id
   // (hunt 261026-0911-021).
   // Scenario: POST /topics/:topicSlug/posts loads the topic with
-  // db.findTopic and attaches the forum's mods.
+  // db.loadTopicFor(viewer, id, "plain"), which selects the forum's mods.
   it("keeps members out of Lexus Lounge topics", () => {
     const loungeTopic = {
       id: 1,

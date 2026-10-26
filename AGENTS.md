@@ -70,6 +70,10 @@ antispam, Turnstile CAPTCHA, Discord).
 
 **Database:** Complex forum schema -- users, topics, posts, private messages
 (convos), subscriptions, plus roleplay-specific tables.
+Load a topic or forum by id only through `db.loadTopicFor` or
+`db.loadForumFor` (`server/db/readable.ts`). They check READ_TOPIC or
+READ_FORUM before they return a row. Add any new by-id topic or forum query
+there as a private function, never as an export of `server/db`.
 
 ## Forum domain model
 

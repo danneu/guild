@@ -101,21 +101,6 @@ const cache = createIntervalCache({
 
   // from cache2
 
-  "forum-mods": createConfig<Record<number, any[]>>(Object.create(null), {
-    enabled: true,
-    interval: 1000 * 60 * 10,
-    fetch: async () => {
-      // maps forumId -> [User]
-      const mapping: Record<number, any[]> = Object.create(null);
-      const rows = await db.allForumMods();
-      rows.forEach((row) => {
-        mapping[row.forum_id] = mapping[row.forum_id] || [];
-        mapping[row.forum_id]!.push(row.user);
-      });
-      return mapping;
-    },
-  }),
-
   "faq-post": {
     enabled: !!config.FAQ_POST_ID,
     initialValue: null,
