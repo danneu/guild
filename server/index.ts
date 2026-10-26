@@ -618,13 +618,13 @@ router.post("/posts/:postId/rate", async (ctx: Context) => {
   // so do not create notification
   if (rating) {
     // Send receiver a RATING notification in the background
-    db.createRatingNotification({
-      from_user_id: ctx.currUser.id,
-      to_user_id: post.user_id,
-      post_id: post.id,
-      topic_id: post.topic_id,
-      rating_type: rating.type,
-    }).catch(console.error);
+    db.notifications
+      .notifyRating({
+        fromUserId: ctx.currUser.id,
+        postId: post.id,
+        ratingType: rating.type,
+      })
+      .catch(console.error);
   }
 
   ctx.type = "json";
@@ -1738,9 +1738,18 @@ router.get("/staff", async (ctx: Context) => {
 //
 router.get("/me/notifications", async (ctx: Context) => {
   ctx.assert(ctx.currUser, 404);
-  const notifications = await db
-    .findReceivedNotificationsForUserId(ctx.currUser.id)
-    .then((xs) => xs.map(pre.presentNotification));
+  const { notifications, prunedCount, prunedSubCount } =
+    await db.notifications.listFeed(ctx.currUser);
+  // The feed deleted rows the user may no longer read. Update the stale user,
+  // so the navbar matches on this render.
+  ctx.currUser.notifications_count = Math.max(
+    0,
+    ctx.currUser.notifications_count - prunedCount,
+  );
+  ctx.currUser.sub_notifications_count = Math.max(
+    0,
+    ctx.currUser.sub_notifications_count - prunedSubCount,
+  );
 
   await ctx.render("me_notifications", {
     ctx,

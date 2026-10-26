@@ -26,14 +26,8 @@ vi.mock("../db", async (importOriginal) => {
   return {
     ...real,
     createPost: vi.fn(),
-    parseAndCreateMentionNotifications: vi.fn(),
-    parseAndCreateQuoteNotifications: vi.fn(),
-    createSubNotificationsBulk: vi.fn(),
     ratelimits: { ...real.ratelimits, bump: vi.fn() },
-    subscriptions: {
-      ...real.subscriptions,
-      listActiveSubscribersForTopic: vi.fn(),
-    },
+    notifications: { ...real.notifications, notifyNewPost: vi.fn() },
     revs: { ...real.revs, getPostRev: vi.fn(), revertPostRev: vi.fn() },
   };
 });
@@ -133,11 +127,10 @@ beforeEach(() => {
         markup: props.markup,
       }) as any,
   );
-  vi.mocked(db.parseAndCreateMentionNotifications).mockResolvedValue([]);
-  vi.mocked(db.parseAndCreateQuoteNotifications).mockResolvedValue([]);
-  vi.mocked(db.subscriptions.listActiveSubscribersForTopic).mockResolvedValue(
-    [],
-  );
+  vi.mocked(db.notifications.notifyNewPost).mockResolvedValue({
+    mentionsCount: 0,
+    quotesCount: 0,
+  });
   vi.mocked(db.revs.getPostRev).mockImplementation(
     async (postId: number, revId: number) =>
       ({ id: revId, post_id: postId }) as any,

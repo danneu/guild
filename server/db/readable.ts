@@ -5,6 +5,9 @@
 //
 // List queries stay in server/db/index.ts, because they filter in SQL. Post
 // rows stay there too, because READ_POST guards them.
+// server/db/notifications.ts creates the notifications that point at a post
+// or a topic, reads their post html and topic title, and lists a user's
+// subscribed topics, each gated with cancan.
 
 // 3rd party
 import assert from "assert";
@@ -85,7 +88,9 @@ function queryTopic(viewer: any, topicId: number, shape: TopicShape) {
 
 // The forum's mods as {id, uname, slug} users. Selected with the row, so
 // READ_TOPIC and the mod rules in server/cancan.ts see them before they run.
-function forumModsColumn(forumId: "t.forum_id" | "f.id") {
+// Exported for server/db/notifications.ts only; server/db/index.ts does not
+// re-export it.
+export function forumModsColumn(forumId: "t.forum_id" | "f.id") {
   return `(
     SELECT COALESCE(
       json_agg(json_build_object('id', mu.id, 'uname', mu.uname, 'slug', mu.slug)),

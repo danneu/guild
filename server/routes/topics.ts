@@ -147,51 +147,19 @@ router.post(
           })
           .then(pre.presentPost);
 
-        // Send MENTION and QUOTE notifications
-
-        const mentionNotifications =
-          await db.parseAndCreateMentionNotifications(pgClient, {
-            fromUser: ctx.currUser,
+        // Send MENTION, QUOTE and TOPIC_SUB notifications
+        const { mentionsCount, quotesCount } =
+          await db.notifications.notifyNewPost(pgClient, {
+            author: ctx.currUser,
+            postId: post.id,
             markup: ctx.vals.markup,
-            post_id: post.id,
-            topic_id: post.topic_id,
           });
 
-        const quoteNotifications = await db.parseAndCreateQuoteNotifications(
-          pgClient,
-          {
-            fromUser: ctx.currUser,
-            markup: ctx.vals.markup,
-            post_id: post.id,
-            topic_id: post.topic_id,
-          },
-        );
-
-        const mentionNotificationsCount = mentionNotifications.length;
-        const quoteNotificationsCount = quoteNotifications.length;
-        {
-          // Send subscription notifications
-
-          // Get all people who do not have this sub archived
-          const subscribers = (
-            await db.subscriptions.listActiveSubscribersForTopic(
-              pgClient,
-              post.topic_id,
-            )
-          )
-            // Ignore self
-            .filter((u) => u.user_id !== ctx.currUser.id);
-
-          const subNotifications = subscribers.map(({ user_id }) => ({
-            fromUserId: ctx.currUser.id as number,
-            toUserId: user_id,
-            topicId: post.topic_id as number,
-            postType: postType as "ic" | "ooc" | "char",
-          }));
-          await db.createSubNotificationsBulk(pgClient, subNotifications);
-        }
-
-        return { post, mentionNotificationsCount, quoteNotificationsCount };
+        return {
+          post,
+          mentionNotificationsCount: mentionsCount,
+          quoteNotificationsCount: quotesCount,
+        };
       });
 
     ctx.flash = {

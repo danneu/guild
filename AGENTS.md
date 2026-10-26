@@ -82,6 +82,13 @@ Load a topic or forum by id only through `db.loadTopicFor` or
 `db.loadForumFor` (`server/db/readable.ts`). They check READ_TOPIC or
 READ_FORUM before they return a row. Add any new by-id topic or forum query
 there as a private function, never as an export of `server/db`.
+Create a notification that points at a post or a topic, read its post html
+or topic title, and list a user's subscribed topics only through the exports
+of `server/db/notifications.ts`. It gates each recipient and each row with
+READ_POST or READ_TOPIC on live rows. Its reads delete the notifications
+that fail and keep the subscriptions. Lookups by id and deletes return only
+pointer columns, so they need no gate; most of them stay in
+`server/db/index.ts`.
 
 ## Forum domain model
 

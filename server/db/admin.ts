@@ -176,6 +176,9 @@ export const mergeUsers = async ({
 // I want to get working at some point rather than delete
 // into the void.
 //
+// Before reviving it, move it into server/db/notifications.ts: a notification
+// that points at a post must pass the READ_POST gate there.
+//
 // blurb is optional string
 //
 // Returns number of notifications created

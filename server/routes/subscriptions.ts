@@ -5,13 +5,25 @@ import _ from "lodash";
 // const debug = createDebug('app:routes:subscriptions')
 // 1st
 import * as db from "../db";
-import * as pre from "../presenters";
 import * as belt from "../belt";
 import { Context } from "koa";
 
 ////////////////////////////////////////////////////////////
 
 const router = new Router();
+
+// The list deleted TOPIC_SUB rows for topics the user may no longer read.
+// Update the stale user, so the navbar matches on this render.
+function lowerSubNotificationCounts(ctx: Context, prunedSubCount: number) {
+  ctx.currUser.sub_notifications_count = Math.max(
+    0,
+    ctx.currUser.sub_notifications_count - prunedSubCount,
+  );
+  ctx.currUser.notifications_count = Math.max(
+    0,
+    ctx.currUser.notifications_count - prunedSubCount,
+  );
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -20,21 +32,9 @@ const router = new Router();
 //
 router.get("/me/subscriptions", async (ctx: Context) => {
   ctx.assert(ctx.currUser, 404);
-  const [topics, subNotes] = await Promise.all([
-    db.subscriptions
-      .findSubscribedTopicsForUserId(ctx.currUser.id, false)
-      .then((xs) => xs.map(pre.presentTopic)),
-    db.findNotificationsForUserId(ctx.currUser.id, "TOPIC_SUB"),
-  ]);
-
-  subNotes.forEach((note) => {
-    const topic = topics.find((t) => t.id === note.topic_id);
-    if (topic) {
-      // will have a flag for each postType that has unread posts
-      // { ooc: true, ic: true, char: true }
-      topic.sub_notes = note.meta;
-    }
-  });
+  const { topics, prunedSubCount } =
+    await db.notifications.listSubscribedTopics(ctx.currUser, false);
+  lowerSubNotificationCounts(ctx, prunedSubCount);
 
   const grouped = _.groupBy(topics, (topic) => topic.forum.is_roleplay);
   const roleplayTopics = grouped[true] || [];
@@ -52,9 +52,9 @@ router.get("/me/subscriptions", async (ctx: Context) => {
 
 router.get("/me/subscriptions/archive", async (ctx: Context) => {
   ctx.assert(ctx.currUser, 404);
-  const topics = (
-    await db.subscriptions.findSubscribedTopicsForUserId(ctx.currUser.id, true)
-  ).map(pre.presentTopic);
+  const { topics, prunedSubCount } =
+    await db.notifications.listSubscribedTopics(ctx.currUser, true);
+  lowerSubNotificationCounts(ctx, prunedSubCount);
   const grouped = _.groupBy(topics, (topic) => topic.forum.is_roleplay);
   const roleplayTopics = grouped[true] || [];
   const nonroleplayTopics = grouped[false] || [];
@@ -77,9 +77,10 @@ router.get("/me/subscriptions/archive", async (ctx: Context) => {
 router.post("/me/subscriptions", async (ctx: Context) => {
   ctx.assert(ctx.currUser, 404);
 
-  // Ensure user doesn't have 200 subscriptions
-  const subs = await db.subscriptions.findSubscribedTopicsForUserId(
-    ctx.currUser.id,
+  // Ensure user doesn't have 200 subscriptions. Counts only the ones they can
+  // see, so the cap never hints that hidden or lounge subscriptions exist.
+  const { topics: subs } = await db.notifications.listSubscribedTopics(
+    ctx.currUser,
     false,
   );
   if (subs.length >= 200) {
