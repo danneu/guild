@@ -18,6 +18,7 @@ import * as config from "../config";
 import * as cancan from "../cancan";
 import { classifyIp } from "../cloudflare_ip";
 import * as avatar from "../avatar";
+import { withUpload } from "../upload";
 import * as emailer from "../emailer";
 import cache3 from "../cache3";
 import bbcode from "../bbcode";
@@ -1133,14 +1134,15 @@ router.get("/users/:slug/recent-topics", async (ctx: Context) => {
 //     ctx.response.redirect('/')
 // })
 
-// Params
-// - submit: 'save' | 'delete'
-// - files
-//   - avatar
-//     - path
-//
+// The Edit Avatar form in views/edit_user.html. Its Delete Avatar button
+// submits the same form, usually with the file input left empty.
+const AVATAR_UPLOAD = {
+  file: "avatar",
+  fields: ["submit"],
+  maxFileBytes: 40e6,
+} as const;
+
 // @koa2
-// TODO: Put the multipart middleware only on specific routes like this one
 router.post("/users/:slug/avatar", async (ctx: Context) => {
   // Ensure user exists
   const user = await db.findUserBySlug(ctx.params.slug).then(pre.presentUser);
@@ -1148,53 +1150,53 @@ router.post("/users/:slug/avatar", async (ctx: Context) => {
   // Ensure currUser is authorized to update user
   ctx.assertAuthorized(ctx.currUser, "UPDATE_USER", user);
 
-  // Handle avatar delete button
-  if (ctx.request.body.submit === "delete") {
-    await db.deleteAvatar(user.id);
-    ctx.flash = { message: ["success", "Avatar deleted"] };
+  const result = await withUpload(
+    ctx,
+    AVATAR_UPLOAD,
+    async ({ fields, file }) => {
+      // Handle avatar delete button
+      if (fields.submit === "delete") {
+        await db.deleteAvatar(user.id);
+        ctx.flash = { message: ["success", "Avatar deleted"] };
+        ctx.response.redirect(user.url + "/edit#avatar");
+        return;
+      }
+
+      ctx.assert(file, 400, "Must choose an avatar to upload");
+
+      // TODO: Pretty sure the handleAvatarTransformAndUpload fn does a magic bytes check?
+      // But we can pre-verify for better a error message
+      ctx.assert(
+        (file.mimetype ?? "").startsWith("image/"),
+        400,
+        "Must be an image",
+      );
+
+      // Process avatar, upload to S3, and get the S3 url
+      const avatarUrl = await avatar.handleAvatarTransformAndUpload(
+        file.buffer,
+      );
+
+      // Save new avatar url to db
+      await db.updateUser(user.id, { avatar_url: avatarUrl });
+
+      // Delete legacy avatar if it exists
+      await db.deleteLegacyAvatar(user.id);
+
+      ctx.flash = { message: ["success", "Avatar uploaded and saved"] };
+      ctx.response.redirect(user.url + "/edit#avatar");
+    },
+  );
+
+  if (result.kind === "too-large") {
+    ctx.flash = {
+      message: [
+        "danger",
+        `Avatar cannot exceed ${AVATAR_UPLOAD.maxFileBytes / 1e6} MB.`,
+      ],
+    };
     ctx.response.redirect(user.url + "/edit#avatar");
-    return;
   }
-
-  // Ensure params
-  // FIXME: Sloppy/lame validation
-  ctx.assert(ctx.request.files, 400, "Must choose an avatar to upload");
-  ctx.assert(ctx.request.files.avatar, 400, "Must choose an avatar to upload");
-
-  ctx.assert(
-    !Array.isArray(ctx.request.files.avatar),
-    400,
-    "avatar must be a single file",
-  );
-
-  ctx.assert(
-    ctx.request.files.avatar.size > 0,
-    400,
-    "Must choose an avatar to upload",
-  );
-
-  // TODO: Pretty sure the handleAvatarTransformAndUpload fn does a magic bytes check?
-  // But we can pre-verify for better a error message
-  ctx.assert(
-    (ctx.request.files.avatar.mimetype ?? "").startsWith("image/"),
-    400,
-    "Must be an image",
-  );
-
-  // Process avatar, upload to S3, and get the S3 url
-  var avatarUrl = await avatar.handleAvatarTransformAndUpload(
-    // @ts-ignore
-    ctx.request.files.avatar.filepath,
-  );
-
-  // Save new avatar url to db
-  await db.updateUser(user.id, { avatar_url: avatarUrl });
-
-  // Delete legacy avatar if it exists
-  await db.deleteLegacyAvatar(user.id);
-
-  ctx.flash = { message: ["success", "Avatar uploaded and saved"] };
-  ctx.response.redirect(user.url + "/edit#avatar");
 });
 
 ////////////////////////////////////////////////////////////

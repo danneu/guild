@@ -58,6 +58,14 @@ Key directories:
 test fails if any other file imports bcrypt. Log in through
 `server/auth.ts#authenticate`, which never shows whether an account exists.
 
+**Request bodies and uploads:** `server/middleware/body.ts` is the app-wide
+body parser. It never parses multipart, and it leaves `ctx.request.body` as
+`{}` for a body it does not read. Parse a file upload only through
+`server/upload.ts#withUpload`, and call it after the route's own
+authorization check. It keeps the file in memory, so no temp file exists, and
+it draws on one byte budget per process. A test fails if any other file
+imports koa-body or formidable.
+
 **Asset pipeline:** Gulp concatenates and minifies CSS/JS into versioned bundles
 in `dist/`. In development assets are served individually; in production the
 bundled assets are served. Browser vendor libs are copied from `node_modules`

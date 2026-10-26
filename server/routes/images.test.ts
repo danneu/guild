@@ -8,8 +8,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as cancan from "../cancan";
 import * as db from "../db";
 import { uploadToS3 } from "../s3";
+import { withUpload } from "../upload";
 import "../validation";
 import router from "./images";
+
+// Spied, so a test can tell whether a request reached the upload parser.
+vi.mock("../upload", { spy: true });
 
 // The upload route answers "offline" before any check when the bucket is
 // unset, which would hide the album check this file tests.
@@ -128,8 +132,10 @@ type Req = {
   method: "GET" | "POST" | "PUT" | "DELETE";
   path: string;
   currUser: object | null;
+  // Stands in for a parsed urlencoded body.
   body?: object;
-  files?: object;
+  // Sent as a real multipart body, which the upload route parses itself.
+  form?: FormData;
 };
 
 async function send(req: Req) {
@@ -138,7 +144,6 @@ async function send(req: Req) {
   app.use(async (ctx: Context, next: Next) => {
     ctx.currUser = req.currUser;
     (ctx.request as any).body = req.body ?? {};
-    (ctx.request as any).files = req.files;
     ctx.assertAuthorized = (user: any, action: any, target: any) => {
       ctx.assert(cancan.can(user, action, target), 404);
     };
@@ -157,6 +162,7 @@ async function send(req: Req) {
     const res = await fetch(`http://127.0.0.1:${port}${req.path}`, {
       method: req.method,
       redirect: "manual",
+      ...(req.form ? { body: req.form } : {}),
     });
     return { status: res.status, location: res.headers.get("location") };
   } finally {
@@ -164,7 +170,19 @@ async function send(req: Req) {
   }
 }
 
-const upload = { image: { size: 1000, filepath: "/nonexistent/upload.png" } };
+const imageBytes = Buffer.from("not really a png");
+
+function uploadForm(albumId: number) {
+  const form = new FormData();
+  form.append("album_id", String(albumId));
+  form.append(
+    "image",
+    new Blob([imageBytes], { type: "image/png" }),
+    "upload.png",
+  );
+  form.append("description", "");
+  return form;
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -289,14 +307,39 @@ describe("POST /users/:user_slug/images", () => {
       method: "POST",
       path: "/users/alice/images",
       currUser: alice,
-      body: { description: "", album_id: String(aliceAlbum.id) },
-      files: upload,
+      form: uploadForm(aliceAlbum.id),
     });
 
     expect(res.status).toBe(302);
+    expect(withUpload).toHaveBeenCalledTimes(1);
+    expect(sharp).toHaveBeenCalledWith(imageBytes);
     expect(db.images.insertImage).toHaveBeenCalledWith(
       expect.objectContaining({ ownerId: alice.id, albumId: aliceAlbum.id }),
     );
+  });
+
+  it("refuses a guest before parsing the upload", async () => {
+    const res = await send({
+      method: "POST",
+      path: "/users/alice/images",
+      currUser: null,
+      form: uploadForm(aliceAlbum.id),
+    });
+
+    expect(res.status).toBe(404);
+    expect(withUpload).not.toHaveBeenCalled();
+  });
+
+  it("refuses another member before parsing the upload", async () => {
+    const res = await send({
+      method: "POST",
+      path: "/users/alice/images",
+      currUser: bob,
+      form: uploadForm(bobAlbum.id),
+    });
+
+    expect(res.status).toBe(404);
+    expect(withUpload).not.toHaveBeenCalled();
   });
 
   // Bob's album page would list Alice's image.
@@ -305,8 +348,7 @@ describe("POST /users/:user_slug/images", () => {
       method: "POST",
       path: "/users/alice/images",
       currUser: alice,
-      body: { description: "", album_id: String(bobAlbum.id) },
-      files: upload,
+      form: uploadForm(bobAlbum.id),
     });
 
     expect(res.status).toBe(404);
@@ -323,8 +365,7 @@ describe("POST /users/:user_slug/images", () => {
       method: "POST",
       path: "/users/alice/images",
       currUser: alice,
-      body: { description: "", album_id: String(aliceAlbum.id) },
-      files: upload,
+      form: uploadForm(aliceAlbum.id),
     });
 
     expect(res.status).toBe(404);

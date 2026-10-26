@@ -43,6 +43,7 @@
     "debug": "^4.4.1",
     "discord.js": "^14.20.0",
     "dotenv": "^16.5.0",
+    "formidable": "2.1.5",
     "knex": "^3.1.0",
     "koa": "^3.0.0",
     "koa-body": "^6.0.1",
@@ -71,6 +72,7 @@
   "devDependencies": {
     "@total-typescript/ts-reset": "^0.6.1",
     "@types/debug": "^4.1.12",
+    "@types/formidable": "2.0.6",
     "@types/gulp": "^4.0.17",
     "@types/gulp-concat": "^0.0.37",
     "@types/gulp-rev": "^5.0.36",

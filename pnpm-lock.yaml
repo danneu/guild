@@ -41,6 +41,9 @@ importers:
       dotenv:
         specifier: ^16.5.0
         version: 16.5.0
+      formidable:
+        specifier: 2.1.5
+        version: 2.1.5
       knex:
         specifier: ^3.1.0
         version: 3.1.0(pg@8.16.0)
@@ -120,6 +123,9 @@ importers:
       '@types/debug':
         specifier: ^4.1.12
         version: 4.1.12
+      '@types/formidable':
+        specifier: 2.0.6
+        version: 2.0.6
       '@types/gulp':
         specifier: ^4.0.17
         version: 4.0.17

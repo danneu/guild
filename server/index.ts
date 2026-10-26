@@ -13,9 +13,9 @@ const app = new Koa();
 import koaBetterStatic from "@ladjs/koa-better-static";
 import koaSend from "koa-send";
 import koaLogger from "koa-logger";
-import { koaBody } from "koa-body";
 import koaConditionalGet from "koa-conditional-get";
 import koaEtag from "@koa/etag";
+import { bodyParser } from "./middleware/body.js";
 
 // Routes
 import legacyRouter from "./legacy_router.js";
@@ -178,15 +178,9 @@ if (config.NODE_ENV !== "production") {
   app.use(koaLogger());
 }
 
-app.use(
-  koaBody({
-    multipart: true,
-    // Max payload size allowed in request form body
-    // Defaults to '56kb'
-    // CloudFlare limits to 100mb max
-    formLimit: "25mb",
-  }),
-);
+// Ahead of methodOverride, which reads body._method. Uploads are parsed later,
+// by server/upload.ts.
+app.use(bodyParser());
 
 import nunjucksRender from "koa-nunjucks-render";
 

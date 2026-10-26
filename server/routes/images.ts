@@ -1,6 +1,7 @@
 import Router from "@koa/router";
 import sharp from "sharp";
 import { uploadToS3 } from "../s3";
+import { withUpload } from "../upload";
 import { v7 as uuidv7 } from "uuid";
 // 1st
 import * as belt from "../belt";
@@ -129,99 +130,95 @@ router.get("/users/:user_slug/images", loadUser, async (ctx: Context) => {
 ////////////////////////////////////////////////////////////
 // Upload
 
+// The upload forms in views/show_album.html and views/show_user_images.html.
+const IMAGE_UPLOAD = {
+  file: "image",
+  fields: ["description", "album_id"],
+  maxFileBytes: 40e6,
+} as const;
+
 router.post("/users/:user_slug/images", loadUser, async (ctx: Context) => {
   if (!config.S3_IMAGE_BUCKET) {
     return (ctx.body =
       "The upload system is currently offline. (Bucket unspecified)");
   }
   ctx.assertAuthorized(ctx.currUser, "UPLOAD_IMAGE", ctx.state.user);
-  // FIXME: Lame validation
-  // fields
-  ctx.assert(ctx.request.body, 400, "no request body");
-  ctx.assert(
-    typeof ctx.request.body.description === "string",
-    400,
-    "description required",
+
+  const result = await withUpload(
+    ctx,
+    IMAGE_UPLOAD,
+    async ({ fields, file }) => {
+      // FIXME: Lame validation
+      // fields
+      const description = fields.description;
+      ctx.assert(typeof description === "string", 400, "description required");
+      ctx.assert(description.length <= 10000, 400, "description too long");
+      const albumId = Number.parseInt(fields.album_id ?? "");
+      ctx.assert(albumId, 400, "album id must be integer");
+      // Before any encode or S3 write, so a foreign album_id stops here and
+      // leaves no S3 object behind.
+      const album = await db.images.getUserAlbum(ctx.state.user.id, albumId);
+      ctx.assert(album, 404);
+      // file
+      ctx.assert(file, 400, 'no file with key "image" provided');
+
+      const uuid = uuidv7();
+
+      const imageResult = await sharp(file.buffer)
+        .avif({
+          quality: 80,
+          effort: 4,
+        })
+        .toBuffer()
+        .then((buffer) => {
+          return uploadToS3({
+            uuid,
+            type: "album_image",
+            buffer,
+            contentType: "image/webp",
+          });
+        });
+
+      // TODO: What happens when we try to upload a non-image file?
+
+      // { 'Mime type': 'image/jpeg' OR 'format': 'JPEG' }
+      // const data = await identify(upload.filepath)
+      // const mime = identifyToMime(data)
+      // if (!mime || ['image/jpeg', 'image/png', 'image/gif'].indexOf(mime) < 0) {
+      //     ctx.flash = {
+      //         message: ['danger', 'Invalid image format. Must be jpg, gif, png.'],
+      //     }
+      //     return ctx.redirect('back')
+      // }
+
+      // INSERT
+
+      const inserted = await db.images.insertImage({
+        imageId: uuid,
+        ownerId: ctx.state.user.id,
+        albumId: album.id,
+        src: imageResult.publicUrl,
+        mime: "image/avif",
+        description,
+      });
+      ctx.assert(inserted, 404);
+
+      // RESPOND
+
+      ctx.flash = { message: ["success", "Image uploaded"] };
+      ctx.redirect(ctx.state.user.url + "/images");
+    },
   );
-  const description = ctx.request.body.description;
-  ctx.assert(description.length <= 10000, 400, "description too long");
-  const albumId = Number.parseInt(ctx.request.body.album_id);
-  ctx.assert(albumId, 400, "album id must be integer");
-  // Before any encode or S3 write, so a foreign album_id stops here and leaves
-  // no S3 object behind.
-  const album = await db.images.getUserAlbum(ctx.state.user.id, albumId);
-  ctx.assert(album, 404);
-  // files
-  ctx.assert(ctx.request.files, 400, "no files provided");
-  ctx.assert(ctx.request.files.image, 400, 'no file with key "image" provided');
-  ctx.assert(
-    !Array.isArray(ctx.request.files.image),
-    400,
-    "image must be a single file",
-  );
-  const upload = ctx.request.files.image;
-  ctx.assert(Number.isInteger(upload.size), 400, "upload.size must be integer");
-  ctx.assert(
-    typeof upload.filepath === "string",
-    400,
-    "upload.filepath must be string",
-  );
-  // ensure max upload size of 40 MB
-  if (upload.size > 40e6) {
+
+  if (result.kind === "too-large") {
     ctx.flash = {
       message: [
         "danger",
-        `Image cannot exceed 40 MB. Max: 40,000,000. Yours: ${upload.size}`,
+        `Image cannot exceed ${IMAGE_UPLOAD.maxFileBytes / 1e6} MB.`,
       ],
     };
     return ctx.back("/");
   }
-
-  const uuid = uuidv7();
-
-  const imageResult = await sharp(upload.filepath)
-    .avif({
-      quality: 80,
-      effort: 4,
-    })
-    .toBuffer()
-    .then((buffer) => {
-      return uploadToS3({
-        uuid,
-        type: "album_image",
-        buffer,
-        contentType: "image/webp",
-      });
-    });
-
-  // TODO: What happens when we try to upload a non-image file?
-
-  // { 'Mime type': 'image/jpeg' OR 'format': 'JPEG' }
-  // const data = await identify(upload.filepath)
-  // const mime = identifyToMime(data)
-  // if (!mime || ['image/jpeg', 'image/png', 'image/gif'].indexOf(mime) < 0) {
-  //     ctx.flash = {
-  //         message: ['danger', 'Invalid image format. Must be jpg, gif, png.'],
-  //     }
-  //     return ctx.redirect('back')
-  // }
-
-  // INSERT
-
-  const inserted = await db.images.insertImage({
-    imageId: uuid,
-    ownerId: ctx.state.user.id,
-    albumId: album.id,
-    src: imageResult.publicUrl,
-    mime: "image/avif",
-    description,
-  });
-  ctx.assert(inserted, 404);
-
-  // RESPOND
-
-  ctx.flash = { message: ["success", "Image uploaded"] };
-  ctx.redirect(ctx.state.user.url + "/images");
 });
 
 // TODO: Also delete from S3

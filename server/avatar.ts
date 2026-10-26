@@ -8,14 +8,14 @@ import { v7 as uuidv7 } from "uuid";
 // Uploads s3 avatars, returns url of the large avatar.
 // Converts all images to webp
 export const handleAvatarTransformAndUpload = async (
-  fullInPath: string,
+  input: Buffer,
 ): Promise<string> => {
   if (!config.AWS_KEY || !config.AWS_SECRET) {
     throw new Error("Avatar upload not configured");
   }
 
   // Get metadata to check for animation
-  const metadata = await sharp(fullInPath).metadata();
+  const metadata = await sharp(input).metadata();
   const isAnimated = !!(metadata.pages && metadata.pages > 1);
 
   const uuid = uuidv7();
@@ -26,7 +26,7 @@ export const handleAvatarTransformAndUpload = async (
     height: number,
     size: "normal" | "small",
   ) => {
-    const buffer = await sharp(fullInPath, {
+    const buffer = await sharp(input, {
       animated: isAnimated, // Preserve animation if present
     })
       .resize({
