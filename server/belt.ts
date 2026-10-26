@@ -5,7 +5,6 @@ import crypto from "crypto";
 import createDebug from "debug";
 const debug = createDebug("app:belt");
 import assert from "assert";
-import bcrypt from "bcryptjs";
 import _ from "lodash";
 import Autolinker from "autolinker";
 // 1st party
@@ -143,21 +142,6 @@ export function truncateStringVals(obj: Record<string, string | number>) {
     }
   }
   return out;
-}
-
-////////////////////////////////////////////////////////////
-// Authentication
-////////////////////////////////////////////////////////////
-
-export function hashPassword(password: string) {
-  return bcrypt.hash(password, 10);
-}
-
-// String -> String -> Bool
-//
-// TODO: Man, digiest should be bytea in the db
-export function checkPassword(password: string, digest: string) {
-  return bcrypt.compare(password, digest);
 }
 
 ////////////////////////////////////////////////////////////

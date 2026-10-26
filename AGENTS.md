@@ -54,6 +54,9 @@ Key directories:
 
 **Authentication:** Session-based auth. Role-based permissions via
 `server/cancan.ts`. Roles (Admin, Mod, Member) gate capabilities.
+`server/auth.ts` is the only module that hashes or checks a password, and a
+test fails if any other file imports bcrypt. Log in through
+`server/auth.ts#authenticate`, which never shows whether an account exists.
 
 **Asset pipeline:** Gulp concatenates and minifies CSS/JS into versioned bundles
 in `dist/`. In development assets are served individually; in production the

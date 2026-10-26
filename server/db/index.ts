@@ -8,6 +8,7 @@ import { v7 as uuidv7 } from "uuid";
 // 1st party
 import * as config from "../config";
 import * as belt from "../belt";
+import { hashPassword } from "../auth";
 import * as pre from "../presenters";
 import { MOD_CATEGORY_ID } from "../cancan";
 import {
@@ -847,7 +848,7 @@ export const updateUserPassword = async function (
   assert(_.isNumber(userId));
   assert(_.isString(password));
 
-  const digest = await belt.hashPassword(password);
+  const digest = await hashPassword(password);
 
   return pool
     .query(
@@ -1715,7 +1716,7 @@ export async function createUserWithSession(props: {
   assert(_.isString(props.password));
   assert(_.isString(props.email));
 
-  const digest = await belt.hashPassword(props.password);
+  const digest = await hashPassword(props.password);
   const slug = belt.slugifyUname(props.uname);
 
   return pool.withTransaction(async (client) => {

@@ -194,6 +194,7 @@ import * as middleware from "./middleware";
 import * as cancan from "./cancan";
 import * as emailer from "./emailer";
 import * as belt from "./belt";
+import { authenticate } from "./auth";
 import bbcode from "./bbcode";
 import bouncer from "koa-bouncer";
 import "./validation"; // Load after koa-bouncer
@@ -647,12 +648,17 @@ router.post("/sessions", async (ctx: Context) => {
   ctx.validateBody("uname-or-email").required("Invalid creds (1)");
   ctx.validateBody("password").required("Invalid creds (2)");
   ctx.validateBody("remember-me").toBoolean();
-  var user = await db.findUserByUnameOrEmail(ctx.vals["uname-or-email"]);
-  ctx.check(user, "Invalid creds (3)");
-  ctx.check(
-    await belt.checkPassword(ctx.vals.password, user.digest),
-    "Invalid creds (4)",
+  const auth = await authenticate(
+    { findUser: db.findUserByUnameOrEmail },
+    { identifier: ctx.vals["uname-or-email"], password: ctx.vals.password },
   );
+  if (auth.type !== "OK") {
+    // One message for every failure, so the page never shows whether the
+    // account exists.
+    ctx.check(false, "Invalid creds (3)");
+    return;
+  }
+  const user = auth.user;
 
   // User authenticated
   const session = await db.createSession(pool, {
