@@ -5,11 +5,11 @@ import {
   // ResourceOwnerPassword,
   AuthorizationCode,
 } from "simple-oauth2";
-import { v7 as uuidv7 } from "uuid";
 
 // 1st
 import * as config from "../config";
 import DiscordClient from "../discord/client";
+import { issueOAuthState, runOAuthCallback } from "../discord/oauth-state";
 import { Context, Next } from "koa";
 
 ////////////////////////////////////////////////////////////
@@ -85,19 +85,13 @@ function createRouter() {
   ////////////////////////////////////////////////////////////
 
   router.get("/discord", async (ctx: Context) => {
-    const state = uuidv7();
-
     // Use the new authorizeURL method
     const authzUri = client.authorizeURL({
       redirect_uri,
-      state,
+      state: issueOAuthState(ctx),
       scope: "identify guilds.join", // Note: scope is now a string, not an array
     });
 
-    ctx.cookies.set("oauth2_state", state, {
-      httpOnly: true,
-      secure: config.NODE_ENV === "production" && ctx.protocol === "https",
-    });
     ctx.redirect(authzUri);
   });
 
@@ -128,35 +122,13 @@ function createRouter() {
       ctx.body = "Discord is not configured";
       return;
     }
-    if (ctx.query.error) {
-      ctx.body = `
-      Error received from Discord API: ${ctx.query.error}
-    `;
-      return;
-    }
 
-    if (ctx.query.state !== ctx.cookies.get("oauth2_state")) {
-      ctx.body = `
-      Error: OAuth state mismatch
-    `;
-      return;
-    }
-
-    // Get code that Discord sent us via redirect params
-    const { code } = ctx.query;
-    ctx.assert(code, 400, "Expected code in OAuth redirect");
-
-    try {
+    await runOAuthCallback(ctx, async (code) => {
       // Use the new getToken method directly
-      const accessToken = await client.getToken({
-        code: code as string,
-        redirect_uri,
-      });
+      const accessToken = await client.getToken({ code, redirect_uri });
 
       // Access the token string directly
       const tokenString = accessToken.token.access_token as string;
-
-      ctx.cookies.set("oauth2_token", tokenString);
 
       // roleMap is a mapping of name -> id
       // { @everyone: _, Admin: _, Staff: _, Member: _ }
@@ -237,11 +209,8 @@ function createRouter() {
           )) ?? null;
       }
 
-      ctx.redirect(`https://discord.com/channels/${config.DISCORD_GUILD_ID}`);
-    } catch (error) {
-      console.error("OAuth callback error:", error);
-      ctx.throw(500, "Failed to complete OAuth flow");
-    }
+      return `https://discord.com/channels/${config.DISCORD_GUILD_ID}`;
+    });
   });
 
   ////////////////////////////////////////////////////////////
