@@ -13,7 +13,7 @@
           <small>{{ user.trophy_count}} total</small>
 
           {% if ctx.currUser and ctx.currUser.id == user.id and ctx.currUser.active_trophy_id %}
-            <form method="POST" action="/users/{{ user.id }}/active-trophy"
+            <form method="POST" action="/me/active-trophy"
                   style="display: inline-block;"
             >
               <input type="hidden" name="_method" value="DELETE">
@@ -56,7 +56,7 @@
                     <span class="label label-success">Active</span>
                   {% else %}
                     {% if ctx.currUser and ctx.currUser.id == user.id %}
-                      <form method="POST" action="/users/{{ user.id }}/active-trophy"
+                      <form method="POST" action="/me/active-trophy"
                             style="display: inline-block;">
                         <input type="hidden" name="_method" value="PUT">
                         <input type="hidden" name="trophy_id" value="{{ trophy.id }}">

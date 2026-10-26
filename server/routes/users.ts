@@ -922,6 +922,34 @@ router.get("/users/:slug/trophies", async (ctx: Context) => {
   });
 });
 
+// The active trophy routes take no user id: a member can only change the
+// trophy they display themselves.
+
+// Activate one of your trophies.
+//
+// Body:
+// - trophy_id: Required Int
+router.put("/me/active-trophy", async (ctx: Context) => {
+  ctx.assert(ctx.currUser, 403);
+  ctx.validateBody("trophy_id").isString("trophy_id required").toInt();
+
+  const updated = await db.updateUserActiveTrophyId(
+    ctx.currUser.id,
+    ctx.vals.trophy_id,
+  );
+  ctx.assert(updated, 404);
+
+  ctx.flash = { message: ["success", "Trophy activated"] };
+  ctx.redirect("/users/" + ctx.currUser.slug);
+});
+
+router.delete("/me/active-trophy", async (ctx: Context) => {
+  ctx.assert(ctx.currUser, 403);
+  await db.deactivateCurrentTrophyForUserId(ctx.currUser.id);
+  ctx.flash = { message: ["success", "Trophy deactivated"] };
+  ctx.redirect("/users/" + ctx.currUser.slug);
+});
+
 //
 // Show user's VM
 //

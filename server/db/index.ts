@@ -3263,21 +3263,32 @@ export const deactivateCurrentTrophyForUserId = async function (user_id) {
 
 ////////////////////////////////////////////////////////////
 
-export const updateUserActiveTrophyId = async function (user_id, trophy_id) {
-  assert(_.isNumber(user_id));
-  assert(_.isNumber(trophy_id));
+// Owns the rule that a user can only display a trophy they were awarded, so
+// a caller cannot set one by skipping a lookup. Returns false, and changes
+// nothing, when the user does not hold the trophy.
+export async function updateUserActiveTrophyId(
+  userId: number,
+  trophyId: number,
+): Promise<boolean> {
+  assert(Number.isInteger(userId));
+  assert(Number.isInteger(trophyId));
 
-  return pool
-    .query(
-      `
+  const result = await pool.query(
+    `
     UPDATE users
-    SET active_trophy_id = $1
-    WHERE id = $2
+    SET active_trophy_id = $2
+    WHERE id = $1
+      AND EXISTS (
+        SELECT 1
+        FROM trophies_users
+        WHERE user_id = $1
+          AND trophy_id = $2
+      )
   `,
-      [trophy_id, user_id],
-    )
-    .then(maybeOneRow);
-};
+    [userId, trophyId],
+  );
+  return (result.rowCount ?? 0) > 0;
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -3298,30 +3309,6 @@ export const findTrophyUserBridgeById = async function (id) {
     WHERE tu.id = $1
   `,
       [id],
-    )
-    .then(maybeOneRow);
-};
-
-////////////////////////////////////////////////////////////
-
-// Deprecated now that I've added a primary key serial to trophies_users.
-//
-// Instead, use db.findTrophyUserBridgeById(id)
-export const findTrophyByIdAndUserId = async function (trophy_id, user_id) {
-  assert(_.isNumber(user_id));
-  assert(_.isNumber(trophy_id));
-
-  return pool
-    .query(
-      `
-    SELECT trophies.*
-    FROM trophies_users
-    JOIN trophies ON trophies_users.trophy_id = trophies.id
-    WHERE trophies_users.trophy_id = $1
-      AND trophies_users.user_id = $2
-    LIMIT 1
-  `,
-      [trophy_id, user_id],
     )
     .then(maybeOneRow);
 };

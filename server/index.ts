@@ -1914,56 +1914,6 @@ router.put("/trophy-groups/:id", async (ctx: Context) => {
   ctx.redirect("/trophy-groups/" + group.id);
 });
 
-// Delete active trophy
-router.del("/users/:user_id/active-trophy", async (ctx: Context) => {
-  // Ensure user is logged in
-  ctx.assert(ctx.currUser, 403);
-
-  ctx.validateParam("user_id").toInt();
-
-  // Ensure currUser is only trying to operate on themselves
-  // TODO: Make cancan.js rule
-  ctx.assert(ctx.currUser.id === ctx.vals.user_id, 403);
-
-  // Ensure user exists
-  const user = await db.findUserById(ctx.vals.user_id).then(pre.presentUser);
-  ctx.assert(user, 404);
-
-  // Deactivate trophy
-  await db.deactivateCurrentTrophyForUserId(ctx.vals.user_id);
-
-  // Redirect
-  ctx.flash = { message: ["success", "Trophy deactivated"] };
-  ctx.redirect(user.url);
-});
-
-// Update user active_trophy_id
-//
-// Body:
-// - trophy_id: Required Int
-router.put("/users/:user_id/active-trophy", async (ctx: Context) => {
-  // Ensure user is logged in
-  ctx.assert(ctx.currUser, 403);
-
-  ctx.validateParam("user_id").toInt();
-  ctx.validateBody("trophy_id").isString("trophy_id required").toInt();
-
-  // Ensure user exists
-  const user = await db.findUserById(ctx.vals.user_id).then(pre.presentUser);
-  ctx.assert(user, 404);
-
-  // Ensure user owns this trophy
-  const trophy = await db.findTrophyByIdAndUserId(ctx.vals.trophy_id, user.id);
-  ctx.assert(trophy, 404);
-
-  // Update user's active_trophy_id
-  await db.updateUserActiveTrophyId(user.id, trophy.id);
-
-  // Return user to profile
-  ctx.flash = { message: ["success", "Trophy activated"] };
-  ctx.redirect(user.url);
-});
-
 router.get("/trophy-groups/:id/edit", async (ctx: Context) => {
   // Load
   var group = await db.findTrophyGroupById(ctx.params.id);
