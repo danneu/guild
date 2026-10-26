@@ -41,6 +41,15 @@ function isModForum(forum: any): boolean {
   return forum.category_id === MOD_CATEGORY_ID;
 }
 
+// The one list of roles that may read the lounge forums, their topics and
+// their category. READ_POST asks LEXUS_LOUNGE instead, a narrower set that
+// keeps conmods and arenamods out of lounge posts; which set is right is an
+// open question.
+function mayEnterModForums(user: any): boolean {
+  if (!user) return false;
+  return ["conmod", "arenamod", "mod", "smod", "admin"].includes(user.role);
+}
+
 // Applies to anyone above member
 //
 // TODO: Now that I've added the 'conmod' role, this function doesn't make
@@ -596,11 +605,7 @@ function _can(
         return ["member", "banned"].includes(target.role);
       return false;
     case "READ_FORUM": // target is a forum
-      if (isModForum(target))
-        return (
-          user &&
-          (isStaffRole(user.role) || ["conmod", "arenamod"].includes(user.role))
-        );
+      if (isModForum(target)) return mayEnterModForums(user);
       else return true; // for now, anyone can read a non-lexus-lounge forum
       // TODO: Forum mods should be able to read their own forum,
       // maybe it canbe hidden from others? Unlisted while they work?
@@ -614,13 +619,9 @@ function _can(
       return false;
     // TODO: Replace LEXUS_LOUNGE with this?
     case "READ_CATEGORY": //  target is category
-      // Users can view any category except for lexus lounge
-      // Only staff can view lexus lounge
+      // Anyone can view any category except for lexus lounge
       assert(Number.isInteger(target.id), "category.id must be an integer");
-      if (target.id === MOD_CATEGORY_ID)
-        return ["conmod", "arenamod", "mod", "smod", "admin"].includes(
-          user.role,
-        );
+      if (target.id === MOD_CATEGORY_ID) return mayEnterModForums(user);
       else return true;
       return false;
     case "UNSUBSCRIBE_TOPIC":
@@ -638,12 +639,7 @@ function _can(
       // User can send pm if they're a participant
       return !!_.find(target.participants, { id: user.id });
     case "READ_TOPIC": // target is topic
-      // Only staff can read lexus lounge
-      if (isModForum(target.forum))
-        return (
-          user &&
-          (isStaffRole(user.role) || ["conmod", "arenamod"].includes(user.role))
-        );
+      if (isModForum(target.forum)) return mayEnterModForums(user);
       // conmod can read any topic in contests forum
       if (
         user &&

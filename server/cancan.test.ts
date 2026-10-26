@@ -295,6 +295,35 @@ const forumSweep: Sweep<typeof forums>[] = [
   ],
 ];
 
+// db.findCategoriesWithForums rows (c.* plus the forums), which the homepage
+// asks READ_CATEGORY about
+function categoryRow(props: Record<string, unknown> = {}) {
+  return {
+    id: 2,
+    title: "Roleplay",
+    description: null,
+    pos: 1,
+    forums: [plainForumColumns],
+    ...props,
+  };
+}
+
+const categories = {
+  plain: categoryRow(),
+  lounge: categoryRow({
+    id: MOD_CATEGORY_ID,
+    title: "Mod Forums",
+    forums: [loungeForumColumns],
+  }),
+};
+
+const categorySweep: Sweep<typeof categories>[] = [
+  [
+    "READ_CATEGORY",
+    { plain: everyone, lounge: only("conmod", "arenamod", ...staff) },
+  ],
+];
+
 const postSweep: Sweep<typeof posts>[] = [
   [
     "READ_POST",
@@ -392,6 +421,10 @@ describe("READ_GATE", () => {
     for (const name of actorNames) {
       const actor = actors[name];
       expect(() => can(actor, "READ_FORUM", shortForum)).toThrow(/category_id/);
+      expect(() => can(actor, "READ_FORUM", topics.plain)).toThrow(
+        /category_id/,
+      );
+      expect(() => can(actor, "READ_TOPIC", shortTopic)).toThrow(/category_id/);
       expect(() => can(actor, "CREATE_TOPIC", shortForum)).toThrow(
         /category_id/,
       );
@@ -403,6 +436,21 @@ describe("READ_GATE", () => {
       );
       expect(() => can(actor, "HIDE_POST", shortPost)).toThrow(/category_id/);
     }
+  });
+});
+
+describe("READ_CATEGORY", () => {
+  sweep("category", categories, categorySweep);
+
+  // Intent: a guest asking about the lounge category gets an answer.
+  // Why it exists: READ_CATEGORY read user.role with no guest check, so a
+  // guest made it throw a TypeError (hunt 261026-0911-023). The homepage
+  // strips the lounge category before it asks, which hid the crash.
+  // Scenario: a view asks READ_CATEGORY about every category for a guest.
+  it("does not throw for a guest on the lounge category", () => {
+    expect(() =>
+      can(actors.guest, "READ_CATEGORY", categories.lounge),
+    ).not.toThrow();
   });
 });
 
