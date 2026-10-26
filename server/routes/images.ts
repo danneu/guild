@@ -21,6 +21,10 @@ async function loadUser(ctx: Context, next: Next) {
   return next();
 }
 
+// loadImage and loadAlbum find any row by id. They suit routes that only read
+// and have no slug user. A route that authorizes the slug user loads with
+// loadUserImage or loadUserAlbum instead.
+
 async function loadImage(ctx: Context, next: Next) {
   ctx.assert(belt.isValidUuid(ctx.params.image_id), 404);
   const image = await db.images.getImage(ctx.params.image_id);
@@ -33,6 +37,34 @@ async function loadImage(ctx: Context, next: Next) {
 async function loadAlbum(ctx: Context, next: Next) {
   ctx.assert(/^[0-9]+$/.test(ctx.params.album_id), 404);
   const album = await db.images.getAlbum(ctx.params.album_id);
+  pre.presentAlbum(album);
+  ctx.assert(album, 404);
+  ctx.state.album = album;
+  return next();
+}
+
+// The loaders for /users/:user_slug/... routes. They run after loadUser and
+// 404 unless ctx.state.user owns the object, so the image or album a route
+// acts on belongs to the user it authorizes.
+
+async function loadUserImage(ctx: Context, next: Next) {
+  ctx.assert(belt.isValidUuid(ctx.params.image_id), 404);
+  const image = await db.images.getUserImage(
+    ctx.state.user.id,
+    ctx.params.image_id,
+  );
+  pre.presentImage(image);
+  ctx.assert(image, 404);
+  ctx.state.image = image;
+  return next();
+}
+
+async function loadUserAlbum(ctx: Context, next: Next) {
+  ctx.assert(/^[0-9]+$/.test(ctx.params.album_id), 404);
+  const album = await db.images.getUserAlbum(
+    ctx.state.user.id,
+    Number(ctx.params.album_id),
+  );
   pre.presentAlbum(album);
   ctx.assert(album, 404);
   ctx.state.album = album;
@@ -68,7 +100,7 @@ router.get("/images/:image_id.:ext", loadImage, async (ctx: Context) => {
 router.get(
   "/users/:user_slug/images/:image_id",
   loadUser,
-  loadImage,
+  loadUserImage,
   async (ctx: Context) => {
     await ctx.render("show_user_image", {
       ctx,
@@ -113,9 +145,11 @@ router.post("/users/:user_slug/images", loadUser, async (ctx: Context) => {
   );
   const description = ctx.request.body.description;
   ctx.assert(description.length <= 10000, 400, "description too long");
-  const albumId = ctx.request.body.album_id;
-  ctx.assert(Number.parseInt(albumId), 400, "album id must be integer");
-  const album = await db.images.getAlbum(albumId);
+  const albumId = Number.parseInt(ctx.request.body.album_id);
+  ctx.assert(albumId, 400, "album id must be integer");
+  // Before any encode or S3 write, so a foreign album_id stops here and leaves
+  // no S3 object behind.
+  const album = await db.images.getUserAlbum(ctx.state.user.id, albumId);
   ctx.assert(album, 404);
   // files
   ctx.assert(ctx.request.files, 400, "no files provided");
@@ -174,14 +208,15 @@ router.post("/users/:user_slug/images", loadUser, async (ctx: Context) => {
 
   // INSERT
 
-  await db.images.insertImage({
+  const inserted = await db.images.insertImage({
     imageId: uuid,
+    ownerId: ctx.state.user.id,
     albumId: album.id,
-    userId: ctx.state.user.id,
     src: imageResult.publicUrl,
     mime: "image/avif",
     description,
   });
+  ctx.assert(inserted, 404);
 
   // RESPOND
 
@@ -193,10 +228,14 @@ router.post("/users/:user_slug/images", loadUser, async (ctx: Context) => {
 router.del(
   "/users/:user_slug/images/:image_id",
   loadUser,
-  loadImage,
+  loadUserImage,
   async (ctx: Context) => {
     ctx.assertAuthorized(ctx.currUser, "MANAGE_IMAGES", ctx.state.user);
-    await db.images.deleteImage(ctx.state.image.id);
+    const deleted = await db.images.deleteImage(
+      ctx.state.user.id,
+      ctx.state.image.id,
+    );
+    ctx.assert(deleted, 404);
     ctx.flash = { message: ["success", "Image deleted"] };
     ctx.redirect(ctx.state.user.url + "/images");
   },
@@ -223,7 +262,7 @@ router.get("/albums/:album_id", loadAlbum, async (ctx: Context) => {
 router.put(
   "/users/:user_slug/albums/:album_id",
   loadUser,
-  loadAlbum,
+  loadUserAlbum,
   async (ctx: Context) => {
     // AUTHZ
     ctx.assertAuthorized(ctx.currUser, "MANAGE_IMAGES", ctx.state.user);
@@ -237,10 +276,15 @@ router.put(
       .toString()
       .isLength(0, 10000, "Description cannot be more than 10k chars");
     // SAVE
-    await db.images.updateAlbum(ctx.state.album.id, {
-      title: ctx.vals.title,
-      markup: ctx.vals.markup,
-    });
+    const updated = await db.images.updateAlbum(
+      ctx.state.user.id,
+      ctx.state.album.id,
+      {
+        title: ctx.vals.title,
+        markup: ctx.vals.markup,
+      },
+    );
+    ctx.assert(updated, 404);
     // RESPOND
     ctx.flash = { message: ["success", "Album updated"] };
     ctx.redirect(ctx.state.album.url);
