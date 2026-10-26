@@ -9,6 +9,7 @@ const debug = createDebug("app:search");
 import { pool } from "../db/util.js";
 import cache3 from "../cache3";
 import * as pre from "../presenters";
+import { MOD_CATEGORY_ID } from "../cancan";
 import { Context } from "koa";
 
 ////////////////////////////////////////////////////////////
@@ -41,7 +42,7 @@ router.get("/search", async (ctx: Context) => {
   // TODO: Stop hard-coding lexus lounge authorization
   // Ignore lexus-lounge and test categories
   const publicCategories = cache3.get("categories").filter((c) => {
-    return c.id !== 4 && c.id !== 5;
+    return c.id !== MOD_CATEGORY_ID && c.id !== 5;
   });
 
   const perPage = 50;

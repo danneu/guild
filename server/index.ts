@@ -702,7 +702,7 @@ router.get("/", async (ctx: Context) => {
   // We don't show the mod forum on the homepage.
   // Nasty, but just delete it for now
   // TODO: Abstract
-  _.remove(categories, { id: 4 });
+  _.remove(categories, { id: cancan.MOD_CATEGORY_ID });
 
   const allForums = _.flatten(categories.map((c) => c.forums));
 

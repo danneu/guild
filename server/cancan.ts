@@ -25,6 +25,22 @@ const ARENA_FORUMS = [6, 15];
 // Forums that pwmods have mod-privs in
 const PW_FORUMS = [49, 50, 51];
 
+// The Lexus Lounge (mod forum) category. Rules test it only through
+// isModForum (or READ_CATEGORY for a category row), so no rule names the id.
+export const MOD_CATEGORY_ID = 4;
+
+// The one lounge test for a forum row. It fails closed: a short or wrong row
+// (say, a topic passed where its forum belongs) throws instead of reading as
+// "not lounge", which would allow.
+function isModForum(forum: any): boolean {
+  assert(forum, "forum is missing");
+  assert(
+    Number.isInteger(forum.category_id),
+    "forum.category_id must be an integer",
+  );
+  return forum.category_id === MOD_CATEGORY_ID;
+}
+
 // Applies to anyone above member
 //
 // TODO: Now that I've added the 'conmod' role, this function doesn't make
@@ -45,10 +61,109 @@ export const isTopicGm = (user: any, topic: any) => {
   return false;
 };
 
+// The read rule each action also requires. can() asks it before the action's
+// own rule, so writes never restate the lounge and hidden rules that
+// READ_FORUM, READ_TOPIC and READ_POST own. The Record type makes every new
+// action declare its gate; null means the action has none.
+const READ_GATE: Record<CanAction, CanAction | null> = {
+  // Topic Management
+  ACCESS_TOPIC_MODKIT: null,
+  UPDATE_TOPIC: "READ_TOPIC",
+  UPDATE_TOPIC_JOIN_STATUS: "READ_TOPIC",
+  UPDATE_TOPIC_TAGS: "READ_TOPIC",
+  UPDATE_TOPIC_CO_GMS: "READ_TOPIC",
+  UPDATE_TOPIC_TITLE: "READ_TOPIC",
+  CREATE_TOPIC: "READ_FORUM",
+  READ_TOPIC: null,
+  MOVE_TOPIC: "READ_TOPIC",
+  STICK_TOPIC: "READ_TOPIC",
+  UNSTICK_TOPIC: "READ_TOPIC",
+  HIDE_TOPIC: "READ_TOPIC",
+  UNHIDE_TOPIC: "READ_TOPIC",
+  CLOSE_TOPIC: "READ_TOPIC",
+  OPEN_TOPIC: "READ_TOPIC",
+  SUBSCRIBE_TOPIC: "READ_TOPIC",
+  // A user must be able to leave a topic after losing read access to it.
+  UNSUBSCRIBE_TOPIC: null,
+  // Known gap: the target is { topic, user }, which READ_TOPIC cannot take.
+  TOPIC_BAN: null,
+
+  // Post Management
+  CREATE_POST: "READ_TOPIC",
+  READ_POST: null,
+  UPDATE_POST: "READ_POST",
+  HIDE_POST: "READ_POST",
+  UNHIDE_POST: "READ_POST",
+  RATE_POST: "READ_POST",
+
+  // User Management
+  UPDATE_USER: null,
+  UPDATE_USER_ROLE: null,
+  GRANT_EMAIL_GATE_EXEMPTION: null,
+  UPDATE_USER_CUSTOM_TITLE: null,
+  DELETE_USER: null,
+  READ_USER_ONLINE_STATUS: null,
+  READ_USER_PM_SENT_COUNT: null,
+  READ_USER_RATINGS_TABLE: null,
+  READ_USER_IP: null,
+  READ_USER_LIST: null,
+  NUKE_USER: null,
+  CHANGE_UNAME: null,
+
+  // Status Management
+  CREATE_USER_STATUS: null,
+  DELETE_USER_STATUS: null,
+  MANAGE_USER_STATUS: null,
+  LIKE_STATUS: null,
+
+  // Trophy System
+  MANAGE_TROPHY_SYSTEM: null,
+  UPDATE_TROPHY: null,
+  CREATE_TROPHY_GROUP: null,
+  UPDATE_TROPHY_GROUP: null,
+
+  // Private Messages & Conversations
+  CREATE_CONVO: null,
+  READ_CONVO: null,
+  DELETE_CONVO: null,
+  CREATE_PM: null,
+  READ_PM: null,
+  UPDATE_PM: null,
+
+  // Visitor Messages
+  CREATE_VM: null,
+  DELETE_VM: null,
+
+  // Forums & Categories
+  READ_FORUM: null,
+  READ_CATEGORY: null,
+  LEXUS_LOUNGE: null,
+
+  // Notifications
+  DELETE_NOTIFICATION: null,
+
+  // Images
+  MANAGE_IMAGES: null,
+  UPLOAD_IMAGE: null,
+
+  // Dice/Campaign System
+  CREATE_CAMPAIGN: null,
+  READ_CAMPAIGN: null,
+  UPDATE_CAMPAIGN: null,
+  CREATE_ROLL: null,
+
+  // Chat
+  READ_CHATLOGS: null,
+};
+
 // TODO: Actually write tests for these
 // TODO: Implement rules for all rules, not just member and admin
 export const can = function (user: any, action: CanAction, target?: any) {
-  var result = _can(user, action, target);
+  const gate = READ_GATE[action];
+  var result =
+    gate !== null && !can(user, gate, target)
+      ? false
+      : _can(user, action, target);
   debug(
     "[cancan] %s %s %s %s %s: %s",
     (user && util.format("%s [%d]", user.uname, user.id)) || "<Guest>",
@@ -244,8 +359,8 @@ function _can(
       if (user.role === "banned") return false;
       // Cannot rate your own post
       if (user.id === target.user_id) return false;
-      // Can rate if you're authorized to read post
-      return can(user, "READ_POST", target);
+      // Everyone else can if READ_GATE lets them read the post
+      return true;
     case "READ_USER_LIST": // no target
       // Let guests read this for now
       return true;
@@ -405,13 +520,11 @@ function _can(
       if (user.role === "pwmod") {
         return true;
       }
-      // Members can post as long as it's outside the lexus lounge,
-      // the topic is open, and the topic is visible
-      // and they are not on topic's banlist
+      // Members can post as long as the topic is open and they are not on
+      // the topic's banlist. READ_GATE keeps them out of hidden and lounge
+      // topics.
       if (user.role === "member") {
-        if (target.category_id === 4) return false;
         if (target.is_closed) return false;
-        if (target.is_hidden) return false;
         if ((target.banned_ids || []).includes(user.id)) return false;
 
         // Topic latest_post_at must be newer than 1 month
@@ -434,12 +547,13 @@ function _can(
     case "READ_POST": // target is post with a post.topic prop
       assert(target, "Post missing");
       assert(target.topic, "post.topic is missing");
-      assert(target.forum, "post.forum is missing");
-      // Staff can read all posts
-      if (user && isStaffRole(user.role)) return true;
-      if (target.forum.category_id === 4) {
+      // Test the lounge before anything returns, so a short forum row throws
+      // for every viewer
+      if (isModForum(target.forum)) {
         return _can(user, "LEXUS_LOUNGE");
       }
+      // Staff can read all posts
+      if (user && isStaffRole(user.role)) return true;
       // conmods can read all posts in contest forums
       if (
         user &&
@@ -464,18 +578,14 @@ function _can(
       ) {
         return true;
       }
-      // GMs can always read the zeroth post even if hidden
+      // GMs and co-GMs can read every post in their topic, even hidden ones
       if (isTopicGm(user, target.topic)) {
         return true;
       }
 
-      // Everyone else can read a post as long as it's not hidden,
-      // the topic is not hidden, and the topic is not in lexus lounge
-      return (
-        !target.is_hidden &&
-        !target.topic.is_hidden &&
-        target.forum.category_id !== 4
-      );
+      // Everyone else can read a post as long as it's not hidden
+      // and the topic is not hidden
+      return !target.is_hidden && !target.topic.is_hidden;
     case "READ_USER_IP": // target is a user
       if (!user) return false;
       // Staff can only see down-chain
@@ -486,8 +596,7 @@ function _can(
         return ["member", "banned"].includes(target.role);
       return false;
     case "READ_FORUM": // target is a forum
-      // TODO: Remove hardcoded mod forum
-      if (target.category_id === 4)
+      if (isModForum(target))
         return (
           user &&
           (isStaffRole(user.role) || ["conmod", "arenamod"].includes(user.role))
@@ -507,7 +616,8 @@ function _can(
     case "READ_CATEGORY": //  target is category
       // Users can view any category except for lexus lounge
       // Only staff can view lexus lounge
-      if (target.id === 4)
+      assert(Number.isInteger(target.id), "category.id must be an integer");
+      if (target.id === MOD_CATEGORY_ID)
         return ["conmod", "arenamod", "mod", "smod", "admin"].includes(
           user.role,
         );
@@ -520,17 +630,16 @@ function _can(
       if (!user) return false;
       // banned cannot
       if (user.role === "banned") return false;
-      // everyone else can if they can read the topic
-      return can(user, "READ_TOPIC", target);
+      // everyone else can if READ_GATE lets them read the topic
+      return true;
     case "CREATE_PM": // target is convo w/ participants prop
       if (!user) return false;
       if (user.role === "banned") return false;
       // User can send pm if they're a participant
       return !!_.find(target.participants, { id: user.id });
     case "READ_TOPIC": // target is topic
-      assert(target.forum);
       // Only staff can read lexus lounge
-      if (target.forum.category_id === 4)
+      if (isModForum(target.forum))
         return (
           user &&
           (isStaffRole(user.role) || ["conmod", "arenamod"].includes(user.role))
@@ -572,13 +681,7 @@ function _can(
       assert(target);
       if (!user) return false;
       if (user.role === "banned") return false;
-      // Members can create topics in any category that's not Lexus Lounge
-      if (user.role === "member") return target.category_id !== 4;
-      // Only staff can create topics in lexus lounge
-      if (target.id === 4)
-        return (
-          isStaffRole(user.role) || ["conmod", "arenamod"].includes(user.role)
-        );
+      // READ_GATE keeps everyone who cannot read the forum out of it
       if (
         ["mod", "arenamod", "conmod", "pwmod", "smod", "admin"].includes(
           user.role,

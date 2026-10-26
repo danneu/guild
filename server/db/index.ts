@@ -9,6 +9,7 @@ import { v7 as uuidv7 } from "uuid";
 import * as config from "../config";
 import * as belt from "../belt";
 import * as pre from "../presenters";
+import { MOD_CATEGORY_ID } from "../cancan";
 import {
   pool,
   maybeOneRow,
@@ -1597,7 +1598,6 @@ export const findLatestUsers = async function (limit = 25) {
 // Also has cat.forums array
 export const findModCategory = async function () {
   debug(`[findModCategory]`);
-  const MOD_CATEGORY_ID = 4;
   return pool
     .query(
       `
@@ -3239,10 +3239,11 @@ export const findAllPublicTopicUrls = async function () {
       AND forum_id IN (
         SELECT id
         FROM forums
-        WHERE category_id NOT IN (4)
+        WHERE category_id <> $1
       )
     ORDER BY id
   `,
+      [MOD_CATEGORY_ID],
     )
     .then((res) => res.rows)
     .then((rows) => {
