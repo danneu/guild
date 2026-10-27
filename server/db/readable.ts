@@ -17,6 +17,7 @@ import createDebug from "debug";
 const debug = createDebug("app:db:readable");
 // 1st party
 import * as cancan from "../cancan";
+import { DbForum, DbTopic } from "../dbtypes";
 import * as pre from "../presenters";
 import { pool, maybeOneRow } from "./util";
 
@@ -90,8 +91,9 @@ function queryTopic(viewer: any, topicId: number, shape: TopicShape) {
 
 // The forum's mods as {id, uname, slug} users. Selected with the row, so
 // READ_TOPIC and the mod rules in server/cancan.ts see them before they run.
-// Exported for server/db/notifications.ts only; server/db/index.ts does not
-// re-export it.
+// Every loader whose topic rows reach READ_TOPIC selects it, since
+// server/cancan.ts#TARGETS refuses a topic without it. server/db/index.ts
+// does not re-export it.
 export function forumModsColumn(forumId: "t.forum_id" | "f.id") {
   return `(
     SELECT COALESCE(
@@ -105,24 +107,46 @@ export function forumModsColumn(forumId: "t.forum_id" | "f.id") {
 }
 
 // The topic's banned user ids as a JSON array, empty when it has none. Every
-// topic and post loader that feeds CREATE_POST or UPDATE_POST selects it,
-// since server/cancan.ts#assertBansLoaded refuses a target without it. Expects
-// the topic aliased as t. Exported for server/db/index.ts#findPostById only;
-// server/db/index.ts does not re-export it.
-export const BANNED_IDS_COLUMN = `COALESCE(
+// loader that feeds CREATE_POST or UPDATE_POST selects it, since
+// server/cancan.ts#TARGETS refuses a target without it. Expects the topic
+// aliased as t. server/db/index.ts does not re-export it.
+export const BANNED_IDS_JSON = `COALESCE(
   (SELECT json_agg(tb.banned_id) FROM topic_bans tb WHERE tb.topic_id = t.id),
   '[]'::json
-) banned_ids`;
+)`;
+
+// The columns every by-id topic load selects. They carry what each topic
+// action in server/cancan.ts reads, so a topic loaded here passes any of them.
+// Expects topics as t and forums as f.
+const TOPIC_COLUMNS = `
+  t.*,
+  to_json(f.*) "forum",
+  ${forumModsColumn("t.forum_id")},
+  ${BANNED_IDS_JSON} banned_ids`;
+
+// One row of TOPIC_COLUMNS. The full shapes select more columns on top.
+type TopicRow = DbTopic & {
+  forum: DbForum;
+  mods: Array<{ id: number; uname: string; slug: string }>;
+  banned_ids: number[];
+};
+
+// What the full shapes add for the topic page and its edit page
+const FULL_TOPIC_COLUMNS = `${TOPIC_COLUMNS},
+  (SELECT to_json(u2.*) FROM users u2 WHERE u2.id = t.user_id) "user",
+  (SELECT json_agg(u3.uname) FROM users u3 WHERE u3.id = ANY (t.co_gm_ids::int[])) co_gm_unames,
+  (
+   SELECT json_agg(tags.*)
+   FROM tags
+   JOIN tags_topics ON tags.id = tags_topics.tag_id
+   WHERE tags_topics.topic_id = t.id
+  ) tags`;
 
 function findTopic(topicId: number) {
   return pool
-    .query(
+    .query<TopicRow>(
       `
-    SELECT
-      t.*,
-      to_json(f.*) "forum",
-      ${forumModsColumn("t.forum_id")},
-      ${BANNED_IDS_COLUMN}
+    SELECT ${TOPIC_COLUMNS}
     FROM topics t
     JOIN forums f ON t.forum_id = f.id
     WHERE t.id = $1
@@ -132,26 +156,13 @@ function findTopic(topicId: number) {
     .then(maybeOneRow);
 }
 
-// Keep in sync with findTopicWithIsSubscribed
 function findTopicById(topicId: number) {
   debug(`[findTopicById] topicId=${topicId}`);
 
   return pool
-    .query(
+    .query<TopicRow>(
       `
-SELECT
-  t.*,
-  to_json(f.*) "forum",
-  ${forumModsColumn("t.forum_id")},
-  (SELECT to_json(u2.*) FROM users u2 WHERE u2.id = t.user_id) "user",
-  (SELECT json_agg(u3.uname) FROM users u3 WHERE u3.id = ANY (t.co_gm_ids::int[])) co_gm_unames,
-  ${BANNED_IDS_COLUMN},
-  (
-   SELECT json_agg(tags.*)
-   FROM tags
-   JOIN tags_topics ON tags.id = tags_topics.tag_id
-   WHERE tags_topics.topic_id = t.id
-  ) tags
+SELECT ${FULL_TOPIC_COLUMNS}
 FROM topics t
 JOIN forums f ON t.forum_id = f.id
 WHERE t.id = $1
@@ -163,12 +174,11 @@ GROUP BY t.id, f.id
 }
 
 // findTopicById plus the user's is_subscribed boolean and unread_* flags.
-// Keep in sync with findTopicById
 function findTopicWithIsSubscribed(userId: number, topicId: number) {
   debug("[findTopicWithIsSubscribed] userId %s, topicId %s:", userId, topicId);
 
   return pool
-    .query(
+    .query<TopicRow>(
       `
     SELECT
       (
@@ -219,19 +229,8 @@ function findTopicWithIsSubscribed(userId: number, topicId: number) {
             )
         END
       ) unread_char,
-      t.*,
-      to_json(f.*) "forum",
-      ${forumModsColumn("t.forum_id")},
       array_agg($1::int) @> Array[ts.user_id::int] "is_subscribed",
-      (SELECT to_json(u2.*) FROM users u2 WHERE u2.id = t.user_id) "user",
-      (SELECT json_agg(u3.uname) FROM users u3 WHERE u3.id = ANY (t.co_gm_ids::int[])) co_gm_unames,
-      ${BANNED_IDS_COLUMN},
-      (
-      SELECT json_agg(tags.*)
-      FROM tags
-      JOIN tags_topics ON tags.id = tags_topics.tag_id
-      WHERE tags_topics.topic_id = t.id
-      ) tags
+      ${FULL_TOPIC_COLUMNS}
     FROM topics t
     JOIN forums f ON t.forum_id = f.id
     LEFT OUTER JOIN topic_subscriptions ts ON t.id = ts.topic_id AND ts.user_id = $1

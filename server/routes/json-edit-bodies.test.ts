@@ -65,7 +65,7 @@ const memberRow = {
 
 const ZEROTH_MARKUP = "The GM's opening post for this roleplay.";
 
-// db.findPost rows: p.*, the topic, the forum and the topic's banned_ids. The
+// db.findPost rows: p.*, the topic with its banned_ids, and the forum. The
 // zeroth post belongs to the GM and carries the GM's posting IP.
 function zerothPostRow() {
   return {
@@ -87,9 +87,9 @@ function zerothPostRow() {
       forum_id: 4,
       co_gm_ids: [coGm.id],
       is_hidden: false,
+      banned_ids: [],
     },
     forum: { id: 4, category_id: 2, title: "Casual Roleplay" },
-    banned_ids: [],
   };
 }
 

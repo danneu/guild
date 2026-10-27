@@ -22,7 +22,7 @@ import {
 } from "./util";
 import { Client, Pool, PoolClient } from "pg";
 import * as revs from "./revs";
-import { BANNED_IDS_COLUMN } from "./readable";
+import { BANNED_IDS_JSON, forumModsColumn } from "./readable";
 import { deleteEmailVerificationTokenByUserId } from "./email_verification";
 import { spend } from "./send_budget";
 import { Context } from "koa";
@@ -421,7 +421,12 @@ export async function findRecentTopicsForUserId(
     viewer,
     "READ_TOPIC",
     knex("topics as t")
-      .select("t.*", knex.raw('to_json(f.*) "forum"'))
+      .select(
+        "t.*",
+        knex.raw('to_json(f.*) "forum"'),
+        // READ_TOPIC reads them
+        knex.raw(forumModsColumn("t.forum_id")),
+      )
       .join("forums as f", "t.forum_id", "f.id")
       .where("t.user_id", userId)
       .where("t.id", "<", beforeId || 1e9)
@@ -705,6 +710,8 @@ export async function findTopicsByForumId(
       knex.raw('to_json(p.*) "latest_post"'),
       knex.raw('to_json(u2.*) "latest_user"'),
       knex.raw('to_json(f.*) "forum"'),
+      // READ_TOPIC reads them
+      knex.raw(forumModsColumn("t.forum_id")),
       knex.raw(`(
         SELECT json_agg(tags.*)
         FROM tags
@@ -865,18 +872,16 @@ RETURNING *
 
 ////////////////////////////////////////////////////////////
 
-// Attaches topic, forum and the topic's ban list to the post for the
-// authorization checks in server/cancan.ts ('READ_POST', 'UPDATE_POST').
-// Keep findPost and findPm in sync
+// The only loader of a post by id. Attaches the topic, with its ban list, and
+// the forum, which the post actions in server/cancan.ts read.
 export const findPostById = async function (postId: number) {
   return pool
     .query(
       `
 SELECT
   p.*,
-  to_json(t.*) "topic",
-  to_json(f.*) "forum",
-  ${BANNED_IDS_COLUMN}
+  (to_jsonb(t.*) || jsonb_build_object('banned_ids', ${BANNED_IDS_JSON})) "topic",
+  to_json(f.*) "forum"
 FROM posts p
 JOIN topics t ON p.topic_id = t.id
 JOIN forums f ON t.forum_id = f.id
@@ -996,10 +1001,14 @@ ORDER BY pms.id
 
 ////////////////////////////////////////////////////////////
 
-export const findPostsByTopicId = async function (topicId, postType, page) {
+// `topic` is the page's topic, as db.loadTopicFor returns it. Each post gets
+// it as post.topic, and its forum as post.forum, so the post actions in
+// server/cancan.ts read the page's topic, ban list included, with no per-row
+// copy of the topic from SQL.
+export const findPostsByTopicId = async function (topic, postType, page) {
   debug(
     "[findPostsByTopicId] topicId: %s, postType: %s, page",
-    topicId,
+    topic.id,
     postType,
     page,
   );
@@ -1056,8 +1065,6 @@ export const findPostsByTopicId = async function (topicId, postType, page) {
             ELSE false
           END
       ) "user",
-      to_json(t.*) "topic",
-      to_json(f.*) "forum",
 
       CASE
         WHEN u.current_status_id IS NOT NULL THEN
@@ -1070,22 +1077,28 @@ export const findPostsByTopicId = async function (topicId, postType, page) {
       to_json(array_remove(array_agg(r.*), null)) ratings
     FROM posts p
     JOIN users u ON p.user_id = u.id
-    JOIN topics t ON p.topic_id = t.id
-    JOIN forums f ON t.forum_id = f.id
     LEFT OUTER JOIN ratings r ON p.id = r.post_id
     LEFT OUTER JOIN statuses s ON u.current_status_id = s.id
     WHERE p.topic_id = $1
       AND p.type = $2
       AND p.idx >= $3
       AND p.idx < $4
-    GROUP BY p.id, u.id, t.id, f.id, s.id
+    GROUP BY p.id, u.id, s.id
     ORDER BY p.idx
   `,
-      [topicId, postType, fromIdx, toIdx],
+      [topic.id, postType, fromIdx, toIdx],
     )
     .then((res) => res.rows);
 
+  // One copy for every post, taken before the route sets topic.posts, so no
+  // post points back at the list it sits in, which would make presentTopic
+  // recurse forever. It leaves out topic.user: presentPost presents post.topic
+  // again, and presentUser is not idempotent (see its posts_count hack).
+  const { posts: _posts, user: _user, ...postTopic } = topic;
+
   return rows.map((row) => {
+    row.topic = postTopic;
+    row.forum = topic.forum;
     // Make current_status a property of post.user where it makes more sense
     if (row.current_status) {
       row.current_status.created_at = new Date(row.current_status.created_at);
@@ -1098,27 +1111,6 @@ export const findPostsByTopicId = async function (topicId, postType, page) {
 
 ////////////////////////////////////////////////////////////
 
-// Keep findPostWithTopic and findPmWithConvo in sync
-export const findPostWithTopic = async function (postId) {
-  return pool
-    .query(
-      `
-    SELECT
-      p.*,
-      to_json(t.*) "topic"
-    FROM posts p
-    JOIN topics t ON p.topic_id = t.id
-    WHERE p.id = $1
-    GROUP BY p.id, t.id
-  `,
-      [postId],
-    )
-    .then(maybeOneRow);
-};
-
-////////////////////////////////////////////////////////////
-
-// Keep findPostWithTopic and findPmWithConvo in sync
 export const findPmWithConvo = async function (pmId) {
   return pool
     .query(
@@ -2716,39 +2708,6 @@ export const findAllPublicTopicUrls = async function () {
     .then((rows) => {
       return rows.map((row) => pre.presentTopic(row).url);
     });
-};
-
-export const findPostsByIds = async function (ids) {
-  assert(_.isArray(ids));
-  ids = ids.map(Number); // Ensure ids are numbers, not strings
-
-  const rows = await pool
-    .query(
-      `
-    SELECT
-      p.*,
-      to_json(t.*) topic,
-      to_json(f.*) forum,
-      to_json(u.*) "user"
-    FROM posts p
-    JOIN topics t ON p.topic_id = t.id
-    JOIN forums f ON t.forum_id = f.id
-    JOIN users u ON p.user_id = u.id
-    WHERE p.id = ANY ($1::int[])
-  `,
-      [ids],
-    )
-    .then((res) => res.rows);
-
-  // Reorder posts by the order of ids passed in
-  const out: any[] = [];
-
-  ids.forEach((id) => {
-    const row = rows.find((row) => row.id === id);
-    if (row) out.push(row);
-  });
-
-  return out;
 };
 
 ////////////////////////////////////////////////////////////

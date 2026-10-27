@@ -72,14 +72,19 @@ export function topicRow(props: Record<string, unknown> = {}) {
   };
 }
 
-// db.findPostById rows: p.*, the topic as to_json(t.*) (no forum or mods),
-// the forum, and the topic's banned_ids. The member wrote every post but the
+// What Postgres's to_json makes of a row: dates become strings
+export function asJson<T>(row: T): unknown {
+  return JSON.parse(JSON.stringify(row));
+}
+
+// db.findPostById rows: p.*, the topic as to_jsonb(t.*) with its banned_ids
+// (no forum or mods), and the forum. The member wrote every post but the
 // zeroth one, which belongs to the GM.
 export function postRow(
   topic: ReturnType<typeof topicRow>,
   props: Record<string, unknown> = {},
 ) {
-  const { forum, banned_ids, mods: _mods, ...topicColumns } = topic;
+  const { forum, mods: _mods, ...topicColumns } = topic;
   return {
     id: 1001,
     text: null,
@@ -96,9 +101,8 @@ export function postRow(
     is_hidden: false,
     rev_count: 1,
     idx: 0,
-    topic: topicColumns,
+    topic: asJson(topicColumns),
     forum,
-    banned_ids,
     ...props,
   };
 }

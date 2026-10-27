@@ -37,6 +37,8 @@ function loadStatus(key: string = "status_id") {
 // Required params
 // - text: String
 router.post("/me/statuses", async (ctx: Context) => {
+  // A guest has no user to post as, and cancan refuses an undefined target
+  ctx.assert(ctx.currUser, 404);
   // Ensure user is authorized
   ctx.assertAuthorized(ctx.currUser, "CREATE_USER_STATUS", ctx.currUser);
   // Validate params

@@ -394,7 +394,7 @@ router.get("/topics/:slug/:postType", async (ctx: Context) => {
 
   const [viewers, posts] = await Promise.all([
     db.findViewersForTopicId(topic.id),
-    db.findPostsByTopicId(topicId, ctx.params.postType, page),
+    db.findPostsByTopicId(topic, ctx.params.postType, page),
   ]);
 
   let zeroth;

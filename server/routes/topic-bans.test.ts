@@ -66,9 +66,11 @@ const topic = {
   title: "Quest",
   forum_id: forum.id,
   user_id: gm.id,
+  is_roleplay: true,
   co_gm_ids: [] as number[],
   is_hidden: false,
   is_closed: false,
+  latest_post_at: new Date(),
 };
 const bannedPost = {
   id: 100,
@@ -93,27 +95,39 @@ const topicBans = [
 // The markup saved in the revision a revert asks for.
 const revMarkup = "My character sheathes her sword.";
 
-// Answers the by-id topic and post loaders the way Postgres would. A row
-// carries banned_ids only when the query selects it from topic_bans. Any
-// other query throws, so a route that reaches one fails at once.
+// Answers the by-id topic and post loaders the way Postgres would. A topic
+// carries banned_ids only when the query selects it from topic_bans, and its
+// forum's mods only when it selects them from forum_mods. A post's topic comes
+// as JSON, so its dates are strings. Any other query throws, so a route that
+// reaches one fails at once.
 async function fakeQuery(sql: string, params: unknown[] = []) {
   const id = Number(params[0]);
-  function withBans(row: object, topicId: number) {
-    if (!/FROM topic_bans/.test(sql)) return row;
+  function bans(topicId: number) {
+    if (!/FROM topic_bans/.test(sql)) return {};
     const ids = topicBans
       .filter((b) => b.topic_id === topicId)
       .map((b) => b.banned_id);
-    return { ...row, banned_ids: ids };
+    return { banned_ids: ids };
+  }
+  // No forum here has mods
+  function mods() {
+    return /FROM forum_mods\b/.test(sql) ? { mods: [] } : {};
   }
   if (/FROM posts p[\s\S]*WHERE p\.id = \$1/.test(sql)) {
     const post = posts.find((p) => p.id === id);
     if (!post) return { rows: [] };
-    const row = { ...post, topic: { ...topic }, forum: { ...forum } };
-    return { rows: [withBans(row, post.topic_id)] };
+    const postTopic = JSON.parse(JSON.stringify(topic));
+    const row = {
+      ...post,
+      topic: { ...postTopic, ...bans(post.topic_id) },
+      forum: { ...forum },
+    };
+    return { rows: [row] };
   }
   if (/FROM topics t[\s\S]*WHERE t\.id = \$1/.test(sql)) {
     if (id !== topic.id) return { rows: [] };
-    return { rows: [withBans({ ...topic, forum: { ...forum } }, topic.id)] };
+    const row = { ...topic, forum: { ...forum }, ...mods(), ...bans(topic.id) };
+    return { rows: [row] };
   }
   throw new Error(`fake database has no answer for: ${sql}`);
 }

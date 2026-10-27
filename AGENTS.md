@@ -53,7 +53,11 @@ Key directories:
 - `img-proxy/` - Cloudflare Worker image proxy (separate subproject)
 
 **Authentication:** Session-based auth. Role-based permissions via
-`server/cancan.ts`. Roles (Admin, Mod, Member) gate capabilities.
+`server/cancan.ts`. Roles (Admin, Mod, Member) gate capabilities. Each action
+declares the target it reads as a zod schema in `server/cancan.ts#TARGETS`.
+`can()` throws on an actor or a target that does not match, so a loader must
+select every field its actions declare, and a rule cannot compile if it reads
+a field its schema leaves out.
 `server/auth.ts` is the only module that hashes or checks a password, and a
 test fails if any other file imports bcrypt. Log in through
 `server/auth.ts#authenticate`, which never shows whether an account exists.

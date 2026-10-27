@@ -126,8 +126,7 @@ const stricterThanCancan: Record<ReadAction, string[]> = {
     ...expand(["pwmod"], hiddenIn("pw")),
   ],
   READ_TOPIC: [
-    // Listing rows do not load a forum's mods, so forum mods lose nothing
-    // in practice
+    // Forum mods read hidden topics in their own forums from the topic page
     ...expand(
       ["forumMod"],
       ["plain", "contest", "arena", "pw"].map((f) => `${f} hidden-topic`),

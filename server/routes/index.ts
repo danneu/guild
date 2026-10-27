@@ -14,6 +14,7 @@ import * as db from "../db";
 import bbcode from "../bbcode";
 import cache3 from "../cache3";
 import * as pre from "../presenters";
+import { forumModsColumn } from "../db/readable";
 import { fetchReadable } from "../readable";
 import { Context } from "koa";
 
@@ -227,7 +228,8 @@ async function listRoleplays(
   });
 }
 
-// Adds each roleplay's forum, GM and latest IC, OOC and Char posts
+// Adds each roleplay's forum, its mods, the GM and the latest IC, OOC and Char
+// posts
 function roleplaysWithLatestPosts(
   roleplays: Knex.Knex.QueryBuilder,
   sort: "created" | "bumped",
@@ -238,6 +240,8 @@ function roleplaysWithLatestPosts(
     .select(
       "t.*",
       knex.raw("to_json(f.*) as forum"),
+      // fetchReadable asks READ_TOPIC of each row, and READ_TOPIC reads them
+      knex.raw(forumModsColumn("t.forum_id")),
       knex.raw(`json_build_object('uname', u.uname, 'slug', u.slug) as user`),
       knex.raw(`
       CASE

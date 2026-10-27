@@ -306,7 +306,7 @@ function loadRatingTarget(postId: number) {
 ////////////////////////////////////////////////////////////
 // Gate
 
-type Viewer = { id: number; role: string };
+type Viewer = NonNullable<cancan.Actor>;
 
 // Keys on the row's pointers, not its type, so a new type that carries a post
 // or a topic is gated without a list to keep in sync. A row with a post shows
@@ -321,15 +321,16 @@ function mayView(viewer: Viewer, target: Target): boolean {
   return true;
 }
 
-// A viewer without a role would read as a guest and be denied.
+// A missing viewer would read as a guest and be denied.
 function assertViewer(viewer: any): asserts viewer is Viewer {
   assert(viewer, "viewer is missing");
   assert(Number.isInteger(viewer.id), "viewer.id must be an integer");
-  assert(typeof viewer.role === "string", "viewer.role must be a string");
+  assert(cancan.ROLES.includes(viewer.role), "viewer.role must be a role");
 }
 
-// The fields READ_TOPIC and isTopicGm read. cancan reads a missing one as
-// "not hidden" or "no mods", which would allow or deny wrongly.
+// The fields READ_TOPIC and isTopicGm read. can() checks what each action
+// reads too; checking every row here first means a row the gate cannot judge
+// throws, with the field's name, before the gate judges any row.
 function assertTopic(topic: any) {
   assert(Number.isInteger(topic.id), "topic.id must be an integer");
   assert(Number.isInteger(topic.forum_id), "topic.forum_id must be an integer");
@@ -415,11 +416,11 @@ async function prune(toUserId: number, ids: number[]): Promise<string[]> {
 async function findRecipientsByUnames(
   pgClient: PgClientInTransaction,
   unames: string[],
-): Promise<Array<{ id: number; role: string }>> {
+): Promise<Viewer[]> {
   assert(_.every(unames, _.isString));
   if (unames.length === 0) return [];
   return pgClient
-    .query<{ id: number; role: string }>(
+    .query<Viewer>(
       `
     SELECT u.id, u.role
     FROM users u
@@ -437,7 +438,7 @@ function listActiveSubscribers(
 ) {
   assert(Number.isInteger(topicId));
   return pgClient
-    .query<{ id: number; role: string }>(
+    .query<Viewer>(
       `
     SELECT u.id, u.role
     FROM users u

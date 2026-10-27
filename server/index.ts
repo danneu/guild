@@ -499,6 +499,8 @@ app.use(verifyEmailRoutes.routes());
 
 // Ex: /me/edit#grayscale-avatars to show users how to toggle that feature
 router.get("/me/edit", async (ctx: Context) => {
+  // A guest has no user to edit, and cancan refuses an undefined target
+  ctx.assert(ctx.currUser, 404);
   // Ensure current user can edit themself
   ctx.assertAuthorized(ctx.currUser, "UPDATE_USER", ctx.currUser);
 

@@ -10,6 +10,7 @@ import {
   ActorName,
   actorNames,
   actors,
+  asJson,
   forumColumns,
   plainForumColumns,
   postRow,
@@ -359,6 +360,335 @@ describe("READ_GATE", () => {
   });
 });
 
+describe("declared targets", () => {
+  // Intent: can() throws on an actor or a target that lacks a field its rule
+  // reads, for every caller, instead of reading the field as undefined.
+  // Why it exists: rules read a missing field as "no bans", "not lounge",
+  // "not hidden" or "no mods", and that allowed (hunts 261026-0911-021, -022
+  // and -032).
+  // Scenario: a loader selects too few columns, or a route or view passes a
+  // hand-built object.
+  it("throws on an actor without a role", () => {
+    expect(() =>
+      can({ id: actors.member.id }, "SUBSCRIBE_TOPIC", topics.plain),
+    ).toThrow(/role/);
+  });
+
+  function without<T extends object>(row: T, key: keyof T) {
+    const { [key]: _dropped, ...rest } = row;
+    return rest;
+  }
+
+  it.each<[CanAction, string, unknown, ActorName]>([
+    ["READ_TOPIC", "is_hidden", without(topics.hidden, "is_hidden"), "guest"],
+    ["READ_TOPIC", "mods", without(topics.hidden, "mods"), "forumMod"],
+    ["CREATE_POST", "is_closed", without(topics.closed, "is_closed"), "member"],
+    ["READ_POST", "is_hidden", without(posts.hidden, "is_hidden"), "guest"],
+    [
+      "READ_USER_ONLINE_STATUS",
+      "is_ghost",
+      { id: actors.member.id, uname: "Member", role: "member" },
+      "guest",
+    ],
+    [
+      "UPDATE_PM",
+      "legacy_html",
+      { id: 1, convo_id: 1, user_id: actors.member.id, markup: "Hi" },
+      "member",
+    ],
+  ])("throws on a %s target without %s", (action, field, target, name) => {
+    expect(() => can(actors[name], action, target)).toThrow(new RegExp(field));
+  });
+});
+
+// A users row (u.*), trimmed to the columns pages and rules read
+function userRow(props: Record<string, unknown> = {}) {
+  return {
+    id: actors.member.id,
+    uname: "Member",
+    slug: "member",
+    role: "member",
+    custom_title: null,
+    avatar_url: null,
+    is_ghost: false,
+    is_nuked: false,
+    created_at: new Date("2026-01-01T00:00:00Z"),
+    last_online_at: new Date("2026-10-01T00:00:00Z"),
+    registration_ip: null,
+    ...props,
+  };
+}
+
+// The topics columns (t.*) of a topic row, without what the loaders join on
+function topicColumns(topic: ReturnType<typeof topicRow>) {
+  const { forum: _forum, mods: _mods, banned_ids: _bans, ...columns } = topic;
+  return columns;
+}
+
+describe("loader rows", () => {
+  // Intent: every loader's row passes each action it feeds, for every actor.
+  // Why it exists: can() throws on a target that lacks a declared field
+  // (hunt 261026-0911-032), so a schema that asks for a column some loader
+  // does not select would turn that page into a 500.
+  // Scenario: a rule starts reading a new topic field, its schema declares
+  // it, and a topic listing still selects the old columns.
+  const topicActions: CanAction[] = [
+    "ACCESS_TOPIC_MODKIT",
+    "UPDATE_TOPIC",
+    "UPDATE_TOPIC_JOIN_STATUS",
+    "UPDATE_TOPIC_TAGS",
+    "UPDATE_TOPIC_CO_GMS",
+    "UPDATE_TOPIC_TITLE",
+    "READ_TOPIC",
+    "MOVE_TOPIC",
+    "STICK_TOPIC",
+    "UNSTICK_TOPIC",
+    "HIDE_TOPIC",
+    "UNHIDE_TOPIC",
+    "CLOSE_TOPIC",
+    "OPEN_TOPIC",
+    "SUBSCRIBE_TOPIC",
+    "UNSUBSCRIBE_TOPIC",
+    "CREATE_POST",
+  ];
+  const postActions: CanAction[] = [
+    "READ_POST",
+    "UPDATE_POST",
+    "HIDE_POST",
+    "UNHIDE_POST",
+    "RATE_POST",
+  ];
+  const userActions: CanAction[] = [
+    "UPDATE_USER",
+    "UPDATE_USER_ROLE",
+    "GRANT_EMAIL_GATE_EXEMPTION",
+    "UPDATE_USER_CUSTOM_TITLE",
+    "READ_USER_ONLINE_STATUS",
+    "READ_USER_PM_SENT_COUNT",
+    "READ_USER_RATINGS_TABLE",
+    "READ_USER_IP",
+    "NUKE_USER",
+    "CHANGE_UNAME",
+    "CREATE_USER_STATUS",
+    "MANAGE_USER_STATUS",
+    "MANAGE_IMAGES",
+    "UPLOAD_IMAGE",
+  ];
+
+  const gmUser = userRow({ id: actors.gm.id, uname: "Gm", slug: "gm" });
+  // A posts row (p.*), as a listing nests it
+  const {
+    topic: _postTopic,
+    forum: _postForum,
+    ...postColumns
+  } = posts.visible;
+  const latestPost = asJson(postColumns);
+  // The full and with-subscription shapes of loadTopicFor
+  const fullTopic = topicRow({
+    user: asJson(gmUser),
+    co_gm_unames: ["CoGm"],
+    tags: null,
+    is_subscribed: false,
+    unread_ic: false,
+    unread_ooc: false,
+    unread_char: false,
+  });
+  // findPostsByTopicId gives each post the loaded topic, without its user
+  const { user: _topicUser, ...pageTopic } = fullTopic;
+  const listedTopic = {
+    ...topicColumns(topics.plain),
+    forum: plainForumColumns,
+    mods: topics.plain.mods,
+  };
+  const forumListedTopic = {
+    ...listedTopic,
+    user: asJson(gmUser),
+    latest_user: asJson(userRow()),
+    latest_post: latestPost,
+    tags: null,
+  };
+  const pm = {
+    id: 1,
+    convo_id: 1,
+    user_id: actors.member.id,
+    idx: 0,
+    text: null,
+    markup: "Hi",
+    html: "Hi",
+    legacy_html: null,
+    ip_address: null,
+    created_at: new Date(),
+    updated_at: null,
+    convo: { id: 1, user_id: actors.member.id, title: "Hi", pms_count: 1 },
+  };
+  const vm = {
+    id: 1,
+    from_user_id: actors.member.id,
+    to_user_id: actors.gm.id,
+    parent_vm_id: null,
+    idx: 0,
+    markup: "Hi",
+    html: "Hi",
+    created_at: new Date(),
+  };
+  const vmFromUser = { uname: "Member", slug: "member", avatar_url: null };
+
+  it.each<[loader: string, row: unknown, actions: CanAction[]]>([
+    ["loadTopicFor plain", topics.plain, topicActions],
+    ["loadTopicFor full", fullTopic, topicActions],
+    ["findTopicsByForumId for a guest", forumListedTopic, ["READ_TOPIC"]],
+    [
+      "findTopicsByForumId for a member",
+      { ...forumListedTopic, has_posted: true, unread_posts: false },
+      ["READ_TOPIC"],
+    ],
+    ["findRecentTopicsForUserId", listedTopic, ["READ_TOPIC"]],
+    [
+      "findRecentTopicsForUserId opening post",
+      postRow(topics.plain, { topic: asJson(topicColumns(topics.plain)) }),
+      ["READ_POST"],
+    ],
+    [
+      "listRoleplays",
+      { ...listedTopic, user: { uname: "Gm", slug: "gm" } },
+      ["READ_TOPIC"],
+    ],
+    ["findPostById", posts.visible, postActions],
+    [
+      "findPostsByTopicId",
+      postRow(topics.plain, {
+        user: asJson(userRow()),
+        ratings: [],
+        topic: pageTopic,
+        forum: pageTopic.forum,
+      }),
+      postActions,
+    ],
+    [
+      "findPostsByTopicId post user",
+      {
+        id: actors.member.id,
+        uname: "Member",
+        role: "member",
+        is_ghost: false,
+      },
+      ["READ_USER_ONLINE_STATUS"],
+    ],
+    [
+      "findRecentPostsForUserId",
+      postRow(topics.plain, { topic: asJson(topicColumns(topics.plain)) }),
+      ["READ_POST"],
+    ],
+    [
+      "search",
+      postRow(topics.plain, {
+        user: asJson(userRow()),
+        topic: asJson(topicColumns(topics.plain)),
+      }),
+      ["READ_POST"],
+    ],
+    [
+      "notification post target",
+      {
+        id: 1001,
+        idx: 0,
+        type: "ooc",
+        html: "Hello",
+        is_hidden: false,
+        user_id: actors.member.id,
+        topic_id: topics.plain.id,
+        topic: asJson(listedTopic),
+        forum: asJson(plainForumColumns),
+      },
+      ["READ_POST"],
+    ],
+    ["notification topic target", asJson(listedTopic), ["READ_TOPIC"]],
+    ["loadForumFor", forums.plain, ["READ_FORUM", "CREATE_TOPIC"]],
+    ["findCategoriesWithForums", categories.plain, ["READ_CATEGORY"]],
+    ["findUserById", userRow(), userActions],
+    [
+      "findStatusById",
+      {
+        id: 1,
+        user_id: actors.member.id,
+        text: "Hi",
+        html: "Hi",
+        liked_user_ids: [actors.gm.id],
+        created_at: new Date(),
+        user: asJson(userRow()),
+      },
+      ["LIKE_STATUS", "DELETE_USER_STATUS"],
+    ],
+    [
+      "vms.getVmById",
+      { ...vm, from_user: asJson(userRow()), to_user: asJson(gmUser) },
+      ["DELETE_VM"],
+    ],
+    [
+      "findLatestVMsForUserId",
+      { ...vm, from_user: { ...vmFromUser, role: "member" }, child_vms: [] },
+      ["DELETE_VM"],
+    ],
+    [
+      "findLatestVMsForUserId child",
+      asJson({
+        ...vm,
+        id: 2,
+        parent_vm_id: 1,
+        from_user: { ...vmFromUser, url: "/users/member", role: "member" },
+      }),
+      ["DELETE_VM"],
+    ],
+    [
+      "convos.getConvos",
+      {
+        id: 1,
+        user_id: actors.member.id,
+        title: "Hi",
+        created_at: new Date(),
+        user: asJson(userRow()),
+        participants: [asJson(userRow()), asJson(gmUser)],
+      },
+      ["READ_CONVO", "DELETE_CONVO", "CREATE_PM"],
+    ],
+    ["findPmById", pm, ["UPDATE_PM"]],
+    [
+      "findPmWithConvo",
+      { ...pm, participants: [asJson(userRow()), asJson(gmUser)] },
+      ["READ_PM", "UPDATE_PM"],
+    ],
+    [
+      "findNotificationById",
+      {
+        id: 1,
+        type: "REPLY_VM",
+        from_user_id: actors.gm.id,
+        to_user_id: actors.member.id,
+        count: 1,
+        created_at: new Date(),
+      },
+      ["DELETE_NOTIFICATION"],
+    ],
+    [
+      "campaign",
+      {
+        id: 1,
+        user_id: actors.gm.id,
+        title: "A campaign",
+        created_at: new Date(),
+      },
+      ["READ_CAMPAIGN", "UPDATE_CAMPAIGN", "CREATE_ROLL"],
+    ],
+    ["topic ban", { topic: topics.plain, user: userRow() }, ["TOPIC_BAN"]],
+  ])("%s rows pass every action they feed", (_loader, row, actions) => {
+    for (const name of actorNames) {
+      for (const action of actions) {
+        expect(() => can(actors[name], action, row)).not.toThrow();
+      }
+    }
+  });
+});
+
 describe("banned users", () => {
   const bannedGm = { ...actors.gm, role: "banned" };
   const bannedForumMod = { ...actors.forumMod, role: "banned" };
@@ -627,10 +957,10 @@ describe("topic bans", () => {
   // Why it exists: a missing list used to read as "no bans", so routes whose
   // loader skipped topic_bans let banned members post and revert
   // (hunt 261026-0911-022).
-  // Scenario: a loader selects the topic or post without BANNED_IDS_COLUMN.
+  // Scenario: a loader selects the topic or post without BANNED_IDS_JSON.
   it("fails closed on a row without banned_ids", () => {
     const { banned_ids: _topicBans, ...shortTopic } = topics.plain;
-    const { banned_ids: _postBans, ...shortPost } = posts.visible;
+    const shortPost = postRow(shortTopic as ReturnType<typeof topicRow>);
 
     for (const name of actorNames) {
       const actor = actors[name];

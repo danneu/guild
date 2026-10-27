@@ -193,7 +193,7 @@
             >Quote</a>
       {% endif %}
       <!-- Edit button -->
-      {% if can(ctx.currUser, 'UPDATE_POST', Object.assign(post, { banned_ids: topic.banned_ids})) %}
+      {% if can(ctx.currUser, 'UPDATE_POST', post) %}
         <a href="{{ post.url }}/edit"
             class="btn btn-default btn-xs pull-right post-edit-btn"
             style="margin-left: 5px;"

@@ -1,10 +1,8 @@
-// Node
-import util from "util";
 // 3rd party
-import _ from "lodash";
 import createDebug from "debug";
 const debug = createDebug("app:cancan");
 import assert from "node:assert";
+import { z } from "zod";
 // 1st
 import * as config from "./config";
 
@@ -30,15 +28,221 @@ const PW_FORUMS = [49, 50, 51];
 // SQL read scopes compare it directly, since SQL cannot call isModForum.
 export const MOD_CATEGORY_ID = 4;
 
-// The one lounge test for a forum row. It fails closed: a short or wrong row
+// The values of the role_type enum in sql/1-schema.sql. can() refuses an actor
+// or a target user whose role is not one of them.
+export const ROLES = [
+  "admin",
+  "smod",
+  "mod",
+  "member",
+  "banned",
+  "conmod",
+  "arenamod",
+  "pwmod",
+] as const;
+export type Role = (typeof ROLES)[number];
+
+////////////////////////////////////////////////////////////
+// Targets
+//
+// Each action declares the target it reads as a zod schema. can() checks the
+// actor and the target against them before any rule runs, so a row that lacks
+// a field throws instead of reading as undefined, which used to allow. The
+// rules' parameter types come from the same schemas, so a rule that reads an
+// undeclared field fails `pnpm run check`. A schema lists only what its rule
+// and the rules it asks read, so a loader selects no column a page never needs.
+//
+// Schemas are plain z.object, with no passthrough or catchall: those add an
+// index signature, and an undeclared read would then compile as unknown. They
+// have no transforms either, so a schema's input and output types match.
+
+const int = z.number().int();
+const role = z.enum(ROLES);
+
+// Who asks. Guests reach can() as undefined (server/middleware#currUser leaves
+// ctx.currUser unset) or as null.
+const ACTOR = z.object({ id: int, role }).nullish();
+export type Actor = z.infer<typeof ACTOR>;
+
+// The forum's mods, as the forum_mods fragment in server/db/readable.ts selects
+const forumMods = z.array(z.object({ id: int }));
+const user = z.object({ id: int, role });
+const userId = z.object({ id: int });
+const userRole = z.object({ role });
+const participants = z.object({ participants: z.array(userId) });
+const ownedRow = z.object({ user_id: int });
+// What isModForum reads
+const forumCategory = z.object({ category_id: int });
+
+// What READ_TOPIC reads, so every action it gates reads it too
+const readableTopic = z.object({
+  forum_id: int,
+  is_hidden: z.boolean(),
+  forum: forumCategory,
+  mods: forumMods,
+});
+// What isTopicGm reads
+const gmFields = { user_id: int, co_gm_ids: z.array(int) };
+const taggedForum = z.object({
+  category_id: int,
+  has_tags_enabled: z.boolean(),
+});
+
+// What READ_POST reads: the post, its topic and the topic's forum
+const postTopic = z.object({
+  forum_id: int,
+  is_hidden: z.boolean(),
+  ...gmFields,
+});
+const readablePost = z.object({
+  is_hidden: z.boolean(),
+  forum: forumCategory,
+  topic: postTopic,
+});
+const zerothPost = readablePost.extend({ idx: int.nullable() });
+
+const TARGETS = {
+  // Topic Management
+  ACCESS_TOPIC_MODKIT: z.object({ forum_id: int, mods: forumMods }),
+  // UPDATE_TOPIC also asks the three rules below it
+  UPDATE_TOPIC: readableTopic.extend({
+    ...gmFields,
+    is_closed: z.boolean(),
+    is_roleplay: z.boolean(),
+    forum: taggedForum,
+  }),
+  UPDATE_TOPIC_JOIN_STATUS: readableTopic.extend({
+    ...gmFields,
+    is_roleplay: z.boolean(),
+  }),
+  UPDATE_TOPIC_TAGS: readableTopic.extend({ ...gmFields, forum: taggedForum }),
+  UPDATE_TOPIC_CO_GMS: readableTopic.extend({
+    user_id: int,
+    is_roleplay: z.boolean(),
+  }),
+  UPDATE_TOPIC_TITLE: readableTopic.extend(gmFields),
+  // A forum
+  CREATE_TOPIC: forumCategory,
+  READ_TOPIC: readableTopic,
+  MOVE_TOPIC: readableTopic,
+  STICK_TOPIC: readableTopic,
+  UNSTICK_TOPIC: readableTopic,
+  HIDE_TOPIC: readableTopic,
+  UNHIDE_TOPIC: readableTopic,
+  CLOSE_TOPIC: readableTopic,
+  OPEN_TOPIC: readableTopic,
+  SUBSCRIBE_TOPIC: readableTopic,
+  UNSUBSCRIBE_TOPIC: z.unknown(),
+  TOPIC_BAN: z.object({ topic: z.object(gmFields), user }),
+
+  // Post Management
+  // A topic. banned_ids is not a topics column: only the loaders that select
+  // it from topic_bans carry it (server/db/readable.ts#BANNED_IDS_JSON).
+  CREATE_POST: readableTopic.extend({
+    is_closed: z.boolean(),
+    latest_post_at: z.date().nullable(),
+    banned_ids: z.array(int),
+  }),
+  READ_POST: readablePost,
+  // The ban list sits on post.topic, because a ban is a topic fact
+  UPDATE_POST: zerothPost.extend({
+    id: int,
+    user_id: int,
+    topic: postTopic.extend({ banned_ids: z.array(int) }),
+  }),
+  HIDE_POST: zerothPost,
+  UNHIDE_POST: zerothPost,
+  RATE_POST: readablePost.extend({ user_id: int }),
+
+  // User Management
+  UPDATE_USER: user,
+  UPDATE_USER_ROLE: userRole,
+  GRANT_EMAIL_GATE_EXEMPTION: userRole,
+  UPDATE_USER_CUSTOM_TITLE: user,
+  DELETE_USER: z.unknown(),
+  READ_USER_ONLINE_STATUS: z.object({ id: int, is_ghost: z.boolean() }),
+  READ_USER_PM_SENT_COUNT: z.unknown(),
+  READ_USER_RATINGS_TABLE: userId,
+  READ_USER_IP: userRole,
+  READ_USER_LIST: z.unknown(),
+  NUKE_USER: userRole,
+  CHANGE_UNAME: user,
+
+  // Status Management
+  CREATE_USER_STATUS: userId,
+  DELETE_USER_STATUS: ownedRow,
+  MANAGE_USER_STATUS: userId,
+  LIKE_STATUS: z.object({ user_id: int, liked_user_ids: z.array(int) }),
+
+  // Trophy System
+  MANAGE_TROPHY_SYSTEM: z.unknown(),
+  UPDATE_TROPHY: z.unknown(),
+  CREATE_TROPHY_GROUP: z.unknown(),
+  UPDATE_TROPHY_GROUP: z.unknown(),
+
+  // Private Messages & Conversations
+  CREATE_CONVO: z.unknown(),
+  READ_CONVO: participants,
+  DELETE_CONVO: participants,
+  CREATE_PM: participants,
+  READ_PM: participants,
+  UPDATE_PM: z.object({ user_id: int, legacy_html: z.string().nullable() }),
+
+  // Visitor Messages
+  CREATE_VM: z.unknown(),
+  DELETE_VM: z.object({
+    from_user_id: int,
+    to_user_id: int,
+    from_user: userRole,
+  }),
+
+  // Forums & Categories
+  READ_FORUM: forumCategory,
+  READ_CATEGORY: userId,
+  LEXUS_LOUNGE: z.unknown(),
+
+  // Notifications
+  DELETE_NOTIFICATION: z.object({ to_user_id: int }),
+
+  // Images
+  MANAGE_IMAGES: user,
+  UPLOAD_IMAGE: userId,
+
+  // Dice/Campaign System
+  CREATE_CAMPAIGN: z.unknown(),
+  READ_CAMPAIGN: z.unknown(),
+  UPDATE_CAMPAIGN: ownedRow,
+  CREATE_ROLL: ownedRow,
+
+  // Chat
+  READ_CHATLOGS: z.unknown(),
+} satisfies Record<CanAction, z.ZodTypeAny>;
+
+export type Target<A extends CanAction> = z.infer<(typeof TARGETS)[A]>;
+
+// An action whose rule reads no target field takes any target, or none.
+type TargetArgs<A extends CanAction> =
+  unknown extends Target<A> ? [target?: Target<A>] : [target: Target<A>];
+
+// Throws when `value` does not match `schema`. The message names each field
+// that failed, so a 500 says which loader column is missing.
+function check(schema: z.ZodTypeAny, value: unknown, what: string) {
+  const result = schema.safeParse(value);
+  if (result.success) return;
+  const issues = result.error.issues
+    .map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
+    .join("; ");
+  throw new Error(`cancan: ${what} does not match its schema (${issues})`);
+}
+
+////////////////////////////////////////////////////////////
+
+// The one lounge test for a forum row. server/readable.ts calls it directly,
+// outside can(), so it checks the field it reads itself: a short or wrong row
 // (say, a topic passed where its forum belongs) throws instead of reading as
 // "not lounge", which would allow.
-export function isModForum(forum: any): boolean {
-  assert(forum, "forum is missing");
-  assert(
-    Number.isInteger(forum.category_id),
-    "forum.category_id must be an integer",
-  );
+export function isModForum(forum: z.infer<typeof forumCategory>): boolean {
+  check(forumCategory, forum, "isModForum: the forum");
   return forum.category_id === MOD_CATEGORY_ID;
 }
 
@@ -46,7 +250,7 @@ export function isModForum(forum: any): boolean {
 // their category. READ_POST asks LEXUS_LOUNGE instead, a narrower set that
 // keeps conmods and arenamods out of lounge posts; which set is right is an
 // open question.
-export function mayEnterModForums(user: any): boolean {
+export function mayEnterModForums(user: Actor): boolean {
   if (!user) return false;
   return ["conmod", "arenamod", "mod", "smod", "admin"].includes(user.role);
 }
@@ -62,20 +266,25 @@ export const isStaffRole = function isStaffRole(role: string) {
   return ["mod", "smod", "admin"].includes(role);
 };
 
-export const isTopicGm = (user: any, topic: any) => {
+// views/show_topic.html calls this directly, outside can(), so it checks the
+// fields it reads itself.
+export function isTopicGm(
+  user: Actor,
+  topic: { user_id: number; co_gm_ids: number[] },
+): boolean {
   assert(topic);
   assert(Array.isArray(topic.co_gm_ids));
   if (!user) return false;
   if (user.id === topic.user_id) return true;
   if (topic.co_gm_ids.some((id) => id === user.id)) return true;
   return false;
-};
+}
 
 // The read rule each action also requires. can() asks it before the action's
 // own rule, so writes never restate the lounge and hidden rules that
 // READ_FORUM, READ_TOPIC and READ_POST own. The Record type makes every new
 // action declare its gate; null means the action has none.
-const READ_GATE: Record<CanAction, CanAction | null> = {
+const READ_GATE = {
   // Topic Management
   ACCESS_TOPIC_MODKIT: null,
   UPDATE_TOPIC: "READ_TOPIC",
@@ -164,727 +373,804 @@ const READ_GATE: Record<CanAction, CanAction | null> = {
 
   // Chat
   READ_CHATLOGS: null,
-};
+} as const satisfies Record<CanAction, CanAction | null>;
 
-// banned_ids is not a topics column: only loaders that select it from
-// topic_bans carry it (server/db/readable.ts#BANNED_IDS_COLUMN). The rules that
-// deny on it assert it before any role branch, so a short row throws instead
-// of reading as "no bans" and letting a banned member through.
-function assertBansLoaded(target: any) {
-  assert(target);
-  assert(Array.isArray(target.banned_ids), "target.banned_ids is not loaded");
-}
+// Each action whose target lacks a field its read gate reads. can() hands the
+// gate the action's own target, so that gate would throw on every call.
+type GateMisfit = {
+  [A in CanAction]: (typeof READ_GATE)[A] extends infer G extends CanAction
+    ? Target<A> extends Target<G>
+      ? never
+      : A
+    : never;
+}[CanAction];
+type NoMisfit<T extends never> = T;
+// Fails `pnpm run check`, naming the action, while any gate misfits.
+export type ReadGateFits = NoMisfit<GateMisfit>;
 
-// TODO: Actually write tests for these
-// TODO: Implement rules for all rules, not just member and admin
-export const can = function (user: any, action: CanAction, target?: any) {
+// Answers whether `user` may do `action` to `target`. Throws when the actor or
+// the target does not match its schema, which fails closed. Rules get the
+// objects the caller passed, never zod's stripped copies, so a rule and the
+// view that renders the same row see the same fields.
+export function can<A extends CanAction>(
+  user: Actor,
+  action: A,
+  ...args: TargetArgs<A>
+): boolean {
+  const target: unknown = args[0];
+  check(ACTOR, user, `${action}: the actor`);
+  check(TARGETS[action], target, `${action}: the target`);
   const gate = READ_GATE[action];
-  var result =
-    gate !== null && !can(user, gate, target)
+  const result =
+    gate !== null && !can<CanAction>(user, gate, target)
       ? false
-      : _can(user, action, target);
+      : RULES[action](user, target as Target<A>);
   debug(
-    "[cancan] %s %s %s %s %s: %s",
-    (user && util.format("%s [%d]", user.uname, user.id)) || "<Guest>",
-    // can/cannot
-    (result ? "\u001b[1;32m can" : "\u001b[1;31m cannot") + " \u001b[0m",
+    "%s %s %s",
+    user ? `user ${user.id}` : "guest",
+    result ? "can" : "cannot",
     action,
-    target && util.format("[%s]", target.id),
-    ((target && JSON.stringify(target)) || "undefined").slice(0, 50),
   );
   return result;
-};
+}
 
+export function cannot<A extends CanAction>(
+  user: Actor,
+  action: A,
+  ...args: TargetArgs<A>
+): boolean {
+  return !can(user, action, ...args);
+}
+
+////////////////////////////////////////////////////////////
+// Rules
+//
 // A banned user's writes stop at
 // server/middleware/require-not-banned.ts#requireNotBanned before any route
 // asks. In a write rule below, a `user.role === "banned"` line is a UI hint: it
 // hides a control that gate would refuse.
-function _can(
-  user: any,
-  action: CanAction,
-  target: any | undefined = undefined,
-) {
-  switch (action) {
-    case "ACCESS_TOPIC_MODKIT": // target is topic
-      if (!user) return false;
-      if (user.role === "banned") return false;
-      if (["mod", "smod", "admin"].includes(user.role)) return true;
-      if (user.role === "conmod" && CONTEST_FORUMS.includes(target.forum_id)) {
-        return true;
-      }
-      if (user.role === "arenamod" && ARENA_FORUMS.includes(target.forum_id)) {
-        return true;
-      }
-      if (user.role === "pwmod" && PW_FORUMS.includes(target.forum_id)) {
-        return true;
-      }
-      // Can if they are forum mod
-      if ((target.mods || []).some((m) => m.id === user.id)) {
-        return true;
-      }
-      return false;
-    case "MANAGE_TROPHY_SYSTEM": // no target, intended to wrap all privs
-    case "UPDATE_TROPHY": // target is trophy
-    case "CREATE_TROPHY_GROUP": // no target
-    case "UPDATE_TROPHY_GROUP": // target is trophy-group
-      // Guests can't
-      if (!user) return false;
-      // Conmods can
-      if (user.role === "conmod") return true;
-      // Admin can
-      if (user.role === "admin") return true;
-      return false;
-    case "DELETE_NOTIFICATION": // target is notification
-      // Guests can't
-      if (!user) return false;
-      // Banned can't
-      if (user.role === "banned") return false;
-      // User can if it's their notification
-      if (user.id === target.to_user_id) return true;
-      return false;
-    // TODO: Replace this with MANAGE_USER_STATUS
-    case "DELETE_USER_STATUS": // target is status
-      // Guests can't
-      if (!user) return false;
-      // Banned can't
-      if (user.role === "banned") return false;
-      // User can delete their own statuses
-      if (user.id === target.user_id) return true;
-      // Staff can
-      if (isStaffRole(user.role)) return true;
-      return false;
-    case "MANAGE_USER_STATUS": // target is user
-      // Guests can't
-      if (!user) return false;
-      // Banned can't
-      if (user.role === "banned") return false;
-      // User can delete their own statuses
-      if (user.id === target.id) return true;
-      // Staff can
-      if (isStaffRole(user.role)) return true;
-      return false;
-    case "LIKE_STATUS": // target status
-      // Guests can't
-      if (!user) return false;
-      // Banned can't
-      if (user.role === "banned") return false;
-      // Users can't like if its their own status
-      if (user.id === target.user_id) return false;
-      // Users can like it if they haven't already liked it
-      if (!target.liked_user_ids.includes(user.id)) return true;
-      return false;
-    case "CREATE_USER_STATUS": // target is user
-      // Guests can't
-      if (!user) return false;
-      // Banned can't
-      if (user.role === "banned") return false;
-      // User can update themself
-      if (user.id === target.id) return true;
-      return false;
-    // Expresses user's ability to update any part of a topic
-    // Only use this for high level checks like to see if a user
-    // should see the "Edit Topic" link at all. The actual actions they
-    // can do to a topic will vary.
-    // Use the specific checks for granular authorization.
-    case "UPDATE_TOPIC": // target is topic
-      // Guests can't
-      if (!user) return false;
-      // Banned can't
-      if (user.role === "banned") return false;
-      // Staff can
-      if (isStaffRole(user.role)) return true;
-      // Conmod can if it's in contest forums
-      if (user.role === "conmod" && CONTEST_FORUMS.includes(target.forum_id))
-        return true;
-      // Arena Mod can // TODO: if it's in ArenaRP forum
-      if (ARENA_FORUMS.includes(target.forum_id) && user.role === "arenamod")
-        return true;
-      if (PW_FORUMS.includes(target.forum_id) && user.role === "pwmod")
-        return true;
-      // If non-staff, then cannot if topic is hidden/closed
-      if (target.is_closed || target.is_hidden) return false;
-      // GMs can
-      if (isTopicGm(user, target)) {
-        return true;
-      }
-      // FIXME: (Sloppy) Check if user is eligible for any of the types of edits
+
+type Rules = { [A in CanAction]: (user: Actor, target: Target<A>) => boolean };
+
+// Shared by the trophy actions
+function manageTrophies(user: Actor): boolean {
+  // Guests can't
+  if (!user) return false;
+  // Conmods can
+  if (user.role === "conmod") return true;
+  // Admin can
+  if (user.role === "admin") return true;
+  return false;
+}
+
+// Shared by the stick, hide and close topic actions and their undos
+function manageTopicStatus(
+  user: Actor,
+  target: Target<"STICK_TOPIC">,
+): boolean {
+  // Guests cannot
+  if (!user) return false;
+  // Banned cannot
+  if (user.role === "banned") return false;
+  // Staff can do this
+  if (isStaffRole(user.role)) return true;
+  // Conmods can manage topics in contest forums
+  if (user.role === "conmod" && CONTEST_FORUMS.includes(target.forum_id))
+    return true;
+  // Arena mod can in arena forums
+  if (user.role === "arenamod" && ARENA_FORUMS.includes(target.forum_id))
+    return true;
+  if (user.role === "pwmod" && PW_FORUMS.includes(target.forum_id)) return true;
+  // Can if they are forum mod
+  if (target.mods.some((m) => m.id === user.id)) {
+    return true;
+  }
+  return false;
+}
+
+// Shared by DELETE_CONVO and READ_CONVO
+function readConvo(user: Actor, target: Target<"READ_CONVO">): boolean {
+  // Banned members can't
+  if (!user) return false;
+  // Admin can read all convos
+  if (user.role === "admin") return true;
+  // Users can only read convos they're participants of
+  if (target.participants.some((x) => x.id === user.id)) return true;
+  return false;
+}
+
+const RULES: Rules = {
+  ACCESS_TOPIC_MODKIT(user, target) {
+    if (!user) return false;
+    if (user.role === "banned") return false;
+    if (["mod", "smod", "admin"].includes(user.role)) return true;
+    if (user.role === "conmod" && CONTEST_FORUMS.includes(target.forum_id)) {
+      return true;
+    }
+    if (user.role === "arenamod" && ARENA_FORUMS.includes(target.forum_id)) {
+      return true;
+    }
+    if (user.role === "pwmod" && PW_FORUMS.includes(target.forum_id)) {
+      return true;
+    }
+    // Can if they are forum mod
+    if (target.mods.some((m) => m.id === user.id)) {
+      return true;
+    }
+    return false;
+  },
+  // no target, intended to wrap all privs
+  MANAGE_TROPHY_SYSTEM: manageTrophies,
+  UPDATE_TROPHY: manageTrophies,
+  CREATE_TROPHY_GROUP: manageTrophies,
+  UPDATE_TROPHY_GROUP: manageTrophies,
+  DELETE_NOTIFICATION(user, target) {
+    // Guests can't
+    if (!user) return false;
+    // Banned can't
+    if (user.role === "banned") return false;
+    // User can if it's their notification
+    if (user.id === target.to_user_id) return true;
+    return false;
+  },
+  // TODO: Replace this with MANAGE_USER_STATUS
+  DELETE_USER_STATUS(user, target) {
+    // Guests can't
+    if (!user) return false;
+    // Banned can't
+    if (user.role === "banned") return false;
+    // User can delete their own statuses
+    if (user.id === target.user_id) return true;
+    // Staff can
+    if (isStaffRole(user.role)) return true;
+    return false;
+  },
+  // target is user
+  MANAGE_USER_STATUS(user, target) {
+    // Guests can't
+    if (!user) return false;
+    // Banned can't
+    if (user.role === "banned") return false;
+    // User can delete their own statuses
+    if (user.id === target.id) return true;
+    // Staff can
+    if (isStaffRole(user.role)) return true;
+    return false;
+  },
+  LIKE_STATUS(user, target) {
+    // Guests can't
+    if (!user) return false;
+    // Banned can't
+    if (user.role === "banned") return false;
+    // Users can't like if its their own status
+    if (user.id === target.user_id) return false;
+    // Users can like it if they haven't already liked it
+    if (!target.liked_user_ids.includes(user.id)) return true;
+    return false;
+  },
+  // target is user
+  CREATE_USER_STATUS(user, target) {
+    // Guests can't
+    if (!user) return false;
+    // Banned can't
+    if (user.role === "banned") return false;
+    // User can update themself
+    if (user.id === target.id) return true;
+    return false;
+  },
+  // Expresses user's ability to update any part of a topic
+  // Only use this for high level checks like to see if a user
+  // should see the "Edit Topic" link at all. The actual actions they
+  // can do to a topic will vary.
+  // Use the specific checks for granular authorization.
+  UPDATE_TOPIC(user, target) {
+    // Guests can't
+    if (!user) return false;
+    // Banned can't
+    if (user.role === "banned") return false;
+    // Staff can
+    if (isStaffRole(user.role)) return true;
+    // Conmod can if it's in contest forums
+    if (user.role === "conmod" && CONTEST_FORUMS.includes(target.forum_id))
+      return true;
+    // Arena Mod can // TODO: if it's in ArenaRP forum
+    if (ARENA_FORUMS.includes(target.forum_id) && user.role === "arenamod")
+      return true;
+    if (PW_FORUMS.includes(target.forum_id) && user.role === "pwmod")
+      return true;
+    // If non-staff, then cannot if topic is hidden/closed
+    if (target.is_closed || target.is_hidden) return false;
+    // GMs can
+    if (isTopicGm(user, target)) {
+      return true;
+    }
+    // FIXME: (Sloppy) Check if user is eligible for any of the types of edits
+    return (
+      can(user, "UPDATE_TOPIC_JOIN_STATUS", target) ||
+      can(user, "UPDATE_TOPIC_TAGS", target) ||
+      can(user, "UPDATE_TOPIC_CO_GMS", target)
+    );
+  },
+  UPDATE_TOPIC_JOIN_STATUS(user, target) {
+    // Nobody can unless it's a roleplay
+    if (!target.is_roleplay) return false;
+    // Guests cant
+    if (!user) return false;
+    // Banned can't
+    if (user.role === "banned") return false;
+    // Topic creator can
+    if (user.id === target.user_id) return true;
+    // co-GMs can
+    if (target.co_gm_ids.includes(user.id)) return true;
+    // Staff can
+    if (isStaffRole(user.role)) return true;
+    return false;
+  },
+  UPDATE_TOPIC_TAGS(user, target) {
+    // Nobody can unless forum has tags enabled
+    if (!target.forum.has_tags_enabled) return false;
+    // Guests never can
+    if (!user) return false;
+    // Banned can't
+    if (user.role === "banned") return false;
+    // GM can
+    if (target.user_id === user.id) return true;
+    // Co-GMs can
+    if (target.co_gm_ids.includes(user.id)) return true;
+    // Staff can
+    if (isStaffRole(user.role)) return true;
+    return false;
+  },
+  UPDATE_TOPIC_CO_GMS(user, target) {
+    // Only roleplays can have co-GMs
+    if (!target.is_roleplay) return false;
+    // Guests can't
+    if (!user) return false;
+    // Banned can't
+    if (user.role === "banned") return false;
+    // GM can
+    if (target.user_id === user.id) return true;
+    // Staff can
+    if (isStaffRole(user.role)) return true;
+    return false;
+  },
+  // target is user
+  UPDATE_USER_CUSTOM_TITLE(user, target) {
+    // Never more than profile edit, so the title route grants no power over
+    // a profile whose edit page the user cannot open. Guests and banned
+    // users stop here.
+    if (!can(user, "UPDATE_USER", target)) return false;
+    if (!user) return false;
+    // Members and Conmods can only change their own
+    if (["member", "conmod"].includes(user.role)) return user.id === target.id;
+    // Mods can change their own title and the title of any non-staff
+    if (user.role === "mod")
+      return user.id === target.id || !isStaffRole(target.role);
+    // Smods can change mods and below
+    if (user.role === "smod")
       return (
-        can(user, "UPDATE_TOPIC_JOIN_STATUS", target) ||
-        can(user, "UPDATE_TOPIC_TAGS", target) ||
-        can(user, "UPDATE_TOPIC_CO_GMS", target)
+        user.id === target.id ||
+        target.role === "mod" ||
+        !isStaffRole(target.role)
       );
-    case "UPDATE_TOPIC_JOIN_STATUS": // target is topic
-      // Nobody can unless it's a roleplay
-      if (!target.is_roleplay) return false;
-      // Guests cant
-      if (!user) return false;
-      // Banned can't
-      if (user.role === "banned") return false;
-      // Topic creator can
-      if (user.id === target.user_id) return true;
-      // co-GMs can
-      if (target.co_gm_ids.includes(user.id)) return true;
-      // Staff can
-      if (isStaffRole(user.role)) return true;
-      return false;
-    case "UPDATE_TOPIC_TAGS": // target is topic
-      assert(target.forum);
-      // Nobody can unless forum has tags enabled
-      if (!target.forum.has_tags_enabled) return false;
-      // Guests never can
-      if (!user) return false;
-      // Banned can't
-      if (user.role === "banned") return false;
-      // GM can
-      if (target.user_id === user.id) return true;
-      // Co-GMs can
-      if (target.co_gm_ids.includes(user.id)) return true;
-      // Staff can
-      if (isStaffRole(user.role)) return true;
-      return false;
-    case "UPDATE_TOPIC_CO_GMS": // target is topic
-      // Only roleplays can have co-GMs
-      if (!target.is_roleplay) return false;
-      // Guests can't
-      if (!user) return false;
-      // Banned can't
-      if (user.role === "banned") return false;
-      // GM can
-      if (target.user_id === user.id) return true;
-      // Staff can
-      if (isStaffRole(user.role)) return true;
-      return false;
-    case "UPDATE_USER_CUSTOM_TITLE": // target is user
-      // Never more than profile edit, so the title route grants no power over
-      // a profile whose edit page the user cannot open. Guests and banned
-      // users stop here.
-      if (!can(user, "UPDATE_USER", target)) return false;
-      // Members and Conmods can only change their own
-      if (["member", "conmod"].includes(user.role))
-        return user.id === target.id;
-      // Mods can change their own title and the title of any non-staff
-      if (user.role === "mod")
-        return user.id === target.id || !isStaffRole(target.role);
-      // Smods can change mods and below
-      if (user.role === "smod")
-        return (
-          user.id === target.id ||
-          target.role === "mod" ||
-          !isStaffRole(target.role)
-        );
-      // Admins can change all
-      if (user.role === "admin") return true;
-      return false;
-    // The ratings table is on the user profile
-    case "READ_USER_RATINGS_TABLE": // target is user
-      // Guests cannot
-      if (!user) return false;
-      // Banned cannot
-      if (user.role === "banned") return false;
-      // Staff can read everyone's
-      if (isStaffRole(user.role)) return true;
-      // everyone can read their own
-      return user.id === target.id;
-    case "RATE_POST": // target is post
-      // Guests can't rate
-      if (!user) return false;
-      // Banned members can't rate
-      if (user.role === "banned") return false;
-      // Cannot rate your own post
-      if (user.id === target.user_id) return false;
-      // Everyone else can if READ_GATE lets them read the post
-      return true;
-    case "READ_USER_LIST": // no target
-      // Let guests read this for now
-      return true;
+    // Admins can change all
+    if (user.role === "admin") return true;
+    return false;
+  },
+  // The ratings table is on the user profile
+  READ_USER_RATINGS_TABLE(user, target) {
+    // Guests cannot
+    if (!user) return false;
+    // Banned cannot
+    if (user.role === "banned") return false;
+    // Staff can read everyone's
+    if (isStaffRole(user.role)) return true;
+    // everyone can read their own
+    return user.id === target.id;
+  },
+  RATE_POST(user, target) {
+    // Guests can't rate
+    if (!user) return false;
+    // Banned members can't rate
+    if (user.role === "banned") return false;
+    // Cannot rate your own post
+    if (user.id === target.user_id) return false;
+    // Everyone else can if READ_GATE lets them read the post
+    return true;
+  },
+  READ_USER_LIST() {
+    // Let guests read this for now
+    return true;
     //
     // Only registered users can
     // if (!user) return false;
     // return true;
-    case "UPDATE_TOPIC_TITLE": // target is topic
-      if (!user) return false;
-      // Banned users can't update their old topics
-      if (user.role === "banned") return false;
-      // Staff can edit all topic titles
-      if (isStaffRole(user.role)) return true;
-      // Topic owner/GM can edit their own titles
-      if (user.id === target.user_id) return true;
-      // Co-GMs can also edit topic title
-      if (target.co_gm_ids.includes(user.id)) return true;
-      // Conmods can edit any topic in contest forums
-      if (user.role === "conmod" && CONTEST_FORUMS.includes(target.forum_id))
-        return true;
-      // Arena mods can edit topic titles in arena forum
-      if (user.role === "arenamod" && ARENA_FORUMS.includes(target.forum_id))
-        return true;
-      if (user.role === "pwmod" && PW_FORUMS.includes(target.forum_id))
-        return true;
-      return false;
-    case "READ_USER_ONLINE_STATUS": // target is user
-      // Guests and members can see status if target isn't in invisible mode.
-      if (!user) return !target.is_ghost;
-      // Members & conmods can see themselves regardless of ghost status
-      if (["member", "conmod"].includes(user.role))
-        return target.id === user.id || !target.is_ghost;
-      // Staff can see ghosts
-      if (isStaffRole(user.role)) return true;
-      return false;
-    case "DELETE_USER": // target is user
-      if (!user) return false;
-      return user.role === "admin";
-    case "READ_USER_PM_SENT_COUNT": // target is user
-      // Guests cannot
-      if (!user) return false;
-      // Only staff can read user pm-sent count
-      if (isStaffRole(user.role)) return true;
-      return false;
-    case "UPDATE_USER_ROLE": // target is user
-      if (!user) return false;
-      if (user.role === "admin") return true;
-      // smods can change everyone except admin
-      if (user.role === "smod") return target.role !== "admin";
-      // mods can change non-staff and pw-mods
-      if (user.role === "mod")
-        return ["banned", "member", "pwmod"].includes(target.role);
-      return false;
-    case "GRANT_EMAIL_GATE_EXEMPTION": // target is user
-      // Mirrors UPDATE_USER_ROLE: during a mail-delivery incident the thing
-      // staff need is "let this person post". Note this excuses the account
-      // from the write gate; it never claims the address was confirmed
-      // (plan/2026-08-11-1613).
-      if (!user) return false;
-      if (user.role === "admin") return true;
-      if (user.role === "smod") return target.role !== "admin";
-      if (user.role === "mod")
-        return ["banned", "member", "pwmod"].includes(target.role);
-      return false;
-    case "UPDATE_USER": // target is user
-      if (!user) return false;
-      if (user.role === "banned") return false;
-      // Anyone can update themselves
-      if (user.id === target.id) return true;
-      // Staff can change staff below them
-      if (user.role === "admin") return true;
-      if (user.role === "smod") return target.role !== "admin";
-      if (user.role === "mod")
-        return ["banned", "member", "pwmod"].includes(target.role);
-      return false;
-    // Post state -- target is post
-    case "UNHIDE_POST":
-      if (!user) return false;
-      if (user.role === "banned") return false;
-      // Staff can unhide
-      if (isStaffRole(user.role)) return true;
-      if (user.role === "conmod") return true;
-      if (user.role === "arenamod") return true;
-      // GMs can unhide zeroth post
-      if (target.idx === -1 && isTopicGm(user, target.topic)) {
-        return true;
-      }
-      return false;
-    case "HIDE_POST":
-      if (!user) return false;
-      assert(target.topic);
-      if (user.role === "banned") return false;
-      // Cannot hide a post if it is the last post in this topic/RP
-      //if (target.topic && target.topic.posts_count === 1) {
-      //  return false
-      //}
-      // Staff can hide
-      if (isStaffRole(user.role)) return true;
-      // TODO: Only let boutique mods hide posts in their respective forums.
-      if (user.role === "conmod") return true;
-      if (user.role === "arenamod") return true;
-      if (user.role === "pwmod") return true;
-      // GMs can hide zeroth post
-      if (target.idx === -1 && isTopicGm(user, target.topic)) {
-        return true;
-      }
-      // Users can hide their own post if the post within 1 hour
-      // Caution: remember to handle the case where this is the last unhidden
-      // post in a topic.
-      // TEMP: Turned this off while I figure out some issues
-      /* if (user.id === target.user_id && belt.isNewerThan(target.created_at, { hours: 1 })) {
-       *   return true
-       * }*/
-      return false;
-    // Topic state
-    case "MOVE_TOPIC":
-      if (!user) return false;
-      if (isStaffRole(user.role)) return true;
-      return false;
-    case "STICK_TOPIC":
-    case "UNSTICK_TOPIC":
-    case "HIDE_TOPIC":
-    case "UNHIDE_TOPIC":
-    case "CLOSE_TOPIC":
-    case "OPEN_TOPIC":
-      // Guests cannot
-      if (!user) return false;
-      // Banned cannot
-      if (user.role === "banned") return false;
-      // Staff can do this
-      if (isStaffRole(user.role)) return true;
-      // Conmods can manage topics in contest forums
-      if (user.role === "conmod" && CONTEST_FORUMS.includes(target.forum_id))
-        return true;
-      // Arena mod can in arena forums
-      if (user.role === "arenamod" && ARENA_FORUMS.includes(target.forum_id))
-        return true;
-      if (user.role === "pwmod" && PW_FORUMS.includes(target.forum_id))
-        return true;
-      // Can if they are forum mod
-      if ((target.mods || []).some((m) => m.id === user.id)) {
-        return true;
-      }
-      return false;
-    case "CREATE_POST": // target is topic with banned_ids
-      assertBansLoaded(target);
-      if (!user) return false;
-      if (user.role === "banned") return false;
-      // Staff can always create posts anywhere
-      if (isStaffRole(user.role)) return true;
-      // Can if they are forum mod
-      if ((target.mods || []).some((m) => m.id === user.id)) {
-        return true;
-      }
-      // TODO: Limit boutique mods to respective forums.
-      if (user.role === "conmod") {
-        return true;
-      }
-      if (user.role === "arenamod") {
-        return true;
-      }
-      if (user.role === "pwmod") {
-        return true;
-      }
-      // Members can post as long as the topic is open and they are not on
-      // the topic's banlist. READ_GATE keeps them out of hidden and lounge
-      // topics.
-      if (user.role === "member") {
-        if (target.is_closed) return false;
-        if (target.banned_ids.includes(user.id)) return false;
-
-        // Topic latest_post_at must be newer than 1 month
-        // if in certain forums where necro'ing is disruptive
-        if (ANTI_NECRO_FORUMS.includes(target.forum_id)) {
-          debug(ANTI_NECRO_FORUMS.includes(target.forum_id));
-          var t = new Date();
-          t.setMonth(t.getMonth() - 1);
-          return target.latest_post_at > t;
-        }
-        return true;
-      }
-      return false;
-    case "READ_PM": // target is pm with pm.convo and pm.participants props
-      // Guests can't
-      if (!user) return false;
-      // Admin can see all
-      if (user.role === "admin") return true;
-      return target.participants.some((p) => p.id === user.id);
-    case "READ_POST": // target is post with a post.topic prop
-      assert(target, "Post missing");
-      assert(target.topic, "post.topic is missing");
-      // Test the lounge before anything returns, so a short forum row throws
-      // for every viewer
-      if (isModForum(target.forum)) {
-        return _can(user, "LEXUS_LOUNGE");
-      }
-      // Staff can read all posts
-      if (user && isStaffRole(user.role)) return true;
-      // conmods can read all posts in contest forums
-      if (
-        user &&
-        user.role === "conmod" &&
-        CONTEST_FORUMS.includes(target.topic.forum_id)
-      ) {
-        return true;
-      }
-      // arnamods can read all posts in arena forums
-      if (
-        user &&
-        user.role === "arenamod" &&
-        ARENA_FORUMS.includes(target.topic.forum_id)
-      ) {
-        return true;
-      }
-      // pwmods can read all posts in pw forums
-      if (
-        user &&
-        user.role === "pwmod" &&
-        PW_FORUMS.includes(target.topic.forum_id)
-      ) {
-        return true;
-      }
-      // GMs and co-GMs can read every post in their topic, even hidden ones
-      if (isTopicGm(user, target.topic)) {
-        return true;
-      }
-
-      // Everyone else can read a post as long as it's not hidden
-      // and the topic is not hidden
-      return !target.is_hidden && !target.topic.is_hidden;
-    case "READ_USER_IP": // target is a user
-      if (!user) return false;
-      // Staff can only see down-chain
-      if (user.role === "admin") return true;
-      if (user.role === "smod")
-        return ["mod", "member", "banned"].includes(target.role);
-      if (user.role === "mod")
-        return ["member", "banned"].includes(target.role);
-      return false;
-    case "READ_FORUM": // target is a forum
-      if (isModForum(target)) return mayEnterModForums(user);
-      else return true; // for now, anyone can read a non-lexus-lounge forum
-      // TODO: Forum mods should be able to read their own forum,
-      // maybe it canbe hidden from others? Unlisted while they work?
-      return false;
-    case "LEXUS_LOUNGE": // no target
-      if (!user) return false;
-      // All staff can access
-      if (["conmod", "arenamod"].includes(user.role)) return false;
-      // conmods and arenamods can't
-      if (isStaffRole(user.role)) return true;
-      return false;
-    // TODO: Replace LEXUS_LOUNGE with this?
-    case "READ_CATEGORY": //  target is category
-      // Anyone can view any category except for lexus lounge
-      assert(Number.isInteger(target.id), "category.id must be an integer");
-      if (target.id === MOD_CATEGORY_ID) return mayEnterModForums(user);
-      else return true;
-      return false;
-    case "UNSUBSCRIBE_TOPIC":
-      // A user can unsubscribe from a topic if they're logged in
-      return !!user;
-    case "SUBSCRIBE_TOPIC": // target is topic
-      if (!user) return false;
-      // banned cannot
-      if (user.role === "banned") return false;
-      // everyone else can if READ_GATE lets them read the topic
+  },
+  UPDATE_TOPIC_TITLE(user, target) {
+    if (!user) return false;
+    // Banned users can't update their old topics
+    if (user.role === "banned") return false;
+    // Staff can edit all topic titles
+    if (isStaffRole(user.role)) return true;
+    // Topic owner/GM can edit their own titles
+    if (user.id === target.user_id) return true;
+    // Co-GMs can also edit topic title
+    if (target.co_gm_ids.includes(user.id)) return true;
+    // Conmods can edit any topic in contest forums
+    if (user.role === "conmod" && CONTEST_FORUMS.includes(target.forum_id))
       return true;
-    case "CREATE_PM": // target is convo w/ participants prop
-      if (!user) return false;
-      if (user.role === "banned") return false;
-      // User can send pm if they're a participant
-      return !!_.find(target.participants, { id: user.id });
-    case "READ_TOPIC": // target is topic
-      if (isModForum(target.forum)) return mayEnterModForums(user);
-      // conmod can read any topic in contests forum
-      if (
-        user &&
-        user.role === "conmod" &&
-        CONTEST_FORUMS.includes(target.forum_id)
-      )
-        return true;
-      // arenamod can read any topic in arena forums
-      if (
-        user &&
-        user.role === "arenamod" &&
-        ARENA_FORUMS.includes(target.forum_id)
-      )
-        return true;
-      // pwmod can read any topic in pw forums
-      if (user && user.role === "pwmod" && PW_FORUMS.includes(target.forum_id))
-        return true;
-      // Staff can always read hidden topics
-      if (user && target.is_hidden && isStaffRole(user.role)) {
-        return true;
-      }
-      // forum mods can read all tpics in their appointed forum
-      if (user && (target.mods || []).some((m) => m.id === user.id)) {
-        return true;
-      }
-      if (!target.is_hidden) {
-        return true;
-      }
-      return false;
-    case "CREATE_CONVO": // no target
-      if (!user) return false;
-      // Any user that isn't banned can start convo
-      return user.role !== "banned";
-    case "CREATE_TOPIC": // target is forum
-      assert(target);
-      if (!user) return false;
-      if (user.role === "banned") return false;
-      // READ_GATE keeps everyone who cannot read the forum out of it
-      if (
-        ["mod", "arenamod", "conmod", "pwmod", "smod", "admin"].includes(
-          user.role,
-        )
-      )
-        return true;
-      if (user.role === "member") return true;
-      return false;
-    case "UPDATE_PM": // target is pm with pm.convo and pm.participants
-      if (!user) return false;
-      if (user.role === "banned") return false;
-      // Can't update legacy PMs. TODO: Implement BBCode editing for PMs
-      // once post BBCode system is tested
-      if (target.legacy_html) return false;
-      // User can update a PM if they own it
-      if (target.user_id === user.id) return true;
-      return false;
-    case "UPDATE_POST": // target is post with post.topic and banned_ids
-      assertBansLoaded(target);
-      if (!user) return false;
-      if (user.role === "banned") return false;
-      // Admin can update any post
-      if (user.role === "admin") return true;
-      // GM and Co-GM can edit the 0th post
-      if (target.idx === -1 && isTopicGm(user, target.topic)) {
-        return true;
-      }
-      // Cannot update post if banned from topic
+    // Arena mods can edit topic titles in arena forum
+    if (user.role === "arenamod" && ARENA_FORUMS.includes(target.forum_id))
+      return true;
+    if (user.role === "pwmod" && PW_FORUMS.includes(target.forum_id))
+      return true;
+    return false;
+  },
+  READ_USER_ONLINE_STATUS(user, target) {
+    // Guests and members can see status if target isn't in invisible mode.
+    if (!user) return !target.is_ghost;
+    // Members & conmods can see themselves regardless of ghost status
+    if (["member", "conmod"].includes(user.role))
+      return target.id === user.id || !target.is_ghost;
+    // Staff can see ghosts
+    if (isStaffRole(user.role)) return true;
+    return false;
+  },
+  // target is user
+  DELETE_USER(user) {
+    if (!user) return false;
+    return user.role === "admin";
+  },
+  // target is user
+  READ_USER_PM_SENT_COUNT(user) {
+    // Guests cannot
+    if (!user) return false;
+    // Only staff can read user pm-sent count
+    if (isStaffRole(user.role)) return true;
+    return false;
+  },
+  UPDATE_USER_ROLE(user, target) {
+    if (!user) return false;
+    if (user.role === "admin") return true;
+    // smods can change everyone except admin
+    if (user.role === "smod") return target.role !== "admin";
+    // mods can change non-staff and pw-mods
+    if (user.role === "mod")
+      return ["banned", "member", "pwmod"].includes(target.role);
+    return false;
+  },
+  GRANT_EMAIL_GATE_EXEMPTION(user, target) {
+    // Mirrors UPDATE_USER_ROLE: during a mail-delivery incident the thing
+    // staff need is "let this person post". Note this excuses the account
+    // from the write gate; it never claims the address was confirmed
+    // (plan/2026-08-11-1613).
+    if (!user) return false;
+    if (user.role === "admin") return true;
+    if (user.role === "smod") return target.role !== "admin";
+    if (user.role === "mod")
+      return ["banned", "member", "pwmod"].includes(target.role);
+    return false;
+  },
+  UPDATE_USER(user, target) {
+    if (!user) return false;
+    if (user.role === "banned") return false;
+    // Anyone can update themselves
+    if (user.id === target.id) return true;
+    // Staff can change staff below them
+    if (user.role === "admin") return true;
+    if (user.role === "smod") return target.role !== "admin";
+    if (user.role === "mod")
+      return ["banned", "member", "pwmod"].includes(target.role);
+    return false;
+  },
+  // Post state -- target is post
+  UNHIDE_POST(user, target) {
+    if (!user) return false;
+    if (user.role === "banned") return false;
+    // Staff can unhide
+    if (isStaffRole(user.role)) return true;
+    if (user.role === "conmod") return true;
+    if (user.role === "arenamod") return true;
+    // GMs can unhide zeroth post
+    if (target.idx === -1 && isTopicGm(user, target.topic)) {
+      return true;
+    }
+    return false;
+  },
+  HIDE_POST(user, target) {
+    if (!user) return false;
+    if (user.role === "banned") return false;
+    // Cannot hide a post if it is the last post in this topic/RP
+    //if (target.topic && target.topic.posts_count === 1) {
+    //  return false
+    //}
+    // Staff can hide
+    if (isStaffRole(user.role)) return true;
+    // TODO: Only let boutique mods hide posts in their respective forums.
+    if (user.role === "conmod") return true;
+    if (user.role === "arenamod") return true;
+    if (user.role === "pwmod") return true;
+    // GMs can hide zeroth post
+    if (target.idx === -1 && isTopicGm(user, target.topic)) {
+      return true;
+    }
+    // Users can hide their own post if the post within 1 hour
+    // Caution: remember to handle the case where this is the last unhidden
+    // post in a topic.
+    // TEMP: Turned this off while I figure out some issues
+    /* if (user.id === target.user_id && belt.isNewerThan(target.created_at, { hours: 1 })) {
+     *   return true
+     * }*/
+    return false;
+  },
+  // Topic state
+  MOVE_TOPIC(user) {
+    if (!user) return false;
+    if (isStaffRole(user.role)) return true;
+    return false;
+  },
+  STICK_TOPIC: manageTopicStatus,
+  UNSTICK_TOPIC: manageTopicStatus,
+  HIDE_TOPIC: manageTopicStatus,
+  UNHIDE_TOPIC: manageTopicStatus,
+  CLOSE_TOPIC: manageTopicStatus,
+  OPEN_TOPIC: manageTopicStatus,
+  CREATE_POST(user, target) {
+    if (!user) return false;
+    if (user.role === "banned") return false;
+    // Staff can always create posts anywhere
+    if (isStaffRole(user.role)) return true;
+    // Can if they are forum mod
+    if (target.mods.some((m) => m.id === user.id)) {
+      return true;
+    }
+    // TODO: Limit boutique mods to respective forums.
+    if (user.role === "conmod") {
+      return true;
+    }
+    if (user.role === "arenamod") {
+      return true;
+    }
+    if (user.role === "pwmod") {
+      return true;
+    }
+    // Members can post as long as the topic is open and they are not on
+    // the topic's banlist. READ_GATE keeps them out of hidden and lounge
+    // topics.
+    if (user.role === "member") {
+      if (target.is_closed) return false;
       if (target.banned_ids.includes(user.id)) return false;
-      // TODO: Create rules for other staff roles
-      // User can edit their own post
-      if (user.id === target.user_id) return true;
-      // All Staff can edit a post if it's the FAQ_POST_ID
-      if (target.id === config.FAQ_POST_ID && isStaffRole(user.role)) {
-        return true;
-      }
-      // All Staff can edit a post if it's the WELCOME_POST_ID
-      if (target.id === config.WELCOME_POST_ID && isStaffRole(user.role)) {
-        return true;
-      }
-      // All staff can edit any post unless it's admin's post
-      //if (isStaffRole(user.role) && target.user_id !== 1) {
-      //  return true
-      //}
-      return false;
-    case "DELETE_CONVO": // target is convo
-    case "READ_CONVO": // target is convo
-      // Banned members can't
-      if (!user) return false;
-      // Admin can read all convos
-      if (user.role === "admin") return true;
-      // Users can only read convos they're participants of
-      if (target.participants.some((x) => x.id === user.id)) return true;
-      return false;
-    case "DELETE_VM": // target is vm
-      if (!user) return false;
-      if (user.role === "banned") return false;
-      // You can delete your own VM
-      if (user.id === target.from_user_id) return true;
-      // You can delete VMs on your wall unless it's from staff
-      if (user.id === target.to_user_id && user.role === "member")
-        return !isStaffRole(target.from_user.role);
-      // Staff
-      if (user.role === "admin") {
-        return true;
-      }
-      if (user.role === "smod") {
-        return target.from_user.role !== "admin";
-      }
-      if (user.role === "mod") {
-        return !isStaffRole(target.from_user.role);
-      }
-      return false;
-    case "CREATE_VM": // no target
-      // Guests can't
-      if (!user) return false;
-      // Banned can't
-      if (user.role === "banned") return false;
-      // Everyone else can
-      return true;
-    case "NUKE_USER": // target is spambot user
-      // guests cannot
-      if (!user) return false;
-      // staff can ban non-staff
-      if (isStaffRole(user.role) && !isStaffRole(target.role)) return true;
-      return false;
-    case "MANAGE_IMAGES": // target is the user being managed
-      if (!user) return false;
-      if (user.role === "banned") return false;
-      if (user.id === target.id) return true;
-      if (isStaffRole(user.role) && !isStaffRole(target.role)) return true;
-      return false;
-    case "UPLOAD_IMAGE": // target is user the image is uploaded to
-      if (!user) return false;
-      if (user.role === "banned") return false;
-      if (user.id === target.id) return true;
-      return false;
-    case "CHANGE_UNAME": // target is user to have their uname changed
-      assert(target);
-      assert(Number.isInteger(target.id));
-      assert(typeof target.role === "string");
-      // Guests cannot
-      if (!user) return false;
-      // Banned cannot
-      if (user.role === "banned") return false;
-      // Admin can change anyone's uname
-      if (user.role === "admin") return true;
-      // Staff can change their own name and the name of any non-staff
-      if (isStaffRole(user.role)) {
-        if (user.id === target.id) {
-          return true;
-        } else {
-          return !isStaffRole(target.role);
-        }
-      }
-      // Everyone else can only change their own username
-      if (user.id === target.id) return true;
-      return false;
-    //
-    // DICE
-    //
-    case "UPDATE_CAMPAIGN": // target is campaign
-      if (!user) return false;
-      if (user.role === "banned") return false;
-      // people can update their own campaigns
-      if (user.id === target.user_id) return true;
-      // staff can update any campaign
-      if (isStaffRole(user.role)) return true;
-      return false;
-    case "READ_CAMPAIGN": // target is campaign
-      // anyone can
-      return true;
-    case "CREATE_CAMPAIGN": // no target
-      if (!user) return false;
-      // anyone that's not banned can
-      if (user.role !== "banned") return true;
-      return false;
-    // TODO: yes if they are coGM/GM of target.topic_id
-    case "CREATE_ROLL": // target is campaign
-      if (!user) return false;
-      if (user.role === "banned") return false;
-      // can if they own the campaign
-      if (user.id === target.user_id) return true;
-      return false;
-    //
-    // CHAT
-    //
-    case "READ_CHATLOGS": // no target
-      if (!user) return false;
-      if (user.id === 107) return true; // HACK: Let Ellri
-      if (isStaffRole(user.role)) return true; // Only staff can
-      return false;
-    //
-    // GM/CO-GM
-    //
-    case "TOPIC_BAN": // target is { topic, user }
-      if (!user) return false;
-      // Staff cannot be banned
-      if (isStaffRole(target.user.role)) return false;
-      // GM cannot be banned
-      if (target.user.id === target.topic.user_id) return false;
-      // Co-GMs cannot be banned
-      if (target.topic.co_gm_ids.includes(target.user.id)) return false;
-      // Staff can ban
-      if (isStaffRole(user.role)) return true;
-      // GM can ban
-      if (user.id === target.topic.user_id) return true;
-      // Co-GMs can ban
-      if (target.topic.co_gm_ids.includes(user.id)) return true;
-      return false;
-    default:
-      debug("Unsupported cancan action: " + action);
-      return false;
-  }
-}
 
-export const cannot = function (user: any, action: CanAction, target?: any) {
-  return !can(user, action, target);
+      // Topic latest_post_at must be newer than 1 month
+      // if in certain forums where necro'ing is disruptive
+      if (ANTI_NECRO_FORUMS.includes(target.forum_id)) {
+        var t = new Date();
+        t.setMonth(t.getMonth() - 1);
+        return target.latest_post_at !== null && target.latest_post_at > t;
+      }
+      return true;
+    }
+    return false;
+  },
+  // target is pm with pm.convo and pm.participants props
+  READ_PM(user, target) {
+    // Guests can't
+    if (!user) return false;
+    // Admin can see all
+    if (user.role === "admin") return true;
+    return target.participants.some((p) => p.id === user.id);
+  },
+  // target is post with a post.topic prop
+  READ_POST(user, target) {
+    if (isModForum(target.forum)) {
+      return can(user, "LEXUS_LOUNGE");
+    }
+    // Staff can read all posts
+    if (user && isStaffRole(user.role)) return true;
+    // conmods can read all posts in contest forums
+    if (
+      user &&
+      user.role === "conmod" &&
+      CONTEST_FORUMS.includes(target.topic.forum_id)
+    ) {
+      return true;
+    }
+    // arnamods can read all posts in arena forums
+    if (
+      user &&
+      user.role === "arenamod" &&
+      ARENA_FORUMS.includes(target.topic.forum_id)
+    ) {
+      return true;
+    }
+    // pwmods can read all posts in pw forums
+    if (
+      user &&
+      user.role === "pwmod" &&
+      PW_FORUMS.includes(target.topic.forum_id)
+    ) {
+      return true;
+    }
+    // GMs and co-GMs can read every post in their topic, even hidden ones
+    if (isTopicGm(user, target.topic)) {
+      return true;
+    }
+
+    // Everyone else can read a post as long as it's not hidden
+    // and the topic is not hidden
+    return !target.is_hidden && !target.topic.is_hidden;
+  },
+  READ_USER_IP(user, target) {
+    if (!user) return false;
+    // Staff can only see down-chain
+    if (user.role === "admin") return true;
+    if (user.role === "smod")
+      return ["mod", "member", "banned"].includes(target.role);
+    if (user.role === "mod") return ["member", "banned"].includes(target.role);
+    return false;
+  },
+  READ_FORUM(user, target) {
+    if (isModForum(target)) return mayEnterModForums(user);
+    else return true; // for now, anyone can read a non-lexus-lounge forum
+    // TODO: Forum mods should be able to read their own forum,
+    // maybe it canbe hidden from others? Unlisted while they work?
+  },
+  LEXUS_LOUNGE(user) {
+    if (!user) return false;
+    // All staff can access
+    if (["conmod", "arenamod"].includes(user.role)) return false;
+    // conmods and arenamods can't
+    if (isStaffRole(user.role)) return true;
+    return false;
+  },
+  // TODO: Replace LEXUS_LOUNGE with this?
+  READ_CATEGORY(user, target) {
+    // Anyone can view any category except for lexus lounge
+    if (target.id === MOD_CATEGORY_ID) return mayEnterModForums(user);
+    else return true;
+  },
+  UNSUBSCRIBE_TOPIC(user) {
+    // A user can unsubscribe from a topic if they're logged in
+    return !!user;
+  },
+  SUBSCRIBE_TOPIC(user) {
+    if (!user) return false;
+    // banned cannot
+    if (user.role === "banned") return false;
+    // everyone else can if READ_GATE lets them read the topic
+    return true;
+  },
+  // target is convo w/ participants prop
+  CREATE_PM(user, target) {
+    if (!user) return false;
+    if (user.role === "banned") return false;
+    // User can send pm if they're a participant
+    return target.participants.some((p) => p.id === user.id);
+  },
+  READ_TOPIC(user, target) {
+    if (isModForum(target.forum)) return mayEnterModForums(user);
+    // conmod can read any topic in contests forum
+    if (
+      user &&
+      user.role === "conmod" &&
+      CONTEST_FORUMS.includes(target.forum_id)
+    )
+      return true;
+    // arenamod can read any topic in arena forums
+    if (
+      user &&
+      user.role === "arenamod" &&
+      ARENA_FORUMS.includes(target.forum_id)
+    )
+      return true;
+    // pwmod can read any topic in pw forums
+    if (user && user.role === "pwmod" && PW_FORUMS.includes(target.forum_id))
+      return true;
+    // Staff can always read hidden topics
+    if (user && target.is_hidden && isStaffRole(user.role)) {
+      return true;
+    }
+    // forum mods can read all tpics in their appointed forum
+    if (user && target.mods.some((m) => m.id === user.id)) {
+      return true;
+    }
+    if (!target.is_hidden) {
+      return true;
+    }
+    return false;
+  },
+  CREATE_CONVO(user) {
+    if (!user) return false;
+    // Any user that isn't banned can start convo
+    return user.role !== "banned";
+  },
+  // target is forum
+  CREATE_TOPIC(user) {
+    if (!user) return false;
+    if (user.role === "banned") return false;
+    // READ_GATE keeps everyone who cannot read the forum out of it
+    if (
+      ["mod", "arenamod", "conmod", "pwmod", "smod", "admin"].includes(
+        user.role,
+      )
+    )
+      return true;
+    if (user.role === "member") return true;
+    return false;
+  },
+  // target is pm with pm.convo and pm.participants
+  UPDATE_PM(user, target) {
+    if (!user) return false;
+    if (user.role === "banned") return false;
+    // Can't update legacy PMs. TODO: Implement BBCode editing for PMs
+    // once post BBCode system is tested
+    if (target.legacy_html) return false;
+    // User can update a PM if they own it
+    if (target.user_id === user.id) return true;
+    return false;
+  },
+  UPDATE_POST(user, target) {
+    if (!user) return false;
+    if (user.role === "banned") return false;
+    // Admin can update any post
+    if (user.role === "admin") return true;
+    // GM and Co-GM can edit the 0th post
+    if (target.idx === -1 && isTopicGm(user, target.topic)) {
+      return true;
+    }
+    // Cannot update post if banned from topic
+    if (target.topic.banned_ids.includes(user.id)) return false;
+    // TODO: Create rules for other staff roles
+    // User can edit their own post
+    if (user.id === target.user_id) return true;
+    // All Staff can edit a post if it's the FAQ_POST_ID
+    if (target.id === config.FAQ_POST_ID && isStaffRole(user.role)) {
+      return true;
+    }
+    // All Staff can edit a post if it's the WELCOME_POST_ID
+    if (target.id === config.WELCOME_POST_ID && isStaffRole(user.role)) {
+      return true;
+    }
+    // All staff can edit any post unless it's admin's post
+    //if (isStaffRole(user.role) && target.user_id !== 1) {
+    //  return true
+    //}
+    return false;
+  },
+  DELETE_CONVO: readConvo,
+  READ_CONVO: readConvo,
+  DELETE_VM(user, target) {
+    if (!user) return false;
+    if (user.role === "banned") return false;
+    // You can delete your own VM
+    if (user.id === target.from_user_id) return true;
+    // You can delete VMs on your wall unless it's from staff
+    if (user.id === target.to_user_id && user.role === "member")
+      return !isStaffRole(target.from_user.role);
+    // Staff
+    if (user.role === "admin") {
+      return true;
+    }
+    if (user.role === "smod") {
+      return target.from_user.role !== "admin";
+    }
+    if (user.role === "mod") {
+      return !isStaffRole(target.from_user.role);
+    }
+    return false;
+  },
+  CREATE_VM(user) {
+    // Guests can't
+    if (!user) return false;
+    // Banned can't
+    if (user.role === "banned") return false;
+    // Everyone else can
+    return true;
+  },
+  // target is spambot user
+  NUKE_USER(user, target) {
+    // guests cannot
+    if (!user) return false;
+    // staff can ban non-staff
+    if (isStaffRole(user.role) && !isStaffRole(target.role)) return true;
+    return false;
+  },
+  // target is the user being managed
+  MANAGE_IMAGES(user, target) {
+    if (!user) return false;
+    if (user.role === "banned") return false;
+    if (user.id === target.id) return true;
+    if (isStaffRole(user.role) && !isStaffRole(target.role)) return true;
+    return false;
+  },
+  // target is user the image is uploaded to
+  UPLOAD_IMAGE(user, target) {
+    if (!user) return false;
+    if (user.role === "banned") return false;
+    if (user.id === target.id) return true;
+    return false;
+  },
+  // target is user to have their uname changed
+  CHANGE_UNAME(user, target) {
+    // Guests cannot
+    if (!user) return false;
+    // Banned cannot
+    if (user.role === "banned") return false;
+    // Admin can change anyone's uname
+    if (user.role === "admin") return true;
+    // Staff can change their own name and the name of any non-staff
+    if (isStaffRole(user.role)) {
+      if (user.id === target.id) {
+        return true;
+      } else {
+        return !isStaffRole(target.role);
+      }
+    }
+    // Everyone else can only change their own username
+    if (user.id === target.id) return true;
+    return false;
+  },
+  //
+  // DICE
+  //
+  // target is campaign
+  UPDATE_CAMPAIGN(user, target) {
+    if (!user) return false;
+    if (user.role === "banned") return false;
+    // people can update their own campaigns
+    if (user.id === target.user_id) return true;
+    // staff can update any campaign
+    if (isStaffRole(user.role)) return true;
+    return false;
+  },
+  // target is campaign
+  READ_CAMPAIGN() {
+    // anyone can
+    return true;
+  },
+  CREATE_CAMPAIGN(user) {
+    if (!user) return false;
+    // anyone that's not banned can
+    if (user.role !== "banned") return true;
+    return false;
+  },
+  // TODO: yes if they are coGM/GM of target.topic_id
+  // target is campaign
+  CREATE_ROLL(user, target) {
+    if (!user) return false;
+    if (user.role === "banned") return false;
+    // can if they own the campaign
+    if (user.id === target.user_id) return true;
+    return false;
+  },
+  //
+  // CHAT
+  //
+  READ_CHATLOGS(user) {
+    if (!user) return false;
+    if (user.id === 107) return true; // HACK: Let Ellri
+    if (isStaffRole(user.role)) return true; // Only staff can
+    return false;
+  },
+  //
+  // GM/CO-GM
+  //
+  TOPIC_BAN(user, target) {
+    if (!user) return false;
+    // Staff cannot be banned
+    if (isStaffRole(target.user.role)) return false;
+    // GM cannot be banned
+    if (target.user.id === target.topic.user_id) return false;
+    // Co-GMs cannot be banned
+    if (target.topic.co_gm_ids.includes(target.user.id)) return false;
+    // Staff can ban
+    if (isStaffRole(user.role)) return true;
+    // GM can ban
+    if (user.id === target.topic.user_id) return true;
+    // Co-GMs can ban
+    if (target.topic.co_gm_ids.includes(user.id)) return true;
+    return false;
+  },
 };
 
 export function visibleRegistrationIp(currUser: any, user: any): string | null {

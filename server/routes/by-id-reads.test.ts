@@ -20,7 +20,8 @@ import topicsRouter from "./topics";
 // a staff forum; a member unsubscribes from a staff topic by id.
 
 // The repo has no real-database tests. This stub answers the by-id topic and
-// forum queries like the real ones, and every other query with no rows.
+// forum queries like the real ones, and every other query with no rows. A row
+// carries its forum's mods only when the SQL selects them from forum_mods.
 vi.mock("../db/util", () => ({
   pool: { query: vi.fn() },
   maybeOneRow: (res: { rows: unknown[] }) => res.rows[0],
@@ -83,9 +84,19 @@ function forumRow(forum: (typeof forums)[number]) {
   };
 }
 
-function topicRow(topic: (typeof topics)[number]) {
+// No forum here has mods
+function modsFor(sql: string) {
+  return /FROM forum_mods\b/.test(sql) ? { mods: [] } : {};
+}
+
+function topicRow(sql: string, topic: (typeof topics)[number]) {
   const forum = forums.find((f) => f.id === topic.forum_id)!;
-  return { ...topic, co_gm_ids: [...topic.co_gm_ids], forum: { ...forum } };
+  return {
+    ...topic,
+    co_gm_ids: [...topic.co_gm_ids],
+    forum: { ...forum },
+    ...modsFor(sql),
+  };
 }
 
 // The id is the param named in the `WHERE t.id = $n` or `WHERE f.id = $n`
@@ -95,7 +106,7 @@ function answer(sql: string, params: unknown[] = []) {
   if (byTopicId) {
     const id = Number(params[Number(byTopicId[1]) - 1]);
     const topic = topics.find((t) => t.id === id);
-    return { rows: topic ? [topicRow(topic)] : [], rowCount: 0 };
+    return { rows: topic ? [topicRow(sql, topic)] : [], rowCount: 0 };
   }
   const byForumId = /FROM forums f\b[\s\S]*WHERE f\.id = \$(\d+)/.exec(sql);
   if (byForumId) {

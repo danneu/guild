@@ -124,8 +124,8 @@ export function scopeAdmits(
 // Runs a listing for a viewer. `base` is the query that holds the rows and
 // any cap; the scope goes on it. `wrap`, if given, puts the scoped base
 // inside an outer query (ranking, paging) and must not widen it. Every row
-// must pass cancan.can(viewer, action, row), so rows carry what that rule
-// reads (a post's topic and forum, a topic's forum).
+// must pass cancan.can(viewer, action, row), so rows carry what
+// server/cancan.ts#TARGETS declares for the action, or can() throws.
 export async function fetchReadable<A extends ReadAction>(
   viewer: any,
   action: A,

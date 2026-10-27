@@ -512,7 +512,7 @@ router.post("/me/convos/move", async (ctx: Context) => {
 
   const convos = await db.convos
     .getConvos(ids)
-    .then((xs) => xs.map(pre.presentConvo));
+    .then((xs) => xs.map((x) => pre.presentConvo(x)!));
 
   ctx.assert(
     convos.every((convo) => cancan.can(ctx.currUser, "READ_CONVO", convo)),
