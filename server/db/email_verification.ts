@@ -246,6 +246,31 @@ export async function deleteEmailVerificationTokenByToken(
 
 ////////////////////////////////////////////////////////////
 
+// Revoke the user's staged address change, whatever its token value.
+//
+// Keys on user_id on purpose, unlike the collision cleanup above: a password
+// reset must kill every pending staging, because an intruder could have
+// staged their own address before the reset ended their session, then confirm
+// it and take the account back through /forgot. This is the "explicitly
+// cleaned up" exit of I3. The owner stages again, and until then resend falls
+// back to the account's current address.
+export async function deleteEmailVerificationTokenByUserId(
+  db: Queryable,
+  userId: number,
+): Promise<void> {
+  assert(Number.isInteger(userId));
+
+  await db.query(
+    `
+    DELETE FROM email_verification_tokens
+    WHERE user_id = $1
+  `,
+    [userId],
+  );
+}
+
+////////////////////////////////////////////////////////////
+
 // Route-facing wrapper around the consume transaction.
 //
 // The collision cleanup runs *after* the rollback, because the rollback

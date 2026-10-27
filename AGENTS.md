@@ -61,6 +61,10 @@ It charges every login to an attempt budget per typed identifier and per
 network (`server/db/login_attempts.ts`) before any lookup or compare. Over a
 soft limit it asks for a Turnstile challenge, or refuses when Turnstile is not
 configured. At an identifier's hard cap it refuses even a solved challenge.
+After signup, change a password only through
+`server/db/index.ts#replacePasswordTx`, inside a transaction. It ends every
+grant the old password left, other sessions included, before it issues the
+new session.
 A banned user (role `banned`) can read, and can write only through the
 allowlist in `server/middleware/require-not-banned.ts`, which refuses every
 other write before any route runs. A new write route that banned users should

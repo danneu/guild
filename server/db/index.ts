@@ -20,6 +20,7 @@ import {
 import { Client, Pool, PoolClient } from "pg";
 import * as revs from "./revs";
 import { BANNED_IDS_COLUMN } from "./readable";
+import { deleteEmailVerificationTokenByUserId } from "./email_verification";
 import { Context } from "koa";
 import {
   DbConvo,
@@ -160,20 +161,6 @@ export async function updateUserBio(
       [bioMarkup, bioHtml, userId],
     )
     .then(maybeOneRow);
-}
-
-////////////////////////////////////////////////////////////
-
-export async function deleteResetTokens(userId: number) {
-  assert(_.isNumber(userId));
-
-  return pool.query(
-    `
-    DELETE FROM reset_tokens
-    WHERE user_id = $1
-  `,
-    [userId],
-  );
 }
 
 ////////////////////////////////////////////////////////////
@@ -740,27 +727,52 @@ OFFSET $6
 
 ////////////////////////////////////////////////////////////
 
-export const updateUserPassword = async function (
+// Replace a user's password and log them in. Must run inside a transaction.
+//
+// Every password change after signup belongs here. A new password must end
+// every grant that let a holder of the old one act as the account or take it
+// over, so each is deleted before the caller's new session is inserted, and
+// that session is the only one left. The caller hashes first, so bcrypt never
+// holds a pooled client.
+export async function replacePasswordTx(
+  pgClient: PgClientInTransaction,
   userId: number,
-  password: string,
-) {
-  assert(_.isNumber(userId));
-  assert(_.isString(password));
+  digest: string,
+  session: { ipAddress: string; interval: string },
+): Promise<DbSession> {
+  assert(pgClient._inTransaction, "pgClient must be in a transaction");
+  assert(Number.isInteger(userId));
+  assert(typeof digest === "string");
 
-  const digest = await hashPassword(password);
-
-  return pool
-    .query(
-      `
+  await pgClient.query(
+    `
     UPDATE users
     SET digest = $1
     WHERE id = $2
-    RETURNING *
   `,
-      [digest, userId],
-    )
-    .then(maybeOneRow);
-};
+    [digest, userId],
+  );
+
+  await pgClient.query(
+    `
+    DELETE FROM sessions
+    WHERE user_id = $1
+  `,
+    [userId],
+  );
+
+  await pgClient.query(
+    `
+    DELETE FROM reset_tokens
+    WHERE user_id = $1
+  `,
+    [userId],
+  );
+
+  await deleteEmailVerificationTokenByUserId(pgClient, userId);
+
+  return createSession(pgClient, { userId, ...session });
+}
 
 ////////////////////////////////////////////////////////////
 

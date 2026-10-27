@@ -198,7 +198,7 @@ import * as middleware from "./middleware";
 import * as cancan from "./cancan";
 import * as emailer from "./emailer";
 import * as belt from "./belt";
-import { authenticate } from "./auth";
+import { authenticate, hashPassword } from "./auth";
 import bbcode from "./bbcode";
 import bouncer from "koa-bouncer";
 import "./validation"; // Load after koa-bouncer
@@ -993,19 +993,19 @@ router.post("/reset-password", async (ctx: Context) => {
     return ctx.response.redirect("/reset-password?token=" + token);
   }
 
-  // Reset token and passwords were valid, so update user password
-  await db.updateUserPassword(user.id, password1);
+  // Reset token and passwords were valid. Hash before the transaction takes a
+  // pooled client, so bcrypt never holds one.
+  const digest = await hashPassword(password1);
 
-  // Delete user's reset tokens - They're for one-time use
-  await db.deleteResetTokens(user.id);
-
-  // Log the user in
+  // Swap the password, end every grant the old one left alive (other
+  // sessions included), and log the user in, all or nothing.
   const interval = rememberMe ? "1 year" : "1 day";
-  const session = await db.createSession(pool, {
-    userId: user.id,
-    ipAddress: ctx.request.ip,
-    interval: interval,
-  });
+  const session = await withPgPoolTransaction(pool, (pgClient) =>
+    db.replacePasswordTx(pgClient, user.id, digest, {
+      ipAddress: ctx.request.ip,
+      interval,
+    }),
+  );
   ctx.cookies.set("sessionId", String(session.id), {
     expires: belt.futureDate(
       new Date(),
