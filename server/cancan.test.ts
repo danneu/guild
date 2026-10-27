@@ -495,6 +495,63 @@ describe("CREATE_POST", () => {
   });
 });
 
+// Another account of each role. No actor shares its id, so these are never
+// self-edits.
+function otherUser(role: string) {
+  return { id: 200, uname: "Other", role };
+}
+
+const otherUsers = {
+  banned: otherUser("banned"),
+  member: otherUser("member"),
+  conmod: otherUser("conmod"),
+  arenamod: otherUser("arenamod"),
+  pwmod: otherUser("pwmod"),
+  mod: otherUser("mod"),
+  smod: otherUser("smod"),
+  admin: otherUser("admin"),
+};
+
+const userSweep: Sweep<typeof otherUsers>[] = [
+  [
+    "UPDATE_USER_CUSTOM_TITLE",
+    {
+      banned: staff,
+      member: staff,
+      // Mods cannot edit a conmod's or arenamod's profile, title included
+      conmod: only("smod", "admin"),
+      arenamod: only("smod", "admin"),
+      pwmod: staff,
+      mod: only("smod", "admin"),
+      // Smods cannot retitle each other
+      smod: only("admin"),
+      admin: only("admin"),
+    },
+  ],
+];
+
+describe("UPDATE_USER_CUSTOM_TITLE", () => {
+  // Intent: the title rule never grants more than profile edit.
+  // Why it exists: it let mods retitle conmods and arenamods, whose profiles
+  // UPDATE_USER keeps them out of (hunt 261026-0911-029).
+  // Scenario: a mod sets an arenamod's title.
+  sweep("user", otherUsers, userSweep);
+
+  // pwmods and arenamods cannot set their own title; that was the owner's call
+  // in hunt 261026-0911-029.
+  it("lets each role but banned, pwmod and arenamod set their own title", () => {
+    const selfEditors = actorNames.filter(
+      (name) =>
+        name !== "guest" &&
+        can(actors[name], "UPDATE_USER_CUSTOM_TITLE", actors[name]),
+    );
+
+    expect(selfEditors).toEqual(
+      only("member", "forumMod", "gm", "coGm", "conmod", ...staff),
+    );
+  });
+});
+
 const registrationIp = "203.0.113.42";
 
 function user(props: Record<string, unknown> = {}) {

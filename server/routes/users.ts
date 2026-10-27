@@ -450,6 +450,39 @@ router.put("/users/:slug/role", async (ctx: Context) => {
 ////////////////////////////////////////////////////////////
 
 //
+// Update custom title
+//
+// Its own route because UPDATE_USER_CUSTOM_TITLE is narrower than the
+// UPDATE_USER check of the generic PUT /users/:slug.
+//
+// Body:
+// - custom-title: String, blank clears it
+router.put("/users/:slug/custom-title", async (ctx: Context) => {
+  ctx
+    .validateBody("custom-title")
+    .isString()
+    .trim()
+    .isLength(
+      0,
+      50,
+      "custom-title can be up to 50 chars. Yours was " +
+        ctx.request.body["custom-title"].length +
+        ".",
+    );
+
+  const user = await db.findUserBySlug(ctx.params.slug);
+  ctx.assert(user, 404);
+  ctx.assertAuthorized(ctx.currUser, "UPDATE_USER_CUSTOM_TITLE", user);
+
+  await db.updateUserCustomTitle(user.id, ctx.vals["custom-title"]);
+  const presentedUser = pre.presentUser(user)!;
+  ctx.flash = { message: ["success", "Custom title updated"] };
+  ctx.response.redirect(presentedUser.url + "/edit");
+});
+
+////////////////////////////////////////////////////////////
+
+//
 // Excuse a user from the email confirmation write gate.
 //
 // Deliberately not a force-verify (plan/2026-08-11-1613): stamping
@@ -577,13 +610,23 @@ router.get("/api/users/:userIdOrSlug", async (ctx: Context) => {
 // - hide-sigs
 // - hide-avatars
 // - is-ghost
-// - custom-title
 // - is-grayscale
 // - force-device-width
+//
+// custom-title has a narrower rule, so it has its own route,
+// PUT /users/:slug/custom-title.
 //
 // @koa2
 router.put("/users/:slug", async (ctx: Context) => {
   debug("BEFORE", ctx.request.body);
+
+  // Fail loudly, not with a "User updated" flash for a write that never
+  // happened, if a stale form still posts the title here.
+  ctx.assert(
+    ctx.request.body["custom-title"] === undefined,
+    400,
+    "This form is out of date. Reload the page and try again.",
+  );
 
   ctx
     .validateBody("eflags")
@@ -596,18 +639,6 @@ router.put("/users/:slug", async (ctx: Context) => {
   ctx.validateBody("sig").optional();
   ctx.validateBody("avatar-url").optional();
 
-  if (typeof ctx.request.body["custom-title"] === "string") {
-    ctx
-      .validateBody("custom-title")
-      .tap((s) => s.trim())
-      .isLength(
-        0,
-        50,
-        "custom-title can be up to 50 chars. Yours was " +
-          ctx.request.body["custom-title"].length +
-          ".",
-      );
-  }
   if (
     ctx.request.body["avatar-url"] &&
     ctx.request.body["avatar-url"].length > 0
@@ -657,7 +688,6 @@ router.put("/users/:slug", async (ctx: Context) => {
   await db.updateUser(user.id, {
     sig: sig_markup,
     sig_html: sig_html,
-    custom_title: ctx.vals["custom-title"],
     avatar_url: ctx.request.body["avatar-url"],
     hide_sigs: _.isBoolean(ctx.vals["hide-sigs"])
       ? ctx.vals["hide-sigs"]

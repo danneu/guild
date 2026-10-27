@@ -36,6 +36,7 @@ vi.mock("../db", () => ({
   findUserBySlug: vi.fn(),
   deleteAvatar: vi.fn(),
   updateUser: vi.fn(),
+  updateUserCustomTitle: vi.fn(),
   deleteLegacyAvatar: vi.fn(),
   updateUserActiveTrophyId: vi.fn(),
   deactivateCurrentTrophyForUserId: vi.fn(),
@@ -46,7 +47,9 @@ vi.mock("../db", () => ({
 
 const alice = { id: 1, uname: "Alice", slug: "alice", role: "member" };
 const bob = { id: 2, uname: "Bob", slug: "bob", role: "member" };
-const users = [alice, bob];
+const smod = { id: 3, uname: "Smod", slug: "smod", role: "smod" };
+const otherSmod = { id: 4, uname: "Other", slug: "other", role: "smod" };
+const users = [alice, bob, smod, otherSmod];
 const trophyId = 5;
 
 beforeEach(() => {
@@ -64,9 +67,10 @@ beforeEach(() => {
 //
 // A bare Koa app with only what these routes read from ctx. server/index.ts
 // cannot be imported here: loading it starts cache3 and app.listen. The authz
-// shim mirrors the one in server/index.ts, so a denied check is a 404 too.
-// The flash setter records what the handler set, since there is no flash
-// middleware.
+// shim and the ValidationError handler mirror the ones in server/index.ts, so
+// a denied check is a 404 and a bad field a redirect back with a danger
+// flash. The flash setter records what the handler set, since there is no
+// flash middleware.
 
 type Req = {
   method: "POST" | "PUT" | "DELETE";
@@ -97,6 +101,15 @@ async function send(req: Req) {
     return next();
   });
   app.use(bouncer.middleware());
+  app.use(async (ctx: Context, next: Next) => {
+    try {
+      await next();
+    } catch (ex) {
+      if (!(ex instanceof bouncer.ValidationError)) throw ex;
+      ctx.flash = { message: ["danger", ex.message] };
+      ctx.back("/");
+    }
+  });
   app.use(router.routes());
 
   const server = http.createServer(app.callback());
@@ -288,5 +301,69 @@ describe("/users/:user_id/active-trophy", () => {
 
     expect(db.updateUserActiveTrophyId).not.toHaveBeenCalled();
     expect(db.deactivateCurrentTrophyForUserId).not.toHaveBeenCalled();
+  });
+});
+
+describe("PUT /users/:slug", () => {
+  // Intent: the generic profile route never writes users.custom_title.
+  // Why it exists: it wrote the title after checking only UPDATE_USER, so a
+  // hand-made request got past UPDATE_USER_CUSTOM_TITLE, which only hid the
+  // form (hunt 261026-0911-029).
+  // Scenario: an smod PUTs another smod's profile with a custom-title field.
+  it("refuses a custom-title instead of writing it", async () => {
+    const res = await send({
+      method: "PUT",
+      path: `/users/${otherSmod.slug}`,
+      currUser: smod,
+      body: { "custom-title": "Retitled" },
+    });
+
+    expect(db.updateUser).not.toHaveBeenCalled();
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("PUT /users/:slug/custom-title", () => {
+  it("lets a member set their own title, trimmed", async () => {
+    const res = await send({
+      method: "PUT",
+      path: `/users/${alice.slug}/custom-title`,
+      currUser: alice,
+      body: { "custom-title": "  The Bearded  " },
+    });
+
+    expect(res.status).toBe(302);
+    expect(res.location).toBe("/users/alice/edit");
+    expect(db.updateUserCustomTitle).toHaveBeenCalledWith(
+      alice.id,
+      "The Bearded",
+    );
+  });
+
+  it("does not let an smod retitle another smod", async () => {
+    const res = await send({
+      method: "PUT",
+      path: `/users/${otherSmod.slug}/custom-title`,
+      currUser: smod,
+      body: { "custom-title": "Retitled" },
+    });
+
+    expect(res.status).toBe(404);
+    expect(db.updateUserCustomTitle).not.toHaveBeenCalled();
+  });
+
+  it("sends a title over 50 chars back without writing it", async () => {
+    const res = await send({
+      method: "PUT",
+      path: `/users/${alice.slug}/custom-title`,
+      currUser: alice,
+      body: { "custom-title": "x".repeat(51) },
+    });
+
+    expect(res.status).toBe(302);
+    expect(res.flash).toMatchObject({
+      message: ["danger", expect.stringContaining("up to 50 chars")],
+    });
+    expect(db.updateUserCustomTitle).not.toHaveBeenCalled();
   });
 });

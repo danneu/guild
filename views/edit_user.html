@@ -172,7 +172,7 @@
 
       <!-- Change custom_title form -->
       {% if ctx.can(ctx.currUser, 'UPDATE_USER_CUSTOM_TITLE', user) %}
-        <form action="{{ user.url }}" method="post" class="form-horizontal">
+        <form action="{{ user.url }}/custom-title" method="post" class="form-horizontal">
           <input type="hidden" name="_method" value="put">
           <div class="panel panel-default no-select" style="border-color: #000">
             <div class="panel-heading">Edit Custom Title</div>

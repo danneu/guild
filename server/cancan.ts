@@ -342,8 +342,10 @@ function _can(
       if (isStaffRole(user.role)) return true;
       return false;
     case "UPDATE_USER_CUSTOM_TITLE": // target is user
-      // Guests cannot
-      if (!user) return false;
+      // Never more than profile edit, so the title route grants no power over
+      // a profile whose edit page the user cannot open. Guests and banned
+      // users stop here.
+      if (!can(user, "UPDATE_USER", target)) return false;
       // Members and Conmods can only change their own
       if (["member", "conmod"].includes(user.role))
         return user.id === target.id;

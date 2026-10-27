@@ -1300,6 +1300,8 @@ export const createTopic = async function (props) {
 // Note: deliberately has no email slot. Confirmation is the sole writer of
 // users.email (plan/2026-08-11-1613/I2); a slot here would be a second writer,
 // able to change the address while email_verified_at stays set.
+// Nor a custom_title slot: updateUserCustomTitle is that column's sole writer,
+// so only a route that checked UPDATE_USER_CUSTOM_TITLE reaches it.
 export const updateUser = async (userId, attrs) => {
   debug("[updateUser] attrs", attrs);
 
@@ -1313,12 +1315,11 @@ export const updateUser = async (userId, attrs) => {
       hide_sigs = COALESCE($3, hide_sigs),
       is_ghost = COALESCE($4, is_ghost),
       sig_html = COALESCE($5, sig_html),
-      custom_title = COALESCE($6, custom_title),
-      is_grayscale = COALESCE($7, is_grayscale),
-      force_device_width = COALESCE($8, force_device_width),
-      hide_avatars = COALESCE($9, hide_avatars),
-      eflags = COALESCE($10, eflags)
-    WHERE id = $11
+      is_grayscale = COALESCE($6, is_grayscale),
+      force_device_width = COALESCE($7, force_device_width),
+      hide_avatars = COALESCE($8, hide_avatars),
+      eflags = COALESCE($9, eflags)
+    WHERE id = $10
     RETURNING *
   `,
       [
@@ -1327,7 +1328,6 @@ export const updateUser = async (userId, attrs) => {
         attrs.hide_sigs,
         attrs.is_ghost,
         attrs.sig_html,
-        attrs.custom_title,
         attrs.is_grayscale,
         attrs.force_device_width,
         attrs.hide_avatars,
@@ -1337,6 +1337,18 @@ export const updateUser = async (userId, attrs) => {
     )
     .then(maybeOneRow);
 };
+
+// The sole writer of users.custom_title. Its guard is UPDATE_USER_CUSTOM_TITLE.
+export async function updateUserCustomTitle(userId: number, title: string) {
+  return pool.query(
+    `
+    UPDATE users
+    SET custom_title = $1
+    WHERE id = $2
+  `,
+    [title, userId],
+  );
+}
 
 ////////////////////////////////////////////////////////////
 
