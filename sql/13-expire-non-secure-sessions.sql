@@ -1,0 +1,42 @@
+-- One-time sweep for hunt finding 261026-0911-014: log out every session
+-- whose cookie went out without Secure.
+--
+-- Not a schema change, and server/reset_db.ts does not run it: a fresh
+-- database has no such sessions.
+--
+-- WHY. Before server/cookie-policy.ts#installCookiePolicy, the sessionId
+-- cookie went out with no Secure and no SameSite. A browser sends only a
+-- cookie's name and value, so the server cannot tell an old cookie from a
+-- new one. Old cookies stay valid until their session expires, a year for
+-- remember-me and registration. Expiring those sessions makes every
+-- non-Secure session cookie worthless. Each member logs in once more.
+--
+-- WHEN TO RUN. Three ordered steps:
+--
+--   1. before the deploy, confirm Cloudflare's "Always Use HTTPS" is on. A
+--      plain-http visitor gets a Secure Set-Cookie that the browser drops, so
+--      without the redirect, logins over http never stick
+--   2. deploy the build with the cookie policy
+--   3. wait for the old build to fully drain, then run THIS FILE
+--
+-- Do not run it before the old build has drained: until then the old build
+-- keeps issuing non-Secure cookies, and a session it creates after the cutoff
+-- would survive. A member who logs in on the new build before the cutoff has
+-- to log in once more.
+--
+-- HOW TO RUN. Autocommit, same as 9b:
+--
+--   psql -f 13-expire-non-secure-sessions.sql
+--
+-- BEFORE RUNNING, pin one placeholder as a literal (e.g. '2026-11-02 14:03:00+00'):
+--   <time the old build drained>
+-- The file will not run with the placeholder in place -- that is deliberate,
+-- the value must be pinned by hand and stay fixed across re-runs.
+--
+-- IDEMPOTENT. The cutoff is a fixed literal, not NOW(), so a re-run never
+-- reaches sessions the new build created after it. A second pass matches
+-- nothing, since every row the first pass touched is already expired.
+
+UPDATE sessions SET expired_at = NOW()
+  WHERE created_at < '<time the old build drained>'
+    AND expired_at > NOW();

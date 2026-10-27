@@ -17,8 +17,8 @@ const STATE_MAX_AGE_MS = 10 * 60 * 1000;
  * Starts a flow: stores a fresh random state in the browser and returns it for
  * the authorize URL. sameSite must stay "lax", because the return from
  * discord.com is a cross-site top-level GET and "strict" would drop the
- * cookie. There is no secure option: behind Fly, Koa sees plain http, and
- * cookies 0.9.1 throws on secure: true there.
+ * cookie. There is no secure option: server/cookie-policy.ts#installCookiePolicy
+ * adds Secure to every cookie the server sets.
  */
 export function issueOAuthState(ctx: Context): string {
   const state = crypto.randomBytes(32).toString("base64url");

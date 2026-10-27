@@ -159,3 +159,8 @@ AWS S3 (file storage), AWS SES (email), and Cloudflare Turnstile (CAPTCHA).
   JSON-encode, such as a db row, answers 500 at
   `server/middleware/response-edge.ts`, and `pnpm test` fails on a handler
   that stringifies a body or sets a JSON type itself. Add a view instead.
+- Every cookie the server sets is HttpOnly and SameSite=Lax, and Secure when
+  `HOST` is https, whatever options the call passes (see
+  `server/cookie-policy.ts#installCookiePolicy`). Behind Fly, TLS ends before
+  Node, so `ctx.secure` and `ctx.protocol` say http: never decide anything on
+  them.

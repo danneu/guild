@@ -8,7 +8,13 @@ import { join } from "path";
 import Router from "@koa/router";
 
 import Koa, { Context, Next } from "koa";
+import { installCookiePolicy } from "./cookie-policy.js";
 const app = new Koa();
+// Every cookie the server sets gets its security attributes here. Secure keys
+// on HOST because ctx.secure is false behind Fly.
+installCookiePolicy(app, {
+  secure: new URL(config.HOST).protocol === "https:",
+});
 
 import koaBetterStatic from "@ladjs/koa-better-static";
 import koaSend from "koa-send";
