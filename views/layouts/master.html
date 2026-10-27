@@ -244,10 +244,7 @@
       if (!isCheatsheetRendered) {
         console.log('rendering cheatsheet');
         $('#bbcode-cheatsheet .bbcode').each(function() {
-          $(this).html(XBBCODE.process({
-            text: $(this).text(),
-            addInLineBreaks: true
-          }).html);
+          $(this).html(XBBCODE.render($(this).text()).html);
         });
         isCheatsheetRendered = true;
       }

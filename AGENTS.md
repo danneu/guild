@@ -78,6 +78,14 @@ authorization check. It keeps the file in memory, so no temp file exists, and
 it draws on one byte budget per process. A test fails if any other file
 imports koa-body or formidable.
 
+**User html:** Pages print stored user html with `|safe`. Render BBCode with
+the default export of `server/bbcode.js`, which ends in
+`server/user_html.ts#sanitizeUserHtml`. Any other code that stores user html
+calls `sanitizeUserHtml` itself, and none copies stored html from another row.
+In `server/bbcode.js` a tag writes user text into an attribute only through
+`attrValue`, and `server/bbcode.test.ts` sweeps every tag against the
+sanitizer's allowlist.
+
 **Asset pipeline:** Gulp concatenates and minifies CSS/JS into versioned bundles
 in `dist/`. In development assets are served individually; in production the
 bundled assets are served. Browser vendor libs are copied from `node_modules`
@@ -134,7 +142,9 @@ AWS S3 (file storage), AWS SES (email), and Cloudflare Turnstile (CAPTCHA).
 
 - Some `server/` code is still `.js` (e.g. `server/bbcode.js`), and a few files
   are copied into `public/` by Gulp (`bbcode.js` -> `public/vendor/xbbcode/`,
-  `ago.js` -> `public/js/`). Edit the `server/` source, not the copy.
+  `ago.js` -> `public/js/`). Edit the `server/` source, not the copy. The
+  copies are tracked and dev serves them as-is, so regenerate them with
+  `pnpm exec gulp copyServerFiles` and commit them with the source.
 - The `img-proxy/` worker runs TypeScript directly via Wrangler -- no separate
   compile step. See `img-proxy/AGENTS.md`.
 - Only `ctx.render` output goes out as HTML. Any other string or Buffer body

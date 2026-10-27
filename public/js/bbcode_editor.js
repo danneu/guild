@@ -349,10 +349,8 @@ var w;
         // if (!e.isDirty())
         //   return e.getContent();
 
-        var result = XBBCODE.process({
-          text: e.getContent(),
-          addInLineBreaks: true
-        });
+        // The same render the server stores, Autolinker included.
+        var result = XBBCODE.render(e.getContent());
 
         // Display errs in editor footer if there are any
         e.$editor.find('.bbcode-errors p').html('Errors: ');
@@ -368,10 +366,7 @@ var w;
           e.$editor.find('.bbcode-errors p').append(' <span class="label label-success">None</span>');
         }
 
-        // window.autolinkerOpts defined in bbcode.js which must
-        // load before this file on client side
-        var outputHtml = Autolinker.link(result.html, window.autolinkerOpts);
-        return outputHtml;
+        return result.html;
       },
       buttons: [[]],
       // hiddenButtons: ['cmdBold', 'cmdItalic', 'cmdHeading',

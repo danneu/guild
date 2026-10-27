@@ -6,6 +6,7 @@ import Router from "@koa/router";
 import * as db from "../db/index.js";
 import * as belt from "../belt.js";
 import * as pre from "../presenters.js";
+import { sanitizeUserHtml } from "../user_html.js";
 import { Context, Next } from "koa";
 
 ////////////////////////////////////////////////////////////
@@ -41,7 +42,7 @@ router.post("/me/statuses", async (ctx: Context) => {
     .isString("text is required")
     .trim()
     .isLength(1, 200, "text must be 1-200 chars");
-  const html = belt.autolink(belt.escapeHtml(ctx.vals.text));
+  const html = sanitizeUserHtml(belt.autolink(belt.escapeHtml(ctx.vals.text)));
   await db.createStatus({
     user_id: ctx.currUser.id,
     text: ctx.vals.text,

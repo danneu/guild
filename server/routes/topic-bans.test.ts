@@ -26,9 +26,10 @@ vi.mock("../db", async (importOriginal) => {
   return {
     ...real,
     createPost: vi.fn(),
+    updatePost: vi.fn(),
     ratelimits: { ...real.ratelimits, bump: vi.fn() },
     notifications: { ...real.notifications, notifyNewPost: vi.fn() },
-    revs: { ...real.revs, getPostRev: vi.fn(), revertPostRev: vi.fn() },
+    revs: { ...real.revs, getPostRevMarkup: vi.fn() },
   };
 });
 
@@ -89,6 +90,8 @@ const posts = [bannedPost, playerPost];
 const topicBans = [
   { topic_id: topic.id, banned_by_id: gm.id, banned_id: banned.id },
 ];
+// The markup saved in the revision a revert asks for.
+const revMarkup = "My character sheathes her sword.";
 
 // Answers the by-id topic and post loaders the way Postgres would. A row
 // carries banned_ids only when the query selects it from topic_bans. Any
@@ -131,10 +134,7 @@ beforeEach(() => {
     mentionsCount: 0,
     quotesCount: 0,
   });
-  vi.mocked(db.revs.getPostRev).mockImplementation(
-    async (postId: number, revId: number) =>
-      ({ id: revId, post_id: postId }) as any,
-  );
+  vi.mocked(db.revs.getPostRevMarkup).mockResolvedValue(revMarkup);
 });
 
 ////////////////////////////////////////////////////////////
@@ -228,10 +228,13 @@ describe("POST /posts/:postId/revisions/:revId/revert", () => {
       currUser: player,
     });
 
-    expect(db.revs.revertPostRev).toHaveBeenCalledWith(
+    expect(db.revs.getPostRevMarkup).toHaveBeenCalledWith(playerPost.id, revId);
+    expect(db.updatePost).toHaveBeenCalledWith(
       player.id,
       playerPost.id,
-      revId,
+      revMarkup,
+      expect.any(String),
+      `Reverted to revision ${revId}`,
     );
     expect(res.status).toBe(302);
     expect(pool.query).toHaveBeenCalled();
@@ -244,7 +247,7 @@ describe("POST /posts/:postId/revisions/:revId/revert", () => {
       currUser: banned,
     });
 
-    expect(db.revs.revertPostRev).not.toHaveBeenCalled();
+    expect(db.updatePost).not.toHaveBeenCalled();
     expect(res.status).toBe(404);
   });
 });

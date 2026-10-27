@@ -312,15 +312,13 @@ router.post("/users", checkCloudflareTurnstile, async (ctx: Context) => {
   });
 
   // Send user the introductory PM
-  // quirk: welcome-post can point to a post that has no html/markup if the post is ancient
+  // quirk: welcome-post can point to a post that has no markup if the post is ancient
   const welcomePost = cache3.get("welcome-post");
-  if (
-    config.STAFF_REPRESENTATIVE_ID &&
-    welcomePost &&
-    welcomePost.markup &&
-    welcomePost.html
-  ) {
-    const { markup, html } = welcomePost;
+  if (config.STAFF_REPRESENTATIVE_ID && welcomePost && welcomePost.markup) {
+    const { markup } = welcomePost;
+    // Render the markup rather than copy the cached post's html, so the PM
+    // gets html from the current renderer and sanitizer.
+    const html = bbcode(markup);
 
     // TODO: All queries in this route should be wrapped in the same transaction
     await withPgPoolTransaction(pool, async (pgClient) => {

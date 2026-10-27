@@ -36,45 +36,6 @@ export async function insertPostRev(
   );
 }
 
-export async function revertPostRev(
-  userId: number,
-  postId: number,
-  revId: number,
-) {
-  assert(Number.isInteger(userId));
-  assert(Number.isInteger(postId));
-  assert(Number.isInteger(revId));
-
-  const reason = `Reverted to revision ${revId}`;
-
-  return pool.query(
-    `
-    WITH rev AS (
-      INSERT INTO post_revs (user_id, post_id, markup, html, length, reason)
-      SELECT
-        $1,
-        $2,
-        markup,
-        html,
-        length,
-        $3
-      FROM post_revs
-      WHERE id = $4
-      RETURNING html, markup
-    )
-    UPDATE posts
-    SET markup = rev.markup
-      , html = rev.html
-      , updated_at = NOW()
-    FROM rev
-    WHERE posts.id = $2
-  `,
-    [userId, postId, reason, revId],
-  );
-}
-
-////////////////////////////////////////////////////////////
-
 export async function getPostRevMarkup(postId: number, revId: number) {
   assert(Number.isInteger(postId));
   assert(Number.isInteger(revId));

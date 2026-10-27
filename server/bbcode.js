@@ -8,7 +8,7 @@
 var isServer = typeof window === "undefined";
 var isBrowser = typeof window !== "undefined";
 
-var util, cache3;
+var util, cache3, userHtml;
 if (isServer) {
   // Node
   util = require("util");
@@ -16,26 +16,14 @@ if (isServer) {
   var Autolinker = require("autolinker");
   // 1st party
   cache3 = require("./cache3").default;
+  userHtml = require("./user_html");
 }
-
-const escapeHtml = (() => {
-  const escapeMap = {
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#039;",
-  };
-  const escapeRegex = /[&<>"']/g;
-
-  return function escapeHtml(unsafe) {
-    return unsafe.replace(escapeRegex, (char) => escapeMap[char]);
-  };
-})();
 
 // String -> Maybe String
 function extractYoutubeId(url) {
-  var re = /^.*(?:youtu.be\/|v\/|e\/|u\/\w+\/|embed\/|v=)([^#\&\?]{11}).*/;
+  // A youtube id is always 11 of these characters. The id goes into the
+  // iframe src, so nothing else may get through.
+  var re = /^.*(?:youtu.be\/|v\/|e\/|u\/\w+\/|embed\/|v=)([A-Za-z0-9_-]{11}).*/;
   var match = url.match(re);
   return match && match[1];
 }
@@ -211,6 +199,51 @@ var XBBCODE = (function () {
   // This allows openTag and closeTag to communicate an error state.
   var hasError = {};
 
+  // Tags write user text into an HTML attribute only through attrValue. The
+  // string passes that run after the tags (hr, greentext, smilies, mentions,
+  // newlines, Autolinker) cannot tell an attribute value from text, so
+  // attrValue hides each value behind a placeholder until me.render swaps it
+  // back as its last step. processMarkup strips ATTR_MARK from the input, so
+  // only attrValue can make a placeholder.
+  var ATTR_MARK = "\u0000";
+  var attrPlaceholderRegExp = /\u0000(\d+)\u0000/g;
+  // The current render's attribute values, indexed by placeholder. Null
+  // outside me.render, so a tag run with no render to restore its values
+  // fails loudly.
+  var attrValues = null;
+
+  // text is renderer text: entry has already escaped < and > as entities,
+  // and any & is the user's own, read as an entity as everywhere else in a
+  // post. So this escapes the quote, plus any raw < or > from processed tag
+  // content, and leaves & alone: escaping & would show "&lt;" for a typed
+  // "<".
+  function attrValue(text) {
+    if (attrValues === null) {
+      throw new Error("attrValue called outside XBBCODE.render");
+    }
+    if (text.indexOf(ATTR_MARK) !== -1) {
+      throw new Error("attrValue got text that holds a placeholder");
+    }
+    attrValues.push(
+      text.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;"),
+    );
+    return ATTR_MARK + (attrValues.length - 1) + ATTR_MARK;
+  }
+
+  function restoreAttrValues(html, values) {
+    var restored = html.replace(attrPlaceholderRegExp, function (_, idx) {
+      var value = values[Number(idx)];
+      if (value === undefined) {
+        throw new Error("bbcode attribute placeholder has no value");
+      }
+      return value;
+    });
+    if (restored.indexOf(ATTR_MARK) !== -1) {
+      throw new Error("bbcode output still holds an attribute placeholder");
+    }
+    return restored;
+  }
+
   function generateUuid() {
     return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
       /[xy]/g,
@@ -366,7 +399,7 @@ var XBBCODE = (function () {
         colorCode = "#" + colorCode;
       }
 
-      return '<font color="' + colorCode + '">';
+      return '<font color="' + attrValue(colorCode) + '">';
     },
     closeTag: function (params, content) {
       var ret = hasError.color ? "&#91;/color&#93;" : "</font>";
@@ -392,12 +425,13 @@ var XBBCODE = (function () {
     hider: {
       trimContents: true,
       openTag: function (params, content) {
-        var title = params ? escapeHtml(params.slice(1)) : "Hider";
+        // Renderer text, already safe as element content.
+        var title = params ? params.slice(1) : "Hider";
         return (
           '<div class="hider-panel">' +
           '<div class="hider-heading">' +
           '<button type="button" class="btn btn-default btn-xs hider-button" data-name="' +
-          title +
+          attrValue(title) +
           '">' +
           // title + ' [+]'+
           // Must use html entity code for brackets so i dont trip
@@ -422,7 +456,7 @@ var XBBCODE = (function () {
         var src = "//youtube.com/embed/" + youtubeId + "?theme=dark";
         return (
           '<iframe src="' +
-          src +
+          attrValue(src) +
           '" frameborder="0" width="496" height="279" allowfullscreen></iframe>'
         );
       },
@@ -433,7 +467,9 @@ var XBBCODE = (function () {
     abbr: {
       openTag: function (params, content) {
         return (
-          '<abbr class="bb-abbr" title="' + (params && params.slice(1)) + '">'
+          '<abbr class="bb-abbr" title="' +
+          attrValue(params ? params.slice(1) : "") +
+          '">'
         );
       },
       closeTag: function (params, content) {
@@ -664,7 +700,7 @@ var XBBCODE = (function () {
           myUrl = "";
         }
 
-        return '<img src="' + escapeHtml(myUrl) + '" />';
+        return '<img src="' + attrValue(myUrl) + '" />';
       },
       closeTag: function (params, content) {
         return "";
@@ -893,7 +929,7 @@ var XBBCODE = (function () {
       openTag: function (params, content) {
         if (isFirstTableRow) return '<th class="bb-th">';
 
-        var classNames = [""],
+        var classNames = [],
           status;
         // Determine the status if one is given.
         switch (params && params.slice(1)) {
@@ -940,7 +976,7 @@ var XBBCODE = (function () {
           return '<thead class="bb-thead"><tr class="bb-tr">';
         }
 
-        var classNames = [""],
+        var classNames = [],
           status;
         // Determine the status if one is given.
         switch (params && params.slice(1)) {
@@ -1021,11 +1057,13 @@ var XBBCODE = (function () {
         // keep synced with Autolinker#replaceFn definedin this file
         if (/roleplayerguild.com/i.test(myUrl)) {
           // internal link
-          return '<a href="' + myUrl + '">';
+          return '<a href="' + attrValue(myUrl) + '">';
         } else {
           // external link
           return (
-            '<a target="_blank" rel="nofollow noopener" href="' + myUrl + '">'
+            '<a target="_blank" rel="nofollow noopener" href="' +
+            attrValue(myUrl) +
+            '">'
           );
         }
       },
@@ -1362,10 +1400,14 @@ var XBBCODE = (function () {
     initTags();
   };
 
-  me.process = function (config) {
+  // Private: only me.render may run it, since its output holds attribute
+  // placeholders that me.render swaps back.
+  function processMarkup(config) {
     var ret = { html: "", error: false },
       errQueue = [];
 
+    // Only attrValue may make a placeholder.
+    config.text = config.text.split(ATTR_MARK).join("");
     config.text = config.text.replace(/</g, "&lt;"); // escape HTML tag brackets
     config.text = config.text.replace(/>/g, "&gt;"); // escape HTML tag brackets
 
@@ -1460,6 +1502,24 @@ var XBBCODE = (function () {
     ret.errorQueue = errQueue;
 
     return ret;
+  }
+
+  // API. The one render path for the server export, the editor preview and
+  // the cheatsheet: tags and string passes, then Autolinker, then attribute
+  // values swapped back last so that no pass can reach them.
+  // Returns { html, error, errorQueue }.
+  me.render = function (markup) {
+    attrValues = [];
+    try {
+      var ret = processMarkup({ text: markup, addInLineBreaks: true });
+      ret.html = restoreAttrValues(
+        Autolinker.link(ret.html, autolinkerOpts),
+        attrValues,
+      );
+      return ret;
+    } finally {
+      attrValues = null;
+    }
   };
 
   return me;
@@ -1485,32 +1545,27 @@ var autolinkerOpts = {
   },
 };
 
-// Allow bbcode_editor.js to access it
+// Allow public/js/chat.js to access it
 if (isBrowser) {
   window.autolinkerOpts = autolinkerOpts;
 }
 
 if (typeof window === "undefined") {
-  // We're on the server, so export module
+  // We're on the server, so export module. Its html is what gets stored, so
+  // it always passes the sanitizer in server/user_html.ts.
   module.exports = function (markup) {
-    var result,
-      start = Date.now();
-    result = XBBCODE.process({ text: markup, addInLineBreaks: true });
-    // Linkify URLs
-    var html = Autolinker.link(result.html, autolinkerOpts);
-    var diff = Date.now() - start;
-    // console.log(util.format('[bbcode.js] Rendered %s chars of BBCode in %sms', markup.length, diff));
-    // console.log('[bbcode.js] result.error:', result.error);
-    // console.log('[bbcode.js] result.errorQueue',result.errorQueue);
-
-    return html;
+    return userHtml.sanitizeUserHtml(XBBCODE.render(markup).html);
   };
+  // The renderer's html before the sanitizer, for code that checks or wraps
+  // the two steps apart. Never store it.
+  module.exports.renderUnsanitized = function (markup) {
+    return XBBCODE.render(markup).html;
+  };
+  module.exports.tagNames = Object.keys(XBBCODE.tags());
 } else {
   // We're on the client so export to window
   window.bbcode = function (markup) {
-    var result = XBBCODE.process({ text: markup, addInLineBreaks: true });
-    var html = Autolinker.link(result.html, autolinkerOpts);
-    return html;
+    return XBBCODE.render(markup).html;
   };
 }
 

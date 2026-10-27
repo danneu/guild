@@ -11,9 +11,12 @@ vi.mock("../db", () => ({
   findPostById: vi.fn(),
   revs: { getPostRev: vi.fn(), getPostRevMarkup: vi.fn() },
 }));
-// Imported by the routes module; stubbed so no pool or refresh loop is built.
+// Imported by the routes module; stubbed so no pool or refresh loop is built,
+// and so server/bbcode.js never runs its server require() calls, which Node
+// cannot resolve to .ts files under vitest.
 vi.mock("../cache3", () => ({ default: {} }));
 vi.mock("../db/util.js", () => ({ pool: {} }));
+vi.mock("../bbcode", () => ({ default: vi.fn() }));
 
 import * as db from "../db";
 import indexRoutes from "./index";
