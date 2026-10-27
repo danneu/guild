@@ -18,6 +18,7 @@ import services from "../services";
 import { Context } from "koa";
 import { pool, withPgPoolTransaction } from "../db/util.js";
 import { sendJson } from "../api_json.js";
+import { catchRefusal, SendBudgetExceeded } from "../db/send_budget";
 import { z } from "zod";
 
 const router = new Router();
@@ -117,66 +118,70 @@ router.post("/convos", async (ctx: Context) => {
   // Render bbcode
   var html = bbcode(markup);
 
-  const { convo, isFirstStartedConvo } = await withPgPoolTransaction(
-    pool,
-    async (pgClient) => {
-      // If all unames are valid, then we can create a convo
-      const toUserIds = users.map((x) => x.id);
-      const isFirstStartedConvo =
-        ctx.currUser.posts_count === 0
-          ? await db.convos.isFirstStartedConvo(pgClient, ctx.currUser.id)
-          : false;
+  const sent = await withPgPoolTransaction(pool, async (pgClient) => {
+    // If all unames are valid, then we can create a convo
+    const toUserIds = users.map((x) => x.id);
+    const isFirstStartedConvo =
+      ctx.currUser.posts_count === 0
+        ? await db.convos.isFirstStartedConvo(pgClient, ctx.currUser.id)
+        : false;
 
-      const convo = await db
-        .createConvo(pgClient, {
-          userId: ctx.currUser.id,
-          toUserIds,
-          title,
-          markup,
-          html,
-          ipAddress: ctx.request.ip,
+    const convo = await db
+      .createConvo(pgClient, {
+        sender: { kind: "member", userId: ctx.currUser.id },
+        toUserIds,
+        title,
+        markup,
+        html,
+        ipAddress: ctx.request.ip,
+      })
+      .then((convo) => pre.presentConvo(convo)!);
+
+    // Create on-guild CONVO notification for each recipient
+    const tasks = toUserIds.map((toUserId) => ({
+      from_user_id: ctx.currUser.id,
+      to_user_id: toUserId,
+      convo_id: convo.id,
+    }));
+
+    await db.createConvoNotificationsBulk(pgClient, tasks);
+
+    // Create email notification for each recipient
+    const recipients = users
+      // Only users who confirmed their address by clicking a link. Reading
+      // the stamp rather than the retired email_verified boolean is phase 3
+      // of plan/2026-08-11-1613; the two agree on every row by now, because
+      // the rollout's reconciliation sweep made them agree before this build
+      // shipped.
+      .filter((u) => u.email_verified_at)
+      // Get the users that want to receive emails for new convos
+      .filter((user) => user.eflags & eflags.NEW_CONVO);
+
+    if (recipients.length > 0) {
+      // Send in background
+      emailer
+        .sendNewConvoEmails({
+          senderUname: ctx.currUser.uname,
+          recipients,
+          convoTitle: convo.title,
+          convoId: convo.id,
+          messageMarkup: markup,
         })
-        .then((convo) => pre.presentConvo(convo)!);
+        .catch((e) => {
+          console.error(`Error sending convo notification emails:`, e);
+        });
+    }
 
-      // Create on-guild CONVO notification for each recipient
-      const tasks = toUserIds.map((toUserId) => ({
-        from_user_id: ctx.currUser.id,
-        to_user_id: toUserId,
-        convo_id: convo.id,
-      }));
+    return { convo, isFirstStartedConvo };
+  }).catch(catchRefusal);
 
-      await db.createConvoNotificationsBulk(pgClient, tasks);
+  if (sent instanceof SendBudgetExceeded) {
+    ctx.flash = { message: ["danger", sent.message], params: ctx.request.body };
+    ctx.response.redirect("/convos/new?to=" + unames.join(","));
+    return;
+  }
 
-      // Create email notification for each recipient
-      const recipients = users
-        // Only users who confirmed their address by clicking a link. Reading
-        // the stamp rather than the retired email_verified boolean is phase 3
-        // of plan/2026-08-11-1613; the two agree on every row by now, because
-        // the rollout's reconciliation sweep made them agree before this build
-        // shipped.
-        .filter((u) => u.email_verified_at)
-        // Get the users that want to receive emails for new convos
-        .filter((user) => user.eflags & eflags.NEW_CONVO);
-
-      if (recipients.length > 0) {
-        // Send in background
-        emailer
-          .sendNewConvoEmails({
-            senderUname: ctx.currUser.uname,
-            recipients,
-            convoTitle: convo.title,
-            convoId: convo.id,
-            messageMarkup: markup,
-          })
-          .catch((e) => {
-            console.error(`Error sending convo notification emails:`, e);
-          });
-      }
-
-      return { convo, isFirstStartedConvo };
-    },
-  );
-
+  const { convo, isFirstStartedConvo } = sent;
   ctx.response.redirect(convo.url);
 
   if (isFirstStartedConvo) {
@@ -270,7 +275,13 @@ router.post("/convos/:convoId/pms", async (ctx: Context) => {
     await db.createPmNotificationsBulk(pgClient, notifications);
 
     return presentedPm;
-  });
+  }).catch(catchRefusal);
+
+  if (pm instanceof SendBudgetExceeded) {
+    ctx.flash = { message: ["danger", pm.message], params: ctx.request.body };
+    ctx.redirect("/convos/" + ctx.params.convoId);
+    return;
+  }
 
   ctx.redirect(pm.url);
 });

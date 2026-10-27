@@ -31,6 +31,7 @@ import {
 import { Context, Next } from "koa";
 import { pool, withPgPoolTransaction } from "../db/util";
 import { sendJson } from "../api_json";
+import { catchRefusal, SendBudgetExceeded } from "../db/send_budget";
 
 const router = new Router();
 
@@ -324,7 +325,7 @@ router.post("/users", checkCloudflareTurnstile, async (ctx: Context) => {
     // TODO: All queries in this route should be wrapped in the same transaction
     await withPgPoolTransaction(pool, async (pgClient) => {
       const convo = await db.createConvo(pgClient, {
-        userId: config.STAFF_REPRESENTATIVE_ID,
+        sender: { kind: "staff" },
         // Added ipAddress to satisfy TS but need to ensure ip is taken from CF header
         ipAddress: ctx.request.ip,
         toUserIds: [user.id],
@@ -1119,7 +1120,13 @@ router.post("/users/:slug/vms", async (ctx: Context) => {
     }
 
     return vm;
-  });
+  }).catch(catchRefusal);
+
+  if (vm instanceof SendBudgetExceeded) {
+    ctx.flash = { message: ["danger", vm.message], params: ctx.request.body };
+    ctx.redirect(user.url + "/vms");
+    return;
+  }
 
   ctx.flash = {
     message: ["success", "Visitor message successfully posted"],

@@ -21,6 +21,7 @@ import { Client, Pool, PoolClient } from "pg";
 import * as revs from "./revs";
 import { BANNED_IDS_COLUMN } from "./readable";
 import { deleteEmailVerificationTokenByUserId } from "./email_verification";
+import { spend } from "./send_budget";
 import { Context } from "koa";
 import {
   DbConvo,
@@ -463,11 +464,18 @@ export async function findUsersByUnames(unames: string[]) {
 
 ////////////////////////////////////////////////////////////
 
-// If toUserIds is not given, then it's a self-convo
+// Who a convo is from. A member pays the send budget. Staff is the sender of
+// the registration welcome PM and pays nothing. It carries no id, so passing
+// it for a member would send as the staff account, where everyone sees it.
+export type ConvoSender =
+  | { kind: "member"; userId: number }
+  | { kind: "staff" };
+
+// If toUserIds is empty, then it's a self-convo
 export async function createConvo(
   pgClient: PgClientInTransaction,
   args: {
-    userId: number;
+    sender: ConvoSender;
     toUserIds: number[];
     title: string;
     markup: string;
@@ -477,11 +485,25 @@ export async function createConvo(
 ) {
   debug("[createConvo] args: ", args);
   assert(pgClient._inTransaction, "pgClient must be in a transaction");
-  assert(typeof args.userId === "number");
   assert(Array.isArray(args.toUserIds));
   assert(typeof args.title === "string");
   assert(typeof args.markup === "string");
   assert(typeof args.html === "string");
+
+  // config parses an unset STAFF_REPRESENTATIVE_ID to NaN.
+  const userId =
+    args.sender.kind === "member"
+      ? args.sender.userId
+      : config.STAFF_REPRESENTATIVE_ID;
+  assert(Number.isInteger(userId), `Invalid convo sender: ${userId}`);
+
+  const participantIds = [...new Set([userId, ...args.toUserIds])];
+
+  if (args.sender.kind === "member") {
+    // One per member it reaches, which pays for the opening PM below too. A
+    // self-convo reaches no one and still costs 1.
+    await spend(pgClient, userId, Math.max(1, participantIds.length - 1));
+  }
 
   // Create convo
   const convo = await pgClient
@@ -491,12 +513,11 @@ export async function createConvo(
       VALUES ($1, $2)
       RETURNING *
     `,
-      [args.userId, args.title],
+      [userId, args.title],
     )
     .then(exactlyOneRow);
 
   // Bulk-insert all participants
-  const participantIds = [...new Set([args.userId, ...args.toUserIds])];
   await pgClient.query(
     `
     INSERT INTO convos_participants (convo_id, user_id)
@@ -518,7 +539,7 @@ export async function createConvo(
         )
         RETURNING *
       `,
-      [convo.id, args.userId, args.ipAddress, args.markup, args.html],
+      [convo.id, userId, args.ipAddress, args.markup, args.html],
     )
     .then(exactlyOneRow);
 
@@ -1131,6 +1152,10 @@ export async function createPm(
   assert(props.convoId);
   assert(_.isString(props.markup));
   assert(_.isString(props.html));
+
+  // A flat 1: a reply reaches only members the convo already reached, and it
+  // sends no mail.
+  await spend(pgClient, props.userId, 1);
 
   return pgClient
     .query<DbPm>(
@@ -3044,13 +3069,18 @@ RETURNING *
 
 ////////////////////////////////////////////////////////////
 
-// props must have user_id (Int), text (String), html (String) properties
-export const createStatus = async function ({ user_id, html, text }) {
+export async function createStatus(
+  pgClient: PgClientInTransaction,
+  { user_id, html, text }: { user_id: number; html: string; text: string },
+) {
+  assert(pgClient._inTransaction, "pgClient must be in a transaction");
   assert(Number.isInteger(user_id));
   assert(typeof text === "string");
   assert(typeof html === "string");
 
-  return pool
+  await spend(pgClient, user_id, 1);
+
+  return pgClient
     .query(
       `
     INSERT INTO statuses (user_id, text, html)
@@ -3060,7 +3090,7 @@ export const createStatus = async function ({ user_id, html, text }) {
       [user_id, text, html],
     )
     .then(maybeOneRow);
-};
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -3665,6 +3695,8 @@ export async function createVm(
   assert(Number.isInteger(data.to_user_id));
   assert(_.isString(data.markup));
   assert(_.isString(data.html));
+
+  await spend(pgClient, data.from_user_id, 1);
 
   return pgClient
     .query<DbVm>(

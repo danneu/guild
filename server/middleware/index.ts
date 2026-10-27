@@ -96,22 +96,6 @@ function postCountToMaxDate(postCount: number) {
   return new Date(Date.now() - seconds * 1000);
 }
 
-// Date -> String
-//
-// 'in 1 minute and 13 seconds'
-function waitLength(tilDate: Date) {
-  // diff is in seconds
-  const diff = Math.max(0, Math.ceil((tilDate.getTime() - Date.now()) / 1000));
-  const mins = Math.floor(diff / 60);
-  const secs = diff % 60;
-  let output = "";
-  if (mins > 1) output += `${mins} minutes and `;
-  else if (mins === 1) output += `${mins} minute and `;
-  if (secs === 1) output += `${secs} second`;
-  else output += `${secs} seconds`;
-  return output;
-}
-
 export const ratelimit = function () {
   return async (ctx: Context, next: Next) => {
     ctx.assert(ctx.currUser, 401, "You must be logged in");
@@ -121,7 +105,7 @@ export const ratelimit = function () {
     } catch (err) {
       if (_.isDate(err)) {
         const msg = `Ratelimited! Since you are a new member, you must wait
-          ${waitLength(
+          ${belt.waitLength(
             err as Date,
           )} longer before posting. The ratelimit goes away as you
           make more posts.

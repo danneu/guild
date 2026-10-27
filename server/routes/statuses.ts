@@ -8,6 +8,8 @@ import * as belt from "../belt.js";
 import * as pre from "../presenters.js";
 import { sanitizeUserHtml } from "../user_html.js";
 import { sendJson } from "../api_json.js";
+import { pool, withPgPoolTransaction } from "../db/util.js";
+import { catchRefusal, SendBudgetExceeded } from "../db/send_budget";
 import { Context, Next } from "koa";
 
 ////////////////////////////////////////////////////////////
@@ -44,11 +46,21 @@ router.post("/me/statuses", async (ctx: Context) => {
     .trim()
     .isLength(1, 200, "text must be 1-200 chars");
   const html = sanitizeUserHtml(belt.autolink(belt.escapeHtml(ctx.vals.text)));
-  await db.createStatus({
-    user_id: ctx.currUser.id,
-    text: ctx.vals.text,
-    html,
-  });
+  const status = await withPgPoolTransaction(pool, (pgClient) =>
+    db.createStatus(pgClient, {
+      user_id: ctx.currUser.id,
+      text: ctx.vals.text,
+      html,
+    }),
+  ).catch(catchRefusal);
+  if (status instanceof SendBudgetExceeded) {
+    ctx.flash = {
+      message: ["danger", status.message],
+      params: ctx.request.body,
+    };
+    ctx.redirect(`/users/${ctx.currUser.slug}#status`);
+    return;
+  }
   ctx.flash = { message: ["success", "Status updated"] };
   ctx.redirect(`/users/${ctx.currUser.slug}#status`);
 });

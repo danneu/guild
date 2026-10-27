@@ -6,6 +6,7 @@ const debug = createDebug("app:db:convos");
 // 1st
 import * as config from "../config";
 import { pool, maybeOneRow, type PgClientInTransaction } from "./util";
+import { lockSender } from "./send_budget";
 
 ////////////////////////////////////////////////////////////
 
@@ -47,15 +48,10 @@ export async function isFirstStartedConvo(
   assert(pgClient._inTransaction, "pgClient must be in a transaction");
   assert(Number.isInteger(userId));
 
-  await pgClient.query(
-    `
-    SELECT 1
-    FROM users
-    WHERE id = $1
-    FOR UPDATE
-  `,
-    [userId],
-  );
+  // Two convos opened at once cannot both count as the first. This takes the
+  // send lock, not a users row lock, because the convo's send takes the send
+  // lock next and it must come first (server/db/send_budget.ts#lockSender).
+  await lockSender(pgClient, userId);
 
   const { rows } = await pgClient.query(
     `

@@ -593,3 +593,18 @@ export const withinGhostRange = (() => {
 export function last<T>(xs: T[]): T | undefined {
   return xs.length > 0 ? xs[xs.length - 1] : undefined;
 }
+
+// How long until tilDate, for a refusal that tells the member when to retry:
+// '1 minute and 13 seconds'.
+export function waitLength(tilDate: Date): string {
+  // diff is in seconds
+  const diff = Math.max(0, Math.ceil((tilDate.getTime() - Date.now()) / 1000));
+  const mins = Math.floor(diff / 60);
+  const secs = diff % 60;
+  let output = "";
+  if (mins > 1) output += `${mins} minutes and `;
+  else if (mins === 1) output += `${mins} minute and `;
+  if (secs === 1) output += `${secs} second`;
+  else output += `${secs} seconds`;
+  return output;
+}

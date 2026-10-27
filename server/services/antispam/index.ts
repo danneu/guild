@@ -10,6 +10,7 @@ import {
   broadcastSpamReview,
 } from "../discord";
 import * as db from "../../db";
+import { isTrustedMember } from "../../trust";
 import { Context } from "koa";
 
 // Returns falsey if they are not a spammer (or if we fail open). Returns the
@@ -27,8 +28,7 @@ async function process(
   assert(typeof markup === "string");
   assert(Number.isInteger(postId));
 
-  // Bail if user is approved or if they have more than 5 posts
-  if (ctx.currUser.approved_at || ctx.currUser.posts_count > 5) {
+  if (isTrustedMember(ctx.currUser)) {
     return;
   }
 

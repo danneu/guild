@@ -1,4 +1,5 @@
 import "dotenv/config";
+import assert from "assert";
 
 export const PORT = parseInt(process.env.PORT || "3000", 10);
 // Format: postgres://<user>:<pass>@<host>:<port>/<dbname>
@@ -81,6 +82,27 @@ export const MAX_CONVO_PARTICIPANTS = parseInt(
   process.env.MAX_CONVO_PARTICIPANTS || "10",
   10,
 );
+
+// How much one account may send per trailing hour, in the cost units
+// server/db/send_budget.ts#spend charges. Trust is server/trust.ts.
+export const SEND_BUDGET_PER_HOUR_UNTRUSTED = parseInt(
+  process.env.SEND_BUDGET_PER_HOUR_UNTRUSTED || "30",
+  10,
+);
+export const SEND_BUDGET_PER_HOUR_TRUSTED = parseInt(
+  process.env.SEND_BUDGET_PER_HOUR_TRUSTED || "300",
+  10,
+);
+// A budget below the largest convo would refuse that convo forever.
+for (const budget of [
+  SEND_BUDGET_PER_HOUR_UNTRUSTED,
+  SEND_BUDGET_PER_HOUR_TRUSTED,
+]) {
+  assert(
+    Number.isInteger(budget) && budget >= MAX_CONVO_PARTICIPANTS,
+    `Send budgets must be integers of at least MAX_CONVO_PARTICIPANTS (${MAX_CONVO_PARTICIPANTS})`,
+  );
+}
 
 // The max amount of co-GMs per topic
 export const MAX_CO_GM_COUNT = process.env.MAX_CO_GM_COUNT || 2;

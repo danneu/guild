@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { isFirstStartedConvo } from "./convos";
+import { LOCK_SPACE } from "./send_budget";
 
 function makePgClient(rows: unknown[]) {
   return {
@@ -29,15 +30,18 @@ describe("isFirstStartedConvo", () => {
     expect(pgClient.query).toHaveBeenCalledTimes(2);
   });
 
-  it("locks the user row before checking started convos", async () => {
+  // The convo's send takes the send lock next. Locking the users row here
+  // instead would let a concurrent send by the same member, which holds the
+  // send lock and then writes this row in a trigger, deadlock against it.
+  it("takes the send lock before checking started convos", async () => {
     const pgClient = makePgClient([]);
 
     await isFirstStartedConvo(pgClient, 42);
 
     expect(pgClient.query).toHaveBeenNthCalledWith(
       1,
-      expect.stringContaining("FOR UPDATE"),
-      [42],
+      expect.stringContaining("pg_advisory_xact_lock"),
+      [LOCK_SPACE, 42],
     );
     expect(pgClient.query).toHaveBeenNthCalledWith(
       2,

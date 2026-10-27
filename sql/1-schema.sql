@@ -851,6 +851,16 @@ CREATE TABLE ratelimits (
 CREATE INDEX ratelimits_user_id ON ratelimits (user_id);
 CREATE INDEX ratelimits_ip_root ON ratelimits (ip_root(ip_address));
 
+-- The send budget's ledger; see sql/11-send-spends.sql.
+CREATE UNLOGGED TABLE send_spends (
+  user_id    int          NOT NULL  REFERENCES users(id) ON DELETE CASCADE,
+  cost       int          NOT NULL  CHECK (cost > 0),
+  created_at timestamptz  NOT NULL  DEFAULT NOW()
+);
+
+CREATE INDEX send_spends__user_id_created_at
+  ON send_spends (user_id, created_at);
+
 ------------------------------------------------------------
 
 CREATE TABLE images (
