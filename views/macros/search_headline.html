@@ -1,0 +1,11 @@
+{#
+  Prints a search headline from server/search_headline.ts#splitSearchHeadline
+  with each match in <b>. Every segment is the author's raw markup, so each
+  one prints escaped. The whitespace control keeps the segments flush, so no
+  space appears next to a match.
+#}
+{% macro headline(segments) -%}
+  {%- for s in segments -%}
+    {%- if s.hit -%}<b>{{ s.text }}</b>{%- else -%}{{ s.text }}{%- endif -%}
+  {%- endfor -%}
+{%- endmacro %}

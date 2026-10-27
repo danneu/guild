@@ -10,6 +10,7 @@ import { pool } from "../db/util.js";
 import cache3 from "../cache3";
 import * as pre from "../presenters";
 import { MOD_CATEGORY_ID } from "../cancan";
+import { searchHeadlineSql, splitSearchHeadline } from "../search_headline";
 import { Context } from "koa";
 
 ////////////////////////////////////////////////////////////
@@ -162,12 +163,7 @@ router.get("/search", async (ctx: Context) => {
           [term],
         ),
       )
-      .select(
-        knex.raw(
-          `ts_headline('english', x.markup, plainto_tsquery('english', ?)) "highlight"`,
-          [term],
-        ),
-      )
+      .select({ highlight: searchHeadlineSql(knex, "x.markup", term) })
       .orderBy("rank", "desc");
   } else {
     // query.orderBy('x.id', 'desc')
@@ -175,9 +171,13 @@ router.get("/search", async (ctx: Context) => {
 
   debug(query.toString());
 
-  const posts = await pool
-    .query(query.toString())
-    .then((res) => res.rows.map((x) => pre.presentPost(x)));
+  const posts = await pool.query(query.toString()).then((res) =>
+    res.rows.map((x) => {
+      const post = pre.presentPost(x);
+      post.highlight = splitSearchHeadline(post.highlight);
+      return post;
+    }),
+  );
 
   ctx.set("X-Robots-Tag", "noindex");
 

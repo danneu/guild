@@ -1,6 +1,7 @@
 {% extends 'layouts/master.html' %}
 {% import './macros/ads.html' as ads %}
 {% import './macros/macros.html' as macros %}
+{% import './macros/search_headline.html' as searchHeadline %}
 
 {% block head %}
   {# Prevent this page from being indexed, prevent links from being followed #}
@@ -208,7 +209,7 @@
 
           {% if post.highlight %}
             <div class="panel-body">
-              {{ post.highlight|safe }}
+              {{ searchHeadline.headline(post.highlight) }}
             </div>
           {% else %}
             <div class="panel-body" style="max-height: 100px; overflow: auto">

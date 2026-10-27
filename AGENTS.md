@@ -140,3 +140,7 @@ AWS S3 (file storage), AWS SES (email), and Cloudflare Turnstile (CAPTCHA).
 - Only `ctx.render` output goes out as HTML. Any other string or Buffer body
   with an html type, sniffed or set by hand, is sent as text/plain (see
   `server/middleware/html-only-from-views.ts`). Build new HTML pages as views.
+- Never print a field that can hold raw author text, such as `markup`, as
+  HTML. Every nunjucks unescape in `views/` or `server/` needs an exact
+  reviewed entry in `server/template_safe_sweep.test.ts`, which defines what
+  counts as one.
