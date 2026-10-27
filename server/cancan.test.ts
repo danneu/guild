@@ -451,6 +451,47 @@ describe("READ_GATE", () => {
   });
 });
 
+describe("banned users", () => {
+  const bannedGm = { ...actors.gm, role: "banned" };
+  const bannedForumMod = { ...actors.forumMod, role: "banned" };
+  const zeroth = postRow(topics.plain, {
+    id: 1006,
+    idx: -1,
+    user_id: actors.gm.id,
+  });
+
+  // Intent: cancan offers a banned GM or forum mod none of their old controls.
+  // Why it exists: these rules had no banned line, and the routes behind them
+  // ask nothing else, so a banned GM could change co-GMs, tags and the 0th
+  // post's visibility, and a banned forum mod could change topic status
+  // (hunt 261026-0911-028). requireNotBanned now refuses those writes; these
+  // answers keep the UI from offering them.
+  // Scenario: a GM or a forum mod is site-banned and opens their topic.
+  it.each<[CanAction, unknown]>([
+    ["UPDATE_TOPIC_CO_GMS", topics.plain],
+    ["UPDATE_TOPIC_TAGS", topics.plain],
+    ["UPDATE_TOPIC_JOIN_STATUS", topics.plain],
+    ["HIDE_POST", zeroth],
+    ["UNHIDE_POST", posts.hiddenZeroth],
+  ])("refuses %s to a GM once banned", (action, target) => {
+    expect(can(actors.gm, action, target)).toBe(true);
+    expect(can(bannedGm, action, target)).toBe(false);
+  });
+
+  it.each<CanAction>([
+    "STICK_TOPIC",
+    "UNSTICK_TOPIC",
+    "HIDE_TOPIC",
+    "UNHIDE_TOPIC",
+    "CLOSE_TOPIC",
+    "OPEN_TOPIC",
+    "ACCESS_TOPIC_MODKIT",
+  ])("refuses %s to a forum mod once banned", (action) => {
+    expect(can(actors.forumMod, action, topics.plain)).toBe(true);
+    expect(can(bannedForumMod, action, topics.plain)).toBe(false);
+  });
+});
+
 describe("READ_CATEGORY", () => {
   sweep("category", categories, categorySweep);
 

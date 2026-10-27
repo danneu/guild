@@ -57,6 +57,10 @@ Key directories:
 `server/auth.ts` is the only module that hashes or checks a password, and a
 test fails if any other file imports bcrypt. Log in through
 `server/auth.ts#authenticate`, which never shows whether an account exists.
+A banned user (role `banned`) can read, and can write only through the
+allowlist in `server/middleware/require-not-banned.ts`, which refuses every
+other write before any route runs. A new write route that banned users should
+keep goes on that allowlist on purpose.
 
 **Request bodies and uploads:** `server/middleware/body.ts` is the app-wide
 body parser. It never parses multipart, and it leaves `ctx.request.body` as

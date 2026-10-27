@@ -211,6 +211,7 @@ import {
   needsEmailConfirmation,
   requireConfirmedEmail,
 } from "./middleware/require-confirmed-email";
+import { isBanned, requireNotBanned } from "./middleware/require-not-banned";
 import { pool, withPgPoolTransaction } from "./db/util";
 
 app.use(middleware.methodOverride());
@@ -261,6 +262,13 @@ app.use(middleware.flash());
 // layer. It is the sole enforcement point and fails closed, so any route added
 // below is gated unless its allowlist entry says otherwise.
 app.use(requireConfirmedEmail());
+
+// The banned-user write gate (hunt 261026-0911-028). Mounted after currUser and
+// flash, and before nunjucks, bouncer and every router, for the same reasons as
+// the email gate above. It is the sole enforcement point for "banned users only
+// read" and fails closed, so any route added below is refused to banned users
+// unless its allowlist entry says otherwise.
+app.use(requireNotBanned());
 
 app.use(async (ctx: Context, next: Next) => {
   // Must become before koa-router
@@ -758,9 +766,14 @@ router.get("/", async (ctx: Context) => {
   var latest_rpgn_topic = pre.presentTopic(cache3.get("latest-rpgn-topic"));
 
   // The unacknowledged feedback_topic for the current user
-  // Will be undefined if we have nothing to show the user.
+  // Will be undefined if we have nothing to show the user. A banned user gets
+  // none, because requireNotBanned refuses both of its buttons.
   let ftopic;
-  if (config.CURRENT_FEEDBACK_TOPIC_ID && ctx.currUser) {
+  if (
+    config.CURRENT_FEEDBACK_TOPIC_ID &&
+    ctx.currUser &&
+    !isBanned(ctx.currUser)
+  ) {
     ftopic = await db
       .findUnackedFeedbackTopic(
         config.CURRENT_FEEDBACK_TOPIC_ID,
@@ -2105,8 +2118,6 @@ router.get("/current-feedback-topic", async (ctx: Context) => {
 router.post("/current-feedback-topic/replies", async (ctx: Context) => {
   // user must be logged in
   ctx.assert(ctx.currUser, 403);
-  // user must not be banned
-  ctx.assert(ctx.currUser.banned !== "banned", 403);
   // ensure a feedback topic is set
   ctx.assert(config.CURRENT_FEEDBACK_TOPIC_ID, 404);
   // ensure user hasn't already acked the ftopic

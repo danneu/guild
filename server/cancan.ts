@@ -193,6 +193,11 @@ export const can = function (user: any, action: CanAction, target?: any) {
   );
   return result;
 };
+
+// A banned user's writes stop at
+// server/middleware/require-not-banned.ts#requireNotBanned before any route
+// asks. In a write rule below, a `user.role === "banned"` line is a UI hint: it
+// hides a control that gate would refuse.
 function _can(
   user: any,
   action: CanAction,
@@ -201,6 +206,7 @@ function _can(
   switch (action) {
     case "ACCESS_TOPIC_MODKIT": // target is topic
       if (!user) return false;
+      if (user.role === "banned") return false;
       if (["mod", "smod", "admin"].includes(user.role)) return true;
       if (user.role === "conmod" && CONTEST_FORUMS.includes(target.forum_id)) {
         return true;
@@ -311,6 +317,8 @@ function _can(
       if (!target.is_roleplay) return false;
       // Guests cant
       if (!user) return false;
+      // Banned can't
+      if (user.role === "banned") return false;
       // Topic creator can
       if (user.id === target.user_id) return true;
       // co-GMs can
@@ -324,6 +332,8 @@ function _can(
       if (!target.forum.has_tags_enabled) return false;
       // Guests never can
       if (!user) return false;
+      // Banned can't
+      if (user.role === "banned") return false;
       // GM can
       if (target.user_id === user.id) return true;
       // Co-GMs can
@@ -336,6 +346,8 @@ function _can(
       if (!target.is_roleplay) return false;
       // Guests can't
       if (!user) return false;
+      // Banned can't
+      if (user.role === "banned") return false;
       // GM can
       if (target.user_id === user.id) return true;
       // Staff can
@@ -459,6 +471,7 @@ function _can(
     // Post state -- target is post
     case "UNHIDE_POST":
       if (!user) return false;
+      if (user.role === "banned") return false;
       // Staff can unhide
       if (isStaffRole(user.role)) return true;
       if (user.role === "conmod") return true;
@@ -471,6 +484,7 @@ function _can(
     case "HIDE_POST":
       if (!user) return false;
       assert(target.topic);
+      if (user.role === "banned") return false;
       // Cannot hide a post if it is the last post in this topic/RP
       //if (target.topic && target.topic.posts_count === 1) {
       //  return false
@@ -506,6 +520,8 @@ function _can(
     case "OPEN_TOPIC":
       // Guests cannot
       if (!user) return false;
+      // Banned cannot
+      if (user.role === "banned") return false;
       // Staff can do this
       if (isStaffRole(user.role)) return true;
       // Conmods can manage topics in contest forums

@@ -19,7 +19,6 @@ const router = new Router();
 router.post("/me/friendships", async (ctx: Context) => {
   // ensure user logged in
   ctx.assert(ctx.currUser, 404);
-  ctx.assert(ctx.currUser.role !== "banned", 404);
 
   // validate body
   ctx.validateBody("commit").isIn(["add", "remove"]);
