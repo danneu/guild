@@ -52,9 +52,6 @@ beforeAll(async () => {
   app.use(bouncer.middleware());
   app.use(async (ctx, next) => {
     ctx.currUser = { id: 1, uname: "Viewer", slug: "viewer", role: "member" };
-    // The attacker's own public post passes READ_POST, so the gate is not
-    // under test here.
-    ctx.can = () => true;
     ctx.render = async (name: string, locals: object) => {
       ctx.body = env.render(`${name}.html`, locals);
     };
@@ -70,6 +67,9 @@ afterAll(() => {
   server.close();
 });
 
+// The route asks cancan about every row (server/readable.ts#fetchReadable),
+// so the topic carries the columns READ_POST reads. The attacker's own public
+// post passes it.
 function postRow(highlight: string) {
   return {
     id: 7,
@@ -81,7 +81,14 @@ function postRow(highlight: string) {
     rank: 0.1,
     highlight,
     user: { id: 2, uname: "Author", slug: "author" },
-    topic: { id: 3, title: "A topic", is_hidden: false },
+    topic: {
+      id: 3,
+      title: "A topic",
+      user_id: 2,
+      forum_id: 4,
+      co_gm_ids: [],
+      is_hidden: false,
+    },
     forum: { id: 4, title: "A forum", category_id: 1 },
   };
 }

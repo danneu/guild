@@ -98,9 +98,8 @@
           {% endif %}
         </div> <!-- /.row -->
       </div><!-- /.list-group-item -->
+      {# server/readable.ts#fetchReadable returns only topics the viewer may read #}
       {% for topic in forum.topics %}
-
-        {% if ctx.can(ctx.currUser, 'READ_TOPIC', topic) %}
           {% if forum.is_roleplay %}
             {{ macros.renderCheckItem(topic, forum) }}
           {% elif forum.is_check %}
@@ -108,10 +107,6 @@
           {% else %}
             {{ macros.renderTopicItem(topic, forum) }}
           {% endif %}
-        {% endif %}
-
-        {% if ctx.can(ctx.currUser, 'READ_TOPIC', topic) %}
-        {% endif %}
       {% endfor %}
     </div> <!-- /.list-group -->
   {% endif %}

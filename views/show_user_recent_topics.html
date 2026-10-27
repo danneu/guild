@@ -58,6 +58,8 @@
               </a>
             </span>
           </div>
+          {# first_post is null when the viewer may not read the opening post #}
+          {% if topic.first_post %}
           <div class="panel-body" style="max-height: 100px; overflow: auto">
             {% if topic.first_post.html %}
               <div class="post-body-html">{{ topic.first_post.html|safe }}</div>
@@ -67,6 +69,7 @@
               <div class="post-body">{{ topic.first_post.text }}</div>
             {% endif %}
           </div>
+          {% endif %}
         </div>
       {% endfor %}
 

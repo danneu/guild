@@ -6,10 +6,10 @@ const knex = Knex({ client: "pg" });
 import createDebug from "debug";
 const debug = createDebug("app:search");
 // 1st
-import { pool } from "../db/util.js";
 import cache3 from "../cache3";
 import * as pre from "../presenters";
 import { MOD_CATEGORY_ID } from "../cancan";
+import { fetchReadable } from "../readable";
 import { searchHeadlineSql, splitSearchHeadline } from "../search_headline";
 import { Context } from "koa";
 
@@ -75,7 +75,6 @@ router.get("/search", async (ctx: Context) => {
 
   const topicId = ctx.validateQuery("topic_id").optional().toInt().val();
 
-  // TODO: Filter out lexus-lounge forums
   const forumIds = ctx
     .validateQuery("forum_ids")
     .optional()
@@ -103,7 +102,10 @@ router.get("/search", async (ctx: Context) => {
 
   const postTypes = ctx.validateQuery("post_types").optional().toArray().val();
 
-  // Now we build the query
+  // Now we build the query. fetchReadable adds the viewer's read scope to
+  // this subquery, so the 1000-row cap counts only posts the viewer may read.
+  // Hidden posts stay out for everyone, staff too: server/db/index.ts#nukeUser
+  // hides every post a spambot wrote.
 
   const subquery = knex("posts")
     .select("posts.*")
@@ -149,30 +151,37 @@ router.get("/search", async (ctx: Context) => {
     subquery.whereIn("posts.user_id", userIds);
   }
 
-  const query = knex
-    .select("x.*")
-    .from(subquery.as("x"))
-    .limit(perPage)
-    .offset((page - 1) * perPage);
+  const posts = await fetchReadable(ctx.currUser, "READ_POST", subquery, {
+    posts: "posts",
+    topics: "topics",
+    forums: "forums",
+    // Ranks and pages the scoped subquery
+    wrap: (scoped) => {
+      const query = knex
+        .select("x.*")
+        .from(scoped.as("x"))
+        .limit(perPage)
+        .offset((page - 1) * perPage);
 
-  if (term) {
-    query
-      .select(
-        knex.raw(
-          `ts_rank(to_tsvector('english', x.markup), plainto_tsquery('english', ?)) "rank"`,
-          [term],
-        ),
-      )
-      .select({ highlight: searchHeadlineSql(knex, "x.markup", term) })
-      .orderBy("rank", "desc");
-  } else {
-    // query.orderBy('x.id', 'desc')
-  }
+      if (term) {
+        query
+          .select(
+            knex.raw(
+              `ts_rank(to_tsvector('english', x.markup), plainto_tsquery('english', ?)) "rank"`,
+              [term],
+            ),
+          )
+          .select({ highlight: searchHeadlineSql(knex, "x.markup", term) })
+          .orderBy("rank", "desc");
+      } else {
+        // query.orderBy('x.id', 'desc')
+      }
 
-  debug(query.toString());
-
-  const posts = await pool.query(query.toString()).then((res) =>
-    res.rows.map((x) => {
+      debug(query.toString());
+      return query;
+    },
+  }).then((rows) =>
+    rows.map((x) => {
       const post = pre.presentPost(x);
       post.highlight = splitSearchHeadline(post.highlight);
       return post;

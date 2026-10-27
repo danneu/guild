@@ -14,7 +14,7 @@ import * as db from "../db";
 import bbcode from "../bbcode";
 import cache3 from "../cache3";
 import * as pre from "../presenters";
-import { pool } from "../db/util.js";
+import { fetchReadable } from "../readable";
 import { Context } from "koa";
 
 const knex = Knex({
@@ -164,7 +164,9 @@ router.get("/faq", async (ctx: Context) => {
 //     )
 // }
 
+// A page of roleplays from the public roleplay forums that `viewer` may read
 async function listRoleplays(
+  viewer: any,
   logic: "any" | "all",
   sort: "created" | "bumped",
   selectedTagIds: number[] = [],
@@ -179,13 +181,15 @@ async function listRoleplays(
 
   const subquery = knex("topics")
     .select("topics.*")
+    // The forums join is for the read scope's lounge clause
     .from(
       knex.raw(
-        'topics, LATERAL (SELECT array_agg(tt.tag_id) "tag_ids" FROM tags_topics tt WHERE topics.id = tt.topic_id GROUP BY topics.id) s',
+        'topics JOIN forums ON forums.id = topics.forum_id, LATERAL (SELECT array_agg(tt.tag_id) "tag_ids" FROM tags_topics tt WHERE topics.id = tt.topic_id GROUP BY topics.id) s',
       ),
     )
     .join("tags", knex.raw("tags.id = ANY (s.tag_ids)"))
     .whereIn("topics.forum_id", [3, 4, 5, 6, 7, 42, 39])
+    // Hidden roleplays stay off this list for staff too
     .where("topics.is_hidden", false);
 
   // Dynamic WHERE clauses
@@ -216,9 +220,21 @@ async function listRoleplays(
 
   subquery.limit(perPage);
 
-  // Main query
+  return fetchReadable(viewer, "READ_TOPIC", subquery, {
+    topics: "topics",
+    forums: "forums",
+    wrap: (scoped) => roleplaysWithLatestPosts(scoped, sort, perPage),
+  });
+}
+
+// Adds each roleplay's forum, GM and latest IC, OOC and Char posts
+function roleplaysWithLatestPosts(
+  roleplays: Knex.Knex.QueryBuilder,
+  sort: "created" | "bumped",
+  perPage: number,
+) {
   const query = knex
-    .with("t", subquery)
+    .with("t", roleplays)
     .select(
       "t.*",
       knex.raw("to_json(f.*) as forum"),
@@ -305,7 +321,7 @@ async function listRoleplays(
 
   query.limit(perPage);
 
-  return pool.query(query.toString()).then((res) => res.rows);
+  return query;
 }
 
 router.get("/roleplays", async (ctx: Context) => {
@@ -332,6 +348,7 @@ router.get("/roleplays", async (ctx: Context) => {
     .val();
 
   const roleplays = await listRoleplays(
+    ctx.currUser,
     logic,
     sort,
     selectedTagIds,

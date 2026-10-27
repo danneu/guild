@@ -3,6 +3,8 @@ import _ from "lodash";
 import assert from "assert";
 import createDebug from "debug";
 const debug = createDebug("app:db");
+import Knex from "knex";
+const knex = Knex({ client: "pg" });
 import pgArray from "postgres-array";
 import { v7 as uuidv7 } from "uuid";
 // 1st party
@@ -11,6 +13,7 @@ import * as belt from "../belt";
 import { hashPassword } from "../auth";
 import * as pre from "../presenters";
 import { MOD_CATEGORY_ID } from "../cancan";
+import { fetchReadable } from "../readable";
 import {
   pool,
   maybeOneRow,
@@ -370,58 +373,98 @@ export const findUserByUname = async function (uname: string) {
 
 ////////////////////////////////////////////////////////////
 
+// A page of a user's posts, newest first, that `viewer` may read
+//
 // `beforeId` is undefined or a number
-export const findRecentPostsForUserId = async function (userId, beforeId) {
+export async function findRecentPostsForUserId(
+  viewer: any,
+  userId: number,
+  beforeId: number | undefined,
+) {
   assert(_.isNumber(beforeId) || _.isUndefined(beforeId));
 
-  return pool
-    .query(
-      `
-    SELECT
-      p.*,
-      to_json(t.*) "topic",
-      to_json(f.*) "forum"
-    FROM posts p
-    JOIN topics t ON p.topic_id = t.id
-    JOIN forums f ON t.forum_id = f.id
-    WHERE p.user_id = $1 AND p.id < $2
-    ORDER BY p.id DESC
-    LIMIT $3
-  `,
-      [userId, beforeId || 1e9, config.RECENT_POSTS_PER_PAGE],
+  const base = knex("posts as p")
+    .select(
+      "p.*",
+      knex.raw('to_json(t.*) "topic"'),
+      knex.raw('to_json(f.*) "forum"'),
     )
-    .then((res) => res.rows);
-};
+    .join("topics as t", "p.topic_id", "t.id")
+    .join("forums as f", "t.forum_id", "f.id")
+    .where("p.user_id", userId)
+    .where("p.id", "<", beforeId || 1e9)
+    .orderBy("p.id", "desc")
+    .limit(config.RECENT_POSTS_PER_PAGE);
+
+  return fetchReadable(viewer, "READ_POST", base, {
+    posts: "p",
+    topics: "t",
+    forums: "f",
+  });
+}
 
 ////////////////////////////////////////////////////////////
 
+// A page of the topics a user started, newest first, that `viewer` may read.
+// Each topic's first_post is its opening post, or null when the viewer may
+// not read that post.
+//
 // `beforeId` is undefined or a number
-export const findRecentTopicsForUserId = async function (userId, beforeId) {
+export async function findRecentTopicsForUserId(
+  viewer: any,
+  userId: number,
+  beforeId: number | undefined,
+) {
   assert(_.isNumber(beforeId) || _.isUndefined(beforeId));
 
-  return pool
-    .query(
-      `
-    SELECT
-      t.*,
-      to_json(f.*) "forum",
-      to_json(p.*) first_post
-    FROM topics t
-    JOIN forums f ON t.forum_id = f.id
-    JOIN posts p ON p.id = (
-      SELECT MAX(p.id) first_post_id
-      FROM posts p
-      WHERE p.topic_id = t.id
-    )
-    WHERE t.user_id = $1 AND t.id < $2
-    GROUP BY t.id, f.id, p.id
-    ORDER BY t.id DESC
-    LIMIT $3
-  `,
-      [userId, beforeId || 1e9, config.RECENT_POSTS_PER_PAGE],
-    )
-    .then((res) => res.rows);
-};
+  const topics = await fetchReadable(
+    viewer,
+    "READ_TOPIC",
+    knex("topics as t")
+      .select("t.*", knex.raw('to_json(f.*) "forum"'))
+      .join("forums as f", "t.forum_id", "f.id")
+      .where("t.user_id", userId)
+      .where("t.id", "<", beforeId || 1e9)
+      .orderBy("t.id", "desc")
+      .limit(config.RECENT_POSTS_PER_PAGE),
+    { topics: "t", forums: "f" },
+  );
+
+  if (topics.length === 0) return topics;
+
+  // The opening post has its topic's lowest post id: createTopic inserts it
+  // with the topic, and a GM's 0th post (idx -1) comes later. The scope then
+  // drops it if the viewer may not read it; no other post stands in for it.
+  const openingPosts = await fetchReadable(
+    viewer,
+    "READ_POST",
+    knex("posts as p")
+      .select(
+        "p.*",
+        knex.raw('to_json(t.*) "topic"'),
+        knex.raw('to_json(f.*) "forum"'),
+      )
+      .join("topics as t", "p.topic_id", "t.id")
+      .join("forums as f", "t.forum_id", "f.id")
+      .whereIn(
+        "p.id",
+        knex("posts")
+          .min("id")
+          .whereIn(
+            "topic_id",
+            topics.map((topic) => topic.id),
+          )
+          .groupBy("topic_id"),
+      ),
+    { posts: "p", topics: "t", forums: "f" },
+  );
+
+  const openingPostByTopicId = _.keyBy(openingPosts, "topic_id");
+  for (const topic of topics) {
+    topic.first_post = openingPostByTopicId[topic.id] ?? null;
+  }
+  return topics;
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -639,112 +682,74 @@ export async function createSession(
 
 ////////////////////////////////////////////////////////////
 
-// Sync with db.findTopicsWithHasPostedByForumId
-export const findTopicsByForumId = async function (
-  forumId,
-  limit,
-  offset,
-  canViewHidden,
+// One page of a forum's topics that `viewer` may read, stickies first. For a
+// logged-in viewer each topic also says whether they have posted in it
+// (has_posted) and whether it has posts past their watermark (unread_posts).
+export async function findTopicsByForumId(
+  viewer: any,
+  forumId: number,
+  limit: number,
+  offset: number,
 ) {
   debug(
-    "[%s] forumId: %s, limit: %s, offset: %s",
-    "findTopicsByForumId",
+    "[findTopicsByForumId] forumId: %s, limit: %s, offset: %s",
     forumId,
     limit,
     offset,
   );
 
-  return pool
-    .query(
-      `
-SELECT
-  t.*,
-  to_json(u.*) "user",
-  to_json(p.*) "latest_post",
-  to_json(u2.*) "latest_user",
-  to_json(f.*) "forum",
-  (
-   SELECT json_agg(tags.*)
-   FROM tags
-   JOIN tags_topics ON tags.id = tags_topics.tag_id
-   WHERE tags_topics.topic_id = t.id
-  ) tags
-FROM topics t
-JOIN users u ON t.user_id = u.id
-LEFT JOIN posts p ON t.latest_post_id = p.id
-LEFT JOIN users u2 ON p.user_id = u2.id
-LEFT JOIN forums f ON t.forum_id = f.id
-WHERE t.forum_id = $1
-  AND ($2 OR t.is_hidden = false)
-ORDER BY t.is_sticky DESC, t.latest_post_at DESC
-LIMIT $3
-OFFSET $4
-  `,
-      [forumId, canViewHidden, limit, offset],
+  const base = knex("topics as t")
+    .select(
+      "t.*",
+      knex.raw('to_json(u.*) "user"'),
+      knex.raw('to_json(p.*) "latest_post"'),
+      knex.raw('to_json(u2.*) "latest_user"'),
+      knex.raw('to_json(f.*) "forum"'),
+      knex.raw(`(
+        SELECT json_agg(tags.*)
+        FROM tags
+        JOIN tags_topics ON tags.id = tags_topics.tag_id
+        WHERE tags_topics.topic_id = t.id
+      ) tags`),
     )
-    .then((res) => res.rows);
-};
+    .join("users as u", "t.user_id", "u.id")
+    .leftJoin("posts as p", "t.latest_post_id", "p.id")
+    .leftJoin("users as u2", "p.user_id", "u2.id")
+    .leftJoin("forums as f", "t.forum_id", "f.id")
+    .where("t.forum_id", forumId)
+    .orderBy("t.is_sticky", "desc")
+    .orderBy("t.latest_post_at", "desc")
+    .limit(limit)
+    .offset(offset);
 
-////////////////////////////////////////////////////////////
+  // Guests skip these subqueries
+  if (viewer) {
+    base.select(
+      knex.raw(
+        `EXISTS(
+          SELECT 1 FROM posts WHERE topic_id = t.id AND user_id = ?
+        ) has_posted`,
+        [viewer.id],
+      ),
+      knex.raw(
+        `(
+          SELECT t.latest_post_id > (
+            SELECT COALESCE(MAX(w.watermark_post_id), 0)
+            FROM topics_users_watermark w
+            WHERE w.topic_id = t.id
+              AND w.user_id = ?
+          )
+        ) unread_posts`,
+        [viewer.id],
+      ),
+    );
+  }
 
-// Sync with db.findTopicsByForumId
-// Same as db.findTopicsByForumId except each forum has a has_posted boolean
-// depending on whether or not userId has posted in each topic
-export const findTopicsWithHasPostedByForumId = async function (
-  forumId,
-  limit,
-  offset,
-  userId,
-  canViewHidden,
-) {
-  assert(userId);
-  debug(
-    "[findTopicsWithHasPostedByForumId] forumId: %s, userId: %s",
-    forumId,
-    userId,
-  );
-
-  return pool
-    .query(
-      `
-SELECT
-  EXISTS(
-    SELECT 1 FROM posts WHERE topic_id = t.id AND user_id = $1
-  ) has_posted,
-  (
-    SELECT t.latest_post_id > (
-      SELECT COALESCE(MAX(w.watermark_post_id), 0)
-      FROM topics_users_watermark w
-      WHERE w.topic_id = t.id
-        AND w.user_id = $2
-    )
-  ) unread_posts,
-  t.*,
-  to_json(u.*) "user",
-  to_json(p.*) "latest_post",
-  to_json(u2.*) "latest_user",
-  to_json(f.*) "forum",
-  (
-   SELECT json_agg(tags.*)
-   FROM tags
-   JOIN tags_topics ON tags.id = tags_topics.tag_id
-   WHERE tags_topics.topic_id = t.id
-  ) tags
-FROM topics t
-JOIN users u ON t.user_id = u.id
-LEFT JOIN posts p ON t.latest_post_id = p.id
-LEFT JOIN users u2 ON p.user_id = u2.id
-LEFT JOIN forums f ON t.forum_id = f.id
-WHERE t.forum_id = $3
-  AND ($4 OR t.is_hidden = false)
-ORDER BY t.is_sticky DESC, t.latest_post_at DESC
-LIMIT $5
-OFFSET $6
-  `,
-      [userId, userId, forumId, canViewHidden, limit, offset],
-    )
-    .then((res) => res.rows);
-};
+  return fetchReadable(viewer, "READ_TOPIC", base, {
+    topics: "t",
+    forums: "f",
+  });
+}
 
 ////////////////////////////////////////////////////////////
 

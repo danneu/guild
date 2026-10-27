@@ -7,7 +7,6 @@ import _ from "lodash";
 import * as db from "../db";
 import * as pre from "../presenters";
 import * as belt from "../belt";
-import * as cancan from "../cancan";
 import { Context } from "koa";
 
 ////////////////////////////////////////////////////////////
@@ -78,20 +77,13 @@ router.get("/forums/:forumSlug", async (ctx: Context) => {
     return;
   }
 
+  // forum.topics_count also counts hidden topics, so a member's last pages
+  // can come up short or empty. The homepage shows the same count.
   var pager = belt.calcPager(ctx.vals.page, 25, forum.topics_count);
 
   const [viewers, topics] = await Promise.all([
     db.findViewersForForumId(forum.id),
-    // Avoids the has_posted subquery if guest
-    ctx.currUser
-      ? db.findTopicsWithHasPostedByForumId(
-          forumId,
-          pager.limit,
-          pager.offset,
-          ctx.currUser.id,
-          cancan.isStaffRole(ctx.currUser.role),
-        )
-      : db.findTopicsByForumId(forumId, pager.limit, pager.offset, false),
+    db.findTopicsByForumId(ctx.currUser, forum.id, pager.limit, pager.offset),
   ]);
 
   forum.topics = topics;

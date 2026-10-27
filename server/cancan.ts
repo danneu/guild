@@ -27,12 +27,13 @@ const PW_FORUMS = [49, 50, 51];
 
 // The Lexus Lounge (mod forum) category. Rules test it only through
 // isModForum (or READ_CATEGORY for a category row), so no rule names the id.
+// SQL read scopes compare it directly, since SQL cannot call isModForum.
 export const MOD_CATEGORY_ID = 4;
 
 // The one lounge test for a forum row. It fails closed: a short or wrong row
 // (say, a topic passed where its forum belongs) throws instead of reading as
 // "not lounge", which would allow.
-function isModForum(forum: any): boolean {
+export function isModForum(forum: any): boolean {
   assert(forum, "forum is missing");
   assert(
     Number.isInteger(forum.category_id),
@@ -45,7 +46,7 @@ function isModForum(forum: any): boolean {
 // their category. READ_POST asks LEXUS_LOUNGE instead, a narrower set that
 // keeps conmods and arenamods out of lounge posts; which set is right is an
 // open question.
-function mayEnterModForums(user: any): boolean {
+export function mayEnterModForums(user: any): boolean {
   if (!user) return false;
   return ["conmod", "arenamod", "mod", "smod", "admin"].includes(user.role);
 }

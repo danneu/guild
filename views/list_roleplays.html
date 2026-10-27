@@ -170,7 +170,7 @@
         </div>
       </div>
       {% for topic in roleplays %}
-        {% if ctx.can(ctx.currUser, 'READ_TOPIC', topic) %}
+        {# server/readable.ts#fetchReadable returns only topics the viewer may read #}
           <div class="list-group-item topic-panel"
              style="background-color: #3d3a3a; border: 1px solid #111; color: #fff;">
 
@@ -280,7 +280,6 @@
             </div>
 
           </div>
-        {% endif %}
       {% endfor %}
     </div> <!-- /.list-group -->
   {% endif %}

@@ -818,17 +818,13 @@ router.get("/users/:userIdOrSlug", async (ctx: Context) => {
   }
 
   // OPTIMIZE: Merge into single query?
-  var recentPosts = await db.findRecentPostsForUserId(
-    user.id,
-    ctx.vals["before-id"],
-  );
-  // TODO: Figure out how to do this so I'm not possibly serving empty or
-  //       partial pages since they're being filtered post-query.
-  // Filter out posts that currUser is unauthorized to see
-  recentPosts = recentPosts.filter((post) => {
-    return cancan.can(ctx.currUser, "READ_POST", post);
-  });
-  recentPosts = recentPosts.map(pre.presentPost);
+  const recentPosts = (
+    await db.findRecentPostsForUserId(
+      ctx.currUser,
+      user.id,
+      ctx.vals["before-id"],
+    )
+  ).map(pre.presentPost);
 
   // FIXME: Way too many queries in this route.
 
@@ -1155,10 +1151,12 @@ router.get("/users/:slug/recent-topics", async (ctx: Context) => {
 
   // Load recent topics
   var topics = (
-    await db.findRecentTopicsForUserId(user.id, ctx.vals["before-id"])
-  )
-    .filter((topic) => cancan.can(ctx.currUser, "READ_TOPIC", topic))
-    .map(pre.presentTopic);
+    await db.findRecentTopicsForUserId(
+      ctx.currUser,
+      user.id,
+      ctx.vals["before-id"],
+    )
+  ).map(pre.presentTopic);
 
   var nextBeforeId = topics.length > 0 ? _.last(topics).id : null;
 

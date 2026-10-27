@@ -3,8 +3,10 @@
 // redirect to, render or act on a row whose read check it skipped. The raw
 // queries stay private to this file for that reason.
 //
-// List queries stay in server/db/index.ts, because they filter in SQL. Post
-// rows stay there too, because READ_POST guards them.
+// List queries stay in server/db/index.ts. A viewer's paged listing of posts
+// or topics runs through server/readable.ts#fetchReadable, which scopes it in
+// SQL and checks each row. Post rows stay in server/db/index.ts too, because
+// READ_POST guards them.
 // server/db/notifications.ts creates the notifications that point at a post
 // or a topic, reads their post html and topic title, and lists a user's
 // subscribed topics, each gated with cancan.

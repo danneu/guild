@@ -172,13 +172,8 @@
 
   {% if posts.length > 0 %}
   <ul>
+    {# server/readable.ts#fetchReadable returns only posts the viewer may read #}
     {% for post in posts %}
-      {% if not ctx.can(ctx.currUser, 'READ_POST', post) %}
-        <p>
-          {{ loop.index }}.
-          <span class="text-danger">You are not authorized to view this post</span>
-        </p>
-      {% else %}
         <div class="panel panel-default">
           <div class="panel-heading">
             {{ loop.index }}.
@@ -223,7 +218,6 @@
             </div>
           {% endif %}
         </div>
-      {% endif %}
     {% endfor %}
   </ul>
   {% endif %}
