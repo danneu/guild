@@ -41,14 +41,12 @@ import {
   shouldRejectOriginBypass,
   startCloudflareIpRangeRefresh,
 } from "./cloudflare_ip.js";
-import {
-  retypeUnrenderedHtml,
-  trustRendered,
-} from "./middleware/html-only-from-views.js";
+import { responseEdge, trustRendered } from "./middleware/response-edge.js";
+import { sendJson } from "./api_json.js";
 
-// HTML leaves only through ctx.render; any other HTML-typed body goes out as
-// text/plain. The first app.use, so it sees every response's final body.
-app.use(retypeUnrenderedHtml());
+// JSON leaves only through sendJson and HTML only through ctx.render. The
+// first app.use, so it sees every response's final body.
+app.use(responseEdge());
 
 // Resolve the trusted client IP. cf-connecting-ip is honored only when the TCP
 // peer (fly-client-ip) is a Cloudflare proxy edge, so a direct origin hit at
@@ -409,7 +407,7 @@ const nunjucksOptions = {
   },
 };
 
-// trustRendered marks ctx.render output as the only HTML retypeUnrenderedHtml
+// trustRendered marks ctx.render output as the only HTML responseEdge
 // lets through.
 app.use(trustRendered(nunjucksRender("views", nunjucksOptions)));
 
@@ -462,10 +460,6 @@ const router = new Router();
 // For fly.io health check
 router.get("/health", (ctx: Context) => {
   ctx.status = 200;
-});
-
-router.post("/test", async (ctx: Context) => {
-  ctx.body = JSON.stringify(ctx.request.body, null, "  ");
 });
 
 app.use(legacyRouter.routes());
@@ -571,8 +565,7 @@ router.delete("/topics/:topicSlug/co-gms/:userSlug", async (ctx: Context) => {
 });
 
 router.get("/unames.json", async (ctx: Context) => {
-  ctx.type = "application/json";
-  ctx.body = JSON.stringify(Array.from(cache3.get("uname-set")));
+  sendJson(ctx, "unames", cache3.get("uname-set"));
 });
 
 // Required body params:
@@ -608,7 +601,7 @@ router.post("/posts/:postId/rate", async (ctx: Context) => {
     var threeSecondsAgo = new Date(Date.now() - 3000);
     // If this user's previous rating is newer than 3 seconds ago, fail.
     if (prevRating.created_at > threeSecondsAgo) {
-      ctx.body = JSON.stringify({ error: "TOO_SOON" });
+      sendJson(ctx, "error", { error: "TOO_SOON" });
       ctx.status = 400;
       return;
     }
@@ -636,8 +629,7 @@ router.post("/posts/:postId/rate", async (ctx: Context) => {
       .catch(console.error);
   }
 
-  ctx.type = "json";
-  ctx.body = rating;
+  sendJson(ctx, "rating", rating);
 });
 
 //
@@ -1459,96 +1451,6 @@ router.get("/pms/:id/raw", async (ctx: Context) => {
   ctx.assertAuthorized(ctx.currUser, "READ_PM", pm);
   ctx.set("Cache-Control", "no-cache");
   ctx.body = pm.markup ? pm.markup : pm.text;
-});
-
-//
-// Update post markup
-// Body params:
-// - markup
-// - reason (optional)
-//
-// Keep /api/posts/:postId and /api/pms/:pmId in sync
-router.put("/api/posts/:id", async (ctx: Context) => {
-  const post = await db.findPost(ctx.params.id);
-  ctx.assert(post, 404);
-  ctx.assertAuthorized(ctx.currUser, "UPDATE_POST", post);
-
-  // Validation
-
-  ctx
-    .validateBody("markup")
-    .isString()
-    .isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH);
-
-  ctx.validateBody("reason").optional().isString().trim().isLength(0, 300);
-
-  // Succeeded
-
-  ctx.type = "json";
-
-  // Short-circuit if nothing changed
-  if (post.markup.trim() === ctx.request.body.markup.trim()) {
-    ctx.body = JSON.stringify(post);
-    return;
-  }
-
-  // Render BBCode to html
-  var html = bbcode(ctx.request.body.markup);
-
-  var updatedPost = await db
-    .updatePost(
-      ctx.currUser.id,
-      post.id,
-      ctx.vals.markup,
-      html,
-      ctx.vals.reason,
-    )
-    .then(pre.presentPost);
-
-  ctx.body = JSON.stringify(updatedPost);
-
-  // If it's the FAQ post, refresh cache
-  if (post.id === config.FAQ_POST_ID) {
-    cache3.requestUpdate("faq-post");
-  }
-
-  if (post.id === config.WELCOME_POST_ID) {
-    cache3.requestUpdate("welcome-post");
-  }
-
-  // TODO: Submit to spam service like PUT /posts/:id
-});
-
-router.put("/api/pms/:id", async (ctx: Context) => {
-  if (!config.IS_PM_SYSTEM_ONLINE) {
-    ctx.body = "PM system currently disabled";
-    return;
-  }
-
-  ctx
-    .validateBody("markup")
-    .isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH);
-
-  // Users that aren't logged in can't read any PMs, so just short-circuit
-  // if user is a guest so we don't even incur DB query.
-  ctx.assert(ctx.currUser, 404);
-
-  var pm = await db.findPmWithConvo(ctx.params.id);
-
-  // 404 if there is no PM with this ID
-  ctx.assert(pm, 404);
-
-  // Ensure user is allowed to update this PM
-  ctx.assertAuthorized(ctx.currUser, "UPDATE_PM", pm);
-
-  // Render BBCode to html
-  var html = bbcode(ctx.vals.markup);
-
-  var updatedPm = await db
-    .updatePm(ctx.params.id, ctx.vals.markup, html)
-    .then(pre.presentPm);
-
-  ctx.body = JSON.stringify(updatedPm);
 });
 
 //

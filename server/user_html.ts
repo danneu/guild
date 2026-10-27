@@ -1,4 +1,4 @@
-// The one gate for user html that pages print with |safe. Every writer of a
+// The one gate for user html that pages print unescaped. Every writer of a
 // stored html column passes its html through sanitizeUserHtml, so stored html
 // can hold only what the BBCode renderer (server/bbcode.js) and status
 // autolinking emit. This module does not import bbcode.js, so code that only

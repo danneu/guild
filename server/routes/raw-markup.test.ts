@@ -20,10 +20,7 @@ vi.mock("../bbcode", () => ({ default: vi.fn() }));
 
 import * as db from "../db";
 import indexRoutes from "./index";
-import {
-  retypeUnrenderedHtml,
-  trustRendered,
-} from "../middleware/html-only-from-views";
+import { responseEdge, trustRendered } from "../middleware/response-edge";
 
 // Intent: member-written markup never reaches a browser as HTML. The raw
 // endpoints answer with text/plain and the markup byte for byte, and only a
@@ -74,13 +71,10 @@ shapes.get("/render-then-overwrite", async (ctx: Context) => {
 shapes.get("/redirect", (ctx: Context) => {
   ctx.redirect("/posts/1");
 });
-shapes.get("/json", (ctx: Context) => {
-  ctx.body = { markup: MARKUP };
-});
 
 // Mirrors the order server/index.ts mounts these in.
 const app = new Koa();
-app.use(retypeUnrenderedHtml());
+app.use(responseEdge());
 app.use(
   trustRendered(
     nunjucksRender(join(__dirname, "..", "..", "views"), { ext: ".html" }),
@@ -137,7 +131,7 @@ describe("raw markup endpoints", () => {
   });
 });
 
-describe("retypeUnrenderedHtml", () => {
+describe("responseEdge", () => {
   it.each([
     ["a body typed html before it is set", "/type-then-body"],
     ["a body typed html after it is set", "/body-then-type"],
@@ -154,13 +148,5 @@ describe("retypeUnrenderedHtml", () => {
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe("/posts/1");
     expect(res.headers.get("content-type")).toBe(PLAIN);
-  });
-
-  it("leaves a JSON body alone", async () => {
-    const res = await get("/json");
-    expect(res.headers.get("content-type")).toBe(
-      "application/json; charset=utf-8",
-    );
-    expect(await res.json()).toEqual({ markup: MARKUP });
   });
 });

@@ -4,6 +4,7 @@ import * as belt from "../belt";
 import * as config from "../config";
 import * as emailer from "../emailer";
 import { isEmailGateSatisfied } from "../middleware/require-confirmed-email";
+import { sendJson } from "../api_json";
 import { Context } from "koa";
 import {
   emailTakenFlashMessage,
@@ -142,10 +143,10 @@ router.post("/api/verify-email", async (ctx: Context) => {
     // Not a 500: the row is staged and the next resend will reuse it. 503 tells
     // the (non-2xx-checking) client this is a transient mailer problem.
     ctx.status = 503;
-    ctx.body = {
+    sendJson(ctx, "error", {
       error: "SEND_FAILED",
       message: SEND_FAILED_MESSAGE,
-    };
+    });
     return;
   }
 

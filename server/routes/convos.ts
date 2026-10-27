@@ -10,13 +10,14 @@ import * as belt from "../belt.js";
 import * as pre from "../presenters.js";
 import * as config from "../config.js";
 import * as cancan from "../cancan.js";
-const bbcode = require("../bbcode.js");
+import bbcode from "../bbcode";
 import * as paginate from "../paginate.js";
 import * as emailer from "../emailer";
 import * as eflags from "../eflags.js";
 import services from "../services";
 import { Context } from "koa";
 import { pool, withPgPoolTransaction } from "../db/util.js";
+import { sendJson } from "../api_json.js";
 import { z } from "zod";
 
 const router = new Router();
@@ -516,6 +517,46 @@ router.post("/me/convos/move", async (ctx: Context) => {
   } else {
     ctx.redirect(`/me/convos/${folder.toLowerCase()}`);
   }
+});
+
+////////////////////////////////////////////////////////////
+
+//
+// Update PM markup
+// Body params:
+// - markup
+//
+// Keep in sync with PUT /api/posts/:id in server/routes/topics.ts
+router.put("/api/pms/:id", async (ctx: Context) => {
+  if (!config.IS_PM_SYSTEM_ONLINE) {
+    ctx.body = "PM system currently disabled";
+    return;
+  }
+
+  ctx
+    .validateBody("markup")
+    .isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH);
+
+  // Users that aren't logged in can't read any PMs, so just short-circuit
+  // if user is a guest so we don't even incur DB query.
+  ctx.assert(ctx.currUser, 404);
+
+  var pm = await db.findPmWithConvo(ctx.params.id);
+
+  // 404 if there is no PM with this ID
+  ctx.assert(pm, 404);
+
+  // Ensure user is allowed to update this PM
+  ctx.assertAuthorized(ctx.currUser, "UPDATE_PM", pm);
+
+  // Render BBCode to html
+  var html = bbcode(ctx.vals.markup);
+
+  var updatedPm = await db
+    .updatePm(ctx.params.id, ctx.vals.markup, html)
+    .then(pre.presentPm);
+
+  sendJson(ctx, "pmEdit", updatedPm);
 });
 
 ////////////////////////////////////////////////////////////

@@ -7,6 +7,7 @@ import * as db from "../db/index.js";
 import * as belt from "../belt.js";
 import * as pre from "../presenters.js";
 import { sanitizeUserHtml } from "../user_html.js";
+import { sendJson } from "../api_json.js";
 import { Context, Next } from "koa";
 
 ////////////////////////////////////////////////////////////
@@ -112,7 +113,7 @@ router.post("/statuses/:status_id/like", loadStatus(), async (ctx: Context) => {
   const latestLikeAt = await db.latestStatusLikeAt(ctx.currUser.id);
   if (latestLikeAt && belt.isNewerThan(latestLikeAt, { seconds: 3 })) {
     ctx.status = 400;
-    ctx.body = JSON.stringify({ error: "TOO_SOON" });
+    sendJson(ctx, "error", { error: "TOO_SOON" });
     return;
   }
   await db.likeStatus({

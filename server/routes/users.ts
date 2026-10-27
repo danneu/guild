@@ -30,6 +30,7 @@ import {
 // import ipintel from "../services/ipintel";
 import { Context, Next } from "koa";
 import { pool, withPgPoolTransaction } from "../db/util";
+import { sendJson } from "../api_json";
 
 const router = new Router();
 
@@ -559,7 +560,7 @@ router.put("/api/users/:id/bio", async (ctx: Context) => {
     html,
   );
 
-  ctx.body = JSON.stringify(updatedUser);
+  sendJson(ctx, "bio", updatedUser);
 
   // Broadcast to Discord if they are setting their bio (not just making an edit)
   // and they only have a couple posts
@@ -589,8 +590,7 @@ router.get("/api/users/:userIdOrSlug", async (ctx: Context) => {
 
   ctx.assert(user, 404);
 
-  ctx.type = "json";
-  ctx.body = pre.presentUserForApi(user, ctx.currUser);
+  sendJson(ctx, "staffUser", user);
 });
 
 //

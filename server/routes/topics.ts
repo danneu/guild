@@ -17,6 +17,7 @@ import cache3 from "../cache3";
 import services from "../services";
 import { Context } from "koa";
 import { pool, withPgPoolTransaction } from "../db/util";
+import { sendJson } from "../api_json";
 import z from "zod";
 
 ////////////////////////////////////////////////////////////
@@ -531,6 +532,64 @@ router.get("/topics/:slug", async (ctx: Context) => {
   } else {
     ctx.response.redirect(ctx.request.path + "/ooc");
   }
+});
+
+////////////////////////////////////////////////////////////
+
+//
+// Update post markup
+// Body params:
+// - markup
+// - reason (optional)
+//
+// Keep in sync with PUT /api/pms/:id in server/routes/convos.ts
+router.put("/api/posts/:id", async (ctx: Context) => {
+  const post = await db.findPost(ctx.params.id);
+  ctx.assert(post, 404);
+  ctx.assertAuthorized(ctx.currUser, "UPDATE_POST", post);
+
+  // Validation
+
+  ctx
+    .validateBody("markup")
+    .isString()
+    .isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH);
+
+  ctx.validateBody("reason").optional().isString().trim().isLength(0, 300);
+
+  // Succeeded
+
+  // Short-circuit if nothing changed
+  if (post.markup.trim() === ctx.request.body.markup.trim()) {
+    sendJson(ctx, "postEdit", post);
+    return;
+  }
+
+  // Render BBCode to html
+  var html = bbcode(ctx.request.body.markup);
+
+  var updatedPost = await db
+    .updatePost(
+      ctx.currUser.id,
+      post.id,
+      ctx.vals.markup,
+      html,
+      ctx.vals.reason,
+    )
+    .then(pre.presentPost);
+
+  sendJson(ctx, "postEdit", updatedPost);
+
+  // If it's the FAQ post, refresh cache
+  if (post.id === config.FAQ_POST_ID) {
+    cache3.requestUpdate("faq-post");
+  }
+
+  if (post.id === config.WELCOME_POST_ID) {
+    cache3.requestUpdate("welcome-post");
+  }
+
+  // TODO: Submit to spam service like PUT /posts/:id
 });
 
 ////////////////////////////////////////////////////////////

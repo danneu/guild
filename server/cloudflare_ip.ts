@@ -1,7 +1,7 @@
 // Trusted client-IP resolution + Cloudflare range classification.
 //
-// Zero app dependencies (imports only Node's `net`) so it stays pure and
-// cycle-free: index.ts, routes/users.ts, and presenters.ts import it.
+// Zero app dependencies (imports only Node's `net`) so it stays pure, and
+// any module can import it without a cycle.
 //
 // Matching is done with sorted, merged integer intervals + binary search
 // rather than net.BlockList: the egress geofeed is ~138k mostly-/32 CIDRs

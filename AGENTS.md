@@ -149,8 +149,13 @@ AWS S3 (file storage), AWS SES (email), and Cloudflare Turnstile (CAPTCHA).
   compile step. See `img-proxy/AGENTS.md`.
 - Only `ctx.render` output goes out as HTML. Any other string or Buffer body
   with an html type, sniffed or set by hand, is sent as text/plain (see
-  `server/middleware/html-only-from-views.ts`). Build new HTML pages as views.
+  `server/middleware/response-edge.ts`). Build new HTML pages as views.
 - Never print a field that can hold raw author text, such as `markup`, as
   HTML. Every nunjucks unescape in `views/` or `server/` needs an exact
   reviewed entry in `server/template_safe_sweep.test.ts`, which defines what
   counts as one.
+- JSON goes out only through `server/api_json.ts#sendJson`, which sends a named
+  view listing each field a client reads. Any other body Koa would
+  JSON-encode, such as a db row, answers 500 at
+  `server/middleware/response-edge.ts`, and `pnpm test` fails on a handler
+  that stringifies a body or sets a JSON type itself. Add a view instead.
