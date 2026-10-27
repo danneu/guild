@@ -102,6 +102,18 @@ CREATE VIEW active_reset_tokens AS
   WHERE expired_at >= NOW()
 ;
 
+-- The login attempt budget's counters; see sql/12-login-attempts.sql.
+CREATE TABLE login_attempts (
+  kind           text         NOT NULL  CHECK (kind IN ('identifier', 'ip')),
+  key_digest     bytea        NOT NULL  CHECK (length(key_digest) = 32),
+  count          int          NOT NULL  CHECK (count >= 0),
+  window_ends_at timestamptz  NOT NULL,
+  PRIMARY KEY (kind, key_digest)
+);
+
+CREATE INDEX login_attempts__window_ends_at
+  ON login_attempts (window_ends_at);
+
 -- At most one token row per user, and the row carries the address it confirms.
 -- See sql/9-email-confirmation.sql.
 CREATE TABLE email_verification_tokens (

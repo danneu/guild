@@ -4072,6 +4072,7 @@ export const listTopicBans = async (topicId) => {
 
 export * as keyvals from "./keyvals";
 export * as ratelimits from "./ratelimits";
+export * as loginAttempts from "./login_attempts";
 export * as images from "./images";
 export * as dice from "./dice";
 export * as profileViews from "./profile-views";

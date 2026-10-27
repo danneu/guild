@@ -13,6 +13,12 @@
 
   <div class="row">
     <div class="col-md-8 col-md-offset-2">
+      {% if throttled %}
+        <div class="alert alert-danger" role="alert">
+          Too many login attempts. Try again later, or
+          <a href="/forgot">reset your password</a>.
+        </div>
+      {% endif %}
       <form action="/sessions" method="post" class="form-horizontal">
         <div class="panel panel-default no-select"
              style="border-color: #000">
@@ -63,6 +69,17 @@
                 </div>
               </div>
             </div>
+
+            {# POST /sessions asks for this after too many attempts. #}
+            {% if ctx.flash.challenge and config.IS_CF_TURNSTILE_CONFIGURED %}
+              <div class="form-group">
+                <div class="col-sm-offset-3 col-sm-9">
+                  <div class="cf-turnstile"
+                       data-sitekey="{{ config.CF_TURNSTILE_SITEKEY }}"
+                       data-callback="turnstileCallback"></div>
+                </div>
+              </div>
+            {% endif %}
           </div> <!-- /.panel-body -->
           <!--
               PANEL FOOTER
@@ -75,7 +92,11 @@
               <input id="login-submit"
                      type="submit"
                      value="Submit"
-                     class="btn btn-primary">
+                     class="btn btn-primary"
+                     {% if ctx.flash.challenge and config.IS_CF_TURNSTILE_CONFIGURED %}
+                       disabled
+                     {% endif %}
+                     >
             </div>
           </div> <!-- /.panel-footer -->
         </div> <!-- /.panel -->
@@ -89,4 +110,13 @@
 <script>
   $('#uname-input').focus();
 </script>
+
+{% if ctx.flash.challenge and config.IS_CF_TURNSTILE_CONFIGURED %}
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script>
+  <script>
+    function turnstileCallback() {
+      document.getElementById('login-submit').disabled = false
+    }
+  </script>
+{% endif %}
 {% endblock %}

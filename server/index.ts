@@ -206,6 +206,7 @@ import services from "./services";
 import cache3 from "./cache3";
 import makeAgo from "./ago";
 import protectCsrf from "./middleware/protect-csrf";
+import { verifyTurnstileToken } from "./middleware/cloudflare-turnstile";
 import {
   isEmailGateSatisfied,
   needsEmailConfirmation,
@@ -664,18 +665,58 @@ router.get("/login", async (ctx: Context) => {
 // Create session
 //
 router.post("/sessions", async (ctx: Context) => {
-  ctx.validateBody("uname-or-email").required("Invalid creds (1)");
-  ctx.validateBody("password").required("Invalid creds (2)");
+  // A qs or JSON body can send an array or an object here, and authenticate
+  // measures and slugifies the identifier and compares the password as strings.
+  ctx
+    .validateBody("uname-or-email")
+    .required("Invalid creds (1)")
+    .isString("Invalid creds (1)");
+  ctx
+    .validateBody("password")
+    .required("Invalid creds (2)")
+    .isString("Invalid creds (2)");
   ctx.validateBody("remember-me").toBoolean();
+  // The Turnstile widget adds this field only when views/login.html shows it.
+  const challengeToken = ctx.request.body["cf-turnstile-response"];
   const auth = await authenticate(
-    { findUser: db.findUserByUnameOrEmail },
-    { identifier: ctx.vals["uname-or-email"], password: ctx.vals.password },
+    {
+      findUser: db.findUserByUnameOrEmail,
+      attempts: db.loginAttempts,
+      verifyChallenge: config.IS_CF_TURNSTILE_CONFIGURED
+        ? verifyTurnstileToken
+        : null,
+    },
+    {
+      identifier: ctx.vals["uname-or-email"],
+      password: ctx.vals.password,
+      ip: ctx.request.ip,
+      challengeToken:
+        typeof challengeToken === "string" ? challengeToken : undefined,
+    },
   );
-  if (auth.type !== "OK") {
-    // One message for every failure, so the page never shows whether the
-    // account exists.
-    ctx.check(false, "Invalid creds (3)");
-    return;
+  switch (auth.type) {
+    case "INVALID":
+      // One message for every failure, so the page never shows whether the
+      // account exists.
+      ctx.check(false, "Invalid creds (3)");
+      return;
+    case "CHALLENGE_REQUIRED":
+      // Back to the form with the widget and the typed identifier. The
+      // password stays out of the flash cookie.
+      ctx.flash = {
+        message: [
+          "warning",
+          "Too many login attempts. Complete the human test to keep trying.",
+        ],
+        params: { "uname-or-email": ctx.vals["uname-or-email"] },
+        challenge: true,
+      };
+      ctx.redirect("/login");
+      return;
+    case "THROTTLED":
+      ctx.status = 429;
+      await ctx.render("login", { ctx, title: "Login", throttled: true });
+      return;
   }
   const user = auth.user;
 
@@ -2336,5 +2377,6 @@ cache3.waitUntilReady().then(() => {
   app.listen(config.PORT, () => {
     console.log("Listening on", config.PORT);
     startCloudflareIpRangeRefresh();
+    db.loginAttempts.startSweep();
   });
 });
