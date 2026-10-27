@@ -6,6 +6,10 @@ declare module "koa" {
   }
   interface Context {
     back(url: string): void;
+    // server/middleware/flash.ts. A route sets a Flash; a page reads back
+    // what the cookie held.
+    get flash(): any;
+    set flash(val: import("../middleware/flash").Flash);
   }
 }
 

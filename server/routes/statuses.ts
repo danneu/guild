@@ -10,6 +10,7 @@ import { sanitizeUserHtml } from "../user_html.js";
 import { sendJson } from "../api_json.js";
 import { pool, withPgPoolTransaction } from "../db/util.js";
 import { catchRefusal, SendBudgetExceeded } from "../db/send_budget";
+import { FlashParams } from "../middleware/flash";
 import { Context, Next } from "koa";
 
 ////////////////////////////////////////////////////////////
@@ -58,7 +59,7 @@ router.post("/me/statuses", async (ctx: Context) => {
   if (status instanceof SendBudgetExceeded) {
     ctx.flash = {
       message: ["danger", status.message],
-      params: ctx.request.body,
+      params: FlashParams.pick(ctx.request.body, ["text"]),
     };
     ctx.redirect(`/users/${ctx.currUser.slug}#status`);
     return;

@@ -1,6 +1,7 @@
 "use strict";
 
 import checkCloudflareTurnstile from "../middleware/cloudflare-turnstile";
+import { FlashParams } from "../middleware/flash";
 
 // Node
 import util from "util";
@@ -303,7 +304,7 @@ router.post("/users", checkCloudflareTurnstile, async (ctx: Context) => {
   if (errMessage) {
     ctx.flash = {
       message: ["danger", errMessage],
-      params: ctx.request.body,
+      params: FlashParams.pick(ctx.request.body, ["uname", "email"]),
     };
     return ctx.response.redirect("/register");
   }
@@ -1121,7 +1122,10 @@ router.post("/users/:slug/vms", async (ctx: Context) => {
   }).catch(catchRefusal);
 
   if (vm instanceof SendBudgetExceeded) {
-    ctx.flash = { message: ["danger", vm.message], params: ctx.request.body };
+    ctx.flash = {
+      message: ["danger", vm.message],
+      params: FlashParams.pick(ctx.request.body, ["markup"]),
+    };
     ctx.redirect(user.url + "/vms");
     return;
   }

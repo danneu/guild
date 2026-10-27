@@ -19,6 +19,7 @@ import { Context } from "koa";
 import { pool, withPgPoolTransaction } from "../db/util.js";
 import { sendJson } from "../api_json.js";
 import { catchRefusal, SendBudgetExceeded } from "../db/send_budget";
+import { FlashParams } from "../middleware/flash";
 import { z } from "zod";
 
 const router = new Router();
@@ -176,7 +177,10 @@ router.post("/convos", async (ctx: Context) => {
   }).catch(catchRefusal);
 
   if (sent instanceof SendBudgetExceeded) {
-    ctx.flash = { message: ["danger", sent.message], params: ctx.request.body };
+    ctx.flash = {
+      message: ["danger", sent.message],
+      params: FlashParams.pick(ctx.request.body, ["to", "title", "markup"]),
+    };
     ctx.response.redirect("/convos/new?to=" + unames.join(","));
     return;
   }
@@ -235,7 +239,7 @@ router.post("/convos/:convoId/pms", async (ctx: Context) => {
     if (ex instanceof bouncer.ValidationError) {
       ctx.flash = {
         message: ["danger", ex.message],
-        params: ctx.request.body,
+        params: FlashParams.pick(ctx.request.body, ["markup"]),
       };
       ctx.redirect("/convos/" + ctx.params.convoId);
     }
@@ -278,7 +282,10 @@ router.post("/convos/:convoId/pms", async (ctx: Context) => {
   }).catch(catchRefusal);
 
   if (pm instanceof SendBudgetExceeded) {
-    ctx.flash = { message: ["danger", pm.message], params: ctx.request.body };
+    ctx.flash = {
+      message: ["danger", pm.message],
+      params: FlashParams.pick(ctx.request.body, ["markup"]),
+    };
     ctx.redirect("/convos/" + ctx.params.convoId);
     return;
   }

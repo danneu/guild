@@ -210,6 +210,7 @@ import services from "./services";
 import cache3 from "./cache3";
 import makeAgo from "./ago";
 import protectCsrf from "./middleware/protect-csrf";
+import { FlashParams, FORM_REFILL_FIELDS } from "./middleware/flash";
 import { verifyTurnstileToken } from "./middleware/cloudflare-turnstile";
 import {
   isEmailGateSatisfied,
@@ -435,7 +436,7 @@ app.use(async (ctx: Context, next: Next) => {
         message: ["danger", message],
         // FIXME: This breaks if body is bigger than ~4kb cookie size limit
         // i.e. large posts, large bodies of text
-        params: ctx.request.body,
+        params: FlashParams.pick(ctx.request.body, FORM_REFILL_FIELDS),
       };
       ctx.back("/");
       return;
@@ -445,7 +446,7 @@ app.use(async (ctx: Context, next: Next) => {
         message: ["danger", ex.message || "Validation error"],
         // FIXME: This breaks if body is bigger than ~4kb cookie size limit
         // i.e. large posts, large bodies of text
-        params: ctx.request.body,
+        params: FlashParams.pick(ctx.request.body, FORM_REFILL_FIELDS),
       };
       ctx.back("/");
       return;
@@ -709,14 +710,13 @@ router.post("/sessions", async (ctx: Context) => {
       ctx.check(false, "Invalid creds (3)");
       return;
     case "CHALLENGE_REQUIRED":
-      // Back to the form with the widget and the typed identifier. The
-      // password stays out of the flash cookie.
+      // Back to the form with the widget and the typed identifier.
       ctx.flash = {
         message: [
           "warning",
           "Too many login attempts. Complete the human test to keep trying.",
         ],
-        params: { "uname-or-email": ctx.vals["uname-or-email"] },
+        params: FlashParams.pick(ctx.vals, ["uname-or-email"]),
         challenge: true,
       };
       ctx.redirect("/login");
@@ -983,7 +983,7 @@ router.post("/reset-password", async (ctx: Context) => {
         "danger",
         "Your new password and the new password confirmation must match",
       ],
-      params: { token: token },
+      params: FlashParams.pick({ token }, ["token"]),
     };
     return ctx.response.redirect("/reset-password?token=" + token);
   }

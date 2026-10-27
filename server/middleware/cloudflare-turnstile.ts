@@ -4,6 +4,7 @@
 import { Context, Next } from "koa";
 import { z } from "zod";
 import * as config from "../config";
+import { FlashParams } from "./flash";
 
 const BodySchema = z
   .object({
@@ -65,7 +66,7 @@ export default async function checkCloudflareTurnstile(
   if (!solved) {
     ctx.flash = {
       message: ["danger", "You failed the human test"],
-      params: ctx.request.body,
+      params: FlashParams.pick(ctx.request.body, ["uname", "email"]),
     };
     ctx.back("/");
     return;

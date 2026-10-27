@@ -12,6 +12,7 @@ import * as config from "../config";
 import * as belt from "../belt";
 import * as cancan from "../cancan";
 import * as middleware from "../middleware";
+import { FlashParams } from "../middleware/flash";
 import { renderMarkup } from "../markup";
 import cache3 from "../cache3";
 import services from "../services";
@@ -257,7 +258,7 @@ router.put("/topics/:slug/edit", async (ctx: Context) => {
     if (ex instanceof bouncer.ValidationError) {
       ctx.flash = {
         message: ["danger", ex.message],
-        params: ctx.request.body,
+        params: FlashParams.pick(ctx.request.body, ["title", "join-status"]),
       };
       ctx.response.redirect(topic.url + "/edit");
       return;

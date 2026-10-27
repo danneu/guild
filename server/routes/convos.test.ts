@@ -171,7 +171,7 @@ describe("POST /convos", () => {
     expect(res.flash.message[0]).toBe("danger");
     expect(res.flash.message[1]).toMatch(/Try again in/);
     // The form refills from these, so the refused message is not lost.
-    expect(res.flash.params).toEqual(body);
+    expect(res.flash.params.fields).toEqual(body);
   });
 
   it("opens the convo and mails recipients while under budget", async () => {
