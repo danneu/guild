@@ -8,7 +8,7 @@
 var isServer = typeof window === "undefined";
 var isBrowser = typeof window !== "undefined";
 
-var util, cache3, userHtml;
+var util, cache3, userHtml, MarkupRejected;
 if (isServer) {
   // Node
   util = require("util");
@@ -17,7 +17,17 @@ if (isServer) {
   // 1st party
   cache3 = require("./cache3").default;
   userHtml = require("./user_html");
+  MarkupRejected = require("./markup_rejected").MarkupRejected;
 }
+
+// The most levels tags may nest. Past it the server refuses the markup and
+// the preview shows its tags as text. The cap bounds a render's cost at about
+// MAX_TAG_DEPTH passes over the text, and the depth of parse's recursion.
+var MAX_TAG_DEPTH = 50;
+var tooDeepMessage =
+  "Tags are nested more than " +
+  MAX_TAG_DEPTH +
+  " levels deep. Unnest some tags and try again.";
 
 // String -> Maybe String
 function extractYoutubeId(url) {
@@ -177,7 +187,78 @@ function replaceMentions(text) {
   });
 }
 
-var XBBCODE = (function () {
+// Returns the href for text when it is an absolute http, https or ftp URL to
+// a public host, else null. tags.url and tags.img check URLs only here. The
+// WHATWG URL parser runs in time linear in the text. The regex it replaced
+// backtracked quadratically on long runs, so one 150k-character post could
+// block the event loop for about 36 s (finding 261026-0911-005).
+// text is renderer text, so any & starts an entity that the browser decodes
+// when it reads the attribute.
+function parseSafeUrl(text) {
+  // The parser drops tabs and newlines and encodes spaces, so without this
+  // it would take URLs that hold whitespace.
+  if (/\s/.test(text)) return null;
+  // The parser also takes "http:x.com" and "http:/x.com".
+  if (!/^(?:https?|ftp):\/\//i.test(text)) return null;
+  var url;
+  if (typeof URL.parse === "function") {
+    // Returns null rather than throwing, which matters when one post holds
+    // thousands of bad URLs.
+    url = URL.parse(text);
+  } else {
+    try {
+      url = new URL(text);
+    } catch (err) {
+      url = null;
+    }
+  }
+  return url && isPublicHost(url.hostname) ? url.href : null;
+}
+
+// The parser has already lowercased the host, turned unicode labels into
+// punycode, and rewritten any IPv4 form, such as 0x7f.1, as four decimal
+// octets.
+var ipv4Pattern = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/;
+var hostLabelPattern = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+var topLabelPattern = /^(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$/;
+
+// A host name of two or more labels, or a public IPv4 address. IPv6 literals
+// are refused, as they were before.
+function isPublicHost(hostname) {
+  if (hostname.length > 253) return false;
+  var ip = ipv4Pattern.exec(hostname);
+  if (ip) {
+    return isPublicIpv4(
+      Number(ip[1]),
+      Number(ip[2]),
+      Number(ip[3]),
+      Number(ip[4]),
+    );
+  }
+  var labels = hostname.split(".");
+  if (labels.length < 2) return false;
+  for (var i = 0; i < labels.length; i++) {
+    if (!hostLabelPattern.test(labels[i])) return false;
+  }
+  return topLabelPattern.test(labels[labels.length - 1]);
+}
+
+// Refuses private and local networks (10/8, 127/8, 169.254/16, 172.16/12,
+// 192.168/16), 0.0.0.0/8, space from 224.0.0.0 up, and addresses ending in
+// .0 or .255.
+function isPublicIpv4(a, b, c, d) {
+  if (a < 1 || a > 223 || a === 10 || a === 127) return false;
+  if (a === 169 && b === 254) return false;
+  if (a === 192 && b === 168) return false;
+  if (a === 172 && b >= 16 && b <= 31) return false;
+  return d !== 0 && d !== 255;
+}
+
+// Builds one renderer. Every variable a render writes (tagErrs, hasError,
+// tabIdx, the attribute values) lives in this closure, and XBBCODE.render
+// makes a new renderer for each call. So a render that a time budget cuts
+// off, or one that throws, leaves no state for the next render.
+function createRenderer() {
   ////
   //// Here are some nasty global variables that let me add in some stateful
   //// hacks until I have time to find better ways to do these things.
@@ -260,46 +341,6 @@ var XBBCODE = (function () {
   // -----------------------------------------------------------------------------
 
   var me = {},
-    // This library's default:
-    //urlPattern = /^[-a-z0-9:;@#%&()~_?\+=\/\\\.]+$/i,
-
-    // https://mathiasbynens.be/demo/url-regex
-    // Source from https://gist.github.com/dperini/729294
-    urlPattern = new RegExp(
-      "^" +
-        // protocol identifier
-        "(?:(?:https?|ftp)://)" +
-        // user:pass authentication
-        "(?:\\S+(?::\\S*)?@)?" +
-        "(?:" +
-        // IP address exclusion
-        // private & local networks
-        "(?!(?:10|127)(?:\\.\\d{1,3}){3})" +
-        "(?!(?:169\\.254|192\\.168)(?:\\.\\d{1,3}){2})" +
-        "(?!172\\.(?:1[6-9]|2\\d|3[0-1])(?:\\.\\d{1,3}){2})" +
-        // IP address dotted notation octets
-        // excludes loopback network 0.0.0.0
-        // excludes reserved space >= 224.0.0.0
-        // excludes network & broacast addresses
-        // (first & last IP address of each class)
-        "(?:[1-9]\\d?|1\\d\\d|2[01]\\d|22[0-3])" +
-        "(?:\\.(?:1?\\d{1,2}|2[0-4]\\d|25[0-5])){2}" +
-        "(?:\\.(?:[1-9]\\d?|1\\d\\d|2[0-4]\\d|25[0-4]))" +
-        "|" +
-        // host name
-        "(?:(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)" +
-        // domain name
-        "(?:\\.(?:[a-z\\u00a1-\\uffff0-9]-*)*[a-z\\u00a1-\\uffff0-9]+)*" +
-        // TLD identifier
-        "(?:\\.(?:[a-z\\u00a1-\\uffff]{2,}))" +
-        ")" +
-        // port number
-        "(?::\\d{2,5})?" +
-        // resource path
-        "(?:/\\S*)?" +
-        "$",
-      "i",
-    ),
     colorNamePattern =
       /^(?:aliceblue|antiquewhite|aqua|aquamarine|azure|beige|bisque|black|blanchedalmond|blue|blueviolet|brown|burlywood|cadetblue|chartreuse|chocolate|coral|cornflowerblue|cornsilk|crimson|cyan|darkblue|darkcyan|darkgoldenrod|darkgray|darkgreen|darkkhaki|darkmagenta|darkolivegreen|darkorange|darkorchid|darkred|darksalmon|darkseagreen|darkslateblue|darkslategray|darkturquoise|darkviolet|deeppink|deepskyblue|dimgray|dodgerblue|firebrick|floralwhite|forestgreen|fuchsia|gainsboro|ghostwhite|gold|goldenrod|gray|green|greenyellow|honeydew|hotpink|indianred|indigo|ivory|khaki|lavender|lavenderblush|lawngreen|lemonchiffon|lightblue|lightcoral|lightcyan|lightgoldenrodyellow|lightgray|lightgreen|lightpink|lightsalmon|lightseagreen|lightskyblue|lightslategray|lightsteelblue|lightyellow|lime|limegreen|linen|magenta|maroon|mediumaquamarine|mediumblue|mediumorchid|mediumpurple|mediumseagreen|mediumslateblue|mediumspringgreen|mediumturquoise|mediumvioletred|midnightblue|mintcream|mistyrose|moccasin|navajowhite|navy|oldlace|olive|olivedrab|orange|orangered|orchid|palegoldenrod|palegreen|paleturquoise|palevioletred|papayawhip|peachpuff|peru|pink|plum|powderblue|purple|red|rosybrown|royalblue|saddlebrown|salmon|sandybrown|seagreen|seashell|sienna|silver|skyblue|slateblue|slategray|snow|springgreen|steelblue|tan|teal|thistle|tomato|turquoise|violet|wheat|white|whitesmoke|yellow|yellowgreen)$/,
     colorCodePattern = /^#?[a-fA-F0-9]{6}$/,
@@ -309,8 +350,6 @@ var XBBCODE = (function () {
     tagList,
     tagsNoParseList = [],
     bbRegExp,
-    pbbRegExp,
-    pbbRegExp2,
     openTags,
     closeTags;
 
@@ -693,14 +732,9 @@ var XBBCODE = (function () {
     },
     img: {
       openTag: function (params, content) {
-        var myUrl = content.trim();
-
-        urlPattern.lastIndex = 0;
-        if (!urlPattern.test(myUrl)) {
-          myUrl = "";
-        }
-
-        return '<img src="' + attrValue(myUrl) + '" />';
+        return (
+          '<img src="' + attrValue(parseSafeUrl(content.trim()) || "") + '" />'
+        );
       },
       closeTag: function (params, content) {
         return "";
@@ -1045,8 +1079,8 @@ var XBBCODE = (function () {
           myUrl = "http://" + myUrl;
         }
 
-        urlPattern.lastIndex = 0;
-        if (!urlPattern.test(myUrl)) {
+        var href = parseSafeUrl(myUrl);
+        if (!href) {
           hasError.url = true;
           tagErrs.push("One of your [url] tags has an invalid url");
           if (params) return "&#91;url=" + myUrl + "&#93;";
@@ -1055,14 +1089,14 @@ var XBBCODE = (function () {
 
         // dumb way to see if user is linking internally or externally
         // keep synced with Autolinker#replaceFn definedin this file
-        if (/roleplayerguild.com/i.test(myUrl)) {
+        if (/roleplayerguild.com/i.test(href)) {
           // internal link
-          return '<a href="' + attrValue(myUrl) + '">';
+          return '<a href="' + attrValue(href) + '">';
         } else {
           // external link
           return (
             '<a target="_blank" rel="nofollow noopener" href="' +
-            attrValue(myUrl) +
+            attrValue(href) +
             '">'
           );
         }
@@ -1127,16 +1161,6 @@ var XBBCODE = (function () {
         ")([ =][^>]*?)?>((?:.|[\\r\\n])*?)<bbcl=\\1 /\\2>",
       "gi",
     );
-    pbbRegExp = new RegExp(
-      "\\[(" + tagList.join("|") + ")([ =][^\\]]*?)?\\]([^\\[]*?)\\[/\\1\\]",
-      "gi",
-    );
-    pbbRegExp2 = new RegExp(
-      "\\[(" +
-        tagsNoParseList.join("|") +
-        ")([ =][^\\]]*?)?\\]([\\s\\S]*?)\\[/\\1\\]",
-      "gi",
-    );
 
     // create the regex for escaping ['s that aren't apart of tags
     (function () {
@@ -1164,122 +1188,54 @@ var XBBCODE = (function () {
   // private functions
   // -----------------------------------------------------------------------------
 
-  function checkParentChildRestrictions(
-    parentTag,
-    bbcode,
-    bbcodeLevel,
-    tagName,
-    tagParams,
-    tagContents,
-    errQueue,
-  ) {
-    errQueue = errQueue || [];
-    bbcodeLevel++;
-
-    // get a list of all of the child tags to this tag
-    var reTagNames = new RegExp(
-        "(<bbcl=" + bbcodeLevel + " )(" + tagList.join("|") + ")([ =>])",
-        "gi",
-      ),
-      reTagNamesParts = new RegExp(
-        "(<bbcl=" + bbcodeLevel + " )(" + tagList.join("|") + ")([ =>])",
-        "i",
-      ),
-      matchingTags = tagContents.match(reTagNames) || [],
-      cInfo,
-      errStr,
-      ii,
-      childTag,
-      pInfo = tags[parentTag] || {};
-
-    reTagNames.lastIndex = 0;
-
-    if (!matchingTags) {
-      tagContents = "";
-    }
-
-    for (ii = 0; ii < matchingTags.length; ii++) {
-      reTagNamesParts.lastIndex = 0;
-      childTag = matchingTags[ii].match(reTagNamesParts)[2].toLowerCase();
-
-      if (
-        pInfo &&
-        pInfo.restrictChildrenTo &&
-        pInfo.restrictChildrenTo.length > 0
-      ) {
-        if (!pInfo.validChildLookup[childTag]) {
-          errStr =
+  // Checks each paired tag against its parent's restrictChildrenTo and its
+  // own restrictParentsTo. root is the tree from addBbcodeLevels. An explicit
+  // stack walks it, so no nesting depth can overflow the call stack. Errors
+  // come in the order the old recursive check gave them: a tag's children
+  // first, then each child's subtree in turn.
+  function checkParentChildRestrictions(root) {
+    var errQueue = [];
+    var pending = [root];
+    while (pending.length > 0) {
+      var parent = pending.pop();
+      var pInfo = tags[parent.name];
+      for (var ii = 0; ii < parent.children.length; ii++) {
+        var childTag = parent.children[ii].name;
+        var cInfo = tags[childTag];
+        if (
+          pInfo.restrictChildrenTo.length > 0 &&
+          !pInfo.validChildLookup[childTag]
+        ) {
+          errQueue.push(
             'The tag "' +
-            childTag +
-            '" is not allowed as a child of the tag "' +
-            parentTag +
-            '".';
-          errQueue.push(errStr);
+              childTag +
+              '" is not allowed as a child of the tag "' +
+              parent.name +
+              '".',
+          );
+        }
+        if (
+          cInfo.restrictParentsTo.length > 0 &&
+          !cInfo.validParentLookup[parent.name]
+        ) {
+          errQueue.push(
+            'The tag "' +
+              parent.name +
+              '" is not allowed as a parent of the tag "' +
+              childTag +
+              '".',
+          );
         }
       }
-      cInfo = tags[childTag] || {};
-      if (cInfo.restrictParentsTo.length > 0) {
-        if (!cInfo.validParentLookup[parentTag]) {
-          errStr =
-            'The tag "' +
-            parentTag +
-            '" is not allowed as a parent of the tag "' +
-            childTag +
-            '".';
-          errQueue.push(errStr);
-        }
+      for (var jj = parent.children.length - 1; jj >= 0; jj--) {
+        pending.push(parent.children[jj]);
       }
     }
-
-    tagContents = tagContents.replace(
-      bbRegExp,
-      function (matchStr, bbcodeLevel, tagName, tagParams, tagContents) {
-        errQueue = checkParentChildRestrictions(
-          tagName.toLowerCase(),
-          matchStr,
-          bbcodeLevel,
-          tagName,
-          tagParams,
-          tagContents,
-          errQueue,
-        );
-        return matchStr;
-      },
-    );
     return errQueue;
   }
 
   /*
-    This function updates or adds a piece of metadata to each tag called "bbcl" which
-    indicates how deeply nested a particular tag was in the bbcode. This property is removed
-    from the HTML code tags at the end of the processing.
-  */
-  function updateTagDepths(tagContents) {
-    tagContents = tagContents.replace(
-      /\<([^\>][^\>]*?)\>/gi,
-      function (matchStr, subMatchStr) {
-        var bbCodeLevel = subMatchStr.match(/^bbcl=([0-9]+) /);
-        if (bbCodeLevel === null) {
-          return "<bbcl=0 " + subMatchStr + ">";
-        } else {
-          return (
-            "<" +
-            subMatchStr.replace(
-              /^(bbcl=)([0-9]+)/,
-              function (matchStr, m1, m2) {
-                return m1 + (parseInt(m2, 10) + 1);
-              },
-            ) +
-            ">"
-          );
-        }
-      },
-    );
-    return tagContents;
-  }
-
-  /*
-    This function removes the metadata added by the updateTagDepths function
+    This function removes the metadata added by the addBbcodeLevels function
   */
   function unprocess(tagContent) {
     return tagContent
@@ -1325,61 +1281,224 @@ var XBBCODE = (function () {
   }
 
   /*
-    The star tag [*] is special in that it does not use a closing tag. Since this parser requires that tags to have a closing
-    tag, we must pre-process the input and add in closing tags [/*] for the star tag.
-    We have a little levaridge in that we know the text we're processing wont contain the <> characters (they have been
-    changed into their HTML entity form to prevent XSS and code injection), so we can use those characters as markers to
-    help us define boundaries and figure out where to place the [/*] tags.
+    The star tag [*] is special in that it does not use a closing tag. Since
+    this parser requires every tag to have a closing tag, this pass adds the
+    [/*] tags. Every [ left in the text by now starts a known tag.
+
+    It works in one pass with a stack of open lists, and it gives the same
+    text as the loop it replaced, which rescanned the text once per list
+    item and once per level of list nesting:
+    - Lists pair like brackets. A [list] or [/list] that never pairs has its
+      [ turned into >, as before.
+    - When a list closes, each bare [*] directly in it gets a [/*] when the
+      next [* tag still waiting in the list is a bare [*], or when no [* tag
+      is waiting. The [/*] goes before that tag, or before the [/list]. A
+      [* x] or [*=x] never gets one, and neither does a bare [*] followed by
+      one.
+    - The [* tags still waiting in a nested list wait in the outer list too,
+      so the first of them can be the "next tag" of a [*] in the outer list.
   */
   function fixStarTag(text) {
-    text = text.replace(/\[(?!\*[ =\]]|list([ =][^\]]*)?\]|\/list[\]])/gi, "<");
-    text = text.replace(/\[(?=list([ =][^\]]*)?\]|\/list[\]])/gi, ">");
+    var tokenRe = /\[(?:list(?:[ =][^\]]*)?\]|\/list\]|\*[ =\]])/gi;
+    // The open lists. Each frame holds the [* tags waiting in it, in order:
+    // its own, plus the first waiting tag of each nested list.
+    var stack = [];
+    // Indexes in text where a [/*] goes.
+    var inserts = [];
+    // Indexes of the [ of list tags that never pair.
+    var unpaired = [];
+    // Indexes of [/list] tags to write in lower case, as the old pass did
+    // when it closed a list's last item.
+    var lowered = [];
+    var match;
+    while ((match = tokenRe.exec(text))) {
+      var token = match[0];
+      var pos = match.index;
+      if (token.charAt(1) === "*") {
+        if (stack.length > 0) {
+          stack[stack.length - 1].waiting.push({
+            pos: pos,
+            bare: token === "[*]",
+            own: true,
+          });
+        }
+      } else if (token.charAt(1) !== "/") {
+        stack.push({ open: pos, waiting: [] });
+      } else if (stack.length === 0) {
+        unpaired.push(pos);
+      } else {
+        var frame = stack.pop();
+        var first = null;
+        for (var ii = 0; ii < frame.waiting.length; ii++) {
+          var item = frame.waiting[ii];
+          var next = frame.waiting[ii + 1];
+          if (item.own && item.bare && (!next || next.bare)) {
+            inserts.push(next ? next.pos : pos);
+            if (!next) lowered.push(pos);
+          } else if (first === null) {
+            first = item;
+          }
+        }
+        if (first !== null && stack.length > 0) {
+          stack[stack.length - 1].waiting.push({
+            pos: first.pos,
+            bare: first.bare,
+            own: false,
+          });
+        }
+      }
+    }
+    for (var jj = 0; jj < stack.length; jj++) {
+      unpaired.push(stack[jj].open);
+    }
+    if (inserts.length === 0 && unpaired.length === 0) return text;
 
-    while (
-      text !==
-      (text = text.replace(
-        />list([ =][^\]]*)?\]([^>]*?)(>\/list])/gi,
-        function (matchStr, contents, endTag) {
-          var innerListTxt = matchStr;
-          while (
-            innerListTxt !==
-            (innerListTxt = innerListTxt.replace(
-              /\[\*\]([^\[]*?)(\[\*\]|>\/list])/i,
-              function (matchStr, contents, endTag) {
-                if (endTag.toLowerCase() === ">/list]") {
-                  endTag = "</*]</list]";
-                } else {
-                  endTag = "</*][*]";
-                }
-                return "<*]" + contents + endTag;
-              },
-            ))
-          );
-
-          innerListTxt = innerListTxt.replace(/>/g, "<");
-          return innerListTxt;
-        },
-      ))
-    );
-
-    // add ['s for our tags back in
-    text = text.replace(/</g, "[");
-    return text;
+    var edits = [];
+    for (jj = 0; jj < inserts.length; jj++) {
+      edits.push({ pos: inserts[jj], kind: 0 });
+    }
+    for (jj = 0; jj < lowered.length; jj++) {
+      edits.push({ pos: lowered[jj], kind: 1 });
+    }
+    for (jj = 0; jj < unpaired.length; jj++) {
+      edits.push({ pos: unpaired[jj], kind: 2 });
+    }
+    // At one index, a [/*] goes before the tag it precedes.
+    edits.sort(function (a, b) {
+      return a.pos - b.pos || a.kind - b.kind;
+    });
+    var out = "";
+    var last = 0;
+    for (jj = 0; jj < edits.length; jj++) {
+      var edit = edits[jj];
+      out += text.slice(last, edit.pos);
+      last = edit.pos;
+      if (edit.kind === 0) {
+        out += "[/*]";
+      } else if (edit.kind === 1) {
+        out += "[/list]";
+        last += "[/list]".length;
+      } else {
+        out += ">";
+        last += 1;
+      }
+    }
+    return out + text.slice(last);
   }
 
+  /*
+    Pairs each open tag with its close, and writes the pair's nesting depth
+    into both as <bbcl=N name params> and <bbcl=N /name>, for parse. Depth 0
+    is the outermost. Every [ left in the text by now starts a known tag.
+
+    It works in one pass with a stack, and it pairs tags as the loop it
+    replaced did. That loop paired the innermost tags once per level of
+    nesting:
+    - An open pairs with the first tag after it, once the pairs between them
+      are taken out, if that tag closes the same name.
+    - Any other tag there never pairs, and no open before it can pair with a
+      close after it.
+    - Inside a pair, a ] that ends no tag (from a list tag fixStarTag left
+      unpaired) becomes >.
+
+    Returns { text, root, tooDeep }. root is the tree of pairs, for
+    checkParentChildRestrictions. When pairs nest more than MAX_TAG_DEPTH
+    deep, tooDeep is true and nothing is converted. That keeps the cost of
+    later passes, and the depth of parse's recursion, bounded by
+    MAX_TAG_DEPTH times the length of the text.
+  */
   function addBbcodeLevels(text) {
-    while (
-      text !==
-      (text = text.replace(
-        pbbRegExp,
-        function (matchStr, tagName, tagParams, tagContents) {
-          matchStr = matchStr.replace(/\[/g, "<");
-          matchStr = matchStr.replace(/\]/g, ">");
-          return updateTagDepths(matchStr);
-        },
-      ))
+    var tokenRe = new RegExp(
+      "\\[(?:\\/(" +
+        tagList.join("|") +
+        ")\\]|(" +
+        tagList.join("|") +
+        ")(?:[ =][^\\]]*?)?\\])?",
+      "gi",
     );
-    return text;
+    var tokens = [];
+    // Indexes into tokens of the opens that may still pair.
+    var stack = [];
+    var match;
+    while ((match = tokenRe.exec(text))) {
+      var closeName = match[1];
+      var openName = match[2];
+      if (openName !== undefined) {
+        stack.push(tokens.length);
+        tokens.push({
+          start: match.index,
+          end: tokenRe.lastIndex,
+          name: openName.toLowerCase(),
+          isClose: false,
+          paired: false,
+        });
+        continue;
+      }
+      var top = stack.length > 0 ? tokens[stack[stack.length - 1]] : null;
+      if (
+        closeName !== undefined &&
+        top !== null &&
+        top.name === closeName.toLowerCase()
+      ) {
+        stack.pop();
+        top.paired = true;
+        tokens.push({
+          start: match.index,
+          end: tokenRe.lastIndex,
+          name: top.name,
+          isClose: true,
+          paired: true,
+        });
+      } else {
+        // A close that pairs with nothing, or a [ that starts no known tag.
+        stack.length = 0;
+      }
+    }
+
+    var root = { name: "bbcode", children: [] };
+    var parents = [root];
+    var maxDepth = 0;
+    var ii, token;
+    for (ii = 0; ii < tokens.length; ii++) {
+      token = tokens[ii];
+      if (!token.paired) continue;
+      if (token.isClose) {
+        parents.pop();
+        token.depth = parents.length - 1;
+      } else {
+        token.depth = parents.length - 1;
+        var node = { name: token.name, children: [] };
+        parents[parents.length - 1].children.push(node);
+        parents.push(node);
+        maxDepth = Math.max(maxDepth, parents.length - 1);
+      }
+    }
+    if (maxDepth > MAX_TAG_DEPTH) {
+      return {
+        text: text,
+        root: { name: "bbcode", children: [] },
+        tooDeep: true,
+      };
+    }
+
+    var out = "";
+    var last = 0;
+    var inside = 0;
+    for (ii = 0; ii < tokens.length; ii++) {
+      token = tokens[ii];
+      if (!token.paired) continue;
+      var between = text.slice(last, token.start);
+      out += inside > 0 ? between.replace(/\]/g, ">") : between;
+      out +=
+        "<bbcl=" +
+        token.depth +
+        " " +
+        text.slice(token.start + 1, token.end - 1) +
+        ">";
+      inside += token.isClose ? -1 : 1;
+      last = token.end;
+    }
+    return { text: out + text.slice(last), root: root, tooDeep: false };
   }
 
   // -----------------------------------------------------------------------------
@@ -1391,19 +1510,56 @@ var XBBCODE = (function () {
     return tags;
   };
 
-  // API
-  me.addTags = function (newtags) {
-    var tag;
-    for (tag in newtags) {
-      tags[tag] = newtags[tag];
+  // Escapes the brackets inside each [code], [pre] and [noparse] pair, so
+  // their content does not parse. It gives the same text as the one regex
+  // replace it took over from. That regex searched from each unclosed open
+  // to the end of the text, so a run of unclosed opens took quadratic time.
+  // Here, once a search for a name's close finds none, no later open of that
+  // name searches again.
+  function escapeNoParseContents(text) {
+    var openRe = new RegExp(
+      "\\[(" + tagsNoParseList.join("|") + ")([ =][^\\]]*?)?\\]",
+      "gi",
+    );
+    var closeRes = {};
+    var out = "";
+    var last = 0;
+    var match;
+    while ((match = openRe.exec(text))) {
+      var name = match[1].toLowerCase();
+      if (closeRes[name] === null) continue;
+      var closeRe =
+        closeRes[name] ||
+        (closeRes[name] = new RegExp("\\[/" + name + "\\]", "gi"));
+      closeRe.lastIndex = openRe.lastIndex;
+      var close = closeRe.exec(text);
+      if (!close) {
+        closeRes[name] = null;
+        continue;
+      }
+      var contents = text
+        .slice(openRe.lastIndex, close.index)
+        .replace(/\[/g, "&#91;")
+        .replace(/\]/g, "&#93;");
+      out +=
+        text.slice(last, match.index) +
+        "[" +
+        match[1] +
+        (match[2] || "") +
+        "]" +
+        contents +
+        "[/" +
+        match[1] +
+        "]";
+      last = openRe.lastIndex = closeRe.lastIndex;
     }
-    initTags();
-  };
+    return out + text.slice(last);
+  }
 
   // Private: only me.render may run it, since its output holds attribute
   // placeholders that me.render swaps back.
   function processMarkup(config) {
-    var ret = { html: "", error: false },
+    var ret = { html: "", error: false, tooDeep: false },
       errQueue = [];
 
     // Only attrValue may make a placeholder.
@@ -1411,12 +1567,17 @@ var XBBCODE = (function () {
     config.text = config.text.replace(/</g, "&lt;"); // escape HTML tag brackets
     config.text = config.text.replace(/>/g, "&gt;"); // escape HTML tag brackets
 
-    config.text = config.text.replace(
-      openTags,
-      function (matchStr, openB, contents, closeB) {
-        return "<" + contents + ">";
-      },
-    );
+    // openTags searches a tag's params for the ] that ends it. After the
+    // last ] in the text that search can never succeed, and running it from
+    // each [ there took quadratic time. No tag can open there, so only the
+    // text up to the last ] is searched.
+    var lastBracket = config.text.lastIndexOf("]");
+    config.text =
+      config.text
+        .slice(0, lastBracket + 1)
+        .replace(openTags, function (matchStr, openB, contents, closeB) {
+          return "<" + contents + ">";
+        }) + config.text.slice(lastBracket + 1);
     config.text = config.text.replace(
       closeTags,
       function (matchStr, openB, contents, closeB) {
@@ -1430,33 +1591,16 @@ var XBBCODE = (function () {
     config.text = config.text.replace(/>/g, "]"); // escape ['s that aren't apart of tags
 
     // process tags that don't have their content parsed
-    while (
-      config.text !==
-      (config.text = config.text.replace(
-        pbbRegExp2,
-        function (matchStr, tagName, tagParams, tagContents) {
-          tagContents = tagContents.replace(/\[/g, "&#91;");
-          tagContents = tagContents.replace(/\]/g, "&#93;");
-          tagParams = tagParams || "";
-          tagContents = tagContents || "";
-          return (
-            "[" + tagName + tagParams + "]" + tagContents + "[/" + tagName + "]"
-          );
-        },
-      ))
-    );
+    while (config.text !== (config.text = escapeNoParseContents(config.text)));
 
     config.text = fixStarTag(config.text); // add in closing tags for the [*] tag
-    config.text = addBbcodeLevels(config.text); // add in level metadata
-
-    errQueue = checkParentChildRestrictions(
-      "bbcode",
-      config.text,
-      -1,
-      "",
-      "",
-      config.text,
-    );
+    var levels = addBbcodeLevels(config.text); // add in level metadata
+    config.text = levels.text;
+    errQueue = checkParentChildRestrictions(levels.root);
+    if (levels.tooDeep) {
+      ret.tooDeep = true;
+      errQueue.push(tooDeepMessage);
+    }
 
     ret.html = parse(config);
 
@@ -1504,10 +1648,8 @@ var XBBCODE = (function () {
     return ret;
   }
 
-  // API. The one render path for the server export, the editor preview and
-  // the cheatsheet: tags and string passes, then Autolinker, then attribute
-  // values swapped back last so that no pass can reach them.
-  // Returns { html, error, errorQueue }.
+  // Tags and string passes, then Autolinker, then attribute values swapped
+  // back last so that no pass can reach them.
   me.render = function (markup) {
     attrValues = [];
     try {
@@ -1523,7 +1665,18 @@ var XBBCODE = (function () {
   };
 
   return me;
-})();
+}
+
+var XBBCODE = {
+  // API. The one render path for the server export, the editor preview and
+  // the cheatsheet. Returns { html, error, errorQueue, tooDeep }.
+  render: function (markup) {
+    return createRenderer().render(markup);
+  },
+  tagNames: function () {
+    return Object.keys(createRenderer().tags());
+  },
+};
 
 var autolinkerOpts = {
   stripPrefix: true,
@@ -1545,23 +1698,31 @@ var autolinkerOpts = {
   },
 };
 
+// The server refuses markup the renderer marks tooDeep, with a message the
+// member sees.
+function renderOrRefuse(markup) {
+  var ret = XBBCODE.render(markup);
+  if (ret.tooDeep) throw new MarkupRejected(tooDeepMessage);
+  return ret.html;
+}
+
 // Allow public/js/chat.js to access it
 if (isBrowser) {
   window.autolinkerOpts = autolinkerOpts;
 }
 
 if (typeof window === "undefined") {
-  // We're on the server, so export module. Its html is what gets stored, so
+  // We're on the server, so export module. Only server/markup.ts calls it,
+  // inside its length cap and time budget. Its html is what gets stored, so
   // it always passes the sanitizer in server/user_html.ts.
   module.exports = function (markup) {
-    return userHtml.sanitizeUserHtml(XBBCODE.render(markup).html);
+    return userHtml.sanitizeUserHtml(renderOrRefuse(markup));
   };
   // The renderer's html before the sanitizer, for code that checks or wraps
   // the two steps apart. Never store it.
-  module.exports.renderUnsanitized = function (markup) {
-    return XBBCODE.render(markup).html;
-  };
-  module.exports.tagNames = Object.keys(XBBCODE.tags());
+  module.exports.renderUnsanitized = renderOrRefuse;
+  module.exports.tagNames = XBBCODE.tagNames();
+  module.exports.MAX_TAG_DEPTH = MAX_TAG_DEPTH;
 } else {
   // We're on the client so export to window
   window.bbcode = function (markup) {

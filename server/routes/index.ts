@@ -11,7 +11,7 @@ import nodeUrl from "url";
 import * as config from "../config";
 import * as cancan from "../cancan";
 import * as db from "../db";
-import bbcode from "../bbcode";
+import { renderMarkup } from "../markup";
 import cache3 from "../cache3";
 import * as pre from "../presenters";
 import { forumModsColumn } from "../db/readable";
@@ -473,7 +473,7 @@ router.post("/posts/:postId/revisions/:revId/revert", async (ctx: Context) => {
     ctx.currUser.id,
     post.id,
     markup,
-    bbcode(markup),
+    renderMarkup(markup, ctx.currUser),
     `Reverted to revision ${revId}`,
   );
 

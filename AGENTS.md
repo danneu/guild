@@ -82,13 +82,21 @@ authorization check. It keeps the file in memory, so no temp file exists, and
 it draws on one byte budget per process. A test fails if any other file
 imports koa-body or formidable.
 
-**User html:** Pages print stored user html with `|safe`. Render BBCode with
-the default export of `server/bbcode.js`, which ends in
-`server/user_html.ts#sanitizeUserHtml`. Any other code that stores user html
-calls `sanitizeUserHtml` itself, and none copies stored html from another row.
-In `server/bbcode.js` a tag writes user text into an attribute only through
-`attrValue`, and `server/bbcode.test.ts` sweeps every tag against the
-sanitizer's allowlist.
+**User html:** Pages print stored user html with `|safe`. Render BBCode, and
+scan markup for mentions and quotes, only through the exports of
+`server/markup.ts`. A test fails if any other non-test server module imports
+`server/bbcode.js`. The owner refuses markup longer than `MAX_POST_LENGTH`
+and cuts off work that runs past `MARKUP_BUDGET_MS`. It then refuses that
+user's markup work for `MARKUP_COOLDOWN_MS`. Each refusal throws
+`MarkupRejected`. The error handler in `server/index.ts` answers an `/api/`
+request with a 400 and the reason as text, and gives a form post the reason
+as a flash. The render ends in `server/user_html.ts#sanitizeUserHtml`. Any other
+code that stores user html calls `sanitizeUserHtml` itself, and none copies
+stored html from another row. In `server/bbcode.js` a tag writes user text
+into an attribute only through `attrValue`, and checks a URL only through
+`parseSafeUrl`. `server/bbcode.test.ts` sweeps every tag against the
+sanitizer's allowlist, and fails any tag or shape whose render costs far more
+than plain text of the same length.
 
 **Asset pipeline:** Gulp concatenates and minifies CSS/JS into versioned bundles
 in `dist/`. In development assets are served individually; in production the

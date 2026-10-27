@@ -10,7 +10,7 @@ import * as belt from "../belt.js";
 import * as pre from "../presenters.js";
 import * as config from "../config.js";
 import * as cancan from "../cancan.js";
-import bbcode from "../bbcode";
+import { renderMarkup } from "../markup.js";
 import * as paginate from "../paginate.js";
 import * as emailer from "../emailer";
 import * as eflags from "../eflags.js";
@@ -116,7 +116,7 @@ router.post("/convos", async (ctx: Context) => {
   }
 
   // Render bbcode
-  var html = bbcode(markup);
+  var html = renderMarkup(markup, ctx.currUser);
 
   const sent = await withPgPoolTransaction(pool, async (pgClient) => {
     // If all unames are valid, then we can create a convo
@@ -247,7 +247,7 @@ router.post("/convos/:convoId/pms", async (ctx: Context) => {
   ctx.assertAuthorized(ctx.currUser, "CREATE_PM", convo);
 
   // Render bbcode
-  const html = bbcode(ctx.vals.markup);
+  const html = renderMarkup(ctx.vals.markup, ctx.currUser);
 
   const pm = await withPgPoolTransaction(pool, async (pgClient) => {
     const pm = await db.createPm(pgClient, {
@@ -561,7 +561,7 @@ router.put("/api/pms/:id", async (ctx: Context) => {
   ctx.assertAuthorized(ctx.currUser, "UPDATE_PM", pm);
 
   // Render BBCode to html
-  var html = bbcode(ctx.vals.markup);
+  var html = renderMarkup(ctx.vals.markup, ctx.currUser);
 
   var updatedPm = await db
     .updatePm(ctx.params.id, ctx.vals.markup, html)

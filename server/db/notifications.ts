@@ -18,9 +18,9 @@
 import assert from "assert";
 import _ from "lodash";
 // 1st party
-import * as belt from "../belt";
 import * as cancan from "../cancan";
 import * as config from "../config";
+import { extractMentions, extractQuoteMentions } from "../markup";
 import * as pre from "../presenters";
 import { DbNotification } from "../dbtypes";
 import {
@@ -58,17 +58,11 @@ export async function notifyNewPost(
   // Lowercase unames, without the author's
   const mentioned = await findRecipientsByUnames(
     pgClient,
-    _.take(
-      belt.extractMentions(markup, author.uname),
-      config.MENTIONS_PER_POST,
-    ),
+    _.take(extractMentions(markup, author), config.MENTIONS_PER_POST),
   );
   const quoted = await findRecipientsByUnames(
     pgClient,
-    _.take(
-      belt.extractQuoteMentions(markup, author.uname),
-      config.QUOTES_PER_POST,
-    ),
+    _.take(extractQuoteMentions(markup, author), config.QUOTES_PER_POST),
   );
   const subscribers = (await listActiveSubscribers(pgClient, topic.id)).filter(
     (u) => u.id !== author.id,

@@ -27,6 +27,10 @@ vi.mock("./util", () => ({
   maybeOneRow: (res: { rows: unknown[] }) => res.rows[0],
   exactlyOneRow: (res: { rows: unknown[] }) => res.rows[0],
 }));
+// The mention scans come from server/markup.ts, which also loads bbcode.js.
+// Its server branch requires TypeScript modules that Node cannot resolve
+// under vitest, and these tests never render.
+vi.mock("../bbcode", () => ({ default: vi.fn() }));
 
 ////////////////////////////////////////////////////////////
 // Fixtures

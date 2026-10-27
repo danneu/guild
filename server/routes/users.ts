@@ -21,7 +21,7 @@ import * as avatar from "../avatar";
 import { withUpload } from "../upload";
 import * as emailer from "../emailer";
 import cache3 from "../cache3";
-import bbcode from "../bbcode";
+import { renderMarkup } from "../markup";
 import {
   broadcastManualNuke,
   broadcastManualUnnuke,
@@ -320,7 +320,9 @@ router.post("/users", checkCloudflareTurnstile, async (ctx: Context) => {
     const { markup } = welcomePost;
     // Render the markup rather than copy the cached post's html, so the PM
     // gets html from the current renderer and sanitizer.
-    const html = bbcode(markup);
+    // Staff wrote the welcome post, so its render counts against the staff
+    // account that sends the PM.
+    const html = renderMarkup(markup, { id: config.STAFF_REPRESENTATIVE_ID });
 
     // TODO: All queries in this route should be wrapped in the same transaction
     await withPgPoolTransaction(pool, async (pgClient) => {
@@ -551,7 +553,7 @@ router.put("/api/users/:id/bio", async (ctx: Context) => {
   // Render markup to html
   var html = "";
   if (ctx.request.body.markup.length > 0) {
-    html = bbcode(ctx.request.body.markup);
+    html = renderMarkup(ctx.request.body.markup, ctx.currUser);
   }
 
   // Save markup and html
@@ -670,7 +672,7 @@ router.put("/users/:slug", async (ctx: Context) => {
   // If it's a blank string, then user is trying to clear their sig
   if (_.isString(ctx.request.body.sig))
     if (ctx.request.body.sig.trim().length > 0) {
-      sig_html = bbcode(ctx.request.body.sig);
+      sig_html = renderMarkup(ctx.request.body.sig, ctx.currUser);
       sig_markup = ctx.request.body.sig.trim();
     } else {
       sig_html = "";
@@ -1068,7 +1070,7 @@ router.post("/users/:slug/vms", async (ctx: Context) => {
     ctx.validateBody("parent_vm_id").toInt();
   }
 
-  const html = bbcode(ctx.vals.markup);
+  const html = renderMarkup(ctx.vals.markup, ctx.currUser);
 
   const vm = await withPgPoolTransaction(pool, async (pgClient) => {
     // Create VM

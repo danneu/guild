@@ -4,6 +4,7 @@ import Router from "@koa/router";
 // 1st
 import * as db from "../db";
 import * as pre from "../presenters";
+import { renderMarkup } from "../markup";
 import { Context, Next } from "koa";
 
 // HELPERS
@@ -69,6 +70,7 @@ router.post("/campaigns", async (ctx: Context) => {
     ctx.currUser.id,
     ctx.vals.title,
     ctx.vals.markup,
+    renderMarkup(ctx.vals.markup, ctx.currUser),
   );
   // RESPOND
   pre.presentCampaign(campaign);
@@ -150,6 +152,7 @@ router.put("/campaigns/:campaign_id", loadCampaign, async (ctx: Context) => {
     ctx.state.campaign.id,
     ctx.vals.title,
     ctx.vals.markup,
+    renderMarkup(ctx.vals.markup, ctx.currUser),
   );
   // RESPOND
   ctx.flash = { message: ["success", "Campaign updated"] };

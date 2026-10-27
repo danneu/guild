@@ -3,7 +3,6 @@
 // const debug = createDebug('app:db:dice')
 import assert from "assert";
 // 1st
-import bbcode from "../bbcode";
 import * as dice from "../dice";
 import { pool, maybeOneRow } from "./util";
 
@@ -82,18 +81,15 @@ export const getCampaignRolls = async function (campaignId: number) {
     .then((res) => res.rows);
 };
 
-// markup is optional
+// html is the markup rendered by the route.
 export const updateCampaign = async function (
   campaignId: number,
   title: string,
-  markup?: string,
+  markup: string,
+  html: string,
 ) {
   assert(Number.isInteger(campaignId));
   assert(typeof title === "string");
-  let html;
-  if (typeof markup === "string") {
-    html = bbcode(markup);
-  }
   return pool
     .query(
       `
@@ -108,18 +104,15 @@ export const updateCampaign = async function (
     .then(maybeOneRow);
 };
 
-// markup is optional
+// html is the markup rendered by the route.
 export const insertCampaign = async function (
   userId: number,
   title: string,
-  markup?: string,
+  markup: string,
+  html: string,
 ) {
   assert(Number.isInteger(userId));
   assert(typeof title === "string");
-  let html;
-  if (typeof markup === "string") {
-    html = bbcode(markup);
-  }
   return pool
     .query(
       `

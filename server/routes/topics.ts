@@ -12,7 +12,7 @@ import * as config from "../config";
 import * as belt from "../belt";
 import * as cancan from "../cancan";
 import * as middleware from "../middleware";
-import bbcode from "../bbcode";
+import { renderMarkup } from "../markup";
 import cache3 from "../cache3";
 import services from "../services";
 import { Context } from "koa";
@@ -66,7 +66,7 @@ router.post("/topics/:topicId/:postType/0th", async (ctx: Context) => {
         userId: ctx.currUser.id,
         ipAddress: ctx.ip,
         markup: body.markup,
-        html: bbcode(body.markup),
+        html: renderMarkup(body.markup, ctx.currUser),
         topicId: topic.id,
         isRoleplay: true,
         type: params.postType,
@@ -132,7 +132,7 @@ router.post(
     }
 
     // Render the bbcode
-    const html = bbcode(ctx.vals.markup);
+    const html = renderMarkup(ctx.vals.markup, ctx.currUser);
 
     const { post, mentionNotificationsCount, quoteNotificationsCount } =
       await withPgPoolTransaction(pool, async (pgClient) => {
@@ -566,7 +566,7 @@ router.put("/api/posts/:id", async (ctx: Context) => {
   }
 
   // Render BBCode to html
-  var html = bbcode(ctx.request.body.markup);
+  var html = renderMarkup(ctx.request.body.markup, ctx.currUser);
 
   var updatedPost = await db
     .updatePost(

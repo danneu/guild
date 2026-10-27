@@ -44,6 +44,19 @@ export const MAX_BIO_LENGTH = parseInt(
 );
 export const MAX_VM_LENGTH = parseInt(process.env.MAX_VM_LENGTH || "300", 10);
 
+// Bounds on markup work, enforced by server/markup.ts. One render or mention
+// scan that runs past MARKUP_BUDGET_MS is cut off and refused, and its user's
+// markup work is then refused for MARKUP_COOLDOWN_MS. Tune them from
+// production render times.
+export const MARKUP_BUDGET_MS = parseInt(
+  process.env.MARKUP_BUDGET_MS || "1000",
+  10,
+);
+export const MARKUP_COOLDOWN_MS = parseInt(
+  process.env.MARKUP_COOLDOWN_MS || "300000",
+  10,
+);
+
 export const LATEST_RPGN_TOPIC_ID =
   parseInt(process.env.LATEST_RPGN_TOPIC_ID || "fail") || undefined;
 export const LATEST_RPGN_IMAGE_URL =

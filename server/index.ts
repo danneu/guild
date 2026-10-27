@@ -203,7 +203,7 @@ import * as cancan from "./cancan";
 import * as emailer from "./emailer";
 import * as belt from "./belt";
 import { authenticate, hashPassword } from "./auth";
-import bbcode from "./bbcode";
+import { MarkupRejected, renderMarkup } from "./markup";
 import bouncer from "koa-bouncer";
 import "./validation"; // Load after koa-bouncer
 import services from "./services";
@@ -382,9 +382,6 @@ const nunjucksOptions = {
     truncate: belt.makeTruncate("…"),
     // Returns distance from now to date in days. 0 or more.
     daysAgo: belt.daysAgo,
-    // FIXME: Can't render bbcode on the fly until I speed up
-    // slow bbcode like tabs
-    bbcode,
     // commafy(10) -> 10
     // commafy(1000000) -> 1,000,000
     commafy: (n) => (n || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","),
@@ -450,6 +447,17 @@ app.use(async (ctx: Context, next: Next) => {
         // i.e. large posts, large bodies of text
         params: ctx.request.body,
       };
+      ctx.back("/");
+      return;
+    }
+    // server/markup.ts refused the markup work. An XHR has no redirect to
+    // follow, so it gets a 400 with the reason, as the ban gate in
+    // server/middleware/require-not-banned.ts answers one. A form post gets
+    // a flash. The body is often too big for the flash cookie, so it is not
+    // echoed back.
+    if (ex instanceof MarkupRejected) {
+      if (ctx.path.startsWith("/api/")) ctx.throw(400, ex.message);
+      ctx.flash = { message: ["danger", ex.message] };
       ctx.back("/");
       return;
     }
@@ -1266,7 +1274,7 @@ router.post(
     // Validation succeeded
 
     // Render BBCode to html
-    var html = bbcode(ctx.vals.markup);
+    var html = renderMarkup(ctx.vals.markup, ctx.currUser);
 
     // post-type is always ooc for non-RPs
     var postType = forum.is_roleplay ? ctx.vals["post-type"] : "ooc";
@@ -1385,7 +1393,7 @@ router.put("/posts/:id", async (ctx: Context) => {
   }
 
   // Render BBCode to html
-  const html = bbcode(ctx.vals.markup);
+  const html = renderMarkup(ctx.vals.markup, ctx.currUser);
 
   const updatedPost = await db
     .updatePost(
@@ -1424,7 +1432,7 @@ router.put("/pms/:id", async (ctx: Context) => {
   ctx.assertAuthorized(ctx.currUser, "UPDATE_PM", pm);
 
   // Render BBCode to html
-  var html = bbcode(ctx.vals.markup);
+  var html = renderMarkup(ctx.vals.markup, ctx.currUser);
 
   var updatedPm = await db
     .updatePm(ctx.params.id, ctx.vals.markup, html)
@@ -1834,7 +1842,10 @@ router.post("/trophy-groups", async (ctx: Context) => {
 
   var description_html;
   if (ctx.vals["description-markup"]) {
-    description_html = bbcode(ctx.vals["description-markup"]);
+    description_html = renderMarkup(
+      ctx.vals["description-markup"],
+      ctx.currUser,
+    );
   }
 
   await db.createTrophyGroup(
@@ -1874,7 +1885,10 @@ router.put("/trophy-groups/:id", async (ctx: Context) => {
 
   var description_html;
   if (ctx.vals["description-markup"]) {
-    description_html = bbcode(ctx.vals["description-markup"]);
+    description_html = renderMarkup(
+      ctx.vals["description-markup"],
+      ctx.currUser,
+    );
   }
 
   await db.updateTrophyGroup(
@@ -1937,7 +1951,7 @@ router.put("/trophies-users/:id", async (ctx: Context) => {
 
   var message_html;
   if (ctx.vals["message-markup"]) {
-    message_html = bbcode(ctx.vals["message-markup"]);
+    message_html = renderMarkup(ctx.vals["message-markup"], ctx.currUser);
   }
 
   await db.updateTrophyUserBridge(
@@ -1991,7 +2005,10 @@ router.put("/trophies/:id", async (ctx: Context) => {
 
   var description_html;
   if (ctx.vals["description-markup"]) {
-    description_html = bbcode(ctx.vals["description-markup"]);
+    description_html = renderMarkup(
+      ctx.vals["description-markup"],
+      ctx.currUser,
+    );
   }
 
   await db.updateTrophy(
