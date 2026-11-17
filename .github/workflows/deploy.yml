@@ -16,7 +16,7 @@ jobs:
           echo "github.ref_type = ${{ github.ref_type }}"
           echo "github.event_name = ${{ github.event_name }}"
 
-      # The Dockerfile base stage owns the Node major; see AGENTS.md#deploy.
+      # The Dockerfile base stage owns the Node major; see docs/agents/deploy.md#the-node-major.
       - name: Read the Node major from the Dockerfile
         id: node
         run: |
