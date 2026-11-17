@@ -223,9 +223,11 @@ import { pool, withPgPoolTransaction } from "./db/util";
 
 app.use(middleware.methodOverride());
 
-app.use(
-  protectCsrf(["roleplayerguild.com", "localhost", "rpguild-staging.fly.dev"]),
-);
+// The CSRF gate judges ctx.method as methodOverride leaves it, and refuses a
+// cross-site write before any router runs. A test in
+// server/middleware/protect-csrf.test.ts checks this order. One rule rests on
+// convention: no middleware mounted above it may act on a write.
+app.use(protectCsrf());
 
 // Only allow guild to be iframed from same domain, and stop browsers from
 // sniffing a text/plain body (such as a post's raw markup) as HTML.

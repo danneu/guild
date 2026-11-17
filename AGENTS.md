@@ -32,6 +32,10 @@ Package manager is **pnpm** (`pnpm-lock.yaml`). Scripts also work via `npm run`.
   SSH: `pnpm run prod:ssh`.
 - Staging (app `rpguild-staging`): `pnpm run staging:deploy` (`fly deploy --config
 fly.staging.toml`). Logs/SSH via `staging:logs` / `staging:ssh`.
+- After a production deploy that touches `server/middleware/protect-csrf.ts`,
+  or a change to Cloudflare or Fly routing, run
+  `pnpm exec tsx scripts/csrf-probe.ts`. It checks through Cloudflare what the
+  CSRF gate trusts the proxies to pass on.
 - Do not deploy unless explicitly asked.
 
 ## Architecture
@@ -82,6 +86,14 @@ A banned user (role `banned`) can read, and can write only through the
 allowlist in `server/middleware/require-not-banned.ts`, which refuses every
 other write before any route runs. A new write route that banned users should
 keep goes on that allowlist on purpose.
+
+**Cross-site writes:** `server/middleware/protect-csrf.ts` refuses a write
+that another site's page sent, before any router runs. SameSite=Lax does not
+cover the writes that need no session, such as login and signup, or pages on
+other subdomains. The gate takes the browser's Sec-Fetch-Site when it is
+sent, and otherwise needs Origin (or Referer, when Origin is absent) to name
+the request's own host. Ask whether a URL names the request's own host only
+through `server/request_host.ts#namesRequestHost`, with the raw Host header.
 
 **Request bodies and uploads:** `server/middleware/body.ts` is the app-wide
 body parser. It never parses multipart, and it leaves `ctx.request.body` as
