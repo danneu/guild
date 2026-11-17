@@ -6,6 +6,7 @@ import { decideAction } from "./policy";
 import * as config from "../../config";
 import {
   broadcastAutoNuke,
+  broadcastClassifierFailing,
   broadcastFirstPost,
   broadcastSpamReview,
 } from "../discord";
@@ -78,7 +79,48 @@ async function process(
   return verdict;
 }
 
+// How often each machine checks that the classifier answers. A revoked key or
+// a retired model does not wait for a deploy, so the check repeats.
+const PROBE_INTERVAL_MS = 1000 * 60 * 60 * 24;
+
+// Checks that the classifier answers, by classifying a fixed clean sample. It
+// reads only whether a verdict came back, never the verdict, and takes no
+// moderation action. With no verdict every screened post fails open to ALLOW,
+// so staff get a Discord note.
+async function checkClassifier(): Promise<void> {
+  const result = await claude.probe();
+  if (result.ok) return;
+  console.error(
+    "[antispam] classifier probe got no verdict; screening fails open:",
+    result.error,
+  );
+  await broadcastClassifierFailing(result.error);
+}
+
+let probeStarted = false;
+
+// Idempotent. In production with a key configured, checks the classifier now
+// and then every PROBE_INTERVAL_MS, in the background. The interval is unref'd
+// so scripts and tests never hang on it. Only server/index.ts calls this
+// (after app.listen).
+function startClassifierProbe(): void {
+  if (probeStarted) return;
+  probeStarted = true;
+  if (config.NODE_ENV !== "production" || !config.IS_ANTISPAM_CONFIGURED) {
+    return;
+  }
+  function check() {
+    checkClassifier().catch((err) =>
+      console.error("antispam probe error", err),
+    );
+  }
+  check();
+  setInterval(check, PROBE_INTERVAL_MS).unref();
+}
+
 export default {
+  checkClassifier,
+  startClassifierProbe,
   process: async (
     ctx: Context,
     charge: ScreeningCharge | null,

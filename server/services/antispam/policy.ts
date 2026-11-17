@@ -9,8 +9,8 @@ export type SpamAction = "NUKE" | "REVIEW" | "ALLOW";
 // Maps an analysis result to an action. Fails open: an API error/timeout, a
 // not-spam verdict, or spam below the review threshold all map to ALLOW.
 //
-//   is_spam && confidence >= 0.9        -> NUKE
-//   is_spam && 0.7 <= confidence < 0.9  -> REVIEW
+//   isSpam && confidence >= 0.9        -> NUKE
+//   isSpam && 0.7 <= confidence < 0.9  -> REVIEW
 //   otherwise                           -> ALLOW
 export function decideAction(r: AnalyzeResult): SpamAction {
   if (!r.ok) return "ALLOW";

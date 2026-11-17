@@ -2251,5 +2251,6 @@ cache3.waitUntilReady().then(() => {
     console.log("Listening on", config.PORT);
     startCloudflareIpRangeRefresh();
     db.loginAttempts.startSweep();
+    services.antispam.startClassifierProbe();
   });
 });

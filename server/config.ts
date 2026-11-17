@@ -198,6 +198,8 @@ export const NEW_RELIC_APP_NAME =
 
 // anthropic (Claude first-post spam classifier)
 export const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+// Fixed, so the Anthropic SDK never takes a host from ANTHROPIC_BASE_URL
+export const ANTHROPIC_API_URL = "https://api.anthropic.com";
 export const IS_ANTISPAM_CONFIGURED = !!ANTHROPIC_API_KEY;
 console.log("Antispam (Claude) configured:", IS_ANTISPAM_CONFIGURED);
 

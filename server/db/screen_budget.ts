@@ -1,9 +1,12 @@
-// The per-account screening budget. A call to the spam classifier
-// (server/services/antispam) needs a ScreeningCharge, and only spendScreening
-// makes one. It prices the exact payload the classifier will send and charges
-// it to the actor, inside the transaction of the write that stores the text,
-// before the insert. So one account cannot make the classifier run without
-// paying, and a write over budget is refused, never landed unscreened.
+// The per-account screening budget. A call that sends member text to the spam
+// classifier (server/services/antispam) needs a ScreeningCharge, and only
+// spendScreening makes one. The one call without a charge is
+// server/services/antispam/claude.ts#probe, which sends a fixed sample and no
+// member text. spendScreening prices the exact payload the classifier will
+// send and charges it to the actor, inside the transaction of the write that
+// stores the text, before the insert. So one account cannot make the
+// classifier run without paying, and a write over budget is refused, never
+// landed unscreened.
 //
 // The ledger is the screen_spends table (sql/14-screen-spends.sql). Only
 // spendScreening writes it, under server/db/send_budget.ts#lockStanding.

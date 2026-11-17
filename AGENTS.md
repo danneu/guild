@@ -151,8 +151,9 @@ call, and nothing fails if it is missing. A send takes
 `server/db/send_budget.ts#lockSender` before any other lock on its sender, or
 two sends can deadlock.
 
-**Spam screening:** A call to the spam classifier needs a `ScreeningCharge`,
-and only `server/db/screen_budget.ts#spendScreening` makes one. It prices the
+**Spam screening:** A call that sends member text to the spam classifier
+needs a `ScreeningCharge`, and only
+`server/db/screen_budget.ts#spendScreening` makes one. It prices the
 exact payload the classifier sends and charges it to a per-account budget,
 which also paces calls per minute. A write that stores text to screen reads
 its actor once through `server/db/send_budget.ts#lockStanding`, which takes
@@ -165,6 +166,14 @@ actor, and no call. Over budget, spendScreening throws
 topic writes in `server/db/index.ts` all charge, but not every route that
 calls them hands the charge on yet, so a paid charge does not mean the text
 was screened.
+Every classifier failure fails open to ALLOW. So in production each machine
+runs `server/services/antispam/claude.ts#probe`, the one call without a
+charge, at boot and on a timer
+(`server/services/antispam/index.ts#startClassifierProbe`). It sends a fixed
+sample, and posts a Discord note when no verdict comes back.
+`SpamVerdictSchema` in `claude.ts` is both the request's output format and
+the parser of the reply. Give it only keywords the API enforces;
+`claude.test.ts` fails on any other.
 
 ## Forum domain model
 

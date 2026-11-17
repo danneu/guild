@@ -1,10 +1,9 @@
 // Tracked, re-runnable reproduction of the antispam classifier validation.
 //
 // Imports the REAL claude.ts adapter and runs the Appendix B suite against the
-// live Anthropic API, asserting the NORMALIZED adapter result
-// (result.verdict.isSpam / .injectionAttempt -- camelCase, not the raw
-// snake_case tool input). Asserting the normalized shape is what catches a
-// raw-passthrough regression that would otherwise allow all spam.
+// live Anthropic API, asserting the verdicts the adapter returns. Run it before
+// deploying a change to the request (model, prompt, schema, thinking): the
+// unit tests stub the API and cannot vouch for real verdicts.
 //
 // Each case's payload comes from the same builder a write uses
 // (server/db/screen_budget.ts#buildPayload). The probe writes nothing, so no

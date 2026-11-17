@@ -5,13 +5,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // nuke, nuking on REVIEW, and returning falsey on REVIEW (which would let
 // server/index.ts broadcast a suspected-spam intro to #general).
 vi.mock("./claude", () => ({
-  default: { analyze: vi.fn() },
+  default: { analyze: vi.fn(), probe: vi.fn() },
 }));
 vi.mock("../../db", () => ({
   nukeUser: vi.fn(() => Promise.resolve()),
 }));
 vi.mock("../discord", () => ({
   broadcastAutoNuke: vi.fn(() => Promise.resolve()),
+  broadcastClassifierFailing: vi.fn(() => Promise.resolve()),
   broadcastFirstPost: vi.fn(() => Promise.resolve()),
   broadcastSpamReview: vi.fn(() => Promise.resolve()),
 }));
@@ -22,6 +23,7 @@ import * as db from "../../db";
 import * as config from "../../config";
 import {
   broadcastAutoNuke,
+  broadcastClassifierFailing,
   broadcastFirstPost,
   broadcastSpamReview,
 } from "../discord";
@@ -29,8 +31,10 @@ import type { AnalyzeResult, SpamVerdict } from "./claude";
 import type { ScreeningCharge } from "../../db/screen_budget";
 
 const analyze = vi.mocked(claude.analyze);
+const probe = vi.mocked(claude.probe);
 const nukeUser = vi.mocked(db.nukeUser);
 const autoNuke = vi.mocked(broadcastAutoNuke);
+const classifierFailing = vi.mocked(broadcastClassifierFailing);
 const firstPost = vi.mocked(broadcastFirstPost);
 const spamReview = vi.mocked(broadcastSpamReview);
 
@@ -180,5 +184,32 @@ describe("antispam.process wiring", () => {
 
     expect(analyze).not.toHaveBeenCalled();
     expect(result).toBeFalsy();
+  });
+});
+
+describe("antispam.checkClassifier", () => {
+  // Intent: staff hear when the classifier stops answering, and only then.
+  // Why it exists: a revoked key, a retired model or an API change turns
+  // every call into an error, which allows every post, and only the log said
+  // so (hunt 261117-0852-016).
+  // Scenario: the probe gets a verdict, then gets none.
+  it("sends no note when the probe gets a verdict", async () => {
+    probe.mockResolvedValue(verdict({ isSpam: true, confidence: 0.99 }));
+
+    await antispam.checkClassifier();
+
+    expect(classifierFailing).not.toHaveBeenCalled();
+    expect(nukeUser).not.toHaveBeenCalled();
+    expect(spamReview).not.toHaveBeenCalled();
+  });
+
+  it("sends one note naming the error when the probe gets no verdict", async () => {
+    probe.mockResolvedValue({ ok: false, error: "API_ERROR" });
+
+    await antispam.checkClassifier();
+
+    expect(classifierFailing).toHaveBeenCalledTimes(1);
+    expect(classifierFailing).toHaveBeenCalledWith("API_ERROR");
+    expect(analyze).not.toHaveBeenCalled();
   });
 });

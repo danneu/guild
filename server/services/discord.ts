@@ -204,6 +204,19 @@ export async function broadcastFirstPost(
 
 ////////////////////////////////////////////////////////////
 
+// When the spam classifier's probe gets no verdict. Until it answers again,
+// every post it should screen is allowed unchecked.
+export async function broadcastClassifierFailing(
+  error: "API_TIMEOUT" | "API_ERROR",
+) {
+  await postToChannel(
+    "forum-activity",
+    `:rotating_light: spam classifier is failing open: ${error}`,
+  );
+}
+
+////////////////////////////////////////////////////////////
+
 export async function broadcastFirstConvo(sender, recipients) {
   pre.presentUser(sender);
   recipients.forEach((recipient) => pre.presentUser(recipient));
