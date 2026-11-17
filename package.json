@@ -65,7 +65,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "sanitize-html": "^2.18.1",
-    "sharp": "^0.34.2",
+    "sharp": "^0.35.5",
     "simple-oauth2": "^5.1.0",
     "tsafe": "^1.8.5",
     "uuid": "^11.1.0",

@@ -104,6 +104,11 @@ body parser. It never parses multipart, and it leaves `ctx.request.body` as
 authorization check. It keeps the file in memory, so no temp file exists, and
 it draws on one byte budget per process. A test fails if any other file
 imports koa-body or formidable.
+Decode an uploaded image only through the transcodes `server/imaging.ts`
+exports. It blocks every libvips loader but the few formats members upload,
+caps the pixels an upload may decode to, and runs one transcode at a time. It
+throws `ImageRefused`, which the route shows as a flash. A test fails if any
+other file imports sharp.
 
 **User html:** Pages print stored user html with `|safe`. Render BBCode, and
 scan markup for mentions and quotes, only through the exports of

@@ -19,6 +19,7 @@ import * as config from "../config";
 import * as cancan from "../cancan";
 import { classifyIp } from "../cloudflare_ip";
 import * as avatar from "../avatar";
+import { ImageRefused } from "../imaging";
 import { withUpload } from "../upload";
 import * as emailer from "../emailer";
 import cache3 from "../cache3";
@@ -1214,18 +1215,18 @@ router.post("/users/:slug/avatar", async (ctx: Context) => {
 
       ctx.assert(file, 400, "Must choose an avatar to upload");
 
-      // TODO: Pretty sure the handleAvatarTransformAndUpload fn does a magic bytes check?
-      // But we can pre-verify for better a error message
-      ctx.assert(
-        (file.mimetype ?? "").startsWith("image/"),
-        400,
-        "Must be an image",
-      );
-
-      // Process avatar, upload to S3, and get the S3 url
-      const avatarUrl = await avatar.handleAvatarTransformAndUpload(
-        file.buffer,
-      );
+      // Process avatar, upload to S3, and get the S3 url. The transcode reads
+      // the format from the bytes and refuses a file that is not an allowed
+      // image; the client's declared type decides nothing.
+      let avatarUrl: string;
+      try {
+        avatarUrl = await avatar.handleAvatarTransformAndUpload(file.buffer);
+      } catch (err) {
+        if (!(err instanceof ImageRefused)) throw err;
+        ctx.flash = { message: ["danger", err.message] };
+        ctx.response.redirect(user.url + "/edit#avatar");
+        return;
+      }
 
       // Save new avatar url to db
       await db.updateUser(user.id, { avatar_url: avatarUrl });

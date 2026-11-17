@@ -1,5 +1,5 @@
 import Router from "@koa/router";
-import sharp from "sharp";
+import { Encoded, ImageRefused, transcodeAlbumImage } from "../imaging";
 import { uploadToS3 } from "../s3";
 import { withUpload } from "../upload";
 import { v7 as uuidv7 } from "uuid";
@@ -162,34 +162,22 @@ router.post("/users/:user_slug/images", loadUser, async (ctx: Context) => {
       // file
       ctx.assert(file, 400, 'no file with key "image" provided');
 
+      // A file that is not an allowed image is refused here, before S3.
+      let avif: Encoded<"image/avif">;
+      try {
+        avif = await transcodeAlbumImage(file.buffer);
+      } catch (err) {
+        if (!(err instanceof ImageRefused)) throw err;
+        ctx.flash = { message: ["danger", err.message] };
+        return ctx.back("/");
+      }
+
       const uuid = uuidv7();
-
-      const imageResult = await sharp(file.buffer)
-        .avif({
-          quality: 80,
-          effort: 4,
-        })
-        .toBuffer()
-        .then((buffer) => {
-          return uploadToS3({
-            uuid,
-            type: "album_image",
-            buffer,
-            contentType: "image/webp",
-          });
-        });
-
-      // TODO: What happens when we try to upload a non-image file?
-
-      // { 'Mime type': 'image/jpeg' OR 'format': 'JPEG' }
-      // const data = await identify(upload.filepath)
-      // const mime = identifyToMime(data)
-      // if (!mime || ['image/jpeg', 'image/png', 'image/gif'].indexOf(mime) < 0) {
-      //     ctx.flash = {
-      //         message: ['danger', 'Invalid image format. Must be jpg, gif, png.'],
-      //     }
-      //     return ctx.redirect('back')
-      // }
+      const imageResult = await uploadToS3({
+        uuid,
+        type: "album_image",
+        ...avif,
+      });
 
       // INSERT
 
@@ -198,7 +186,7 @@ router.post("/users/:user_slug/images", loadUser, async (ctx: Context) => {
         ownerId: ctx.state.user.id,
         albumId: album.id,
         src: imageResult.publicUrl,
-        mime: "image/avif",
+        mime: avif.contentType,
         description,
       });
       ctx.assert(inserted, 404);

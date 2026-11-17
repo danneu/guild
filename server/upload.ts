@@ -11,9 +11,11 @@ import formidable from "formidable";
 import { Context } from "koa";
 
 /**
- * The upload bytes this process may hold at once, sharp jobs included. Sized
- * to fit a few uploads at the image cap while leaving most of the VM memory
- * (fly.toml) to the rest of the app.
+ * The upload bytes this process may hold at once, uploads waiting for a
+ * transcode included. Sized to fit a few uploads at the image cap while
+ * leaving most of the VM memory (fly.toml) to the rest of the app. These bytes
+ * sit beside the one running transcode, whose own memory server/imaging.ts
+ * bounds.
  */
 const UPLOAD_BUDGET_BYTES = 128 * 1024 * 1024;
 

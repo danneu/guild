@@ -1,12 +1,12 @@
-// 3rd party
-import sharp from "sharp";
 // 1st party
 import * as config from "./config";
+import { transcodeAvatar } from "./imaging";
 import { uploadToS3 } from "./s3";
 import { v7 as uuidv7 } from "uuid";
 
 // Uploads s3 avatars, returns url of the large avatar.
-// Converts all images to webp
+// server/imaging.ts#transcodeAvatar turns the upload into both WebP sizes, and
+// throws ImageRefused for a file it will not take.
 export const handleAvatarTransformAndUpload = async (
   input: Buffer,
 ): Promise<string> => {
@@ -14,51 +14,13 @@ export const handleAvatarTransformAndUpload = async (
     throw new Error("Avatar upload not configured");
   }
 
-  // Get metadata to check for animation
-  const metadata = await sharp(input).metadata();
-  const isAnimated = !!(metadata.pages && metadata.pages > 1);
-
+  const { normal, small } = await transcodeAvatar(input);
   const uuid = uuidv7();
-
-  // Create resize operations
-  const createResizedImage = async (
-    width: number,
-    height: number,
-    size: "normal" | "small",
-  ) => {
-    const buffer = await sharp(input, {
-      animated: isAnimated, // Preserve animation if present
-    })
-      .resize({
-        width,
-        height,
-        // keep aspect ratio, don't crop, don't stretch
-        fit: "inside",
-        // don't enlarge images smaller than the target resize
-        withoutEnlargement: true,
-      })
-      .webp({
-        quality: 100,
-        effort: 4, // 0-6, higher = better compression but slower
-        // Additional options for better results:
-        nearLossless: false, // Set true for higher quality at larger size
-        smartSubsample: true, // Better color subsampling
-      })
-      .toBuffer();
-
-    return uploadToS3({
-      type: "avatar",
-      uuid,
-      buffer,
-      contentType: "image/webp",
-      size,
-    });
-  };
 
   // Upload both sizes in parallel
   const [normalResult] = await Promise.all([
-    createResizedImage(300, 400, "normal"),
-    createResizedImage(64, 64, "small"),
+    uploadToS3({ type: "avatar", uuid, size: "normal", ...normal }),
+    uploadToS3({ type: "avatar", uuid, size: "small", ...small }),
   ]);
 
   return normalResult.publicUrl;

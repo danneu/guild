@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as avatar from "../avatar";
 import * as cancan from "../cancan";
 import * as db from "../db";
+import { UnsupportedImage } from "../imaging";
 import { withUpload } from "../upload";
 import "../validation";
 import router from "./users";
@@ -209,7 +210,14 @@ describe("POST /users/:slug/avatar", () => {
     expect(avatar.handleAvatarTransformAndUpload).not.toHaveBeenCalled();
   });
 
-  it("refuses a file that is not an image", async () => {
+  // The transcode reads the format from the bytes, so the type the client
+  // declares decides nothing, and its refusal comes back as a flash.
+  it("shows the transcode's refusal as a flash and saves nothing", async () => {
+    const refusal = new UnsupportedImage("Could not use that image.");
+    vi.mocked(avatar.handleAvatarTransformAndUpload).mockRejectedValueOnce(
+      refusal,
+    );
+
     const res = await send({
       method: "POST",
       path: "/users/alice/avatar",
@@ -221,8 +229,13 @@ describe("POST /users/:slug/avatar", () => {
       ),
     });
 
-    expect(res.status).toBe(400);
-    expect(avatar.handleAvatarTransformAndUpload).not.toHaveBeenCalled();
+    expect(res.status).toBe(302);
+    expect(res.location).toBe("/users/alice/edit#avatar");
+    expect(res.flash).toEqual({ message: ["danger", refusal.message] });
+    expect(avatar.handleAvatarTransformAndUpload).toHaveBeenCalledWith(
+      Buffer.from("hello"),
+    );
+    expect(db.updateUser).not.toHaveBeenCalled();
   });
 
   it("refuses a guest before parsing the upload", async () => {

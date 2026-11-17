@@ -2,11 +2,11 @@ import http from "node:http";
 import type { AddressInfo } from "node:net";
 import Koa, { Context, Next } from "koa";
 import bouncer from "koa-bouncer";
-import sharp from "sharp";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as cancan from "../cancan";
 import * as db from "../db";
+import { UnsupportedImage, transcodeAlbumImage } from "../imaging";
 import { uploadToS3 } from "../s3";
 import { withUpload } from "../upload";
 import "../validation";
@@ -28,9 +28,13 @@ vi.mock("../s3", () => ({
   })),
 }));
 
-vi.mock("sharp", () => ({
-  default: vi.fn(() => ({
-    avif: () => ({ toBuffer: async () => Buffer.from("avif") }),
+// The real refusal classes, so the route's instanceof check is the real one.
+// server/imaging.test.ts runs the real transcode.
+vi.mock("../imaging", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../imaging")>()),
+  transcodeAlbumImage: vi.fn(async () => ({
+    buffer: Buffer.from("avif"),
+    contentType: "image/avif",
   })),
 }));
 
@@ -127,6 +131,8 @@ beforeEach(() => {
 // A bare Koa app with only what these routes read from ctx. server/index.ts
 // cannot be imported here: loading it starts cache3 and app.listen. The authz
 // shim mirrors the one in server/index.ts, so a denied check is a 404 too.
+// The flash setter records what the handler set, since there is no flash
+// middleware.
 
 type Req = {
   method: "GET" | "POST" | "PUT" | "DELETE";
@@ -139,6 +145,7 @@ type Req = {
 };
 
 async function send(req: Req) {
+  let flash: unknown;
   const app = new Koa();
   app.silent = true;
   app.use(async (ctx: Context, next: Next) => {
@@ -150,6 +157,12 @@ async function send(req: Req) {
     ctx.render = async (template: string) => {
       ctx.body = template;
     };
+    Object.defineProperty(ctx, "flash", {
+      get: () => flash,
+      set: (value) => {
+        flash = value;
+      },
+    });
     return next();
   });
   app.use(bouncer.middleware());
@@ -164,7 +177,7 @@ async function send(req: Req) {
       redirect: "manual",
       ...(req.form ? { body: req.form } : {}),
     });
-    return { status: res.status, location: res.headers.get("location") };
+    return { status: res.status, location: res.headers.get("location"), flash };
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
@@ -312,10 +325,40 @@ describe("POST /users/:user_slug/images", () => {
 
     expect(res.status).toBe(302);
     expect(withUpload).toHaveBeenCalledTimes(1);
-    expect(sharp).toHaveBeenCalledWith(imageBytes);
-    expect(db.images.insertImage).toHaveBeenCalledWith(
-      expect.objectContaining({ ownerId: alice.id, albumId: aliceAlbum.id }),
+    expect(transcodeAlbumImage).toHaveBeenCalledWith(imageBytes);
+    expect(uploadToS3).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "album_image",
+        contentType: "image/avif",
+      }),
     );
+    expect(db.images.insertImage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ownerId: alice.id,
+        albumId: aliceAlbum.id,
+        mime: "image/avif",
+      }),
+    );
+  });
+
+  it("shows the transcode's refusal as a flash and stores nothing", async () => {
+    vi.mocked(transcodeAlbumImage).mockRejectedValueOnce(
+      new UnsupportedImage("Could not use that image."),
+    );
+
+    const res = await send({
+      method: "POST",
+      path: "/users/alice/images",
+      currUser: alice,
+      form: uploadForm(aliceAlbum.id),
+    });
+
+    expect(res.status).toBe(302);
+    expect(res.flash).toEqual({
+      message: ["danger", "Could not use that image."],
+    });
+    expect(uploadToS3).not.toHaveBeenCalled();
+    expect(db.images.insertImage).not.toHaveBeenCalled();
   });
 
   it("refuses a guest before parsing the upload", async () => {
@@ -352,7 +395,7 @@ describe("POST /users/:user_slug/images", () => {
     });
 
     expect(res.status).toBe(404);
-    expect(sharp).not.toHaveBeenCalled();
+    expect(transcodeAlbumImage).not.toHaveBeenCalled();
     expect(uploadToS3).not.toHaveBeenCalled();
     expect(db.images.insertImage).not.toHaveBeenCalled();
   });

@@ -2,13 +2,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-// Intent: each body parser has one owner. Only server/middleware/body.ts
-// mounts koa-body, and only server/upload.ts runs formidable.
+// Intent: each parser of client bytes has one owner. Only
+// server/middleware/body.ts mounts koa-body, only server/upload.ts runs
+// formidable, and only server/imaging.ts decodes images with sharp.
 // Why it exists: koa-body once parsed multipart for the whole app, so any
-// client could make formidable write temp files that nothing deleted. Another
-// importer of either package could quietly bring that back.
+// client could make formidable write temp files that nothing deleted. sharp
+// once decoded member uploads with every libvips loader and no pixel cap.
+// Another importer of any of these could quietly bring that back.
 // Scenario: a route mounts koaBody({ multipart: true }) for itself, as an old
-// TODO in server/routes/users.ts suggested.
+// TODO in server/routes/users.ts suggested, or calls sharp(file.buffer).
 
 const repoRoot = path.resolve(__dirname, "..");
 
@@ -35,12 +37,16 @@ function importersOf(pkg: string): string[] {
   );
 }
 
-describe("body parser owners", () => {
+describe("parser owners", () => {
   it("only server/middleware/body.ts imports koa-body", () => {
     expect(importersOf("koa-body")).toEqual(["server/middleware/body.ts"]);
   });
 
   it("only server/upload.ts imports formidable", () => {
     expect(importersOf("formidable")).toEqual(["server/upload.ts"]);
+  });
+
+  it("only server/imaging.ts imports sharp", () => {
+    expect(importersOf("sharp")).toEqual(["server/imaging.ts"]);
   });
 });

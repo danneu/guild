@@ -14,7 +14,7 @@ export type Uploadable =
       uuid: string;
       type: "album_image";
       buffer: Buffer;
-      contentType: "image/webp";
+      contentType: "image/avif";
     };
 
 export type UploadResult = {
@@ -94,8 +94,8 @@ export async function uploadToS3(
       break;
     }
     case "avatar": {
-      // normal: https://avatars.roleplayerguild.com/{production|development}/{uuid}.avif
-      // small:  https://avatars.roleplayerguild.com/{production|development}/32/{uuid}.avif
+      // normal: https://avatars.roleplayerguild.com/{production|development}/{uuid}.webp
+      // small:  https://avatars.roleplayerguild.com/{production|development}/32/{uuid}.webp
       const guildUrl = new URL("https://avatars.roleplayerguild.com");
       guildUrl.pathname = s3Url.pathname;
       publicUrl = guildUrl.toString();
