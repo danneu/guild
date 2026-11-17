@@ -873,6 +873,13 @@ CREATE UNLOGGED TABLE screen_spends (
 CREATE INDEX screen_spends__user_id_created_at
   ON screen_spends (user_id, created_at);
 
+-- The Discord account each forum account added; see sql/15-discord-links.sql.
+CREATE TABLE discord_links (
+  user_id          int          PRIMARY KEY  REFERENCES users(id) ON DELETE CASCADE,
+  discord_user_id  text         NOT NULL  CHECK (discord_user_id ~ '^[0-9]+$'),
+  created_at       timestamptz  NOT NULL  DEFAULT NOW()
+);
+
 ------------------------------------------------------------
 
 CREATE TABLE images (

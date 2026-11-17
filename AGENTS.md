@@ -85,7 +85,9 @@ new session.
 A banned user (role `banned`) can read, and can write only through the
 allowlist in `server/middleware/require-not-banned.ts`, which refuses every
 other write before any route runs. A new write route that banned users should
-keep goes on that allowlist on purpose.
+keep goes on that allowlist on purpose. That gate and the email gate pass every
+GET as a read, so the Discord join, a GET, checks both itself (see Discord
+membership below).
 
 **Cross-site writes:** `server/middleware/protect-csrf.ts` refuses a write
 that another site's page sent, before any router runs. SameSite=Lax does not
@@ -189,6 +191,21 @@ sample, and posts a Discord note when no verdict comes back.
 `SpamVerdictSchema` in `claude.ts` is both the request's output format and
 the parser of the reply. Give it only keywords the API enforces;
 `claude.test.ts` fails on any other.
+
+**Discord membership:** `server/discord/join.ts#joinDiscord` is the only code
+that changes a member of the Discord server: adding one, or setting a
+member's roles or nick. The bot's per-member endpoints are private there, and
+`server/discord/join.test.ts` fails on a per-member path or a discord.js member
+write anywhere else in `server/`. Channel messages about a member's actions
+are not member writes and go through `server/services/discord.ts`. The join
+runs on GET /discord/callback, which both write gates pass, so joinDiscord
+refuses a banned or unconfirmed account itself, before any Discord call.
+Before it adds anyone, it claims the account's row in `discord_links`
+(`server/db/discord_links.ts`) and refuses a Discord id other than the one
+the row holds. Staff may delete a row so a member can switch Discord
+accounts. That is an explicit exception: the old account stays in the server,
+so the row limits a forum account to one Discord account at a time, not over
+its life.
 
 ## Forum domain model
 

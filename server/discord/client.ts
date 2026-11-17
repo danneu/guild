@@ -11,8 +11,6 @@ import type {
   RESTPostAPIChannelMessageJSONBody,
   RESTPostAPIGuildRoleJSONBody,
   RESTPatchAPIGuildJSONBody,
-  RESTPatchAPIGuildMemberJSONBody,
-  RESTPutAPIGuildMemberJSONBody,
   RESTGetAPIGuildMembersQuery,
   APIApplication,
   RESTPostAPIGuildsJSONBody,
@@ -20,7 +18,7 @@ import type {
   RESTPatchAPICurrentUserJSONBody,
 } from "discord-api-types/v10";
 
-class ResponseNotOkError extends Error {
+export class ResponseNotOkError extends Error {
   status: number;
   bodyText: string;
   constructor(message: string, details: { status: number; bodyText: string }) {
@@ -119,7 +117,9 @@ export default class Client {
     }
   }
 
-  private async botRequest<T = unknown>(
+  // Public so server/discord/join.ts can call the per-member endpoints, which
+  // live there and not here: it is the only code that writes a guild member.
+  async botRequest<T = unknown>(
     method: string,
     url: string,
     body?: any,
@@ -214,44 +214,6 @@ export default class Client {
     } as any);
     const url = `/guilds/${guildId}/members?${params}`;
     return this.botRequest<APIGuildMember[]>("GET", url);
-  }
-
-  async getGuildMember(
-    guildId: string,
-    userId: string,
-  ): Promise<APIGuildMember | null> {
-    assert(typeof guildId === "string");
-    assert(typeof userId === "string");
-    const url = `/guilds/${guildId}/members/${userId}`;
-    return this.botRequest<APIGuildMember>("GET", url).catch((err) => {
-      if (err instanceof ResponseNotOkError && err.status === 404) {
-        return null;
-      }
-      throw err;
-    });
-  }
-
-  async modifyGuildMember(
-    guildId: string,
-    userId: string,
-    body: RESTPatchAPIGuildMemberJSONBody,
-  ): Promise<APIGuildMember> {
-    assert(typeof guildId === "string");
-    assert(typeof userId === "string");
-    const url = `/guilds/${guildId}/members/${userId}`;
-    return this.botRequest<APIGuildMember>("PATCH", url, body);
-  }
-
-  async addGuildMember(
-    guildId: string,
-    userId: string,
-    body: RESTPutAPIGuildMemberJSONBody,
-  ): Promise<APIGuildMember | void> {
-    assert(typeof guildId === "string");
-    assert(typeof userId === "string");
-    assert(typeof body.access_token === "string");
-    const url = `/guilds/${guildId}/members/${userId}`;
-    return this.botRequest<APIGuildMember>("PUT", url, body);
   }
 
   // Channel methods

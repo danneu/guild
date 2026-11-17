@@ -9,16 +9,41 @@ import {
 // 1st
 import * as config from "../config";
 import DiscordClient from "../discord/client";
+import { joinDiscord, joinRefusal, type JoinRefusal } from "../discord/join";
 import { issueOAuthState, runOAuthCallback } from "../discord/oauth-state";
+import type { FlashLevel } from "../middleware/flash";
 import { Context, Next } from "koa";
 
 ////////////////////////////////////////////////////////////
 
-// Ensure bot has these rolls on Discord dashboard:
-// CHANGE_NICKNAME
-// MANAGE_NICKNAMES
-// MANAGE_ROLES
-// CREATE_INSTANT_INVITE
+// What a refused join tells the user, and where it sends them
+const REFUSALS: Record<
+  JoinRefusal,
+  { level: FlashLevel; text: string; location: string }
+> = {
+  BANNED: {
+    level: "warning",
+    text: "You cannot join the Discord server since you are banned.",
+    location: "/",
+  },
+  EMAIL_UNCONFIRMED: {
+    level: "danger",
+    text: "Please confirm your email address before you join the Discord server.",
+    location: "/confirm-email",
+  },
+  LINKED_ELSEWHERE: {
+    level: "warning",
+    text: "Your Guild account already added a different Discord account to the server. Ask staff if you need to switch Discord accounts.",
+    location: "/",
+  },
+};
+
+// Sets the refusal's flash and returns where to send the user.
+function refuse(ctx: Context, refusal: JoinRefusal): string {
+  const { level, text, location } = REFUSALS[refusal];
+  ctx.flash = { message: [level, text] };
+  return location;
+}
 
 function createRouter() {
   const router = new Router();
@@ -40,13 +65,9 @@ function createRouter() {
     }
 
     if (ctx.currUser.role === "banned") {
-      ctx.flash = {
-        message: [
-          "warning",
-          "You cannot join the Discord server since you are banned.",
-        ],
-      };
-      ctx.redirect("/");
+      const { level, text, location } = REFUSALS.BANNED;
+      ctx.flash = { message: [level, text] };
+      ctx.redirect(location);
       return;
     }
 
@@ -85,6 +106,14 @@ function createRouter() {
   ////////////////////////////////////////////////////////////
 
   router.get("/discord", async (ctx: Context) => {
+    // Only spares the user a trip through Discord: joinDiscord refuses them
+    // anyway.
+    const refusal = joinRefusal(ctx.currUser);
+    if (refusal) {
+      ctx.redirect(refuse(ctx, refusal));
+      return;
+    }
+
     // Use the new authorizeURL method
     const authzUri = client.authorizeURL({
       redirect_uri,
@@ -116,7 +145,6 @@ function createRouter() {
 
   ////////////////////////////////////////////////////////////
 
-  // FIXME: Race conditions
   router.get("/discord/callback", async (ctx: Context) => {
     if (!discord) {
       ctx.body = "Discord is not configured";
@@ -124,91 +152,11 @@ function createRouter() {
     }
 
     await runOAuthCallback(ctx, async (code) => {
-      // Use the new getToken method directly
-      const accessToken = await client.getToken({ code, redirect_uri });
-
-      // Access the token string directly
-      const tokenString = accessToken.token.access_token as string;
-
-      // roleMap is a mapping of name -> id
-      // { @everyone: _, Admin: _, Staff: _, Member: _ }
-      // roleMap [Object: null prototype] {
-      //   '@everyone': '313921604868636672',
-      //   Admin: '313921605744984064',
-      //   Staff: '313921607754055680',
-      //   Member: '313921608471412737',
-      //   'Test RPGuild': '315210657228259330',
-      //   Muted: '315214322898829313'
-      // }
-      const roleMap = await discord
-        .listRoles(config.DISCORD_GUILD_ID!)
-        .then((roles) => {
-          const mapping: Record<string, string> = Object.create(null);
-          roles.forEach((role) => {
-            mapping[role.name] = role.id;
-          });
-          return mapping;
-        });
-
-      let roles: string[] = [];
-      if (["smod", "admin"].includes(ctx.currUser.role)) {
-        roles = [roleMap["Admin"] ?? "", roleMap["Staff"] ?? ""];
-      } else if (["conmod", "arenamod", "mod"].includes(ctx.currUser.role)) {
-        roles = [roleMap["Staff"] ?? ""];
-      } else if (ctx.currUser.role === "member") {
-        roles = [roleMap["Member"] ?? ""];
-      }
-
-      roles = roles.filter(Boolean);
-      console.log("roleMap", roleMap);
-
-      const discordUser = await discord.getUser(tokenString);
-
-      let guildMember = await discord.getGuildMember(
-        config.DISCORD_GUILD_ID!,
-        discordUser.id,
-      );
-
-      if (guildMember) {
-        // If there's already part of the server, just redirect them to the channel
-        // We don't want to rename them because, say, they might be a mod logged in as a member alt
-        //
-        // Old code:
-        //
-        // FIXME: modifyGuildMember is failing with 403 Forbidden (missing permissions)
-        // However since they are already part of the server, I'll redirect them instead of failing.
-        // try {
-        //   guildMember = await discord.modifyGuildMember(
-        //     config.DISCORD_GUILD_ID!,
-        //     discordUser.id,
-        //     {
-        //       nick: ctx.currUser.uname,
-        //     },
-        //   );
-        // } catch (err) {
-        //   if (err instanceof Error && "status" in err && err.status === 403) {
-        //     // Missing permissions, but just go ahead instead of bailing
-        //     console.log(
-        //       "TODO: modifyGuildMember 403 Forbidden (missing permissions)",
-        //     );
-        //   } else {
-        //     console.error("modifyGuildMember error", err);
-        //     throw err;
-        //   }
-        // }
-      } else {
-        guildMember =
-          (await discord.addGuildMember(
-            config.DISCORD_GUILD_ID!,
-            discordUser.id,
-            {
-              access_token: tokenString,
-              nick: ctx.currUser.uname,
-              roles,
-            },
-          )) ?? null;
-      }
-
+      const result = await joinDiscord(discord, ctx.currUser, async () => {
+        const accessToken = await client.getToken({ code, redirect_uri });
+        return accessToken.token.access_token as string;
+      });
+      if (!result.ok) return refuse(ctx, result.refusal);
       return `https://discord.com/channels/${config.DISCORD_GUILD_ID}`;
     });
   });

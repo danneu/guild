@@ -1,10 +1,13 @@
 // The banned-user write gate (hunt 261026-0911-028). A banned user (role
 // "banned") may read the site but may not write.
 //
-// This middleware is the sole enforcement point. It is fail-closed: a route
-// added later is gated by default, and opening it to banned users is a
-// deliberate edit to the allowlist below. The `user.role === "banned"` lines in
-// server/cancan.ts only keep the UI from offering a write this gate refuses.
+// This middleware enforces the gate for every write that is not a GET. It is
+// fail-closed: a route added later is gated by default, and opening it to
+// banned users is a deliberate edit to the allowlist below. It passes every
+// GET as a read, so the Discord join, a GET that writes, is gated by its owner
+// instead: server/discord/join.ts#joinDiscord asks isBanned itself. The
+// `user.role === "banned"` lines in server/cancan.ts only keep the UI from
+// offering a write this gate refuses.
 
 import { Context, Next } from "koa";
 
@@ -17,7 +20,8 @@ export function isBanned(user: any): boolean {
   return user?.role === "banned";
 }
 
-// Reads are never gated.
+// Reads are never gated. GET /discord/callback writes all the same: it adds a
+// member to the Discord server, and its owner checks this gate.
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 // Exact "<METHOD> <path>" matches. These are the self-service writes a banned

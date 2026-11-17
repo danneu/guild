@@ -1,8 +1,10 @@
 // The email confirmation write gate -- plan/2026-08-11-1613.
 //
-// This middleware is the sole enforcement point. It is fail-closed: a route
-// added later is gated by default, and opening it up is a deliberate edit to
-// the allowlist below.
+// This middleware enforces the gate for every write that is not a GET. It is
+// fail-closed: a route added later is gated by default, and opening it up is a
+// deliberate edit to the allowlist below. It passes every GET as a read, so
+// the Discord join, a GET that writes, is gated by its owner instead:
+// server/discord/join.ts#joinDiscord asks isEmailGateSatisfied itself.
 
 import { Context, Next } from "koa";
 
@@ -41,7 +43,8 @@ export function needsEmailConfirmation(user: any): boolean {
   return !user.email_verified_at;
 }
 
-// Reads are never gated.
+// Reads are never gated. GET /discord/callback writes all the same: it adds a
+// member to the Discord server, and its owner checks this gate.
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 // Exact "<METHOD> <path>" matches. Every entry here is either a route a gated

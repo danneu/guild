@@ -258,15 +258,17 @@ app.use(middleware.flash());
 // currUser (it reads ctx.currUser) and after flash (it sets a flash message),
 // and before nunjucks and bouncer, so neither ctx.render nor ctx.back exists
 // yet -- the gate answers with a plain redirect and never touches the view
-// layer. It is the sole enforcement point and fails closed, so any route added
-// below is gated unless its allowlist entry says otherwise.
+// layer. It fails closed, so any route added below is gated unless its
+// allowlist entry says otherwise. It passes every GET, so the Discord join, a
+// GET that writes, checks the gate in server/discord/join.ts#joinDiscord.
 app.use(requireConfirmedEmail());
 
 // The banned-user write gate (hunt 261026-0911-028). Mounted after currUser and
 // flash, and before nunjucks, bouncer and every router, for the same reasons as
-// the email gate above. It is the sole enforcement point for "banned users only
-// read" and fails closed, so any route added below is refused to banned users
-// unless its allowlist entry says otherwise.
+// the email gate above. It enforces "banned users only read" and fails closed,
+// so any route added below is refused to banned users unless its allowlist
+// entry says otherwise. Like the email gate, it passes every GET, and
+// server/discord/join.ts#joinDiscord checks it for the Discord join.
 app.use(requireNotBanned());
 
 app.use(async (ctx: Context, next: Next) => {
