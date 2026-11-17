@@ -1,13 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { pool } from "./util";
-import { replacePasswordTx, updateUserActiveTrophyId } from "./index";
+import {
+  replacePasswordTx,
+  unnukeUser,
+  updateUserActiveTrophyId,
+  updateUserRole,
+} from "./index";
 
 // The repo has no real-database tests, so these pin the SQL text and the
 // bound params each write sends.
 vi.mock("./util", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./util")>()),
-  pool: { query: vi.fn() },
+  pool: { query: vi.fn(), withTransaction: vi.fn() },
 }));
 
 // server/bbcode.js loads cache3 with a CommonJS require that vitest cannot
@@ -24,6 +29,7 @@ function lastCall(): [string, unknown[] | undefined] {
 beforeEach(() => {
   query.mockReset();
   query.mockResolvedValue({ rows: [], rowCount: 1 });
+  vi.mocked(pool.withTransaction).mockReset();
 });
 
 describe("updateUserActiveTrophyId", () => {
@@ -118,5 +124,124 @@ describe("replacePasswordTx", () => {
         insertAt,
       );
     }
+  });
+});
+
+describe("role writes", () => {
+  const actorId = 9;
+  const userId = 42;
+
+  type UserRow = { id: number; role: string; is_nuked: boolean };
+
+  // A client in a transaction over a users table holding `rows`. A locking
+  // read returns the rows it names; every other statement is a write.
+  function makeTxClient(rows: UserRow[]) {
+    const clientQuery = vi.fn(async (sql: any, params?: unknown[]) => {
+      const text: string = typeof sql === "string" ? sql : sql.text;
+      const values: any = params ?? sql.values;
+      if (/FOR (NO KEY )?UPDATE/.test(text)) {
+        const ids: number[] = values.flat();
+        return { rows: rows.filter((row) => ids.includes(row.id)) };
+      }
+      return { rows: [], rowCount: 1 };
+    });
+    const client = { _inTransaction: true, query: clientQuery } as any;
+    vi.mocked(pool.withTransaction).mockImplementation(async (fn: any) =>
+      fn(client),
+    );
+    return client;
+  }
+
+  // Each statement other than the locking read, as [text, values]
+  function writes(client: any): [string, unknown][] {
+    return client.query.mock.calls
+      .map(([sql, params]: [any, unknown]) =>
+        typeof sql === "string" ? [sql, params] : [sql.text, sql.values],
+      )
+      .filter(([text]: [string]) => !/FOR (NO KEY )?UPDATE/.test(text));
+  }
+
+  function row(id: number, role: string, is_nuked = false): UserRow {
+    return { id, role, is_nuked };
+  }
+
+  describe("updateUserRole", () => {
+    // Intent: the write asks UPDATE_USER_ROLE about the roles the actor and
+    // the account hold when it writes, read under a row lock.
+    // Why it exists: the grant limit lived only in PUT /users/:slug/role,
+    // which checks the roles it loaded before the write (hunt
+    // 261117-0852-014). A route that skips the check, or a role that changes
+    // in between, must not reach the write.
+    // Scenario: a mod opens a member's edit page, an admin then makes that
+    // member an admin, and the mod's submit to member arrives.
+    it.each([
+      ["an account made admin since the route loaded it", "mod", "admin"],
+      ["an actor demoted since their session loaded", "member", "member"],
+    ])("refuses %s", async (_case, actorRole, userRole) => {
+      const client = makeTxClient([
+        row(actorId, actorRole),
+        row(userId, userRole),
+      ]);
+
+      await expect(
+        updateUserRole({ actorId, userId, role: "member" }),
+      ).rejects.toThrow(/UPDATE_USER_ROLE/);
+      expect(writes(client)).toEqual([]);
+      expect(query).not.toHaveBeenCalled();
+    });
+
+    it("writes the role the live rows allow", async () => {
+      const client = makeTxClient([row(actorId, "mod"), row(userId, "member")]);
+
+      await updateUserRole({ actorId, userId, role: "pwmod" });
+
+      expect(writes(client)).toEqual([
+        [
+          expect.stringMatching(/UPDATE users\s+SET role = \$1/),
+          ["pwmod", userId],
+        ],
+      ]);
+    });
+  });
+
+  describe("unnukeUser", () => {
+    // Intent: the unnuke asks UNNUKE_USER about the live rows, read under a
+    // row lock, before it unbans and unhides anything.
+    // Why it exists: unnuke asked only the route's NUKE_USER check, so a mod
+    // could demote a conmod to member and unhide every post staff hid
+    // (hunt 261117-0852-014).
+    // Scenario: a mod unnukes a nuked conmod, or an account another staff
+    // member already unnuked.
+    it.each([
+      ["a mod unnuking a conmod", row(userId, "conmod", true)],
+      ["an account that is no longer nuked", row(userId, "member", false)],
+    ])("refuses %s", async (_case, user) => {
+      const client = makeTxClient([row(actorId, "mod"), user]);
+
+      await expect(unnukeUser({ actorId, userId })).rejects.toThrow(
+        /UNNUKE_USER/,
+      );
+      expect(writes(client)).toEqual([]);
+      expect(query).not.toHaveBeenCalled();
+    });
+
+    it("unbans and unhides a nuked spambot", async () => {
+      const client = makeTxClient([
+        row(actorId, "mod"),
+        row(userId, "banned", true),
+      ]);
+
+      await unnukeUser({ actorId, userId });
+
+      expect(writes(client)).toEqual([
+        [expect.stringMatching(/UPDATE users SET role = 'member'/), [userId]],
+        [
+          expect.stringMatching(/UPDATE topics SET is_hidden = false/),
+          [userId],
+        ],
+        [expect.stringMatching(/UPDATE posts SET is_hidden = false/), [userId]],
+        [expect.stringMatching(/DELETE FROM nuked_users/), [userId]],
+      ]);
+    });
   });
 });

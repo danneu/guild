@@ -410,41 +410,24 @@ router.post("/users", checkCloudflareTurnstile, async (ctx: Context) => {
 //
 // Update user role
 //
+// UPDATE_USER_ROLE decides which roles the actor may give this account, so a
+// forged role the menu never offered is refused like any other action.
+//
 // @koa2
 router.put("/users/:slug/role", async (ctx: Context) => {
-  ctx
-    .validateBody("role")
-    .isIn(
-      [
-        "banned",
-        "member",
-        "mod",
-        "conmod",
-        "arenamod",
-        "pwmod",
-        "smod",
-        "admin",
-      ],
-      "Invalid role",
-    );
-  // TODO: Authorize role param against role of both parties
+  ctx.validateBody("role").isIn([...cancan.ROLES], "Invalid role");
   const user = await db.findUserBySlug(ctx.params.slug);
   ctx.assert(user, 404);
-  ctx.assertAuthorized(ctx.currUser, "UPDATE_USER_ROLE", user);
+  ctx.assertAuthorized(ctx.currUser, "UPDATE_USER_ROLE", {
+    user,
+    role: ctx.vals.role,
+  });
 
-  // smod can set any roles except admin/smod
-  if (ctx.currUser.role === "smod") {
-    ctx
-      .validateBody("role")
-      .isIn(["banned", "member", "conmod", "mod", "pwmod"], "Invalid role");
-  } else if (ctx.currUser.role === "mod") {
-    // mod can only set roles to pwmod, member, and below
-    ctx
-      .validateBody("role")
-      .isIn(["banned", "member", "pwmod"], "Invalid role");
-  }
-
-  await db.updateUserRole(user.id, ctx.request.body.role);
+  await db.updateUserRole({
+    actorId: ctx.currUser.id,
+    userId: user.id,
+    role: ctx.vals.role,
+  });
   const presentedUser = pre.presentUser(user)!;
   ctx.flash = { message: ["success", "User role updated"] };
   ctx.response.redirect(presentedUser.url + "/edit");
@@ -1340,9 +1323,9 @@ router.post("/users/:slug/unnuke", async (ctx: Context) => {
   ctx.assert(ctx.currUser, 404);
   const user = await db.findUserBySlug(ctx.params.slug).then(pre.presentUser);
   ctx.assert(user, 404);
-  ctx.assertAuthorized(ctx.currUser, "NUKE_USER", user);
+  ctx.assertAuthorized(ctx.currUser, "UNNUKE_USER", user);
 
-  await db.unnukeUser(user.id);
+  await db.unnukeUser({ actorId: ctx.currUser.id, userId: user.id });
 
   // Approve in background
   db.users

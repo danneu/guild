@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   can,
   CanAction,
+  grantableRoles,
   MOD_CATEGORY_ID,
+  Role,
+  ROLES,
   visibleRegistrationIp,
 } from "./cancan";
 import {
@@ -21,9 +24,31 @@ function allowed(action: CanAction, target: unknown): ActorName[] {
   return actorNames.filter((name) => can(actors[name], action, target));
 }
 
-// Lists actors in sweep order, so expectations read as sets.
+// Lists actors in sweep order, so expectations read as sets. tsc never reads
+// this file, so a name that is not an actor throws here instead.
 function only(...names: ActorName[]): ActorName[] {
+  for (const name of names) {
+    if (!actorNames.includes(name)) {
+      throw new Error(`only: ${name} is not an actor`);
+    }
+  }
   return actorNames.filter((name) => names.includes(name));
+}
+
+// Every actor but these
+function except(...names: ActorName[]): ActorName[] {
+  const left = only(...names);
+  return actorNames.filter((name) => !left.includes(name));
+}
+
+// The same actors for every target of a table
+function forEvery<T extends object>(
+  targets: T,
+  names: ActorName[],
+): Record<keyof T, ActorName[]> {
+  return Object.fromEntries(
+    Object.keys(targets).map((label) => [label, names]),
+  ) as Record<keyof T, ActorName[]>;
 }
 
 const everyone = actorNames;
@@ -190,6 +215,11 @@ const topicSweep: Sweep<typeof topics>[] = [
       },
     ],
   ),
+  // No read gate, so a member who moderates a lounge forum reaches the modkit
+  // of its topics
+  ["ACCESS_TOPIC_MODKIT", forEvery(topics, only("forumMod", ...staff))],
+  // No read gate, so a user can leave a topic they can no longer read
+  ["UNSUBSCRIBE_TOPIC", forEvery(topics, except("guest"))],
 ];
 
 const forumSweep: Sweep<typeof forums>[] = [
@@ -310,19 +340,46 @@ const postSweep: Sweep<typeof posts>[] = [
   ],
 ];
 
+// Every action a sweep below covers. vitest runs each describe body before any
+// test, so the completeness test sees every swept table, and a table counts
+// only once it is swept.
+const swept: CanAction[] = [];
+
 function sweep<T extends Record<string, unknown>>(
   kind: string,
   targets: T,
   table: Sweep<T>[],
 ) {
   for (const [action, expected] of table) {
-    for (const label of Object.keys(expected) as (keyof T & string)[]) {
+    swept.push(action);
+    // tsc never reads this file, so a row that skips a target, or names one
+    // the table lacks, fails here instead
+    const labels = new Set([...Object.keys(targets), ...Object.keys(expected)]);
+    for (const label of labels as Set<keyof T & string>) {
       it(`${action} on the ${label} ${kind}`, () => {
+        expect(Object.keys(targets), `no ${label} ${kind}`).toContain(label);
+        expect(Object.keys(expected), `${action} skips ${label}`).toContain(
+          label,
+        );
         expect(allowed(action, targets[label])).toEqual(expected[label]);
       });
     }
   }
 }
+
+describe("sweep tables", () => {
+  // Intent: every action has exactly one sweep row, so each rule's answers
+  // sit in a table a reviewer reads.
+  // Why it exists: the actions that hand out or use staff power over another
+  // account had no row, so a widened rule still passed pnpm test (hunt
+  // 261117-0852-014).
+  // Scenario: someone adds an action, or a table, and forgets its row.
+  it("cover every action exactly once", () => {
+    const repeated = swept.filter((action, i) => swept.indexOf(action) !== i);
+    expect(repeated).toEqual([]);
+    expect([...swept].sort()).toEqual(Object.values(CanAction).sort());
+  });
+});
 
 describe("READ_GATE", () => {
   sweep("topic", topics, topicSweep);
@@ -460,7 +517,6 @@ describe("loader rows", () => {
   ];
   const userActions: CanAction[] = [
     "UPDATE_USER",
-    "UPDATE_USER_ROLE",
     "GRANT_EMAIL_GATE_EXEMPTION",
     "UPDATE_USER_CUSTOM_TITLE",
     "READ_USER_ONLINE_STATUS",
@@ -468,6 +524,7 @@ describe("loader rows", () => {
     "READ_USER_RATINGS_TABLE",
     "READ_USER_IP",
     "NUKE_USER",
+    "UNNUKE_USER",
     "CHANGE_UNAME",
     "CREATE_USER_STATUS",
     "MANAGE_USER_STATUS",
@@ -606,6 +663,25 @@ describe("loader rows", () => {
     ["loadForumFor", forums.plain, ["READ_FORUM", "CREATE_TOPIC"]],
     ["findCategoriesWithForums", categories.plain, ["READ_CATEGORY"]],
     ["findUserById", userRow(), userActions],
+    [
+      "PUT /users/:slug/role",
+      { user: userRow(), role: "pwmod" },
+      ["UPDATE_USER_ROLE"],
+    ],
+    // What db.updateUserRole and db.unnukeUser lock and re-read
+    [
+      "locked role row",
+      { id: actors.member.id, role: "member", is_nuked: true },
+      ["UNNUKE_USER"],
+    ],
+    [
+      "locked role change",
+      {
+        user: { id: actors.member.id, role: "member", is_nuked: false },
+        role: "pwmod",
+      },
+      ["UPDATE_USER_ROLE"],
+    ],
     [
       "findStatusById",
       {
@@ -791,31 +867,271 @@ const otherUsers = {
   admin: otherUser("admin"),
 };
 
+// Staff edit and excuse the accounts whose role they may change
+const managedBy = {
+  banned: staff,
+  member: staff,
+  conmod: only("smod", "admin"),
+  arenamod: only("smod", "admin"),
+  pwmod: staff,
+  mod: only("smod", "admin"),
+  // Smods manage each other, as the role rule lets them
+  smod: only("smod", "admin"),
+  admin: only("admin"),
+};
+
 const userSweep: Sweep<typeof otherUsers>[] = [
+  ["UPDATE_USER", managedBy],
+  ["GRANT_EMAIL_GATE_EXEMPTION", managedBy],
+  // Never more than profile edit. It used to let mods retitle conmods and
+  // arenamods (hunt 261026-0911-029).
   [
     "UPDATE_USER_CUSTOM_TITLE",
     {
+      ...managedBy,
+      // Smods cannot retitle each other
+      smod: only("admin"),
+    },
+  ],
+  // A nuke bans the account, so it also needs the role rule's leave to make it
+  // banned: mods cannot nuke conmods or arenamods. No one nukes staff.
+  [
+    "NUKE_USER",
+    {
       banned: staff,
       member: staff,
-      // Mods cannot edit a conmod's or arenamod's profile, title included
       conmod: only("smod", "admin"),
       arenamod: only("smod", "admin"),
       pwmod: staff,
-      mod: only("smod", "admin"),
-      // Smods cannot retitle each other
+      mod: [],
+      smod: [],
+      admin: [],
+    },
+  ],
+  // Today's answers. A mod may rename a conmod whose profile it cannot edit.
+  [
+    "CHANGE_UNAME",
+    {
+      banned: staff,
+      member: staff,
+      conmod: staff,
+      arenamod: staff,
+      pwmod: staff,
+      mod: only("admin"),
       smod: only("admin"),
       admin: only("admin"),
     },
   ],
+  // Today's answers. A mod may manage a conmod's images but not edit its
+  // profile, and even an admin cannot manage a staff account's images.
+  [
+    "MANAGE_IMAGES",
+    {
+      banned: staff,
+      member: staff,
+      conmod: staff,
+      arenamod: staff,
+      pwmod: staff,
+      mod: [],
+      smod: [],
+      admin: [],
+    },
+  ],
+  [
+    "READ_USER_IP",
+    {
+      banned: staff,
+      member: staff,
+      conmod: only("admin"),
+      arenamod: only("admin"),
+      pwmod: only("admin"),
+      mod: only("smod", "admin"),
+      smod: only("admin"),
+      admin: only("admin"),
+    },
+  ],
+  ["READ_USER_RATINGS_TABLE", forEvery(otherUsers, staff)],
+  ["MANAGE_USER_STATUS", forEvery(otherUsers, staff)],
+  // Only ever on one's own account
+  ["UPLOAD_IMAGE", forEvery(otherUsers, [])],
+  ["CREATE_USER_STATUS", forEvery(otherUsers, [])],
 ];
 
-describe("UPDATE_USER_CUSTOM_TITLE", () => {
-  // Intent: the title rule never grants more than profile edit.
-  // Why it exists: it let mods retitle conmods and arenamods, whose profiles
-  // UPDATE_USER keeps them out of (hunt 261026-0911-029).
-  // Scenario: a mod sets an arenamod's title.
-  sweep("user", otherUsers, userSweep);
+// Changing another account from one role to another
+function roleChange(from: string, to: string) {
+  return { user: otherUser(from), role: to };
+}
 
+const roleChanges = {
+  memberToBanned: roleChange("member", "banned"),
+  memberToPwmod: roleChange("member", "pwmod"),
+  memberToConmod: roleChange("member", "conmod"),
+  memberToArenamod: roleChange("member", "arenamod"),
+  memberToMod: roleChange("member", "mod"),
+  memberToSmod: roleChange("member", "smod"),
+  memberToAdmin: roleChange("member", "admin"),
+  conmodToMember: roleChange("conmod", "member"),
+  modToMember: roleChange("mod", "member"),
+  smodToMember: roleChange("smod", "member"),
+  adminToMember: roleChange("admin", "member"),
+  // Submitting the role an account already has changes nothing
+  smodToSmod: roleChange("smod", "smod"),
+  arenamodToArenamod: roleChange("arenamod", "arenamod"),
+};
+
+const roleChangeSweep: Sweep<typeof roleChanges>[] = [
+  [
+    "UPDATE_USER_ROLE",
+    {
+      memberToBanned: staff,
+      memberToPwmod: staff,
+      memberToConmod: only("smod", "admin"),
+      memberToArenamod: only("admin"),
+      memberToMod: only("smod", "admin"),
+      memberToSmod: only("admin"),
+      memberToAdmin: only("admin"),
+      conmodToMember: only("smod", "admin"),
+      modToMember: only("smod", "admin"),
+      smodToMember: only("smod", "admin"),
+      adminToMember: only("admin"),
+      smodToSmod: only("smod", "admin"),
+      arenamodToArenamod: only("smod", "admin"),
+    },
+  ],
+];
+
+function nukedUser(role: string) {
+  return { ...otherUser(role), is_nuked: true };
+}
+
+const nukedUsers = {
+  banned: nukedUser("banned"),
+  // Staff changed the role after the nuke
+  member: nukedUser("member"),
+  conmod: nukedUser("conmod"),
+  arenamod: nukedUser("arenamod"),
+  pwmod: nukedUser("pwmod"),
+  mod: nukedUser("mod"),
+  smod: nukedUser("smod"),
+  admin: nukedUser("admin"),
+  notNuked: { ...otherUser("banned"), is_nuked: false },
+};
+
+const nukedSweep: Sweep<typeof nukedUsers>[] = [
+  // An unnuke makes the account a member, so it needs the role rule's leave
+  // to do that: mods cannot unnuke conmods or arenamods
+  [
+    "UNNUKE_USER",
+    {
+      banned: staff,
+      member: staff,
+      conmod: only("smod", "admin"),
+      arenamod: only("smod", "admin"),
+      pwmod: staff,
+      mod: [],
+      smod: [],
+      admin: [],
+      notNuked: [],
+    },
+  ],
+];
+
+const presences = {
+  visible: { id: 200, is_ghost: false },
+  ghost: { id: 200, is_ghost: true },
+  // The member actor's own account, in ghost mode
+  memberGhost: { id: actors.member.id, is_ghost: true },
+};
+
+const presenceSweep: Sweep<typeof presences>[] = [
+  [
+    "READ_USER_ONLINE_STATUS",
+    {
+      // Banned users, arenamods and pwmods see no one's status
+      visible: only(
+        "guest",
+        "member",
+        "forumMod",
+        "gm",
+        "coGm",
+        "conmod",
+        ...staff,
+      ),
+      ghost: staff,
+      memberGhost: only("member", ...staff),
+    },
+  ],
+];
+
+describe("user powers", () => {
+  // Intent: who may change, nuke, edit, excuse or rename another account.
+  // Why it exists: these rules had no sweep, so a rule that forgot the
+  // target's role or widened a role list still passed pnpm test, and nuke and
+  // unnuke let mods do what the role rule forbids them (hunt 261117-0852-014).
+  // Scenario: a mod promotes a member to admin, or demotes a conmod through
+  // unnuke.
+  sweep("user", otherUsers, userSweep);
+  sweep("role change", roleChanges, roleChangeSweep);
+  sweep("nuked user", nukedUsers, nukedSweep);
+  sweep("presence", presences, presenceSweep);
+});
+
+describe("grantableRoles", () => {
+  const modGrants: Role[] = ["banned", "member", "pwmod"];
+  const smodGrants: Role[] = ["banned", "member", "conmod", "mod", "pwmod"];
+  const noGrants = Object.fromEntries(ROLES.map((role) => [role, []]));
+
+  // What each acting role may set an account of each role to. The list keeps
+  // the account's current role whenever the actor may change it.
+  const grants: Record<"guest" | Role, Record<string, Role[]>> = {
+    guest: noGrants,
+    banned: noGrants,
+    member: noGrants,
+    conmod: noGrants,
+    arenamod: noGrants,
+    pwmod: noGrants,
+    mod: {
+      ...noGrants,
+      banned: modGrants,
+      member: modGrants,
+      pwmod: modGrants,
+    },
+    smod: {
+      admin: [],
+      smod: [...smodGrants, "smod"],
+      mod: smodGrants,
+      member: smodGrants,
+      banned: smodGrants,
+      conmod: smodGrants,
+      arenamod: [...smodGrants, "arenamod"],
+      pwmod: smodGrants,
+    },
+    admin: Object.fromEntries(ROLES.map((role) => [role, [...ROLES]])),
+  };
+
+  it.each(Object.entries(grants))(
+    "lists what a %s may set each role to",
+    (acting, byTarget) => {
+      const actor = acting === "guest" ? undefined : { id: 1, role: acting };
+      expect(Object.keys(byTarget).sort()).toEqual([...ROLES].sort());
+      for (const role of ROLES) {
+        const roles = grantableRoles(actor, { id: 200, role });
+        expect([...roles].sort(), `${acting} on ${role}`).toEqual(
+          [...byTarget[role]!].sort(),
+        );
+      }
+    },
+  );
+
+  // views/edit_user.html calls it outside can()
+  it("throws on a user without a role", () => {
+    expect(() => grantableRoles(actors.admin, { id: 200 } as any)).toThrow(
+      /role/,
+    );
+  });
+});
+
+describe("UPDATE_USER_CUSTOM_TITLE", () => {
   // pwmods and arenamods cannot set their own title; that was the owner's call
   // in hunt 261026-0911-029.
   it("lets each role but banned, pwmod and arenamod set their own title", () => {
@@ -968,4 +1284,146 @@ describe("topic bans", () => {
       expect(() => can(actor, "UPDATE_POST", shortPost)).toThrow(/banned_ids/);
     }
   });
+
+  const topicBans = {
+    member: {
+      topic: topics.plain,
+      user: { id: actors.member.id, role: "member" },
+    },
+    gm: { topic: topics.plain, user: { id: actors.gm.id, role: "member" } },
+    coGm: { topic: topics.plain, user: { id: actors.coGm.id, role: "member" } },
+    mod: { topic: topics.plain, user: { id: actors.mod.id, role: "mod" } },
+  };
+
+  sweep("ban", topicBans, [
+    [
+      "TOPIC_BAN",
+      { member: only("gm", "coGm", ...staff), gm: [], coGm: [], mod: [] },
+    ],
+  ]);
+});
+
+////////////////////////////////////////////////////////////
+// The rest of the actions, so every action has a row
+
+const statuses = {
+  byMember: { user_id: actors.member.id, liked_user_ids: [] },
+  likedByMember: { user_id: actors.gm.id, liked_user_ids: [actors.member.id] },
+};
+
+const statusSweep: Sweep<typeof statuses>[] = [
+  [
+    "DELETE_USER_STATUS",
+    { byMember: only("member", ...staff), likedByMember: only("gm", ...staff) },
+  ],
+  [
+    "LIKE_STATUS",
+    {
+      byMember: except("guest", "banned", "member"),
+      likedByMember: except("guest", "banned", "gm", "member"),
+    },
+  ],
+];
+
+const convos = {
+  memberAndBanned: {
+    participants: [{ id: actors.member.id }, { id: actors.banned.id }],
+  },
+};
+
+const convoSweep: Sweep<typeof convos>[] = [
+  ["READ_CONVO", { memberAndBanned: only("banned", "member", "admin") }],
+  ["DELETE_CONVO", { memberAndBanned: only("banned", "member", "admin") }],
+  ["CREATE_PM", { memberAndBanned: only("member") }],
+];
+
+const pmParticipants = [{ id: actors.member.id }, { id: actors.gm.id }];
+
+const pms = {
+  byMember: {
+    user_id: actors.member.id,
+    legacy_html: null,
+    participants: pmParticipants,
+  },
+  legacy: {
+    user_id: actors.member.id,
+    legacy_html: "<b>Hi</b>",
+    participants: pmParticipants,
+  },
+};
+
+const pmSweep: Sweep<typeof pms>[] = [
+  [
+    "READ_PM",
+    {
+      byMember: only("member", "gm", "admin"),
+      legacy: only("member", "gm", "admin"),
+    },
+  ],
+  ["UPDATE_PM", { byMember: only("member"), legacy: [] }],
+];
+
+function vm(from: ActorName, to: ActorName) {
+  return {
+    from_user_id: actors[from]!.id,
+    to_user_id: actors[to]!.id,
+    from_user: { role: actors[from]!.role },
+  };
+}
+
+const vms = {
+  memberToGm: vm("member", "gm"),
+  modToMember: vm("mod", "member"),
+  adminToMember: vm("admin", "member"),
+};
+
+const vmSweep: Sweep<typeof vms>[] = [
+  [
+    "DELETE_VM",
+    {
+      memberToGm: only("member", "gm", ...staff),
+      // A member cannot delete staff VMs from their wall
+      modToMember: staff,
+      adminToMember: only("admin"),
+    },
+  ],
+];
+
+const notifications = { toMember: { to_user_id: actors.member.id } };
+
+const campaigns = { byGm: { user_id: actors.gm.id } };
+
+// Actions whose rules read no target
+const untargeted = { absent: undefined };
+
+const untargetedSweep: Sweep<typeof untargeted>[] = [
+  ["DELETE_USER", { absent: only("admin") }],
+  ["READ_USER_PM_SENT_COUNT", { absent: staff }],
+  ["READ_USER_LIST", { absent: everyone }],
+  ["MANAGE_TROPHY_SYSTEM", { absent: only("conmod", "admin") }],
+  ["UPDATE_TROPHY", { absent: only("conmod", "admin") }],
+  ["CREATE_TROPHY_GROUP", { absent: only("conmod", "admin") }],
+  ["UPDATE_TROPHY_GROUP", { absent: only("conmod", "admin") }],
+  ["CREATE_CONVO", { absent: except("guest", "banned") }],
+  ["CREATE_VM", { absent: except("guest", "banned") }],
+  ["LEXUS_LOUNGE", { absent: staff }],
+  ["CREATE_CAMPAIGN", { absent: except("guest", "banned") }],
+  ["READ_CAMPAIGN", { absent: everyone }],
+  // The rule lets account 107 in by id, and the arenamod actor has that id
+  ["READ_CHATLOGS", { absent: only("arenamod", ...staff) }],
+];
+
+describe("other actions", () => {
+  sweep("status", statuses, statusSweep);
+  sweep("convo", convos, convoSweep);
+  sweep("pm", pms, pmSweep);
+  sweep("vm", vms, vmSweep);
+  sweep("notification", notifications, [
+    ["DELETE_NOTIFICATION", { toMember: only("member") }],
+  ]);
+  sweep("campaign", campaigns, [
+    ["UPDATE_CAMPAIGN", { byGm: only("gm", ...staff) }],
+    ["CREATE_ROLL", { byGm: only("gm") }],
+  ]);
+  sweep("target", untargeted, untargetedSweep);
 });

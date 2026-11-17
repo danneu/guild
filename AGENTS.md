@@ -57,7 +57,16 @@ Key directories:
 declares the target it reads as a zod schema in `server/cancan.ts#TARGETS`.
 `can()` throws on an actor or a target that does not match, so a loader must
 select every field its actions declare, and a rule cannot compile if it reads
-a field its schema leaves out.
+a field its schema leaves out. `server/cancan.test.ts` fails unless every
+action has exactly one sweep row, which lists the actors it allows on each
+target.
+`server/cancan.ts#grantableRoles` is the one list of who may set which role.
+UPDATE_USER_ROLE, the role menu, and the profile edit, email gate and nuke
+rules all read it. Change a role only through
+`server/db/index.ts#updateUserRole` or `#unnukeUser`. Each locks the actor's
+and the account's rows and asks the rule about their live roles before it
+writes. `db.nukeUser` is checked only at its route, because the automatic
+nukes have no staff actor.
 `server/auth.ts` is the only module that hashes or checks a password, and a
 test fails if any other file imports bcrypt. Log in through
 `server/auth.ts#authenticate`, which never shows whether an account exists.

@@ -156,7 +156,8 @@ const TARGETS = {
 
   // User Management
   UPDATE_USER: user,
-  UPDATE_USER_ROLE: userRole,
+  // The account and the role it would get
+  UPDATE_USER_ROLE: z.object({ user: userRole, role }),
   GRANT_EMAIL_GATE_EXEMPTION: userRole,
   UPDATE_USER_CUSTOM_TITLE: user,
   DELETE_USER: z.unknown(),
@@ -166,6 +167,7 @@ const TARGETS = {
   READ_USER_IP: userRole,
   READ_USER_LIST: z.unknown(),
   NUKE_USER: userRole,
+  UNNUKE_USER: z.object({ role, is_nuked: z.boolean() }),
   CHANGE_UNAME: user,
 
   // Status Management
@@ -280,6 +282,65 @@ export function isTopicGm(
   return false;
 }
 
+// Who may change whose role, and to what, by the actor's role: `from` holds
+// the roles an account may have for the actor to change it, and `to` the roles
+// the actor may give. The one list of role grants: UPDATE_USER_ROLE, the role
+// menu in views/edit_user.html, and the rules that ask mayChangeRole all read
+// it. A role with no entry changes no one.
+const ROLE_GRANTS: Partial<
+  Record<Role, { from: readonly Role[]; to: readonly Role[] }>
+> = {
+  admin: { from: ROLES, to: ROLES },
+  // Smods change every account but admins, themselves and other smods included
+  smod: {
+    from: ROLES.filter((r) => r !== "admin"),
+    to: ["banned", "member", "conmod", "mod", "pwmod"],
+  },
+  mod: {
+    from: ["banned", "member", "pwmod"],
+    to: ["banned", "member", "pwmod"],
+  },
+};
+
+// The roles `actor` may set on `user`, in ROLES order. Empty when the actor may
+// not change the account; otherwise it keeps the account's current role, so a
+// submit that keeps it changes nothing.
+function roleChoices(actor: Actor, user: z.infer<typeof userRole>): Role[] {
+  const grants = actor ? ROLE_GRANTS[actor.role] : undefined;
+  if (!grants || !grants.from.includes(user.role)) return [];
+  return ROLES.filter((r) => grants.to.includes(r) || r === user.role);
+}
+
+// Whether `actor` may change `user`'s role at all. Staff edit and excuse
+// exactly the accounts whose role they may change.
+function mayChangeRole(actor: Actor, user: z.infer<typeof userRole>): boolean {
+  return roleChoices(actor, user).length > 0;
+}
+
+// The role menu's choices. views/edit_user.html calls this outside can(), so
+// it checks the fields it reads itself.
+export function grantableRoles(
+  actor: Actor,
+  user: z.infer<typeof userRole>,
+): Role[] {
+  check(ACTOR, actor, "grantableRoles: the actor");
+  check(userRole, user, "grantableRoles: the user");
+  return roleChoices(actor, user);
+}
+
+// Shared by NUKE_USER and UNNUKE_USER. A nuke makes the account banned and an
+// unnuke makes it a member, so each also needs the role rule's leave to set
+// `role`. No one nukes or unnukes a staff account.
+function mayNuke(
+  user: Actor,
+  target: z.infer<typeof userRole>,
+  role: Role,
+): boolean {
+  if (!user) return false;
+  if (!isStaffRole(user.role) || isStaffRole(target.role)) return false;
+  return can(user, "UPDATE_USER_ROLE", { user: target, role });
+}
+
 // The read rule each action also requires. can() asks it before the action's
 // own rule, so writes never restate the lounge and hidden rules that
 // READ_FORUM, READ_TOPIC and READ_POST own. The Record type makes every new
@@ -327,6 +388,7 @@ const READ_GATE = {
   READ_USER_IP: null,
   READ_USER_LIST: null,
   NUKE_USER: null,
+  UNNUKE_USER: null,
   CHANGE_UNAME: null,
 
   // Status Management
@@ -730,38 +792,21 @@ const RULES: Rules = {
     return false;
   },
   UPDATE_USER_ROLE(user, target) {
-    if (!user) return false;
-    if (user.role === "admin") return true;
-    // smods can change everyone except admin
-    if (user.role === "smod") return target.role !== "admin";
-    // mods can change non-staff and pw-mods
-    if (user.role === "mod")
-      return ["banned", "member", "pwmod"].includes(target.role);
-    return false;
+    return roleChoices(user, target.user).includes(target.role);
   },
   GRANT_EMAIL_GATE_EXEMPTION(user, target) {
-    // Mirrors UPDATE_USER_ROLE: during a mail-delivery incident the thing
-    // staff need is "let this person post". Note this excuses the account
-    // from the write gate; it never claims the address was confirmed
+    // Follows the role rule: during a mail-delivery incident the thing staff
+    // need is "let this person post". Note this excuses the account from the
+    // write gate; it never claims the address was confirmed
     // (plan/2026-08-11-1613).
-    if (!user) return false;
-    if (user.role === "admin") return true;
-    if (user.role === "smod") return target.role !== "admin";
-    if (user.role === "mod")
-      return ["banned", "member", "pwmod"].includes(target.role);
-    return false;
+    return mayChangeRole(user, target);
   },
   UPDATE_USER(user, target) {
     if (!user) return false;
     if (user.role === "banned") return false;
     // Anyone can update themselves
     if (user.id === target.id) return true;
-    // Staff can change staff below them
-    if (user.role === "admin") return true;
-    if (user.role === "smod") return target.role !== "admin";
-    if (user.role === "mod")
-      return ["banned", "member", "pwmod"].includes(target.role);
-    return false;
+    return mayChangeRole(user, target);
   },
   // Post state -- target is post
   UNHIDE_POST(user, target) {
@@ -1069,11 +1114,11 @@ const RULES: Rules = {
   },
   // target is spambot user
   NUKE_USER(user, target) {
-    // guests cannot
-    if (!user) return false;
-    // staff can ban non-staff
-    if (isStaffRole(user.role) && !isStaffRole(target.role)) return true;
-    return false;
+    return mayNuke(user, target, "banned");
+  },
+  UNNUKE_USER(user, target) {
+    if (!target.is_nuked) return false;
+    return mayNuke(user, target, "member");
   },
   // target is the user being managed
   MANAGE_IMAGES(user, target) {
@@ -1221,6 +1266,7 @@ export const CanAction = {
   READ_USER_IP: "READ_USER_IP",
   READ_USER_LIST: "READ_USER_LIST",
   NUKE_USER: "NUKE_USER",
+  UNNUKE_USER: "UNNUKE_USER",
   CHANGE_UNAME: "CHANGE_UNAME",
 
   // Status Management

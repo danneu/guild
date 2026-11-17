@@ -90,23 +90,23 @@
       {% endif %}
 
       <!-- Nuke Button -->
-      {% if can(ctx.currUser, 'NUKE_USER', user) %}
+      {% if user.is_nuked and can(ctx.currUser, 'UNNUKE_USER', user) %}
         <div class="pull-right" style="margin-right: 10px; display: inline-block;">
-          {% if user.is_nuked %}
-            <form method="POST" action="{{ user.url }}/unnuke">
-              <button type="submit" class="btn btn-success">
-                <span class="glyphicon glyphicon-flag"></span>
-                UN-Nuke User
-              </button>
-            </form>
-          {% else %}
-              <form method="POST" action="{{ user.url }}/nuke">
-                <button type="submit" class="btn btn-danger" id="nuke-user">
-                  <span class="glyphicon glyphicon-flag"></span>
-                  Nuke Spambot
-                </button>
-              </form>
-          {% endif %}
+          <form method="POST" action="{{ user.url }}/unnuke">
+            <button type="submit" class="btn btn-success">
+              <span class="glyphicon glyphicon-flag"></span>
+              UN-Nuke User
+            </button>
+          </form>
+        </div>
+      {% elif not user.is_nuked and can(ctx.currUser, 'NUKE_USER', user) %}
+        <div class="pull-right" style="margin-right: 10px; display: inline-block;">
+          <form method="POST" action="{{ user.url }}/nuke">
+            <button type="submit" class="btn btn-danger" id="nuke-user">
+              <span class="glyphicon glyphicon-flag"></span>
+              Nuke Spambot
+            </button>
+          </form>
         </div>
       {% endif %}
 

@@ -22,7 +22,7 @@ vi.mock("../db/util", () => ({ pool: {}, withPgPoolTransaction: vi.fn() }));
 vi.mock("../emailer", () => ({}));
 vi.mock("../services/discord", () => ({
   broadcastManualNuke: vi.fn(),
-  broadcastManualUnnuke: vi.fn(),
+  broadcastManualUnnuke: vi.fn(async () => {}),
   broadcastBioUpdate: vi.fn(),
 }));
 
@@ -40,6 +40,9 @@ vi.mock("../db", () => ({
   deleteLegacyAvatar: vi.fn(),
   updateUserActiveTrophyId: vi.fn(),
   deactivateCurrentTrophyForUserId: vi.fn(),
+  updateUserRole: vi.fn(),
+  unnukeUser: vi.fn(),
+  users: { approveUser: vi.fn(async () => {}) },
 }));
 
 ////////////////////////////////////////////////////////////
@@ -49,7 +52,22 @@ const alice = { id: 1, uname: "Alice", slug: "alice", role: "member" };
 const bob = { id: 2, uname: "Bob", slug: "bob", role: "member" };
 const smod = { id: 3, uname: "Smod", slug: "smod", role: "smod" };
 const otherSmod = { id: 4, uname: "Other", slug: "other", role: "smod" };
-const users = [alice, bob, smod, otherSmod];
+const mod = { id: 6, uname: "Mod", slug: "mod", role: "mod" };
+const nukedConmod = {
+  id: 7,
+  uname: "Conmod",
+  slug: "conmod",
+  role: "conmod",
+  is_nuked: true,
+};
+const spambot = {
+  id: 8,
+  uname: "Spambot",
+  slug: "spambot",
+  role: "banned",
+  is_nuked: true,
+};
+const users = [alice, bob, smod, otherSmod, mod, nukedConmod, spambot];
 const trophyId = 5;
 
 beforeEach(() => {
@@ -365,5 +383,77 @@ describe("PUT /users/:slug/custom-title", () => {
       message: ["danger", expect.stringContaining("up to 50 chars")],
     });
     expect(db.updateUserCustomTitle).not.toHaveBeenCalled();
+  });
+});
+
+describe("PUT /users/:slug/role", () => {
+  // Intent: the role route refuses any role the actor may not grant, through
+  // UPDATE_USER_ROLE, before it writes.
+  // Why it exists: the grant limit was a clamp in the route body that no test
+  // covered, so deleting it let a mod make a member an admin (hunt
+  // 261117-0852-014).
+  // Scenario: a mod or an smod forges the role field of the edit form.
+  it.each([
+    { actor: mod, role: "admin" },
+    { actor: smod, role: "admin" },
+    { actor: smod, role: "smod" },
+  ])("refuses a $actor.role making a member $role", async ({ actor, role }) => {
+    const res = await send({
+      method: "PUT",
+      path: `/users/${alice.slug}/role`,
+      currUser: actor,
+      body: { role },
+    });
+
+    expect(res.status).toBe(404);
+    expect(db.updateUserRole).not.toHaveBeenCalled();
+  });
+
+  it("lets a mod make a member a pwmod", async () => {
+    const res = await send({
+      method: "PUT",
+      path: `/users/${alice.slug}/role`,
+      currUser: mod,
+      body: { role: "pwmod" },
+    });
+
+    expect(res.status).toBe(302);
+    expect(res.location).toBe("/users/alice/edit");
+    expect(db.updateUserRole).toHaveBeenCalledWith({
+      actorId: mod.id,
+      userId: alice.id,
+      role: "pwmod",
+    });
+  });
+});
+
+describe("POST /users/:slug/unnuke", () => {
+  // Intent: unnuke asks the role rule, since it makes the account a member.
+  // Why it exists: it asked NUKE_USER, which let a mod demote a conmod or
+  // arenamod and unhide every post staff had hidden (hunt 261117-0852-014).
+  // Scenario: a mod unnukes a contest mod.
+  it("refuses a mod unnuking a conmod", async () => {
+    const res = await send({
+      method: "POST",
+      path: `/users/${nukedConmod.slug}/unnuke`,
+      currUser: mod,
+    });
+
+    expect(res.status).toBe(404);
+    expect(db.unnukeUser).not.toHaveBeenCalled();
+  });
+
+  it("lets a mod unnuke a spambot", async () => {
+    const res = await send({
+      method: "POST",
+      path: `/users/${spambot.slug}/unnuke`,
+      currUser: mod,
+    });
+
+    expect(res.status).toBe(302);
+    expect(db.unnukeUser).toHaveBeenCalledWith({
+      actorId: mod.id,
+      userId: spambot.id,
+    });
   });
 });

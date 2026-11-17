@@ -12,7 +12,7 @@ import * as config from "../config";
 import * as belt from "../belt";
 import { hashPassword } from "../auth";
 import * as pre from "../presenters";
-import { MOD_CATEGORY_ID } from "../cancan";
+import { can, MOD_CATEGORY_ID, type Role } from "../cancan";
 import { fetchReadable } from "../readable";
 import {
   pool,
@@ -1386,19 +1386,68 @@ export async function updateUserCustomTitle(userId: number, title: string) {
 
 ////////////////////////////////////////////////////////////
 
-export const updateUserRole = async function (userId, role) {
-  return pool
-    .query(
-      `
-    UPDATE users
-    SET role = $1
-    WHERE id = $2
-    RETURNING *
+// The role columns of a staff role write's actor and account, as they stand
+// now. Locks both rows until the transaction ends, so neither role can change
+// between the rule's check and the write. One statement locks them in id
+// order, so two staff acting on each other at once cannot deadlock.
+async function lockRoleRows(
+  client: PgClientInTransaction,
+  actorId: number,
+  userId: number,
+) {
+  assert(Number.isInteger(actorId));
+  assert(Number.isInteger(userId));
+  const { rows } = await client.query<{
+    id: number;
+    role: Role;
+    is_nuked: boolean;
+  }>(
+    `
+    SELECT id, role, is_nuked
+    FROM users
+    WHERE id = ANY($1::int[])
+    ORDER BY id
+    FOR NO KEY UPDATE
   `,
+    [[actorId, userId]],
+  );
+  const user = rows.find((row) => row.id === userId);
+  if (!user) throw new Error(`lockRoleRows: no user ${userId}`);
+  // A deleted actor asks as a guest, which every role rule refuses
+  return { actor: rows.find((row) => row.id === actorId) ?? null, user };
+}
+
+// The writer of users.role for staff role changes. It asks UPDATE_USER_ROLE
+// about the live, locked rows, not the ones its caller loaded, so a route
+// that skipped its own check, or a role that changed after the route read it,
+// writes nothing. A refusal here is a 500: the route's own check answers the
+// usual case first.
+export async function updateUserRole({
+  actorId,
+  userId,
+  role,
+}: {
+  actorId: number;
+  userId: number;
+  role: Role;
+}) {
+  return pool.withTransaction(async (client) => {
+    const { actor, user } = await lockRoleRows(client, actorId, userId);
+    if (!can(actor, "UPDATE_USER_ROLE", { user, role })) {
+      throw new Error(
+        `UPDATE_USER_ROLE refused: user ${actorId} may not make user ${userId} ${role}`,
+      );
+    }
+    await client.query(
+      `
+      UPDATE users
+      SET role = $1
+      WHERE id = $2
+    `,
       [role, userId],
-    )
-    .then(maybeOneRow);
-};
+    );
+  });
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -3849,10 +3898,16 @@ export const updateConvoFolder = async function (userId, convoId, folder) {
 // NUKING
 ////////////////////////////////////////////////////////////
 
-// Remember to also approve an unnuked user. Didn't do it
-// here because i don't currently pass in unnuker_id
-export async function unnukeUser(userId: number) {
-  assert(Number.isInteger(userId));
+// Makes a nuked account a member again and unhides all its stuff. Like
+// updateUserRole, it asks UNNUKE_USER about the live, locked rows before it
+// writes. The route approves the account afterwards.
+export async function unnukeUser({
+  actorId,
+  userId,
+}: {
+  actorId: number;
+  userId: number;
+}) {
   const sqls = {
     unbanUser: {
       text: `UPDATE users SET role = 'member', is_nuked = false WHERE id = $1`,
@@ -3873,6 +3928,12 @@ export async function unnukeUser(userId: number) {
     },
   };
   return pool.withTransaction(async (client) => {
+    const { actor, user } = await lockRoleRows(client, actorId, userId);
+    if (!can(actor, "UNNUKE_USER", user)) {
+      throw new Error(
+        `UNNUKE_USER refused: user ${actorId} may not unnuke user ${userId}`,
+      );
+    }
     await client.query(sqls.unbanUser);
     await client.query(sqls.unhideTopics);
     await client.query(sqls.unhidePosts);
