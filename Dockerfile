@@ -1,4 +1,11 @@
-FROM node:23-alpine AS build
+# The base stage owns the Node major: the other stages start from it, CI
+# installs the major it names (scripts/node-major.sh), and @types/node must
+# match it. node-eol is that major's end-of-life date in Node's release
+# schedule, and pnpm test fails after it (scripts/node-runtime.mts).
+# node-eol: 2028-04-30
+FROM node:24-alpine AS base
+
+FROM base AS build
 RUN corepack enable
 WORKDIR /app
 
@@ -10,7 +17,7 @@ RUN pnpm run build
 RUN pnpm run build:server
 RUN pnpm prune --prod
 
-FROM node:23-alpine
+FROM base
 WORKDIR /app
 ENV NODE_ENV=production
 

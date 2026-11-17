@@ -16,10 +16,17 @@ jobs:
           echo "github.ref_type = ${{ github.ref_type }}"
           echo "github.event_name = ${{ github.event_name }}"
 
+      # The Dockerfile base stage owns the Node major; see AGENTS.md#deploy.
+      - name: Read the Node major from the Dockerfile
+        id: node
+        run: |
+          major=$(bash scripts/node-major.sh)
+          echo "major=$major" >> "$GITHUB_OUTPUT"
+
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: 23
+          node-version: ${{ steps.node.outputs.major }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v2

@@ -1,0 +1,37 @@
+# Scheduled checks of facts that change outside the repo. A failure here is a
+# warning with lead time; the hard gates live in pnpm test, which needs no
+# network.
+name: Weekly watch
+
+on:
+  schedule:
+    - cron: "17 14 * * 1"
+  workflow_dispatch:
+  push:
+    paths:
+      - Dockerfile
+      - scripts/node-major.sh
+      - scripts/node-runtime.mts
+      - .github/workflows/watch.yml
+
+jobs:
+  # Checks the Dockerfile base stage's Node line against Node's release
+  # schedule: an LTS major, the committed end date, and enough time left.
+  node-eol:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Read the Node major from the Dockerfile
+        id: node
+        run: |
+          major=$(bash scripts/node-major.sh)
+          echo "major=$major" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ steps.node.outputs.major }}
+
+      - name: Check the Node line against Node's release schedule
+        run: node scripts/node-runtime.mts

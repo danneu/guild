@@ -36,6 +36,16 @@ fly.staging.toml`). Logs/SSH via `staging:logs` / `staging:ssh`.
   or a change to Cloudflare or Fly routing, run
   `pnpm exec tsx scripts/csrf-probe.ts`. It checks through Cloudflare what the
   CSRF gate trusts the proxies to pass on.
+- The Dockerfile's base stage, `FROM node:<major>-alpine AS base`, owns the
+  Node major and its end date. The other stages start from it, CI installs
+  the major it names through `scripts/node-major.sh`, and `@types/node` must
+  be on the same major. The `# node-eol:` line right above it holds that
+  major's end-of-life date from Node's release schedule. `pnpm test` fails the
+  day after that date, so deploys stop until the base stage moves to the next
+  LTS major. The weekly watch (`.github/workflows/watch.yml`) checks the line
+  against the schedule and starts failing ahead of the date
+  (`scripts/node-runtime.mts#WARN_DAYS`). Move the base line, its node-eol
+  line and `@types/node` together.
 - Do not deploy unless explicitly asked.
 
 ## Architecture
