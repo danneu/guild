@@ -392,6 +392,68 @@ describe("bbcode URL check", () => {
   );
 });
 
+// Intent: stored html keeps a link followed and opening in place only when the
+// URL parser reads its host as roleplayerguild.com or www.roleplayerguild.com.
+// Every other link gets rel="nofollow noopener" and a new tab, whatever its
+// writer wrote.
+// Why it exists: finding 261117-0852-046. tags.url and the autolinker called
+// a link internal when roleplayerguild.com appeared anywhere in its text, so
+// a spammer's lookalike URL was stored as a followed link. Status links never
+// had nofollow at all.
+describe("stored link rel", () => {
+  const outside = { rel: "nofollow noopener", target: "_blank" };
+  const own = { rel: undefined, target: undefined };
+
+  function linkAttribs(html: string) {
+    return parseElements(html)
+      .filter((el) => el.name === "a")
+      .map(({ attribs }) => ({ rel: attribs.rel, target: attribs.target }));
+  }
+
+  it.each([
+    "[url=https://casino.example/?r=roleplayerguild.com]x[/url]",
+    "[url]https://roleplayerguild.com.casino.example/[/url]",
+    "https://casino.example/roleplayerguild.com",
+    "[url=https://roleplayerguild.com:x@casino.example/]x[/url]",
+    "[url=https://img.roleplayerguild.com/a.png]x[/url]",
+  ])("stores %s as a nofollow link", (markup) => {
+    expect(linkAttribs(bbcode(markup))).toEqual([outside]);
+  });
+
+  it.each([
+    "[url=https://roleplayerguild.com/x]x[/url]",
+    "[url]https://www.roleplayerguild.com/x[/url]",
+    "https://WWW.RolePlayerGuild.com/x",
+    "[@name]",
+  ])("stores %s as a followed link that opens in place", (markup) => {
+    expect(linkAttribs(bbcode(markup))).toEqual([own]);
+  });
+
+  // The renderer never writes these hrefs, but a browser reads each one as
+  // another host, or cannot read it at all.
+  it.each([
+    "//casino.example/",
+    "\\\\casino.example/",
+    "https:\\\\casino.example/",
+    "https://roleplayerguild.com./",
+    "http://exa mple.com/",
+  ])("the sanitizer marks href %s nofollow", (href) => {
+    const html = userHtml.sanitizeUserHtml(`<a href="${href}">x</a>`);
+    expect(linkAttribs(html)).toEqual([outside]);
+  });
+
+  it("marks a status's outside link nofollow and opens its own in place", () => {
+    const html = userHtml.sanitizeUserHtml(
+      belt.autolink(
+        belt.escapeHtml(
+          "see https://casino.example/x and https://www.roleplayerguild.com/y",
+        ),
+      ),
+    );
+    expect(linkAttribs(html)).toEqual([outside, own]);
+  });
+});
+
 // Intent: tags may nest MAX_TAG_DEPTH levels deep, and the server refuses
 // deeper nesting with a message for the member.
 // Why it exists: finding 261026-0911-005. Each level of nesting cost the
@@ -491,8 +553,25 @@ describe("bbcode render cost sweep", () => {
     return markup;
   }
 
+  // Each run writes one link per unit, and the sanitizer parses the URL of
+  // every link, so these time thousands of parses. The bare URLs are
+  // space-separated, so they cannot merge into one link. Bare a.co is the
+  // densest link shape known.
+  const linkRuns: [string, string][] = [
+    ["a run of bare a.co links", "a.co "],
+    ["a run of [url]a.co[/url]", "[url]a.co[/url]"],
+    ["a run of [url=a.co]x[/url]", "[url=a.co]x[/url]"],
+  ];
+
+  it.each(linkRuns)("%s writes one link per unit", (_name, unit) => {
+    const html = unbounded.renderMarkup(fill(unit), author);
+    const links = parseElements(html).filter((el) => el.name === "a");
+    expect(links).toHaveLength(Math.floor(maxLength / unit.length));
+  });
+
   const shapes: [string, string][] = [
     ["plain", plain],
+    ...linkRuns.map(([name, unit]): [string, string] => [name, fill(unit)]),
     ["a [*] run", "[list]" + fill("[*]", maxLength - 13) + "[/list]"],
     ["a [*]x run", "[list]" + fill("[*]x", maxLength - 13) + "[/list]"],
     ["a [quote run", fill("[quote")],

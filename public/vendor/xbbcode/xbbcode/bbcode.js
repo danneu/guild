@@ -1087,19 +1087,14 @@ function createRenderer() {
           else return "&#91;url&#93;";
         }
 
-        // dumb way to see if user is linking internally or externally
-        // keep synced with Autolinker#replaceFn definedin this file
-        if (/roleplayerguild.com/i.test(href)) {
-          // internal link
-          return '<a href="' + attrValue(href) + '">';
-        } else {
-          // external link
-          return (
-            '<a target="_blank" rel="nofollow noopener" href="' +
-            attrValue(href) +
-            '">'
-          );
-        }
+        // Every link is nofollow and opens in a new tab here, for the editor
+        // preview. Stored html gets its rel and target from
+        // server/user_html.ts, which alone knows the site's own hosts.
+        return (
+          '<a target="_blank" rel="nofollow noopener" href="' +
+          attrValue(href) +
+          '">'
+        );
       },
       closeTag: function (params, content) {
         var ret = hasError.url ? "&#91;/url&#93;" : "</a>";
@@ -1686,15 +1681,14 @@ var autolinkerOpts = {
   twitter: false,
   hashtag: false,
   newWindow: false,
-  // keep synced with [url] logic
+  // Marks every link the way tags.url does, for the editor preview and
+  // public/js/chat.js. Stored html gets its rel and target from
+  // server/user_html.ts.
   replaceFn: function (match) {
-    //var tag = autolinker.getTagBuilder().build(match);
-    var tag = match.buildTag();
-    // dumb way to see if user is linking internally or externally
-    if (!/roleplayerguild.com/i.test(match.getAnchorHref())) {
-      tag.setAttr("rel", "nofollow noopener").setAttr("target", "_blank");
-    }
-    return tag;
+    return match
+      .buildTag()
+      .setAttr("rel", "nofollow noopener")
+      .setAttr("target", "_blank");
   },
 };
 

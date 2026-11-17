@@ -120,11 +120,15 @@ user's markup work for `MARKUP_COOLDOWN_MS`. Each refusal throws
 request with a 400 and the reason as text, and gives a form post the reason
 as a flash. The render ends in `server/user_html.ts#sanitizeUserHtml`. Any other
 code that stores user html calls `sanitizeUserHtml` itself, and none copies
-stored html from another row. In `server/bbcode.js` a tag writes user text
-into an attribute only through `attrValue`, and checks a URL only through
-`parseSafeUrl`. `server/bbcode.test.ts` sweeps every tag against the
-sanitizer's allowlist, and fails any tag or shape whose render costs far more
-than plain text of the same length.
+stored html from another row. The sanitizer also sets the rel and target of
+every stored link from the host the URL parser reads in its href. Only a link
+to a host in `server/user_html.ts#ownLinkHosts` stays followed and opens in
+place. Every other link gets nofollow and a new tab, whatever its writer
+wrote. In `server/bbcode.js` a tag writes user text into an attribute only
+through `attrValue`, and checks a URL only through `parseSafeUrl`.
+`server/bbcode.test.ts` sweeps every tag against the sanitizer's allowlist,
+and fails any tag or shape whose render costs far more than plain text of the
+same length.
 
 **Asset pipeline:** Gulp concatenates and minifies CSS/JS into versioned bundles
 in `dist/`. In development assets are served individually; in production the
