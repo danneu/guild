@@ -212,6 +212,7 @@ import services from "./services";
 import cache3 from "./cache3";
 import makeAgo from "./ago";
 import protectCsrf from "./middleware/protect-csrf";
+import { trailingSlash } from "./middleware/trailing-slash";
 import { FlashParams, FORM_REFILL_FIELDS } from "./middleware/flash";
 import { verifyTurnstileToken } from "./middleware/cloudflare-turnstile";
 import {
@@ -246,19 +247,7 @@ app.use(async (ctx: Context, next: Next) => {
   return next();
 });
 
-// Remove trailing slashes from url path
-app.use(async (ctx: Context, next: Next) => {
-  // If path has more than one character and ends in a slash, then redirect to
-  // the same path without that slash. Note: homepage is "/" which is why
-  // we check for more than 1 char.
-  if (/.+\/$/.test(ctx.request.path)) {
-    const newPath = ctx.request.path.slice(0, ctx.request.path.length - 1);
-    ctx.status = 301;
-    ctx.response.redirect(newPath + ctx.request.search);
-  }
-
-  return next();
-});
+app.use(trailingSlash());
 
 /// /////////////////////////////////////////////////////////
 
