@@ -2226,7 +2226,7 @@ router.del("/current-sidebar-contest", async (ctx: Context) => {
 
 /// ////////////////////////////////////////////////////////
 
-guildbot.connect().catch((err) => console.error("guildbot error", err));
+guildbot.start();
 
 /// /////////////////////////////////////////////////////////
 
@@ -2238,11 +2238,18 @@ cache3.on("error", (err) => {
 
 console.log("Waiting for cache3 to be ready before starting server...");
 cache3.start();
-cache3.waitUntilReady().then(() => {
-  app.listen(config.PORT, () => {
-    console.log("Listening on", config.PORT);
-    startCloudflareIpRangeRefresh();
-    db.loginAttempts.startSweep();
-    services.antispam.startClassifierProbe();
+cache3
+  .waitUntilReady()
+  .then(() => {
+    app.listen(config.PORT, () => {
+      console.log("Listening on", config.PORT);
+      startCloudflareIpRangeRefresh();
+      db.loginAttempts.startSweep();
+      services.antispam.startClassifierProbe();
+    });
+  })
+  .catch((err) => {
+    // A server that cannot fill its cache must not boot.
+    console.error("server failed to start", err);
+    process.exit(1);
   });
-});

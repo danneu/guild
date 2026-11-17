@@ -331,7 +331,13 @@ export function createIntervalCache<T extends CacheConfigMap>(
       `Starting cache with ${Object.keys(config).length} keys, loopInterval: ${loopInterval}ms`,
     );
     running = true;
-    intervalId = setInterval(updateLoop, loopInterval);
+    intervalId = setInterval(() => {
+      // updateLoop rejects only when an 'error' listener throws, so the
+      // error is logged rather than emitted to that listener again.
+      updateLoop().catch((err) =>
+        console.error("cache3 update loop failed", err),
+      );
+    }, loopInterval);
   }
 
   /**

@@ -261,6 +261,13 @@ AWS S3 (file storage), AWS SES (email), and Cloudflare Turnstile (CAPTCHA).
   JSON-encode, such as a db row, answers 500 at
   `server/middleware/response-edge.ts`, and `pnpm test` fails on a handler
   that stringifies a body or sets a JSON type itself. Add a view instead.
+- Never drop a promise in server code. Node exits on an unhandled rejection,
+  and on an 'error' event that no listener hears. Await a promise, return it,
+  or end it in `.catch(handler)`, and hand a listener or timer a sync function
+  that does that. `pnpm test` fails otherwise
+  (`server/promise_sweep.test.ts`), but it reads static types, so a value
+  typed any gets past it. Make pg connections only in `server/db/util.ts`,
+  which gives each one an 'error' listener; the sweep fails any other.
 - Every cookie the server sets is HttpOnly and SameSite=Lax, and Secure when
   `HOST` is https, whatever options the call passes (see
   `server/cookie-policy.ts#installCookiePolicy`). Behind Fly, TLS ends before

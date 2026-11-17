@@ -176,7 +176,7 @@ router.post("/topics/:topicSlug/posts", async (ctx: Context) => {
   ctx.response.redirect(post.url + "?created=true");
 
   // Check if post is spam in the background
-  services.antispam.process(ctx, charge, post.id);
+  services.antispam.processInBackground(ctx, charge, post.id);
 });
 
 ////////////////////////////////////////////////////////////
@@ -585,7 +585,7 @@ router.put("/posts/:id", async (ctx: Context) => {
   }
 
   // Check if post is spam after response is sent
-  services.antispam.process(ctx, updated.charge, post.id);
+  services.antispam.processInBackground(ctx, updated.charge, post.id);
 });
 
 //

@@ -42,6 +42,17 @@ const connectionConfig: pg.ClientConfig = {
 // should import and use
 export const pool = new pg.Pool(connectionConfig);
 
+// pg emits 'error' on a client whose socket dies, even mid-query, and an
+// 'error' with no listener exits the process. pg-pool listens only while a
+// client sits idle (it takes its listener off at checkout), so each client
+// gets one here for its whole life. server/promise_sweep.test.ts fails any pg
+// connection made outside this file.
+pool.on("connect", (client) => {
+  client.on("error", (err) => console.error("pg pool client error", err));
+});
+// pg-pool re-emits an idle client's error here. The listener above logged it.
+pool.on("error", () => {});
+
 // These versions work with both datablan/pg and pg's query results.
 export function maybeOneRow<T extends QueryResultRow>(
   result: QueryResult<T>,
@@ -128,8 +139,18 @@ pg.Client.prototype.one = function <T extends QueryResultRow = any>(
     .then(maybeOneRow);
 };
 
-export function getClient() {
-  return new pg.Client(connectionConfig);
+// A dedicated connection outside the pool, such as one that holds a session
+// lock. onError hears every error the client emits, attached before anyone can
+// connect it, since an unheard 'error' exits the process. TCP keepalive lets a
+// client blocked in a long query notice a dead socket.
+export function getClient(onError: (err: Error) => void): pg.Client {
+  const client = new pg.Client({
+    ...connectionConfig,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 1000 * 60,
+  });
+  client.on("error", onError);
+  return client;
 }
 
 // // TODO: Get rid of db/index.js' wrapOptionalClient and use this

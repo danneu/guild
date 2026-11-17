@@ -118,23 +118,36 @@ function startClassifierProbe(): void {
   setInterval(check, PROBE_INTERVAL_MS).unref();
 }
 
+function logVerdict<T>(result: T): T {
+  if (result) {
+    console.log("antispam process detected a spammer:", result);
+  }
+  return result;
+}
+
+function logError(err: unknown): void {
+  console.error("antispam process error", err);
+}
+
 export default {
   checkClassifier,
   startClassifierProbe,
+  // For a caller that waits for the verdict. Never rejects: an error is
+  // logged and the text passes.
   process: async (
     ctx: Context,
     charge: ScreeningCharge | null,
     postId: number,
   ) => {
-    return process(ctx, charge, postId)
-      .then((result) => {
-        if (result) {
-          console.log("antispam process detected a spammer:", result);
-        }
-        return result;
-      })
-      .catch((err) => {
-        console.error("antispam process error", err);
-      });
+    return process(ctx, charge, postId).then(logVerdict).catch(logError);
+  },
+  // The one entry point for screening after the response is sent. It returns
+  // nothing, so a route has no promise to drop.
+  processInBackground(
+    ctx: Context,
+    charge: ScreeningCharge | null,
+    postId: number,
+  ): void {
+    process(ctx, charge, postId).then(logVerdict).catch(logError);
   },
 };

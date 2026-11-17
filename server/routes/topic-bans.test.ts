@@ -33,7 +33,7 @@ vi.mock("../db", async (importOriginal) => {
 });
 
 vi.mock("../services", () => ({
-  default: { antispam: { process: vi.fn() } },
+  default: { antispam: { processInBackground: vi.fn() } },
 }));
 
 // server/bbcode.js loads cache3 with a CommonJS require that vitest cannot
