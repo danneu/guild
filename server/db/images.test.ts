@@ -1,13 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { pool } from "./util.js";
-import {
-  deleteImage,
-  getUserAlbum,
-  getUserImage,
-  insertImage,
-  updateAlbum,
-} from "./images";
+import { getUserAlbum, getUserImage, updateAlbum } from "./images";
 
 // The repo has no real-database tests, so these pin the owner filter in the
 // SQL text and the bound params each write sends.
@@ -52,23 +46,6 @@ describe("getUserAlbum", () => {
   });
 });
 
-describe("deleteImage", () => {
-  it("only soft-deletes the owner's row", async () => {
-    await deleteImage(ownerId, imageId);
-
-    const [sql, params] = lastCall();
-    expect(sql).toMatch(/WHERE id = \$1\s+AND user_id = \$2/);
-    expect(params).toEqual([imageId, ownerId]);
-  });
-
-  it("reports whether a row changed", async () => {
-    await expect(deleteImage(ownerId, imageId)).resolves.toBe(true);
-
-    query.mockResolvedValue({ rows: [], rowCount: 0 });
-    await expect(deleteImage(ownerId, imageId)).resolves.toBe(false);
-  });
-});
-
 describe("updateAlbum", () => {
   it("only updates the owner's row", async () => {
     await updateAlbum(ownerId, albumId, { title: "t" });
@@ -87,42 +64,5 @@ describe("updateAlbum", () => {
     await expect(updateAlbum(ownerId, albumId, { title: "t" })).resolves.toBe(
       false,
     );
-  });
-});
-
-describe("insertImage", () => {
-  const image = {
-    imageId,
-    ownerId,
-    albumId,
-    src: "https://img.roleplayerguild.com/prod/users/x.avif",
-    mime: "image/avif",
-    description: null,
-  };
-
-  // The image takes its user_id from the album row, and the row only exists
-  // when the named owner holds the album.
-  it("copies ownership from an album the owner holds", async () => {
-    await insertImage(image);
-
-    const [sql, params] = lastCall();
-    expect(sql).toMatch(/SELECT \$1::uuid, albums\.id, albums\.user_id,/);
-    expect(sql).toMatch(/WHERE albums\.id = \$2\s+AND albums\.user_id = \$3/);
-    expect(sql).not.toContain("VALUES");
-    expect(params).toEqual([
-      imageId,
-      albumId,
-      ownerId,
-      image.src,
-      image.mime,
-      null,
-    ]);
-  });
-
-  it("reports whether a row was inserted", async () => {
-    await expect(insertImage(image)).resolves.toBe(true);
-
-    query.mockResolvedValue({ rows: [], rowCount: 0 });
-    await expect(insertImage(image)).resolves.toBe(false);
   });
 });

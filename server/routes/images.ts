@@ -1,8 +1,8 @@
 import Router from "@koa/router";
 import { Encoded, ImageRefused, transcodeAlbumImage } from "../imaging";
-import { uploadToS3 } from "../s3";
+import * as storage from "../storage";
+import { StorageQuotaExceeded } from "../storage";
 import { withUpload } from "../upload";
-import { v7 as uuidv7 } from "uuid";
 // 1st
 import * as belt from "../belt";
 import * as db from "../db";
@@ -137,12 +137,24 @@ const IMAGE_UPLOAD = {
   maxFileBytes: 40e6,
 } as const;
 
+// The answer while the bucket is unset, as in development without S3.
+const OFFLINE = "The upload system is currently offline. (Bucket unspecified)";
+
 router.post("/users/:user_slug/images", loadUser, async (ctx: Context) => {
   if (!config.S3_IMAGE_BUCKET) {
-    return (ctx.body =
-      "The upload system is currently offline. (Bucket unspecified)");
+    return (ctx.body = OFFLINE);
   }
   ctx.assertAuthorized(ctx.currUser, "UPLOAD_IMAGE", ctx.state.user);
+
+  // An account already at a cap is told so before its file is read and
+  // transcoded. storeImage checks again under the lock and decides.
+  try {
+    await storage.checkImageQuota(ctx.state.user.id);
+  } catch (err) {
+    if (!(err instanceof StorageQuotaExceeded)) throw err;
+    ctx.flash = { message: ["danger", err.message] };
+    return ctx.back("/");
+  }
 
   const result = await withUpload(
     ctx,
@@ -172,24 +184,22 @@ router.post("/users/:user_slug/images", loadUser, async (ctx: Context) => {
         return ctx.back("/");
       }
 
-      const uuid = uuidv7();
-      const imageResult = await uploadToS3({
-        uuid,
-        type: "album_image",
-        ...avif,
-      });
+      // STORE
 
-      // INSERT
-
-      const inserted = await db.images.insertImage({
-        imageId: uuid,
-        ownerId: ctx.state.user.id,
-        albumId: album.id,
-        src: imageResult.publicUrl,
-        mime: avif.contentType,
-        description,
-      });
-      ctx.assert(inserted, 404);
+      let stored: boolean;
+      try {
+        stored = await storage.storeImage({
+          ownerId: ctx.state.user.id,
+          albumId: album.id,
+          description,
+          image: avif,
+        });
+      } catch (err) {
+        if (!(err instanceof StorageQuotaExceeded)) throw err;
+        ctx.flash = { message: ["danger", err.message] };
+        return ctx.back("/");
+      }
+      ctx.assert(stored, 404);
 
       // RESPOND
 
@@ -209,20 +219,70 @@ router.post("/users/:user_slug/images", loadUser, async (ctx: Context) => {
   }
 });
 
-// TODO: Also delete from S3
+// Deletes the image from S3, then hides its row.
 router.del(
   "/users/:user_slug/images/:image_id",
   loadUser,
   loadUserImage,
   async (ctx: Context) => {
     ctx.assertAuthorized(ctx.currUser, "MANAGE_IMAGES", ctx.state.user);
-    const deleted = await db.images.deleteImage(
+    if (!config.S3_IMAGE_BUCKET) {
+      ctx.body = OFFLINE;
+      return;
+    }
+    const removed = await storage.removeImage(
       ctx.state.user.id,
       ctx.state.image.id,
     );
-    ctx.assert(deleted, 404);
+    ctx.assert(removed, 404);
     ctx.flash = { message: ["success", "Image deleted"] };
     ctx.redirect(ctx.state.user.url + "/images");
+  },
+);
+
+// The staff takedown of a member's uploads: every album image and the avatar
+// come out of S3. The GET is the confirm page, and the POST needs the field
+// only that page's form sends, because S3 cannot bring the objects back.
+
+// The confirm page's form field
+const REMOVE_UPLOADS_CONFIRM = "remove-uploads";
+
+router.get(
+  "/users/:user_slug/remove-uploads",
+  loadUser,
+  async (ctx: Context) => {
+    ctx.assertAuthorized(ctx.currUser, "REMOVE_UPLOADS", ctx.state.user);
+    const images = await db.images.getUserImages(ctx.state.user.id);
+    // template: views/confirm_remove_uploads.html
+    await ctx.render("confirm_remove_uploads", {
+      ctx,
+      user: ctx.state.user,
+      imageCount: images.length,
+      confirm: REMOVE_UPLOADS_CONFIRM,
+      title: `Remove ${ctx.state.user.uname}'s uploads`,
+    });
+  },
+);
+
+router.post(
+  "/users/:user_slug/remove-uploads",
+  loadUser,
+  async (ctx: Context) => {
+    ctx.assertAuthorized(ctx.currUser, "REMOVE_UPLOADS", ctx.state.user);
+    if (!config.S3_IMAGE_BUCKET || !config.S3_AVATAR_BUCKET) {
+      ctx.body = OFFLINE;
+      return;
+    }
+    ctx.assert(
+      ctx.request.body.confirm === REMOVE_UPLOADS_CONFIRM,
+      400,
+      "Confirm on the Remove Uploads page.",
+    );
+    const { images } = await storage.removeUploads(ctx.state.user.id);
+    ctx.flash = {
+      message: ["success", `Removed ${images} images and the avatar`],
+    };
+    ctx.redirect(ctx.state.user.url);
   },
 );
 

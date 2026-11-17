@@ -90,6 +90,45 @@ if (!S3_AVATAR_BUCKET) {
 if (!S3_IMAGE_BUCKET) {
   console.warn("S3_IMAGE_BUCKET not set. Cannot process image uploads.");
 }
+// The folder this deployment's objects sit under in each bucket.
+// server/storage.ts builds every key it writes or deletes from these, so a
+// deployment that shares a bucket with production cannot touch production's
+// objects unless it sets production's folders. The defaults are the
+// development folders; fly.toml sets production's.
+export const S3_IMAGE_PREFIX = process.env.S3_IMAGE_PREFIX || "dev";
+export const S3_AVATAR_PREFIX = process.env.S3_AVATAR_PREFIX || "development";
+for (const prefix of [S3_IMAGE_PREFIX, S3_AVATAR_PREFIX]) {
+  assert(
+    /^[a-z0-9-]+$/.test(prefix),
+    `An S3 key prefix is one folder name of a-z, 0-9 and -, not ${prefix}`,
+  );
+}
+
+// What one account may keep in album images, checked by
+// server/storage.ts#storeImage: live images, the bytes they store, and
+// uploads in the trailing hour, deleted ones included. Trust is
+// server/trust.ts. A stored image is an AVIF that server/imaging.ts shrinks to
+// its album edge, so the byte caps are sized on that output.
+export const IMAGE_QUOTA = {
+  untrusted: {
+    images: parseInt(process.env.IMAGE_QUOTA_UNTRUSTED_IMAGES || "50", 10),
+    bytes: parseInt(process.env.IMAGE_QUOTA_UNTRUSTED_BYTES || "50000000", 10),
+    perHour: parseInt(process.env.IMAGE_QUOTA_UNTRUSTED_PER_HOUR || "20", 10),
+  },
+  trusted: {
+    images: parseInt(process.env.IMAGE_QUOTA_TRUSTED_IMAGES || "1000", 10),
+    bytes: parseInt(process.env.IMAGE_QUOTA_TRUSTED_BYTES || "500000000", 10),
+    perHour: parseInt(process.env.IMAGE_QUOTA_TRUSTED_PER_HOUR || "60", 10),
+  },
+};
+for (const [standing, quota] of Object.entries(IMAGE_QUOTA)) {
+  for (const [cap, value] of Object.entries(quota)) {
+    assert(
+      Number.isInteger(value) && value > 0,
+      `IMAGE_QUOTA.${standing}.${cap} must be a positive integer`,
+    );
+  }
+}
 
 export const MAX_CONVO_PARTICIPANTS = parseInt(
   process.env.MAX_CONVO_PARTICIPANTS || "10",

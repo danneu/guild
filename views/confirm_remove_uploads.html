@@ -1,0 +1,28 @@
+{% extends 'layouts/master.html' %}
+
+{% block embed %}
+  <div class="page-header">
+    <h2>Remove {{ user.uname }}'s uploads</h2>
+    <p>
+      &larr; <a href="{{ user.url }}">Back to {{ user.uname }}'s profile</a>
+    </p>
+  </div>
+
+  <div class="alert alert-danger">
+    <p>
+      This deletes {{ user.uname }}'s {{ imageCount }} album images and avatar
+      from storage, so their links stop working. It cannot be undone, and
+      un-nuking the account does not bring them back.
+    </p>
+    <p>
+      Copies a browser or the CDN already cached can stay visible until they
+      expire.
+    </p>
+  </div>
+
+  <form method="POST" action="{{ user.url }}/remove-uploads">
+    <input type="hidden" name="confirm" value="{{ confirm }}">
+    <button type="submit" class="btn btn-danger">Remove uploads</button>
+    <a href="{{ user.url }}" style="margin-left: 20px;">Cancel</a>
+  </form>
+{% endblock %}

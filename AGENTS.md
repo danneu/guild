@@ -187,6 +187,21 @@ send needs the same call, and nothing fails if it is missing. A send takes
 `server/db/send_budget.ts#lockSender` before any other lock on its sender, or
 two sends can deadlock.
 
+**Uploads:** Store or remove a member's album image or avatar only through the
+exports of `server/storage.ts`. It is the only file that imports
+`server/s3.ts`, which is the only file that imports the S3 SDK, and a test
+fails on any other importer. Every key is built from this deployment's
+`S3_IMAGE_PREFIX` or `S3_AVATAR_PREFIX` and a row id or user id, never read
+from a stored URL. An album image's row is the record of its object.
+`storeImage` takes lockSender, checks the owner's caps in
+`server/config.ts#IMAGE_QUOTA`, and commits the row before the PUT. Over a cap
+it throws `StorageQuotaExceeded` and writes nothing, and the route shows that
+as a flash. `removeImage` deletes the object before it hides the row. Uploads
+are not sends and pay nothing to the send budget. Each account has one avatar
+slot, which a new avatar overwrites. Staff take down an account's uploads with
+REMOVE_UPLOADS. It stays apart from nuke, because unnuke cannot bring back a
+deleted object.
+
 **Spam screening:** A call that sends member text to the spam classifier
 needs a `ScreeningCharge`, and only
 `server/db/screen_budget.ts#spendScreening` makes one. It prices the

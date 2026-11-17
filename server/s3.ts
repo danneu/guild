@@ -1,111 +1,74 @@
-import * as config from "./config";
-import { PutObjectCommandInput, S3Client } from "@aws-sdk/client-s3";
+// The app's S3 calls: put one object and delete objects, each by bucket and
+// key. This is the only file that imports the S3 SDK, and server/storage.ts,
+// which decides every key, is the only file that imports this one
+// (server/parser-owners.test.ts holds both).
+
+import { DeleteObjectsCommand, S3Client } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
+import * as config from "./config";
 
-export type Uploadable =
-  | {
-      uuid: string;
-      type: "avatar";
-      buffer: Buffer;
-      contentType: "image/webp";
-      size: "normal" | "small";
-    }
-  | {
-      uuid: string;
-      type: "album_image";
-      buffer: Buffer;
-      contentType: "image/avif";
-    };
+// The most keys one DeleteObjects request takes.
+const MAX_KEYS_PER_DELETE = 1000;
 
-export type UploadResult = {
-  publicUrl: string;
-};
+let client: S3Client | undefined;
 
-// Returns URL to uploaded file
-export async function uploadToS3(
-  uploadable: Uploadable,
-): Promise<UploadResult> {
+function s3(): S3Client {
   if (!config.AWS_KEY || !config.AWS_SECRET) {
-    throw new Error(
-      `Cannot upload ${uploadable.type} to S3, AWS credentials not configured`,
-    );
+    throw new Error("Cannot reach S3: AWS_KEY and AWS_SECRET are not set");
   }
-
-  const ext = uploadable.contentType.split("/")[1];
-  if (!ext) {
-    throw new Error(`Unsupported content type: ${uploadable.contentType}`);
-  }
-
-  const client = new S3Client({
+  client ??= new S3Client({
     region: "us-east-1",
     credentials: {
-      accessKeyId: config.AWS_KEY!,
-      secretAccessKey: config.AWS_SECRET!,
+      accessKeyId: config.AWS_KEY,
+      secretAccessKey: config.AWS_SECRET,
     },
   });
+  return client;
+}
 
-  let params: PutObjectCommandInput;
-  switch (uploadable.type) {
-    case "album_image": {
-      const envFolder = config.NODE_ENV === "production" ? "prod" : "dev";
-      const Key = `${envFolder}/users/${uploadable.uuid}.${ext}`;
-      params = {
-        Bucket: config.S3_IMAGE_BUCKET,
-        Key,
-        Body: uploadable.buffer,
-        ContentType: uploadable.contentType,
-        CacheControl: "max-age=31536000", // 1 year
-      };
-      break;
-    }
-    case "avatar": {
-      const folderName =
-        config.NODE_ENV === "production" ? "production" : "development";
-      const Key =
-        uploadable.size === "normal"
-          ? `${folderName}/${uploadable.uuid}.${ext}`
-          : `${folderName}/32/${uploadable.uuid}.${ext}`;
-      params = {
-        Bucket: config.S3_AVATAR_BUCKET,
-        Key,
-        Body: uploadable.buffer,
-        ContentType: uploadable.contentType,
-        CacheControl: "max-age=31536000", // 1 year
-      };
-      break;
-    }
-    default: {
-      const exhaustive: never = uploadable;
-      throw new Error(`Unknown uploadable type: ${exhaustive}`);
+/** Stores body at key, public and cached for a year, replacing any object. */
+export async function putObject(
+  bucket: string,
+  key: string,
+  body: Buffer,
+  contentType: string,
+): Promise<void> {
+  await new Upload({
+    client: s3(),
+    params: {
+      Bucket: bucket,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+      CacheControl: "max-age=31536000", // 1 year
+    },
+  }).done();
+}
+
+/**
+ * Deletes each key, whether it holds an object or not. Returns only once S3
+ * confirms every key: DeleteObjects answers 200 even when it fails some keys,
+ * and lists those in Errors, so this throws on any.
+ */
+export async function deleteObjects(
+  bucket: string,
+  keys: string[],
+): Promise<void> {
+  for (let start = 0; start < keys.length; start += MAX_KEYS_PER_DELETE) {
+    const batch = keys.slice(start, start + MAX_KEYS_PER_DELETE);
+    const result = await s3().send(
+      new DeleteObjectsCommand({
+        Bucket: bucket,
+        Delete: { Objects: batch.map((Key) => ({ Key })), Quiet: true },
+      }),
+    );
+    const failed = result.Errors ?? [];
+    if (failed.length > 0) {
+      const first = failed[0]!;
+      throw new Error(
+        `S3 did not delete ${failed.length} of ${batch.length} keys, ` +
+          `first ${first.Key}: ${first.Code} ${first.Message}`,
+      );
     }
   }
-
-  const upload = new Upload({ client, params });
-
-  const result = await upload.done();
-  const s3Url = new URL(result.Location!);
-  let publicUrl: string;
-  switch (uploadable.type) {
-    case "album_image": {
-      // https://img.roleplayerguild.com/{prod|dev}/users/{uuid}.avif
-      const guildUrl = new URL("https://img.roleplayerguild.com");
-      guildUrl.pathname = s3Url.pathname;
-      publicUrl = guildUrl.toString();
-      break;
-    }
-    case "avatar": {
-      // normal: https://avatars.roleplayerguild.com/{production|development}/{uuid}.webp
-      // small:  https://avatars.roleplayerguild.com/{production|development}/32/{uuid}.webp
-      const guildUrl = new URL("https://avatars.roleplayerguild.com");
-      guildUrl.pathname = s3Url.pathname;
-      publicUrl = guildUrl.toString();
-      break;
-    }
-    default: {
-      const exhaustive: never = uploadable;
-      throw new Error(`Unknown uploadable type: ${exhaustive}`);
-    }
-  }
-
-  return { publicUrl };
 }

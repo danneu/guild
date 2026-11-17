@@ -44,6 +44,10 @@ HOST = "https://www.roleplayerguild.com"
 ERROR_PAGE_URL = "https://guild.neocities.org/error.html"
 MAINTENANCE_PAGE_URL = "https://guild.neocities.org/maintenance.html"
 STAFF_REPRESENTATIVE_ID = "8231"
+# Production's folders in the S3 buckets. Every key the app writes or deletes
+# starts with these, and old objects already sit under them.
+S3_IMAGE_PREFIX = "prod"
+S3_AVATAR_PREFIX = "production"
 
 [[services]]
 internal_port = 3000

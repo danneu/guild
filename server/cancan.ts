@@ -209,6 +209,7 @@ const TARGETS = {
   // Images
   MANAGE_IMAGES: user,
   UPLOAD_IMAGE: userId,
+  REMOVE_UPLOADS: userRole,
 
   // Dice/Campaign System
   CREATE_CAMPAIGN: z.unknown(),
@@ -426,6 +427,7 @@ const READ_GATE = {
   // Images
   MANAGE_IMAGES: null,
   UPLOAD_IMAGE: null,
+  REMOVE_UPLOADS: null,
 
   // Dice/Campaign System
   CREATE_CAMPAIGN: null,
@@ -1135,6 +1137,13 @@ const RULES: Rules = {
     if (user.id === target.id) return true;
     return false;
   },
+  // target is the account whose album images and avatar staff take out of
+  // storage (server/storage.ts#removeUploads). Staff over non-staff, as for
+  // MANAGE_IMAGES.
+  REMOVE_UPLOADS(user, target) {
+    if (!user) return false;
+    return isStaffRole(user.role) && !isStaffRole(target.role);
+  },
   // target is user to have their uname changed
   CHANGE_UNAME(user, target) {
     // Guests cannot
@@ -1304,6 +1313,7 @@ export const CanAction = {
   // Images
   MANAGE_IMAGES: "MANAGE_IMAGES",
   UPLOAD_IMAGE: "UPLOAD_IMAGE",
+  REMOVE_UPLOADS: "REMOVE_UPLOADS",
 
   // Dice/Campaign System
   CREATE_CAMPAIGN: "CREATE_CAMPAIGN",

@@ -110,6 +110,16 @@
         </div>
       {% endif %}
 
+      <!-- Remove Uploads Button: opens its confirm page -->
+      {% if can(ctx.currUser, 'REMOVE_UPLOADS', user) %}
+        <div class="pull-right" style="margin-right: 10px; display: inline-block;">
+          <a href="{{ user.url }}/remove-uploads" class="btn btn-default">
+            <span class="glyphicon glyphicon-picture"></span>
+            Remove Uploads
+          </a>
+        </div>
+      {% endif %}
+
     <h1 style="margin-bottom: 0;">
       <a href="{{ user.url }}">{{ user.uname }}</a>
       {% if user.gender %}

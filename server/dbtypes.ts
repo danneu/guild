@@ -145,6 +145,7 @@ export type DbImage = {
   deleted_at: Date | null;
   is_private: boolean;
   created_at: Date;
+  bytes: number;
 };
 
 export type DbAlbum = {

@@ -1,29 +1,21 @@
 // 1st party
 import * as config from "./config";
 import { transcodeAvatar } from "./imaging";
-import { uploadToS3 } from "./s3";
-import { v7 as uuidv7 } from "uuid";
+import { storeAvatar } from "./storage";
 
-// Uploads s3 avatars, returns url of the large avatar.
+// Makes the upload the account's avatar.
 // server/imaging.ts#transcodeAvatar turns the upload into both WebP sizes, and
-// throws ImageRefused for a file it will not take.
+// throws ImageRefused for a file it will not take. server/storage.ts#storeAvatar
+// puts them in the account's avatar slot and points avatar_url at it.
 export const handleAvatarTransformAndUpload = async (
+  userId: number,
   input: Buffer,
-): Promise<string> => {
+): Promise<void> => {
   if (!config.AWS_KEY || !config.AWS_SECRET) {
     throw new Error("Avatar upload not configured");
   }
 
-  const { normal, small } = await transcodeAvatar(input);
-  const uuid = uuidv7();
-
-  // Upload both sizes in parallel
-  const [normalResult] = await Promise.all([
-    uploadToS3({ type: "avatar", uuid, size: "normal", ...normal }),
-    uploadToS3({ type: "avatar", uuid, size: "small", ...small }),
-  ]);
-
-  return normalResult.publicUrl;
+  await storeAvatar(userId, await transcodeAvatar(input));
 };
 
 //// jun 11 2025 - found this bit of archeology commented out at the bottom of the file.

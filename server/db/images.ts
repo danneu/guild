@@ -145,68 +145,6 @@ export async function getAlbumImages(albumId: number) {
     .then((res) => res.rows);
 }
 
-// Inserts into the album only if ownerId owns it, and copies the image's
-// user_id from the album, so an image always has its album's owner.
-// Returns false when no row was inserted.
-//
-// description is optional
-export async function insertImage({
-  imageId,
-  ownerId,
-  albumId,
-  src,
-  mime,
-  description,
-}: {
-  imageId: string;
-  ownerId: number;
-  albumId: number;
-  src: string;
-  mime: string;
-  description: string | null;
-}): Promise<boolean> {
-  assert(typeof imageId === "string");
-  assert(Number.isInteger(ownerId));
-  assert(Number.isInteger(albumId));
-  assert(typeof src === "string");
-  assert(
-    ["image/jpeg", "image/gif", "image/png", "image/avif"].indexOf(mime) > -1,
-  );
-  const result = await pool.query(
-    `
-    INSERT INTO images (id, album_id, user_id, src, mime, description)
-    SELECT $1::uuid, albums.id, albums.user_id, $4::text, $5::text, $6::text
-    FROM albums
-    WHERE albums.id = $2
-      AND albums.user_id = $3
-  `,
-    [imageId, albumId, ownerId, src, mime, description],
-  );
-  return (result.rowCount ?? 0) > 0;
-}
-
-// Soft-deletes the image only if ownerId owns it.
-// Returns false when no row matched.
-//
-// TODO: Also delete from S3
-export async function deleteImage(
-  ownerId: number,
-  imageId: string,
-): Promise<boolean> {
-  assert(Number.isInteger(ownerId));
-  assert(typeof imageId === "string");
-  const result = await pool.query(
-    `
-    UPDATE images
-    SET deleted_at = NOW()
-    WHERE id = $1
-      AND user_id = $2
-  `,
-    [imageId, ownerId],
-  );
-  return (result.rowCount ?? 0) > 0;
-}
-
 // markup is optional
 export async function insertAlbum({
   userId,

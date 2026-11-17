@@ -113,10 +113,21 @@ export function presentUser(user: DbUser | void): PresentedUser | null {
       user.avatar_url = "https://" + parsed.pathname.slice(1);
     }
 
-    (user as PresentedUser).avatar_url_sm = user.avatar_url.replace(
-      /\/([a-f0-9\-]+\.[a-z]+)$/,
-      "/32/$1",
-    );
+    // The small avatar sits under /32/ beside the large one. On our avatars
+    // host the path is rewritten on its own, so the version in the query
+    // string that server/storage.ts#storeAvatar adds stays on it. Any other
+    // URL keeps the rule it always had.
+    const smallFile = /\/([a-f0-9\-]+\.[a-z]+)$/;
+    const small = new URL(user.avatar_url);
+    if (small.hostname === "avatars.roleplayerguild.com") {
+      small.pathname = small.pathname.replace(smallFile, "/32/$1");
+      (user as PresentedUser).avatar_url_sm = small.toString();
+    } else {
+      (user as PresentedUser).avatar_url_sm = user.avatar_url.replace(
+        smallFile,
+        "/32/$1",
+      );
+    }
   }
 
   if (user.id === 1485) {

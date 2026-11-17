@@ -44,6 +44,10 @@ HOST = "https://www.roleplayerguild.com"
 ERROR_PAGE_URL = "https://guild.neocities.org/error.html"
 MAINTENANCE_PAGE_URL = "https://guild.neocities.org/maintenance.html"
 STAFF_REPRESENTATIVE_ID = "8231"
+# Staging's own folders in the S3 buckets, so it never writes or deletes
+# production's objects even if it shares production's buckets.
+S3_IMAGE_PREFIX = "staging"
+S3_AVATAR_PREFIX = "staging"
 
 [[services]]
 internal_port = 3000

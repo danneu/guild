@@ -2688,34 +2688,6 @@ export async function deleteRatingByFromUserIdAndPostId(
   );
 }
 
-export async function deleteLegacyAvatar(userId: number) {
-  return pool
-    .query(
-      `
-    UPDATE users
-    SET legacy_avatar_url = null
-    WHERE id = $1
-    RETURNING *
-  `,
-      [userId],
-    )
-    .then(maybeOneRow);
-}
-
-export async function deleteAvatar(userId: number) {
-  return pool
-    .query(
-      `
-UPDATE users
-SET legacy_avatar_url = null, avatar_url = ''
-WHERE id = $1
-RETURNING *
-  `,
-      [userId],
-    )
-    .then(maybeOneRow);
-}
-
 export async function updateTopicCoGms(topicId: number, userIds: number[]) {
   assert(topicId);
   assert(_.isArray(userIds));

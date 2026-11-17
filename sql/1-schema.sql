@@ -892,7 +892,9 @@ CREATE TABLE images (
   description    text             NULL,
   deleted_at     timestamptz      NULL,
   is_private     boolean          NOT NULL DEFAULT false,
-  created_at     timestamptz      NOT NULL DEFAULT NOW()
+  created_at     timestamptz      NOT NULL DEFAULT NOW(),
+  -- The stored size, which server/storage.ts charges to the owner
+  bytes          int              NOT NULL DEFAULT 0 CHECK (bytes >= 0)
 );
 
 CREATE INDEX images_user_id ON images (user_id, created_at);

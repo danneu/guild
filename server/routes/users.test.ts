@@ -8,6 +8,7 @@ import * as avatar from "../avatar";
 import * as cancan from "../cancan";
 import * as db from "../db";
 import { withPgPoolTransaction } from "../db/util";
+import * as storage from "../storage";
 import { VmParentRefused } from "../db/vms";
 import { UnsupportedImage } from "../imaging";
 import { withUpload } from "../upload";
@@ -30,17 +31,14 @@ vi.mock("../services/discord", () => ({
 }));
 
 vi.mock("../avatar", () => ({
-  handleAvatarTransformAndUpload: vi.fn(
-    async () => "https://avatars.roleplayerguild.com/new.webp",
-  ),
+  handleAvatarTransformAndUpload: vi.fn(async () => {}),
 }));
+vi.mock("../storage", () => ({ removeAvatar: vi.fn(async () => {}) }));
 
 vi.mock("../db", () => ({
   findUserBySlug: vi.fn(),
-  deleteAvatar: vi.fn(),
   updateUser: vi.fn(),
   updateUserCustomTitle: vi.fn(),
-  deleteLegacyAvatar: vi.fn(),
   updateUserActiveTrophyId: vi.fn(),
   deactivateCurrentTrophyForUserId: vi.fn(),
   updateUserRole: vi.fn(),
@@ -182,11 +180,9 @@ describe("POST /users/:slug/avatar", () => {
     expect(res.location).toBe("/users/alice/edit#avatar");
     expect(withUpload).toHaveBeenCalledTimes(1);
     expect(avatar.handleAvatarTransformAndUpload).toHaveBeenCalledWith(
+      alice.id,
       avatarBytes,
     );
-    expect(db.updateUser).toHaveBeenCalledWith(alice.id, {
-      avatar_url: "https://avatars.roleplayerguild.com/new.webp",
-    });
   });
 
   // A browser sends an empty part with filename="" for a file input left
@@ -200,7 +196,7 @@ describe("POST /users/:slug/avatar", () => {
     });
 
     expect(res.status).toBe(302);
-    expect(db.deleteAvatar).toHaveBeenCalledWith(alice.id);
+    expect(storage.removeAvatar).toHaveBeenCalledWith(alice.id);
     expect(avatar.handleAvatarTransformAndUpload).not.toHaveBeenCalled();
   });
 
@@ -239,9 +235,9 @@ describe("POST /users/:slug/avatar", () => {
     expect(res.location).toBe("/users/alice/edit#avatar");
     expect(res.flash).toEqual({ message: ["danger", refusal.message] });
     expect(avatar.handleAvatarTransformAndUpload).toHaveBeenCalledWith(
+      alice.id,
       Buffer.from("hello"),
     );
-    expect(db.updateUser).not.toHaveBeenCalled();
   });
 
   it("refuses a guest before parsing the upload", async () => {
@@ -254,7 +250,7 @@ describe("POST /users/:slug/avatar", () => {
 
     expect(res.status).toBe(404);
     expect(withUpload).not.toHaveBeenCalled();
-    expect(db.deleteAvatar).not.toHaveBeenCalled();
+    expect(storage.removeAvatar).not.toHaveBeenCalled();
   });
 
   it("refuses another member before parsing the upload", async () => {
@@ -267,7 +263,7 @@ describe("POST /users/:slug/avatar", () => {
 
     expect(res.status).toBe(404);
     expect(withUpload).not.toHaveBeenCalled();
-    expect(db.deleteAvatar).not.toHaveBeenCalled();
+    expect(storage.removeAvatar).not.toHaveBeenCalled();
   });
 });
 

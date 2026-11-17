@@ -530,6 +530,7 @@ describe("loader rows", () => {
     "MANAGE_USER_STATUS",
     "MANAGE_IMAGES",
     "UPLOAD_IMAGE",
+    "REMOVE_UPLOADS",
   ];
 
   const gmUser = userRow({ id: actors.gm.id, uname: "Gm", slug: "gm" });
@@ -926,6 +927,20 @@ const userSweep: Sweep<typeof otherUsers>[] = [
   // profile, and even an admin cannot manage a staff account's images.
   [
     "MANAGE_IMAGES",
+    {
+      banned: staff,
+      member: staff,
+      conmod: staff,
+      arenamod: staff,
+      pwmod: staff,
+      mod: [],
+      smod: [],
+      admin: [],
+    },
+  ],
+  // Takes every upload out of storage, which cannot be undone
+  [
+    "REMOVE_UPLOADS",
     {
       banned: staff,
       member: staff,
