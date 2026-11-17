@@ -1,6 +1,16 @@
 import { DbUser, DbVm } from "../dbtypes.js";
 import { pool, maybeOneRow } from "./util.js";
 
+// A reply that server/db/index.ts#createVm refused because its parent is not
+// a top-level VM on the wall the reply is posted to. Nothing was written or
+// charged. The VM route answers it with 404.
+export class VmParentRefused extends Error {
+  constructor() {
+    super("No such thread on this wall");
+    this.name = "VmParentRefused";
+  }
+}
+
 ////////////////////////////////////////////////////////////
 
 export async function getVmById(id: number) {

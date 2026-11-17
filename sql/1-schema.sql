@@ -677,7 +677,8 @@ CREATE TABLE vms (
   -- nested vms dont have idx
   idx          int NULL,
   -- Present when vm is in reply to another
-  -- Can only be one level deep.
+  -- Can only be one level deep, under a vm on the same wall
+  -- (server/db/index.ts#createVm checks both).
   parent_vm_id int NULL REFERENCES vms(id) ON DELETE CASCADE,
   -- Cache of reply vm count
   vms_count    int NOT NULL DEFAULT 0,

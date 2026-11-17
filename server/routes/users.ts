@@ -34,6 +34,7 @@ import { Context, Next } from "koa";
 import { pool, withPgPoolTransaction } from "../db/util";
 import { sendJson } from "../api_json";
 import { catchRefusal, SendBudgetExceeded } from "../db/send_budget";
+import { VmParentRefused } from "../db/vms";
 
 const router = new Router();
 
@@ -1064,7 +1065,7 @@ router.post("/users/:slug/vms", async (ctx: Context) => {
       to_user_id: user.id,
       markup: ctx.vals.markup,
       html,
-      parent_vm_id: ctx.vals.parent_vm_id,
+      parent_vm_id: ctx.vals.parent_vm_id ?? null,
     });
 
     // if VM is a reply, notify everyone in the thread and the owner of the
@@ -1103,7 +1104,11 @@ router.post("/users/:slug/vms", async (ctx: Context) => {
     }
 
     return vm;
-  }).catch(catchRefusal);
+  }).catch((err) => {
+    // This wall has no thread with that id.
+    if (err instanceof VmParentRefused) ctx.throw(404);
+    return catchRefusal(err);
+  });
 
   if (vm instanceof SendBudgetExceeded) {
     ctx.flash = {

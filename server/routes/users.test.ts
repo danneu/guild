@@ -7,6 +7,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as avatar from "../avatar";
 import * as cancan from "../cancan";
 import * as db from "../db";
+import { withPgPoolTransaction } from "../db/util";
+import { VmParentRefused } from "../db/vms";
 import { UnsupportedImage } from "../imaging";
 import { withUpload } from "../upload";
 import "../validation";
@@ -43,6 +45,10 @@ vi.mock("../db", () => ({
   deactivateCurrentTrophyForUserId: vi.fn(),
   updateUserRole: vi.fn(),
   unnukeUser: vi.fn(),
+  createVm: vi.fn(),
+  getVmThreadUserIds: vi.fn(async () => []),
+  createReplyVmNotificationsBulk: vi.fn(),
+  createTopLevelVmNotificationsBulk: vi.fn(),
   users: { approveUser: vi.fn(async () => {}) },
 }));
 
@@ -437,6 +443,87 @@ describe("PUT /users/:slug/role", () => {
       userId: alice.id,
       role: "pwmod",
     });
+  });
+});
+
+describe("POST /users/:slug/vms", () => {
+  beforeEach(() => {
+    vi.mocked(withPgPoolTransaction).mockImplementation(async (_pool, fn) =>
+      fn({} as any),
+    );
+  });
+
+  // Intent: the route answers createVm's refusal of a reply's parent with a
+  // 404, and notifies nobody.
+  // Why it exists: a reply could go under a thread on another wall and notify
+  // any member the sender named in the URL (hunt 261117-0852-040). createVm
+  // owns the rule; this pins how the route answers it.
+  // Scenario: Alice posts to Bob's wall with a thread on Carol's wall as the
+  // parent.
+  it("404s a reply whose parent createVm refuses", async () => {
+    vi.mocked(db.createVm).mockRejectedValue(new VmParentRefused());
+
+    const res = await send({
+      method: "POST",
+      path: `/users/${bob.slug}/vms`,
+      currUser: alice,
+      body: { markup: "hi", parent_vm_id: "20" },
+    });
+
+    expect(res.status).toBe(404);
+    expect(res.flash).toBeUndefined();
+    expect(db.createReplyVmNotificationsBulk).not.toHaveBeenCalled();
+    expect(db.createTopLevelVmNotificationsBulk).not.toHaveBeenCalled();
+  });
+
+  it("posts a reply under the named thread", async () => {
+    vi.mocked(db.createVm).mockResolvedValue({
+      id: 11,
+      from_user_id: alice.id,
+      to_user_id: bob.id,
+      parent_vm_id: 10,
+    } as any);
+
+    const res = await send({
+      method: "POST",
+      path: `/users/${bob.slug}/vms`,
+      currUser: alice,
+      body: { markup: "hi", parent_vm_id: "10" },
+    });
+
+    expect(res.status).toBe(302);
+    expect(res.location).toBe("/users/bob/vms#vm-11");
+    expect(db.createVm).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ to_user_id: bob.id, parent_vm_id: 10 }),
+    );
+    expect(db.createReplyVmNotificationsBulk).toHaveBeenCalled();
+  });
+
+  // The wall's new-thread form sends markup alone, with no parent_vm_id.
+  // createVm takes a null parent for a new thread, never an absent one.
+  it("posts a new thread with a null parent", async () => {
+    vi.mocked(db.createVm).mockResolvedValue({
+      id: 12,
+      from_user_id: alice.id,
+      to_user_id: bob.id,
+      parent_vm_id: null,
+    } as any);
+
+    const res = await send({
+      method: "POST",
+      path: `/users/${bob.slug}/vms`,
+      currUser: alice,
+      body: { markup: "hi" },
+    });
+
+    expect(res.status).toBe(302);
+    expect(res.location).toBe("/users/bob/vms#vm-12");
+    expect(db.createVm).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ to_user_id: bob.id, parent_vm_id: null }),
+    );
+    expect(db.createTopLevelVmNotificationsBulk).toHaveBeenCalled();
   });
 });
 

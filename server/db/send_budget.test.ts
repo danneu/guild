@@ -8,6 +8,7 @@ import {
   spend,
   whenItFits,
 } from "./send_budget";
+import { VmParentRefused } from "./vms";
 
 // Mutable so one test can unset the staff account the way an unset env var
 // does (config parses it to NaN).
@@ -31,13 +32,19 @@ const UNTRUSTED = config.SEND_BUDGET_PER_HOUR_UNTRUSTED;
 // vitest cannot run Postgres here, so the SQL itself is reviewed, not tested.
 
 type Sender = { approved_at: Date | null; posts_count: number };
+// A vms row as a reply's parent lookup reads it.
+type Vm = { id: number; to_user_id: number; parent_vm_id: number | null };
 
-function makePgClient(opts: { sender?: Sender; spent?: number } = {}) {
+function makePgClient(
+  opts: { sender?: Sender; spent?: number; vms?: Vm[] } = {},
+) {
   const sender = opts.sender ?? { approved_at: null, posts_count: 0 };
   const spent = opts.spent ?? 0;
-  const query = vi.fn(async (sql: string, _params?: unknown[]) => {
+  const vms = opts.vms ?? [];
+  const query = vi.fn(async (sql: string, params?: unknown[]) => {
     const rows = (() => {
       if (/FROM users/.test(sql)) return [{ id: 1, uname: "alice", ...sender }];
+      if (/FROM vms/.test(sql)) return vms.filter((vm) => vm.id === params![0]);
       if (/SELECT cost, created_at/.test(sql)) {
         return spent > 0 ? [{ cost: spent, created_at: new Date() }] : [];
       }
@@ -278,5 +285,62 @@ describe("send writes", () => {
       }),
     ).rejects.toThrow(/Invalid convo sender/);
     expect(indexOfSql(pgClient, /INSERT/)).toBe(-1);
+  });
+});
+
+describe("createVm replies", () => {
+  // Bob's wall (user 2) holds thread 10 and its reply 11. Carol's wall (user
+  // 3) holds thread 20.
+  const vms = [
+    { id: 10, to_user_id: 2, parent_vm_id: null },
+    { id: 11, to_user_id: 2, parent_vm_id: 10 },
+    { id: 20, to_user_id: 3, parent_vm_id: null },
+  ];
+
+  // Alice replies on Bob's wall.
+  function reply(pgClient: any, parentVmId: number) {
+    return createVm(pgClient, {
+      from_user_id: 1,
+      to_user_id: 2,
+      parent_vm_id: parentVmId,
+      markup: "hi",
+      html: "hi",
+    });
+  }
+
+  // Intent: a reply saves only under a top-level VM on the wall it is posted
+  // to, and a refused reply costs its sender nothing.
+  // Why it exists: createVm saved any parent_vm_id, so a member could post a
+  // reply to one wall that showed in a thread on another, where that wall's
+  // owner could not delete it (hunt 261117-0852-040).
+  // Scenario: Alice posts to Bob's wall under Carol's thread, under a reply,
+  // and under a VM that does not exist.
+  it.each([
+    ["a thread on another wall", 20],
+    ["a reply", 11],
+    ["a missing VM", 99],
+  ])("refuses a reply under %s and writes nothing", async (_label, parent) => {
+    const pgClient = makePgClient({ vms });
+
+    await expect(reply(pgClient, parent)).rejects.toBeInstanceOf(
+      VmParentRefused,
+    );
+
+    // No VM, no budget read or charge, and no lock on the sender.
+    expect(
+      indexOfSql(pgClient, /INSERT INTO vms|send_spends|pg_advisory/),
+    ).toBe(-1);
+  });
+
+  it("saves a reply under a thread on its own wall", async () => {
+    const pgClient = makePgClient({ vms });
+
+    await reply(pgClient, 10);
+
+    expect(spendInserts(pgClient)).toEqual([[1, 1]]);
+    const insert = pgClient.query.mock.calls.find(([sql]: [string]) =>
+      /INSERT INTO vms/.test(sql),
+    );
+    expect(insert[1]).toEqual([1, 2, "hi", "hi", 10]);
   });
 });

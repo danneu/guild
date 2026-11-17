@@ -27,6 +27,7 @@ import { deleteEmailVerificationTokenByUserId } from "./email_verification";
 import { lockStanding, spend } from "./send_budget";
 import { spendScreening, type ScreeningCharge } from "./screen_budget";
 import { admitPost } from "./post_gap";
+import { VmParentRefused } from "./vms";
 import { Context } from "koa";
 import {
   DbConvo,
@@ -3778,13 +3779,9 @@ export async function getVmThreadUserIds(
     .then((res) => res.rows.map((vm) => vm.from_user_id));
 }
 
-// data:
-// - to_user_id: Int
-// - from_user_id: Int
-// - markup
-// - html
-// Optional
-// - parent_vm_id: Int - Only present if this VM is a reply to a toplevel VM
+// Posts a VM on to_user_id's wall. parent_vm_id is null for a new thread, or
+// names the thread a reply goes under. Throws VmParentRefused for a reply
+// whose parent is not a thread on that wall.
 export async function createVm(
   pgClient: PgClientInTransaction,
   data: {
@@ -3798,8 +3795,37 @@ export async function createVm(
   assert(pgClient._inTransaction, "pgClient must be in a transaction");
   assert(Number.isInteger(data.from_user_id));
   assert(Number.isInteger(data.to_user_id));
+  assert(data.parent_vm_id === null || Number.isInteger(data.parent_vm_id));
   assert(_.isString(data.markup));
   assert(_.isString(data.html));
+
+  // A reply goes under a thread on its own wall: a top-level VM with the same
+  // to_user_id. The wall lists a thread's replies by parent alone, and
+  // DELETE_VM lets a wall owner delete only VMs addressed to them, so a reply
+  // under another wall's thread would show there out of that owner's reach. A
+  // reply under a reply would never show. No code changes a VM's wall or
+  // parent, so this check at insert holds the rule. It runs before spend, so
+  // a refused reply costs nothing, and it locks no row, so the sender's lock
+  // still comes first (server/db/send_budget.ts#lockSender).
+  if (data.parent_vm_id !== null) {
+    const parent = await pgClient
+      .query<Pick<DbVm, "to_user_id" | "parent_vm_id">>(
+        `
+    SELECT to_user_id, parent_vm_id
+    FROM vms
+    WHERE id = $1
+  `,
+        [data.parent_vm_id],
+      )
+      .then(maybeOneRow);
+    if (
+      !parent ||
+      parent.to_user_id !== data.to_user_id ||
+      parent.parent_vm_id !== null
+    ) {
+      throw new VmParentRefused();
+    }
+  }
 
   await spend(pgClient, data.from_user_id, 1);
 
