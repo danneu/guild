@@ -6,6 +6,10 @@
 // snake_case tool input). Asserting the normalized shape is what catches a
 // raw-passthrough regression that would otherwise allow all spam.
 //
+// Each case's payload comes from the same builder a write uses
+// (server/db/screen_budget.ts#buildPayload). The probe writes nothing, so no
+// screening budget pays for its calls.
+//
 // Usage:
 //   ANTHROPIC_API_KEY=sk-... pnpm exec tsx scripts/antispam-probe.ts
 //
@@ -14,6 +18,7 @@
 // 1st
 import claude from "../server/services/antispam/claude";
 import * as config from "../server/config";
+import { buildPayload, type ScreeningCharge } from "../server/db/screen_budget";
 
 type Case = {
   username: string;
@@ -96,6 +101,13 @@ const CASES: Case[] = [
   },
 ];
 
+// Only spendScreening makes a real charge, and only inside a write. The cast
+// stands in, carrying the payload a write by this user would send.
+function probeCharge(c: Case): ScreeningCharge {
+  const payload = buildPayload(c.username, { title: c.title, body: c.body });
+  return { take: () => payload } as unknown as ScreeningCharge;
+}
+
 async function main() {
   if (!config.ANTHROPIC_API_KEY) {
     console.error(
@@ -108,8 +120,7 @@ async function main() {
 
   for (let i = 0; i < CASES.length; i++) {
     const c = CASES[i]!;
-    const ctx = { currUser: { uname: c.username } } as any;
-    const result = await claude.analyze(ctx, c.body, c.title ?? undefined);
+    const result = await claude.analyze(probeCharge(c));
 
     if (!result.ok) {
       console.log(

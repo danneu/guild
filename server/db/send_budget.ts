@@ -43,6 +43,50 @@ export async function lockSender(
   ]);
 }
 
+// The actor as one write's gates see it. A write reads it once, through
+// lockStanding, and hands it to each gate, so the gates cannot disagree about
+// who is trusted.
+export type Standing = {
+  id: number;
+  uname: string;
+  // Before this write: a write's own post is not counted yet
+  posts_count: number;
+  // server/trust.ts#isTrustedMember
+  trusted: boolean;
+};
+
+// Takes lockSender, then reads the actor's standing. Read under the lock, it
+// counts every locked write the actor finished before this one, such as the
+// post that made them trusted, and none of them can change it until this
+// write ends.
+export async function lockStanding(
+  pgClient: PgClientInTransaction,
+  userId: number,
+): Promise<Standing> {
+  await lockSender(pgClient, userId);
+  const row = await pgClient
+    .query<{
+      id: number;
+      uname: string;
+      approved_at: Date | null;
+      posts_count: number;
+    }>(
+      `
+      SELECT id, uname, approved_at, posts_count
+      FROM users
+      WHERE id = $1
+    `,
+      [userId],
+    )
+    .then(exactlyOneRow);
+  return {
+    id: row.id,
+    uname: row.uname,
+    posts_count: row.posts_count,
+    trusted: isTrustedMember(row),
+  };
+}
+
 export type Spend = { cost: number; created_at: Date };
 
 // A send refused because it would take its sender past their budget. Routes
@@ -69,11 +113,13 @@ export function catchRefusal(err: unknown): SendBudgetExceeded {
 
 // When a send of `cost` fits under `budget`, given the sender's spends still in
 // the window, oldest first. Null means it fits now. Otherwise it fits once
-// enough of the oldest spends have left the window.
+// enough of the oldest spends have left the window. The screening budget
+// checks its own windows with it too.
 export function whenItFits(
   spends: Spend[],
   cost: number,
   budget: number,
+  windowSeconds: number = WINDOW_SECONDS,
 ): Date | null {
   assert(
     cost <= budget,
@@ -84,7 +130,7 @@ export function whenItFits(
   for (const s of spends) {
     spent -= s.cost;
     if (spent + cost <= budget) {
-      return new Date(s.created_at.getTime() + WINDOW_SECONDS * 1000);
+      return new Date(s.created_at.getTime() + windowSeconds * 1000);
     }
   }
   // Once every spend has left, spent is 0, and cost <= budget fits.
@@ -103,19 +149,7 @@ export async function spend(
   assert(Number.isInteger(cost) && cost > 0, `cost must be positive: ${cost}`);
 
   // Two sends at once cannot both fit.
-  await lockSender(pgClient, userId);
-
-  const sender = await pgClient
-    .query<{ approved_at: Date | null; posts_count: number }>(
-      `
-      SELECT approved_at, posts_count
-      FROM users
-      WHERE id = $1
-    `,
-      [userId],
-    )
-    .then(exactlyOneRow);
-  const trusted = isTrustedMember(sender);
+  const { trusted } = await lockStanding(pgClient, userId);
   const budget = trusted
     ? config.SEND_BUDGET_PER_HOUR_TRUSTED
     : config.SEND_BUDGET_PER_HOUR_UNTRUSTED;

@@ -136,13 +136,15 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(pool.query).mockImplementation(fakeQuery as any);
   vi.mocked(db.createPost).mockImplementation(
-    async (_client: any, props: any) =>
-      ({
+    async (_client: any, props: any) => ({
+      post: {
         id: 200,
         topic_id: props.topicId,
         user_id: props.userId,
         markup: props.markup,
-      }) as any,
+      },
+      charge: null,
+    }),
   );
   vi.mocked(db.notifications.notifyNewPost).mockResolvedValue({
     mentionsCount: 0,

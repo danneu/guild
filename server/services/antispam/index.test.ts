@@ -26,6 +26,7 @@ import {
   broadcastSpamReview,
 } from "../discord";
 import type { AnalyzeResult, SpamVerdict } from "./claude";
+import type { ScreeningCharge } from "../../db/screen_budget";
 
 const analyze = vi.mocked(claude.analyze);
 const nukeUser = vi.mocked(db.nukeUser);
@@ -33,16 +34,27 @@ const autoNuke = vi.mocked(broadcastAutoNuke);
 const firstPost = vi.mocked(broadcastFirstPost);
 const spamReview = vi.mocked(broadcastSpamReview);
 
-function makeCtx(currUser: Record<string, unknown> = {}): any {
+function makeCtx(): any {
+  return { currUser: { id: 42, uname: "spammer", slug: "spammer" } };
+}
+
+// Only server/db/screen_budget.ts makes a real charge; the cast stands in.
+function charge(
+  body: string,
+  standing: { posts_count?: number; id?: number } = {},
+): ScreeningCharge {
   return {
-    currUser: {
+    standing: {
       id: 42,
       uname: "spammer",
-      approved_at: null,
       posts_count: 0,
-      ...currUser,
+      trusted: false,
+      ...standing,
     },
-  };
+    cost: 9,
+    body,
+    take: () => JSON.stringify({ username: "spammer", title: null, body }),
+  } as unknown as ScreeningCharge;
 }
 
 function verdict(over: Partial<SpamVerdict> = {}): AnalyzeResult {
@@ -67,7 +79,7 @@ describe("antispam.process wiring", () => {
   it("NUKE: nukes the user, broadcasts the nuke, returns truthy", async () => {
     analyze.mockResolvedValue(verdict({ confidence: 0.95 }));
 
-    const result = await antispam.process(makeCtx(), "buy coins", 100, "title");
+    const result = await antispam.process(makeCtx(), charge("buy coins"), 100);
 
     expect(nukeUser).toHaveBeenCalledTimes(1);
     expect(nukeUser).toHaveBeenCalledWith({
@@ -83,12 +95,7 @@ describe("antispam.process wiring", () => {
   it("REVIEW: does not nuke, broadcasts a review note, returns truthy", async () => {
     analyze.mockResolvedValue(verdict({ confidence: 0.8 }));
 
-    const result = await antispam.process(
-      makeCtx(),
-      "maybe spam",
-      101,
-      "title",
-    );
+    const result = await antispam.process(makeCtx(), charge("maybe spam"), 101);
 
     expect(nukeUser).not.toHaveBeenCalled();
     expect(spamReview).toHaveBeenCalledTimes(1);
@@ -101,7 +108,11 @@ describe("antispam.process wiring", () => {
   it("ALLOW (not spam): broadcasts the clean first post, returns falsey", async () => {
     analyze.mockResolvedValue(verdict({ isSpam: false, confidence: 0.99 }));
 
-    const result = await antispam.process(makeCtx(), "hi everyone", 102, "hi");
+    const result = await antispam.process(
+      makeCtx(),
+      charge("hi everyone"),
+      102,
+    );
 
     expect(nukeUser).not.toHaveBeenCalled();
     expect(autoNuke).not.toHaveBeenCalled();
@@ -119,7 +130,7 @@ describe("antispam.process wiring", () => {
   it("API timeout: fails open and broadcasts first post review metadata", async () => {
     analyze.mockResolvedValue({ ok: false, error: "API_TIMEOUT" });
 
-    const result = await antispam.process(makeCtx(), "anything", 103);
+    const result = await antispam.process(makeCtx(), charge("anything"), 103);
 
     expect(nukeUser).not.toHaveBeenCalled();
     expect(autoNuke).not.toHaveBeenCalled();
@@ -138,10 +149,9 @@ describe("antispam.process wiring", () => {
     analyze.mockResolvedValue(verdict({ isSpam: false, confidence: 0.99 }));
 
     const result = await antispam.process(
-      makeCtx({ posts_count: 3 }),
-      "hi again",
+      makeCtx(),
+      charge("hi again", { posts_count: 3 }),
       106,
-      "hi",
     );
 
     expect(nukeUser).not.toHaveBeenCalled();
@@ -151,29 +161,24 @@ describe("antispam.process wiring", () => {
     expect(result).toBeFalsy();
   });
 
-  it("gate: approved user is not sent to the classifier", async () => {
-    const result = await antispam.process(
-      makeCtx({ approved_at: new Date() }),
-      "anything",
-      104,
-      "title",
-    );
+  // A trusted actor's write returns no charge (server/db/send_budget.ts's
+  // lockStanding decides trust), and no charge means no call.
+  it("no charge: sends nothing to the classifier", async () => {
+    const result = await antispam.process(makeCtx(), null, 104);
 
     expect(analyze).not.toHaveBeenCalled();
     expect(firstPost).not.toHaveBeenCalled();
     expect(result).toBeFalsy();
   });
 
-  it("gate: user with > 5 posts is not sent to the classifier", async () => {
+  it("refuses a charge another user paid", async () => {
     const result = await antispam.process(
-      makeCtx({ posts_count: 6 }),
-      "anything",
+      makeCtx(),
+      charge("anything", { id: 43 }),
       105,
-      "title",
     );
 
     expect(analyze).not.toHaveBeenCalled();
-    expect(firstPost).not.toHaveBeenCalled();
     expect(result).toBeFalsy();
   });
 });

@@ -861,6 +861,17 @@ CREATE UNLOGGED TABLE send_spends (
 CREATE INDEX send_spends__user_id_created_at
   ON send_spends (user_id, created_at);
 
+-- The screening budget's ledger; see sql/14-screen-spends.sql.
+CREATE UNLOGGED TABLE screen_spends (
+  id         bigserial    PRIMARY KEY,
+  user_id    int          NOT NULL  REFERENCES users(id) ON DELETE CASCADE,
+  cost       int          NOT NULL  CHECK (cost > 0),
+  created_at timestamptz  NOT NULL
+);
+
+CREATE INDEX screen_spends__user_id_created_at
+  ON screen_spends (user_id, created_at);
+
 ------------------------------------------------------------
 
 CREATE TABLE images (

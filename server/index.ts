@@ -204,6 +204,7 @@ import * as emailer from "./emailer";
 import * as belt from "./belt";
 import { authenticate, hashPassword } from "./auth";
 import { MarkupRejected, renderMarkup } from "./markup";
+import { ScreeningBudgetExceeded } from "./db/screen_budget";
 import bouncer from "koa-bouncer";
 import "./validation"; // Load after koa-bouncer
 import services from "./services";
@@ -451,12 +452,13 @@ app.use(async (ctx: Context, next: Next) => {
       ctx.back("/");
       return;
     }
-    // server/markup.ts refused the markup work. An XHR has no redirect to
-    // follow, so it gets a 400 with the reason, as the ban gate in
+    // server/markup.ts refused the markup work, or the screening budget
+    // (server/db/screen_budget.ts) refused the write. An XHR has no redirect
+    // to follow, so it gets a 400 with the reason, as the ban gate in
     // server/middleware/require-not-banned.ts answers one. A form post gets
     // a flash. The body is often too big for the flash cookie, so it is not
     // echoed back.
-    if (ex instanceof MarkupRejected) {
+    if (ex instanceof MarkupRejected || ex instanceof ScreeningBudgetExceeded) {
       if (ctx.path.startsWith("/api/")) ctx.throw(400, ex.message);
       ctx.flash = { message: ["danger", ex.message] };
       ctx.back("/");
@@ -1285,32 +1287,31 @@ router.post(
       .value();
 
     // Create topic
-    var topic = await db
-      .createTopic({
-        userId: ctx.currUser.id,
-        forumId: forumId,
-        ipAddress: ctx.request.ip,
-        title: ctx.vals.title,
-        markup: ctx.vals.markup,
-        html: html,
-        postType: postType,
-        isRoleplay: forum.is_roleplay,
-        tagIds: tagIds,
-        joinStatus: ctx.vals["join-status"],
-      })
-      .then(pre.presentTopic);
+    const created = await db.createTopic({
+      userId: ctx.currUser.id,
+      forumId: forumId,
+      ipAddress: ctx.request.ip,
+      title: ctx.vals.title,
+      markup: ctx.vals.markup,
+      html: html,
+      postType: postType,
+      isRoleplay: forum.is_roleplay,
+      tagIds: tagIds,
+      joinStatus: ctx.vals["join-status"],
+    });
+    const topic = pre.presentTopic(created.topic);
 
     ctx.response.redirect(topic.url);
 
-    // Check if post is spam. Only unapproved users with <= 5 posts are
-    // actually sent to the spam classifier (see antispam.process); a
-    // high-confidence spam verdict auto-nukes them. Awaited so we can skip the
-    // Discord intro broadcast for anyone who tripped the spam detector.
+    // Check if post is spam. Only a write that paid a screening charge is
+    // sent to the classifier (server/db/screen_budget.ts); a trusted member's
+    // charge is null. A high-confidence spam verdict auto-nukes them. Awaited
+    // so we can skip the Discord intro broadcast for anyone who tripped the
+    // spam detector.
     const result = await services.antispam.process(
       ctx,
-      ctx.vals.markup,
+      created.charge,
       topic.post.id,
-      ctx.vals.title,
     );
 
     // Don't broadcast to discord if they tripped the spam detector
@@ -1365,62 +1366,7 @@ router.get("/pms/:id/edit", async (ctx: Context) => {
   });
 });
 
-//
-// Update post markup (via from submission)
-// This is for the /posts/:id/edit basic form made
-// for people on devices where the Edit button doesn't work.
-//
-// Params: markup
-router.put("/posts/:id", async (ctx: Context) => {
-  const post = await db.findPostById(ctx.params.id).then(pre.presentPost);
-  ctx.assert(post, 404);
-  ctx.assertAuthorized(ctx.currUser, "UPDATE_POST", post);
-
-  // Validation
-
-  ctx
-    .validateBody("markup")
-    .isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH);
-
-  ctx.validateBody("reason").optional().isString().trim().isLength(0, 300);
-
-  // Succeeded
-
-  // Short-circuit if nothing changed
-  if (post.markup.trim() === ctx.vals.markup.trim()) {
-    ctx.redirect(post.url);
-    return;
-  }
-
-  // Render BBCode to html
-  const html = renderMarkup(ctx.vals.markup, ctx.currUser);
-
-  const updatedPost = await db
-    .updatePost(
-      ctx.currUser.id,
-      post.id,
-      ctx.vals.markup,
-      html,
-      ctx.vals.reason,
-    )
-    .then(pre.presentPost);
-
-  ctx.response.redirect(updatedPost.url);
-
-  // If it's the FAQ post, refresh cache
-  if (post.id === config.FAQ_POST_ID) {
-    cache3.requestUpdate("faq-post");
-  }
-
-  if (post.id === config.WELCOME_POST_ID) {
-    cache3.requestUpdate("welcome-post");
-  }
-
-  // Check if post is spam after response is sent
-  services.antispam.process(ctx, ctx.vals.markup, post.id);
-});
-
-// See and keep in sync with PUT /posts/:id
+// See and keep in sync with PUT /posts/:id in server/routes/topics.ts
 // Params: markup
 router.put("/pms/:id", async (ctx: Context) => {
   ctx

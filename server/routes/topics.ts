@@ -135,19 +135,18 @@ router.post(
     // Render the bbcode
     const html = renderMarkup(ctx.vals.markup, ctx.currUser);
 
-    const { post, mentionNotificationsCount, quoteNotificationsCount } =
+    const { post, charge, mentionNotificationsCount, quoteNotificationsCount } =
       await withPgPoolTransaction(pool, async (pgClient) => {
-        const post = await db
-          .createPost(pgClient, {
-            userId: ctx.currUser.id,
-            ipAddress: ctx.request.ip,
-            topicId: topic.id,
-            markup: ctx.vals.markup,
-            html: html,
-            type: postType,
-            isRoleplay: topic.forum.is_roleplay,
-          })
-          .then(pre.presentPost);
+        const created = await db.createPost(pgClient, {
+          userId: ctx.currUser.id,
+          ipAddress: ctx.request.ip,
+          topicId: topic.id,
+          markup: ctx.vals.markup,
+          html: html,
+          type: postType,
+          isRoleplay: topic.forum.is_roleplay,
+        });
+        const post = pre.presentPost(created.post);
 
         // Send MENTION, QUOTE and TOPIC_SUB notifications
         const { mentionsCount, quotesCount } =
@@ -159,6 +158,7 @@ router.post(
 
         return {
           post,
+          charge: created.charge,
           mentionNotificationsCount: mentionsCount,
           quoteNotificationsCount: quotesCount,
         };
@@ -178,7 +178,7 @@ router.post(
     ctx.response.redirect(post.url + "?created=true");
 
     // Check if post is spam in the background
-    services.antispam.process(ctx, post.markup, post.id);
+    services.antispam.process(ctx, charge, post.id);
   },
 );
 
@@ -267,7 +267,7 @@ router.put("/topics/:slug/edit", async (ctx: Context) => {
   }
 
   // Validation succeeded, so update topic
-  await db.updateTopic(topic.id, {
+  await db.updateTopic(ctx.currUser.id, topic.id, {
     title: ctx.vals.title,
     join_status: ctx.vals["join-status"],
   });
@@ -538,6 +538,60 @@ router.get("/topics/:slug", async (ctx: Context) => {
 ////////////////////////////////////////////////////////////
 
 //
+// Update post markup (via from submission)
+// This is for the /posts/:id/edit basic form made
+// for people on devices where the Edit button doesn't work.
+//
+// Params: markup
+router.put("/posts/:id", async (ctx: Context) => {
+  const post = await db.findPostById(ctx.params.id).then(pre.presentPost);
+  ctx.assert(post, 404);
+  ctx.assertAuthorized(ctx.currUser, "UPDATE_POST", post);
+
+  // Validation
+
+  ctx
+    .validateBody("markup")
+    .isLength(config.MIN_POST_LENGTH, config.MAX_POST_LENGTH);
+
+  ctx.validateBody("reason").optional().isString().trim().isLength(0, 300);
+
+  // Succeeded
+
+  // Short-circuit if nothing changed
+  if (post.markup.trim() === ctx.vals.markup.trim()) {
+    ctx.redirect(post.url);
+    return;
+  }
+
+  // Render BBCode to html
+  const html = renderMarkup(ctx.vals.markup, ctx.currUser);
+
+  const updated = await db.updatePost(
+    ctx.currUser.id,
+    post.id,
+    ctx.vals.markup,
+    html,
+    ctx.vals.reason,
+  );
+  const updatedPost = pre.presentPost(updated.post);
+
+  ctx.response.redirect(updatedPost.url);
+
+  // If it's the FAQ post, refresh cache
+  if (post.id === config.FAQ_POST_ID) {
+    cache3.requestUpdate("faq-post");
+  }
+
+  if (post.id === config.WELCOME_POST_ID) {
+    cache3.requestUpdate("welcome-post");
+  }
+
+  // Check if post is spam after response is sent
+  services.antispam.process(ctx, updated.charge, post.id);
+});
+
+//
 // Update post markup
 // Body params:
 // - markup
@@ -577,7 +631,7 @@ router.put("/api/posts/:id", async (ctx: Context) => {
       html,
       ctx.vals.reason,
     )
-    .then(pre.presentPost);
+    .then(({ post }) => pre.presentPost(post));
 
   sendJson(ctx, "postEdit", updatedPost);
 
@@ -590,7 +644,8 @@ router.put("/api/posts/:id", async (ctx: Context) => {
     cache3.requestUpdate("welcome-post");
   }
 
-  // TODO: Submit to spam service like PUT /posts/:id
+  // TODO: Submit to spam service like PUT /posts/:id. The edit already paid
+  // its screening charge, which is dropped here.
 });
 
 ////////////////////////////////////////////////////////////

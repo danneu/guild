@@ -24,7 +24,8 @@ import { Client, Pool, PoolClient } from "pg";
 import * as revs from "./revs";
 import { BANNED_IDS_JSON, forumModsColumn } from "./readable";
 import { deleteEmailVerificationTokenByUserId } from "./email_verification";
-import { spend } from "./send_budget";
+import { lockStanding, spend } from "./send_budget";
+import { spendScreening, type ScreeningCharge } from "./screen_budget";
 import { Context } from "koa";
 import {
   DbConvo,
@@ -811,7 +812,9 @@ export async function replacePasswordTx(
 
 // Keep updatePost and updatePm in sync
 //
-// Updating a post saves the update as a revision.
+// Updating a post saves the update as a revision. The editor pays the
+// screening charge for the new markup (server/db/screen_budget.ts), which
+// comes back with the post.
 //
 // reason is optional
 export const updatePost = async function (
@@ -820,34 +823,52 @@ export const updatePost = async function (
   markup,
   html,
   reason,
-) {
+): Promise<{ post: any; charge: ScreeningCharge | null }> {
   assert(Number.isInteger(userId));
   assert(Number.isInteger(postId));
   assert(typeof markup === "string");
   assert(typeof html === "string");
   assert(!reason || typeof reason === "string");
 
-  return pool
-    .query(
-      `
-    WITH rev AS (
-      INSERT INTO post_revs (user_id, post_id, markup, html, length, reason)
-      VALUES (
-        $1, $2, $3, $4, $5, $6
+  return pool.withTransaction(async (client) => {
+    const standing = await lockStanding(client, userId);
+    const charge = await spendScreening(client, standing, {
+      title: null,
+      body: markup,
+    });
+
+    const post = await client
+      .query(
+        `
+      WITH rev AS (
+        INSERT INTO post_revs (user_id, post_id, markup, html, length, reason)
+        VALUES (
+          $1, $2, $3, $4, $5, $6
+        )
+        RETURNING html, markup
       )
-      RETURNING html, markup
-    )
-    UPDATE posts
-    SET markup = rev.markup
-      , html = rev.html
-      , updated_at = NOW()
-    FROM rev
-    WHERE posts.id = $7
-    RETURNING *
-  `,
-      [userId, postId, markup, html, Buffer.byteLength(markup), reason, postId],
-    )
-    .then(maybeOneRow);
+      UPDATE posts
+      SET markup = rev.markup
+        , html = rev.html
+        , updated_at = NOW()
+      FROM rev
+      WHERE posts.id = $7
+      RETURNING *
+    `,
+        [
+          userId,
+          postId,
+          markup,
+          html,
+          Buffer.byteLength(markup),
+          reason,
+          postId,
+        ],
+      )
+      .then(maybeOneRow);
+
+    return { post, charge };
+  });
 };
 
 ////////////////////////////////////////////////////////////
@@ -1177,7 +1198,13 @@ export async function createPm(
 // - type        Required String, ic | ooc | char
 // - isRoleplay  Required Boolean
 // - idx         Undefined or -1 if it's the tab's wiki post
-export async function createPost(pgClient: PgClientInTransaction, args) {
+//
+// The author pays the screening charge for the markup
+// (server/db/screen_budget.ts), which comes back with the post.
+export async function createPost(
+  pgClient: PgClientInTransaction,
+  args,
+): Promise<{ post: any; charge: ScreeningCharge | null }> {
   debug(`[createPost] args:`, args);
   assert(_.isNumber(args.userId));
   assert(_.isString(args.ipAddress));
@@ -1187,6 +1214,12 @@ export async function createPost(pgClient: PgClientInTransaction, args) {
   assert(_.isBoolean(args.isRoleplay));
   assert(["ic", "ooc", "char"].includes(args.type));
   assert(args.idx === -1 || typeof args.idx === "undefined");
+
+  const standing = await lockStanding(pgClient, args.userId);
+  const charge = await spendScreening(pgClient, standing, {
+    title: null,
+    body: args.markup,
+  });
 
   const post = await pgClient
     .query(
@@ -1222,7 +1255,7 @@ export async function createPost(pgClient: PgClientInTransaction, args) {
     args.html,
   );
 
-  return post;
+  return { post, charge };
 }
 
 ////////////////////////////////////////////////////////////
@@ -1238,7 +1271,11 @@ export async function createPost(pgClient: PgClientInTransaction, args) {
 // - tagIds     Optional [Int]
 // - joinStatus Optional String (Required if roleplay)
 //
-export const createTopic = async function (props) {
+// The author pays the screening charge for the title and markup
+// (server/db/screen_budget.ts), which comes back with the topic.
+export const createTopic = async function (
+  props,
+): Promise<{ topic: any; charge: ScreeningCharge | null }> {
   debug("[createTopic]", props);
   assert(_.isNumber(props.userId));
   assert(props.forumId);
@@ -1254,6 +1291,12 @@ export const createTopic = async function (props) {
   else assert(_.isUndefined(props.joinStatus));
 
   return pool.withTransaction(async (client) => {
+    const standing = await lockStanding(client, props.userId);
+    const charge = await spendScreening(client, standing, {
+      title: props.title,
+      body: props.markup,
+    });
+
     // Create topic
     const topic = await client
       .query(
@@ -1322,7 +1365,7 @@ export const createTopic = async function (props) {
       await Promise.all(tasks);
     }
 
-    return topic;
+    return { topic, charge };
   });
 };
 
@@ -2206,29 +2249,68 @@ WHERE t.id = $1
 // - title Maybe String
 // - join-status Maybe (jump-in | apply | full)
 //
+// A new title pays the screening charge (server/db/screen_budget.ts) for what
+// the classifier would send: the title with the topic's opening post. The
+// actor pays, and the charge comes back with the topic.
 export async function updateTopic(
+  actorId: number,
   topicId: number,
   props: {
     title?: string;
     join_status?: "jump-in" | "apply" | "full";
   },
-) {
+): Promise<{ topic: any; charge: ScreeningCharge | null }> {
+  assert(Number.isInteger(actorId));
   assert(topicId);
   assert(props);
 
-  return pool
-    .query(
-      `
-    UPDATE topics
-    SET
-      title = COALESCE($1, title),
-      join_status = COALESCE($2, join_status)::join_status
-    WHERE id = $3
-    RETURNING *
-  `,
-      [props.title, props.join_status, topicId],
-    )
-    .then(maybeOneRow);
+  return pool.withTransaction(async (client) => {
+    let charge: ScreeningCharge | null = null;
+    if (props.title !== undefined) {
+      const standing = await lockStanding(client, actorId);
+      // The opening post has its topic's lowest post id.
+      const current = await client
+        .query<{ title: string; opening_markup: string | null }>(
+          `
+        SELECT
+          t.title,
+          (
+            SELECT p.markup
+            FROM posts p
+            WHERE p.topic_id = t.id
+            ORDER BY p.id
+            LIMIT 1
+          ) AS opening_markup
+        FROM topics t
+        WHERE t.id = $1
+      `,
+          [topicId],
+        )
+        .then(maybeOneRow);
+      if (current && current.title !== props.title) {
+        charge = await spendScreening(client, standing, {
+          title: props.title,
+          body: current.opening_markup ?? "",
+        });
+      }
+    }
+
+    const topic = await client
+      .query(
+        `
+      UPDATE topics
+      SET
+        title = COALESCE($1, title),
+        join_status = COALESCE($2, join_status)::join_status
+      WHERE id = $3
+      RETURNING *
+    `,
+        [props.title, props.join_status, topicId],
+      )
+      .then(maybeOneRow);
+
+    return { topic, charge };
+  });
 }
 
 ////////////////////////////////////////////////////////////

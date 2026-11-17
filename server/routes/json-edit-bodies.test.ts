@@ -178,10 +178,9 @@ describe("JSON edit endpoints", () => {
       vi.mocked(db.findPost).mockResolvedValue(zerothPostRow());
       const { topic: _topic, forum: _forum, ...columns } = zerothPostRow();
       vi.mocked(db.updatePost).mockResolvedValue({
-        ...columns,
-        markup,
-        html: "<p>saved</p>",
-      } as any);
+        post: { ...columns, markup, html: "<p>saved</p>" },
+        charge: null,
+      });
 
       const res = await put("/api/posts/900", coGm, { markup });
 

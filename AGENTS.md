@@ -151,6 +151,21 @@ call, and nothing fails if it is missing. A send takes
 `server/db/send_budget.ts#lockSender` before any other lock on its sender, or
 two sends can deadlock.
 
+**Spam screening:** A call to the spam classifier needs a `ScreeningCharge`,
+and only `server/db/screen_budget.ts#spendScreening` makes one. It prices the
+exact payload the classifier sends and charges it to a per-account budget,
+which also paces calls per minute. A write that stores text to screen reads
+its actor once through `server/db/send_budget.ts#lockStanding`, which takes
+lockSender first. It charges in its own transaction, before its insert, and
+returns the charge with its row. The route hands that charge to
+`server/services/antispam/index.ts#process`. A null charge means a trusted
+actor, and no call. Over budget, spendScreening throws
+`ScreeningBudgetExceeded` and nothing is written; the error handler in
+`server/index.ts` answers it as it answers `MarkupRejected`. The post and
+topic writes in `server/db/index.ts` all charge, but not every route that
+calls them hands the charge on yet, so a paid charge does not mean the text
+was screened.
+
 ## Forum domain model
 
 The homepage shows a couple dozen forums grouped into categories. Some `forums`

@@ -117,6 +117,27 @@ for (const budget of [
   );
 }
 
+// The screening budget: what one account may spend on spam classifier calls,
+// in the units server/db/screen_budget.ts#spendScreening prices from each
+// call's payload. The hour and day budgets bound what one account sends; the
+// day budget keeps it far below the API's monthly spend cap. The minute limit
+// counts calls, not units, so one account's burst stays far below the API's
+// per-minute request limit and its burst rule. Trust is server/trust.ts:
+// trusted members are not screened and pay nothing. screen_budget.ts asserts
+// that each unit budget fits the largest payload a write can send.
+export const SCREEN_BUDGET_PER_HOUR = parseInt(
+  process.env.SCREEN_BUDGET_PER_HOUR || "1000",
+  10,
+);
+export const SCREEN_BUDGET_PER_DAY = parseInt(
+  process.env.SCREEN_BUDGET_PER_DAY || "2000",
+  10,
+);
+export const SCREEN_CALLS_PER_MINUTE = parseInt(
+  process.env.SCREEN_CALLS_PER_MINUTE || "3",
+  10,
+);
+
 // The max amount of co-GMs per topic
 export const MAX_CO_GM_COUNT = process.env.MAX_CO_GM_COUNT || 2;
 

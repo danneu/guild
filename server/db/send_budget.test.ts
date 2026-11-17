@@ -2,7 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as config from "../config";
 import { createConvo, createPm, createStatus, createVm } from "./index";
-import { SendBudgetExceeded, spend, whenItFits } from "./send_budget";
+import {
+  lockStanding,
+  SendBudgetExceeded,
+  spend,
+  whenItFits,
+} from "./send_budget";
 
 // Mutable so one test can unset the staff account the way an unset env var
 // does (config parses it to NaN).
@@ -32,7 +37,7 @@ function makePgClient(opts: { sender?: Sender; spent?: number } = {}) {
   const spent = opts.spent ?? 0;
   const query = vi.fn(async (sql: string, _params?: unknown[]) => {
     const rows = (() => {
-      if (/FROM users/.test(sql)) return [sender];
+      if (/FROM users/.test(sql)) return [{ id: 1, uname: "alice", ...sender }];
       if (/SELECT cost, created_at/.test(sql)) {
         return spent > 0 ? [{ cost: spent, created_at: new Date() }] : [];
       }
@@ -89,6 +94,33 @@ describe("whenItFits", () => {
 
   it("rejects a cost no window could ever fit", () => {
     expect(() => whenItFits([], 31, 30)).toThrow(/never fit/);
+  });
+});
+
+describe("lockStanding", () => {
+  // The send budget and the spam screen both take trust from here.
+  it.each([
+    ["an approved member", { approved_at: new Date(), posts_count: 0 }, true],
+    ["a member with 6 posts", { approved_at: null, posts_count: 6 }, true],
+    ["a member with 5 posts", { approved_at: null, posts_count: 5 }, false],
+  ])("decides whether to trust %s", async (_label, sender, trusted) => {
+    const standing = await lockStanding(makePgClient({ sender }), 1);
+
+    expect(standing).toEqual({
+      id: 1,
+      uname: "alice",
+      posts_count: sender.posts_count,
+      trusted,
+    });
+  });
+
+  it("locks the actor before reading them", async () => {
+    const pgClient = makePgClient();
+
+    await lockStanding(pgClient, 1);
+
+    expect(sqlOf(pgClient)[0]).toMatch(/pg_advisory_xact_lock/);
+    expect(sqlOf(pgClient)[1]).toMatch(/FROM users/);
   });
 });
 

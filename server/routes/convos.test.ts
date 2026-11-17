@@ -79,8 +79,9 @@ function answer(sql: string) {
     if (/^\s*(BEGIN|COMMIT|ROLLBACK)\s*$/.test(sql)) return [];
     if (/lower\(u\.uname\) = ANY/.test(sql)) return [{ ...bob }, { ...carol }];
     if (/pg_advisory_xact_lock/.test(sql)) return [{}];
-    if (/SELECT approved_at, posts_count\s+FROM users/.test(sql)) {
-      return [{ approved_at: alice.approved_at, posts_count: 1 }];
+    if (/SELECT id, uname, approved_at, posts_count\s+FROM users/.test(sql)) {
+      const { id, uname, approved_at, posts_count } = alice;
+      return [{ id, uname, approved_at, posts_count }];
     }
     if (/DELETE FROM send_spends/.test(sql)) return [];
     if (/SELECT cost, created_at\s+FROM send_spends/.test(sql)) {

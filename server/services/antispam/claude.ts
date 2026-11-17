@@ -1,16 +1,16 @@
 // 3rd
-import assert from "assert";
 import { randomBytes } from "crypto";
 // 1st
-import * as belt from "../../belt";
 import * as config from "../../config";
-import { Context } from "koa";
+import type { ScreeningCharge } from "../../db/screen_budget";
 
 const MODEL = "claude-haiku-4-5-20251001";
 const API_URL = "https://api.anthropic.com/v1/messages";
 // The Messages API rejects requests without max_tokens with a 400, which would
 // otherwise fail open into allowing all spam. Tested output is ~200 tokens.
 const MAX_TOKENS = 512;
+// The request itself is aborted at this point, so a slow call stops running
+// and billing. A race that only stopped waiting would leave it running.
 const TIMEOUT_MS = 10000;
 
 // normalized at the adapter boundary from the snake_case tool input
@@ -119,25 +119,36 @@ Call record_spam_verdict exactly once. Fill \`reasoning\` first, then the verdic
 }
 
 // Performs the actual API call. Any failure resolves to a fail-open result.
-async function classify(
-  ctx: Context,
-  markup: string,
-  title?: string,
-): Promise<AnalyzeResult> {
+//
+// `payload` is the JSON a screening charge paid for: username, title (topics
+// only) and body -- no email, to minimize PII.
+async function classify(payload: string): Promise<AnalyzeResult> {
   // Per-call salt from the Node crypto module (NOT globalThis.crypto, which has
   // no randomBytes). Interpolated into both the system prompt and user message.
   const salt = randomBytes(5).toString("hex");
   const open = `<member_submission-${salt}>`;
   const close = `</member_submission-${salt}>`;
-
-  // username + title (topics only) + body -- no email, to minimize PII.
-  const payload = JSON.stringify({
-    username: ctx.currUser!.uname,
-    title: title ?? null,
-    body: markup,
-  });
   const userMessage = `${open}\n${payload}\n${close}`;
 
+  // A timer and an AbortController rather than AbortSignal.timeout, so tests
+  // can drive the timeout with fake timers. The abort covers reading the body.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  try {
+    return await request(userMessage, open, close, controller.signal);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Sends one request and parses its verdict. Once `signal` aborts, the failure
+// it causes, in the fetch or in reading the body, is reported as the timeout.
+async function request(
+  userMessage: string,
+  open: string,
+  close: string,
+  signal: AbortSignal,
+): Promise<AnalyzeResult> {
   let res;
   try {
     res = await fetch(API_URL, {
@@ -155,8 +166,15 @@ async function classify(
         tool_choice: { type: "tool", name: "record_spam_verdict" },
         messages: [{ role: "user", content: userMessage }],
       }),
+      signal,
     });
   } catch (err) {
+    if (signal.aborted) {
+      console.error(
+        "[claude antispam] request timed out; failing open (ALLOW)",
+      );
+      return { ok: false, error: "API_TIMEOUT" };
+    }
     console.error("[claude antispam] fetch failed; failing open (ALLOW)", err);
     return { ok: false, error: "API_ERROR" };
   }
@@ -173,6 +191,12 @@ async function classify(
   try {
     body = await res.json();
   } catch (err) {
+    if (signal.aborted) {
+      console.error(
+        "[claude antispam] response timed out; failing open (ALLOW)",
+      );
+      return { ok: false, error: "API_TIMEOUT" };
+    }
     console.error(
       "[claude antispam] failed to parse response JSON; failing open (ALLOW)",
       err,
@@ -232,16 +256,12 @@ async function classify(
   return { ok: true, verdict };
 }
 
-// Classifies a member post. `title` is only supplied for topic creation;
-// replies and edits omit it. Fails open (returns an error result) on missing
-// API key, timeout, HTTP error, or any unexpected failure.
-async function analyze(
-  ctx: Context,
-  markup: string,
-  title?: string,
-): Promise<AnalyzeResult> {
-  assert(ctx.currUser);
-  assert(typeof markup === "string");
+// Classifies the text a screening charge paid for, in one call. The charge
+// carries the payload, so a call costs exactly what its write paid. Fails open
+// (returns an error result) on missing API key, timeout, HTTP error, or any
+// unexpected failure.
+async function analyze(charge: ScreeningCharge): Promise<AnalyzeResult> {
+  const payload = charge.take();
 
   if (!config.ANTHROPIC_API_KEY) {
     console.warn(
@@ -250,12 +270,7 @@ async function analyze(
     return { ok: false, error: "API_ERROR" };
   }
 
-  return Promise.race([
-    belt
-      .timeout(TIMEOUT_MS)
-      .then((): AnalyzeResult => ({ ok: false, error: "API_TIMEOUT" })),
-    classify(ctx, markup, title),
-  ]).catch((err): AnalyzeResult => {
+  return classify(payload).catch((err): AnalyzeResult => {
     console.error(
       "[claude antispam] unexpected error; failing open (ALLOW)",
       err,

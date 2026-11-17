@@ -74,6 +74,12 @@ async function resetDb() {
     console.log("Inserted dev_seeds.sql");
   })();
 
+  // foo (1) writes the seed topics and posts below. An admin (4) approves foo
+  // first, so the seed is trusted and pays no screening budget
+  // (server/db/screen_budget.ts). Otherwise the seed would hit the budget's
+  // pacing whenever its limits are set low.
+  await db.users.approveUser({ approvedBy: 4, targetUser: 1 });
+
   // Insert 100 topics for forum1
   await (async () => {
     console.log("Inserting 100 topics into forum 1");

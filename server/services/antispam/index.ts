@@ -10,40 +10,44 @@ import {
   broadcastSpamReview,
 } from "../discord";
 import * as db from "../../db";
-import { isTrustedMember } from "../../trust";
+import type { ScreeningCharge } from "../../db/screen_budget";
 import { Context } from "koa";
 
 // Returns falsey if they are not a spammer (or if we fail open). Returns the
 // verdict (truthy) for both NUKE and REVIEW so the caller suppresses the
 // intro-topic broadcast for a suspected spammer.
 //
-// `title` is only passed for topic creation; replies and edits omit it.
+// `charge` is what the write that stored the text returned
+// (server/db/screen_budget.ts#spendScreening). It decides whether the text is
+// screened: null means the actor is trusted, and nothing is sent.
 async function process(
   ctx: Context,
-  markup: string,
+  charge: ScreeningCharge | null,
   postId: number,
-  title?: string,
 ) {
   assert(ctx.currUser);
-  assert(typeof markup === "string");
   assert(Number.isInteger(postId));
 
-  if (isTrustedMember(ctx.currUser)) {
+  if (!charge) {
     return;
   }
+  assert(
+    charge.standing.id === ctx.currUser.id,
+    "A screening charge must belong to the request's user",
+  );
 
-  const result = await claude.analyze(ctx, markup, title);
+  const result = await claude.analyze(charge);
   const action = decideAction(result);
 
   console.log("antispam process:", { action, result });
 
   if (action === "ALLOW") {
-    if (ctx.currUser.posts_count === 0) {
+    if (charge.standing.posts_count === 0) {
       const antispam = result.ok
         ? ({ ran: true } as const)
         : ({ ran: false, error: result.error } as const);
-      broadcastFirstPost(ctx.currUser, postId, antispam, markup).catch((err) =>
-        console.error("broadcastFirstPost failed", err),
+      broadcastFirstPost(ctx.currUser, postId, antispam, charge.body).catch(
+        (err) => console.error("broadcastFirstPost failed", err),
       );
     }
     return;
@@ -77,11 +81,10 @@ async function process(
 export default {
   process: async (
     ctx: Context,
-    markup: string,
+    charge: ScreeningCharge | null,
     postId: number,
-    title?: string,
   ) => {
-    return process(ctx, markup, postId, title)
+    return process(ctx, charge, postId)
       .then((result) => {
         if (result) {
           console.log("antispam process detected a spammer:", result);
