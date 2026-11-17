@@ -5,8 +5,7 @@ import fs from "fs";
 import _ from "lodash";
 // 1st party
 import { NODE_ENV, DATABASE_URL } from "./config";
-import * as db from "./db";
-import { pool, withPgPoolTransaction } from "./db/util";
+import { pool } from "./db/util";
 
 if (NODE_ENV !== "development") {
   console.log("can only reset db in development");
@@ -72,50 +71,6 @@ async function resetDb() {
     const str = slurpSqlSync("dev_seeds.sql");
     await pool.query(str);
     console.log("Inserted dev_seeds.sql");
-  })();
-
-  // foo (1) writes the seed topics and posts below. An admin (4) approves foo
-  // first, so the seed is trusted and pays no screening budget
-  // (server/db/screen_budget.ts). Otherwise the seed would hit the budget's
-  // pacing whenever its limits are set low.
-  await db.users.approveUser({ approvedBy: 4, targetUser: 1 });
-
-  // Insert 100 topics for forum1
-  await (async () => {
-    console.log("Inserting 100 topics into forum 1");
-    for (let i = 0; i < 100; i++) {
-      const markup = "Post " + i;
-      await db.createTopic({
-        userId: 1,
-        forumId: 1,
-        ipAddress: "1.2.3.4",
-        title: "My topic " + i,
-        markup: markup,
-        html: markup,
-        isRoleplay: false,
-        postType: "ooc",
-      });
-    }
-  })();
-
-  // Insert 100 posts for topic1
-  await (async () => {
-    console.log("Inserting 100 posts into topic 1");
-
-    await withPgPoolTransaction(pool, async (pgClient) => {
-      for (let i = 0; i < 100; i++) {
-        const markup = String(`Post ${i}`);
-        await db.createPost(pgClient, {
-          userId: 1,
-          ipAddress: "1.2.3.4",
-          markup: markup,
-          html: markup,
-          topicId: 1,
-          isRoleplay: false,
-          type: "ooc",
-        });
-      }
-    });
   })();
 
   await (async () => {

@@ -11,7 +11,6 @@ import * as pre from "../presenters";
 import * as config from "../config";
 import * as belt from "../belt";
 import * as cancan from "../cancan";
-import * as middleware from "../middleware";
 import { FlashParams } from "../middleware/flash";
 import { renderMarkup } from "../markup";
 import cache3 from "../cache3";
@@ -98,89 +97,87 @@ router.post("/topics/:topicId/:postType/0th", async (ctx: Context) => {
 // - post-type
 // - markup
 //
-router.post(
-  "/topics/:topicSlug/posts",
-  middleware.ratelimit(),
-  async (ctx: Context) => {
-    var topicId = belt.extractId(ctx.params.topicSlug);
-    ctx.assert(topicId, 404);
+router.post("/topics/:topicSlug/posts", async (ctx: Context) => {
+  ctx.assert(ctx.currUser, 401, "You must be logged in");
 
-    ctx
-      .validateBody("post-type")
-      .isIn(["ic", "ooc", "char"], "Invalid post-type");
-    ctx
-      .validateBody("markup")
-      .isLength(
-        config.MIN_POST_LENGTH,
-        config.MAX_POST_LENGTH,
-        "Post must be between " +
-          config.MIN_POST_LENGTH +
-          " and " +
-          config.MAX_POST_LENGTH +
-          " chars long. Yours was " +
-          ctx.request.body.markup.length,
-      );
+  var topicId = belt.extractId(ctx.params.topicSlug);
+  ctx.assert(topicId, 404);
 
-    const postType = ctx.vals["post-type"];
-    const loaded = await db.loadTopicFor(ctx.currUser, topicId, "plain");
-    ctx.assert(loaded.kind === "readable", 404);
-    const { topic } = loaded;
-    ctx.assertAuthorized(ctx.currUser, "CREATE_POST", topic);
+  ctx
+    .validateBody("post-type")
+    .isIn(["ic", "ooc", "char"], "Invalid post-type");
+  ctx
+    .validateBody("markup")
+    .isLength(
+      config.MIN_POST_LENGTH,
+      config.MAX_POST_LENGTH,
+      "Post must be between " +
+        config.MIN_POST_LENGTH +
+        " and " +
+        config.MAX_POST_LENGTH +
+        " chars long. Yours was " +
+        ctx.request.body.markup.length,
+    );
 
-    // If non-rp forum, then the post must be 'ooc' type
-    if (!topic.forum.is_roleplay) {
-      ctx.assert(postType === "ooc", 400);
-    }
+  const postType = ctx.vals["post-type"];
+  const loaded = await db.loadTopicFor(ctx.currUser, topicId, "plain");
+  ctx.assert(loaded.kind === "readable", 404);
+  const { topic } = loaded;
+  ctx.assertAuthorized(ctx.currUser, "CREATE_POST", topic);
 
-    // Render the bbcode
-    const html = renderMarkup(ctx.vals.markup, ctx.currUser);
+  // If non-rp forum, then the post must be 'ooc' type
+  if (!topic.forum.is_roleplay) {
+    ctx.assert(postType === "ooc", 400);
+  }
 
-    const { post, charge, mentionNotificationsCount, quoteNotificationsCount } =
-      await withPgPoolTransaction(pool, async (pgClient) => {
-        const created = await db.createPost(pgClient, {
-          userId: ctx.currUser.id,
-          ipAddress: ctx.request.ip,
-          topicId: topic.id,
-          markup: ctx.vals.markup,
-          html: html,
-          type: postType,
-          isRoleplay: topic.forum.is_roleplay,
-        });
-        const post = pre.presentPost(created.post);
+  // Render the bbcode
+  const html = renderMarkup(ctx.vals.markup, ctx.currUser);
 
-        // Send MENTION, QUOTE and TOPIC_SUB notifications
-        const { mentionsCount, quotesCount } =
-          await db.notifications.notifyNewPost(pgClient, {
-            author: ctx.currUser,
-            postId: post.id,
-            markup: ctx.vals.markup,
-          });
-
-        return {
-          post,
-          charge: created.charge,
-          mentionNotificationsCount: mentionsCount,
-          quoteNotificationsCount: quotesCount,
-        };
+  const { post, charge, mentionNotificationsCount, quoteNotificationsCount } =
+    await withPgPoolTransaction(pool, async (pgClient) => {
+      const created = await db.createPost(pgClient, {
+        userId: ctx.currUser.id,
+        ipAddress: ctx.request.ip,
+        topicId: topic.id,
+        markup: ctx.vals.markup,
+        html: html,
+        type: postType,
+        isRoleplay: topic.forum.is_roleplay,
       });
+      const post = pre.presentPost(created.post);
 
-    ctx.flash = {
-      message: [
-        "success",
-        util.format(
-          "Post created. Mentions sent: %s, Quotes sent: %s",
-          mentionNotificationsCount,
-          quoteNotificationsCount,
-        ),
-      ],
-    };
+      // Send MENTION, QUOTE and TOPIC_SUB notifications
+      const { mentionsCount, quotesCount } =
+        await db.notifications.notifyNewPost(pgClient, {
+          author: ctx.currUser,
+          postId: post.id,
+          markup: ctx.vals.markup,
+        });
 
-    ctx.response.redirect(post.url + "?created=true");
+      return {
+        post,
+        charge: created.charge,
+        mentionNotificationsCount: mentionsCount,
+        quoteNotificationsCount: quotesCount,
+      };
+    });
 
-    // Check if post is spam in the background
-    services.antispam.process(ctx, charge, post.id);
-  },
-);
+  ctx.flash = {
+    message: [
+      "success",
+      util.format(
+        "Post created. Mentions sent: %s, Quotes sent: %s",
+        mentionNotificationsCount,
+        quoteNotificationsCount,
+      ),
+    ],
+  };
+
+  ctx.response.redirect(post.url + "?created=true");
+
+  // Check if post is spam in the background
+  services.antispam.process(ctx, charge, post.id);
+});
 
 ////////////////////////////////////////////////////////////
 

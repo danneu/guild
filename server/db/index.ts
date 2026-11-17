@@ -26,6 +26,7 @@ import { BANNED_IDS_JSON, forumModsColumn } from "./readable";
 import { deleteEmailVerificationTokenByUserId } from "./email_verification";
 import { lockStanding, spend } from "./send_budget";
 import { spendScreening, type ScreeningCharge } from "./screen_budget";
+import { admitPost } from "./post_gap";
 import { Context } from "koa";
 import {
   DbConvo,
@@ -1199,7 +1200,8 @@ export async function createPm(
 // - isRoleplay  Required Boolean
 // - idx         Undefined or -1 if it's the tab's wiki post
 //
-// The author pays the screening charge for the markup
+// The author must have left the post gap since their last post
+// (server/db/post_gap.ts), and pays the screening charge for the markup
 // (server/db/screen_budget.ts), which comes back with the post.
 export async function createPost(
   pgClient: PgClientInTransaction,
@@ -1216,6 +1218,12 @@ export async function createPost(
   assert(args.idx === -1 || typeof args.idx === "undefined");
 
   const standing = await lockStanding(pgClient, args.userId);
+  // A tab's 0th post skips the gap: posts_topic_id_type_idx_idx caps it at one
+  // per tab, it needs UPDATE_TOPIC, and a GM setting up a new roleplay's tabs
+  // should not wait between them.
+  if (args.idx !== -1) {
+    await admitPost(pgClient, standing, args.ipAddress);
+  }
   const charge = await spendScreening(pgClient, standing, {
     title: null,
     body: args.markup,
@@ -1271,8 +1279,9 @@ export async function createPost(
 // - tagIds     Optional [Int]
 // - joinStatus Optional String (Required if roleplay)
 //
-// The author pays the screening charge for the title and markup
-// (server/db/screen_budget.ts), which comes back with the topic.
+// The author must have left the post gap since their last post
+// (server/db/post_gap.ts), and pays the screening charge for the title and
+// markup (server/db/screen_budget.ts), which comes back with the topic.
 export const createTopic = async function (
   props,
 ): Promise<{ topic: any; charge: ScreeningCharge | null }> {
@@ -1292,6 +1301,7 @@ export const createTopic = async function (
 
   return pool.withTransaction(async (client) => {
     const standing = await lockStanding(client, props.userId);
+    await admitPost(client, standing, props.ipAddress);
     const charge = await spendScreening(client, standing, {
       title: props.title,
       body: props.markup,
@@ -4222,7 +4232,6 @@ export const listTopicBans = async (topicId) => {
 // Re-exports
 
 export * as keyvals from "./keyvals";
-export * as ratelimits from "./ratelimits";
 export * as loginAttempts from "./login_attempts";
 export * as images from "./images";
 export * as dice from "./dice";

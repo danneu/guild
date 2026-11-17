@@ -1,8 +1,6 @@
 // 3rd party
 // import createDebug from 'debug'
 // const debug = createDebug('app:middleware')
-import _ from "lodash";
-import assert from "assert";
 // 1st party
 import * as db from "../db";
 import * as pre from "../presenters";
@@ -27,55 +25,6 @@ export const currUser = function () {
 };
 
 export { flash } from "./flash";
-
-////////////////////////////////////////////////////////////
-// RATELIMITING
-////////////////////////////////////////////////////////////
-
-// Int -> Date
-function postCountToMaxDate(postCount: number) {
-  assert(Number.isInteger(postCount));
-  // postCount to seconds of waiting
-  // Now that we have the antispam classifier, 10 seconds is long enough.
-  const lookup = {
-    1: 10,
-    2: 10,
-    3: 10,
-    4: 10,
-    5: 10,
-    6: 10,
-    7: 10,
-    8: 10,
-    9: 10,
-    10: 10,
-  };
-  // there's always a 1 second minimum wait to prevent dbl-posting
-  const seconds = lookup[postCount] || 1;
-  return new Date(Date.now() - seconds * 1000);
-}
-
-export const ratelimit = function () {
-  return async (ctx: Context, next: Next) => {
-    ctx.assert(ctx.currUser, 401, "You must be logged in");
-    const maxDate = postCountToMaxDate(ctx.currUser.posts_count);
-    try {
-      await db.ratelimits.bump(ctx.currUser.id, ctx.ip, maxDate);
-    } catch (err) {
-      if (_.isDate(err)) {
-        const msg = `Ratelimited! Since you are a new member, you must wait
-          ${belt.waitLength(
-            err as Date,
-          )} longer before posting. The ratelimit goes away as you
-          make more posts.
-        `;
-        ctx.check(false, msg);
-        return;
-      }
-      throw err;
-    }
-    return next();
-  };
-};
 
 export const methodOverride = function (
   { bodyKey, headerKey } = {

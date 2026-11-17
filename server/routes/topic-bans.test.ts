@@ -27,7 +27,6 @@ vi.mock("../db", async (importOriginal) => {
     ...real,
     createPost: vi.fn(),
     updatePost: vi.fn(),
-    ratelimits: { ...real.ratelimits, bump: vi.fn() },
     notifications: { ...real.notifications, notifyNewPost: vi.fn() },
     revs: { ...real.revs, getPostRevMarkup: vi.fn() },
   };

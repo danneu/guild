@@ -65,6 +65,10 @@ function makePgClient(opts: { user?: User; ledger?: ScreenSpend[] } = {}) {
     const rows = ((): unknown[] => {
       if (/pg_advisory_xact_lock/.test(sql)) return [];
       if (/FROM users/.test(sql)) return [{ id: 7, uname: "newbie", ...user }];
+      // The post gap (server/db/post_gap.ts): no earlier post
+      if (/(INSERT INTO|DELETE FROM) ratelimits/.test(sql)) return [];
+      if (/FROM ratelimits/.test(sql))
+        return [{ now: NOW, last_post_at: null }];
       if (/clock_timestamp\(\)/.test(sql)) return [{ now: NOW }];
       if (/(INSERT INTO|DELETE FROM) screen_spends/.test(sql)) return [];
       if (/FROM screen_spends/.test(sql)) return opts.ledger ?? [];

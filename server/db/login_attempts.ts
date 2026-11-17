@@ -3,8 +3,7 @@
 // server/auth.ts; this file only locks, counts and charges.
 //
 // Both keys are hashed in SQL, so every row is fixed size and none holds what
-// was typed. The network key is the client's ip_root, the same grouping as
-// server/db/ratelimits.ts.
+// was typed. The network key is the client's ip_root (sql/1-schema.sql#ip_root).
 
 import assert from "assert";
 import type { Admission, AttemptCounts } from "../auth";

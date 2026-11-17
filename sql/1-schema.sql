@@ -841,6 +841,7 @@ CREATE OR REPLACE FUNCTION ip_root (ip_address inet) RETURNS inet AS $$
   SELECT host(network(set_masklen(ip_address, (CASE family(ip_address) WHEN 4 THEN 24 ELSE 48 END))))::inet;
 $$ LANGUAGE SQL IMMUTABLE;
 
+-- The post gap's ledger; see server/db/post_gap.ts.
 CREATE TABLE ratelimits (
   id             bigserial        PRIMARY KEY,
   user_id        int              NOT NULL REFERENCES users(id),

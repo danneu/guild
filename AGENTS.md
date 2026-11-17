@@ -152,14 +152,17 @@ pointer columns, so they need no gate; most of them stay in
 outside the forums. Each send pays a per-account budget through
 `server/db/send_budget.ts#spend`, and the callers of spend in
 `server/db/index.ts` are the full set of sends. Topics and posts are not
-sends. `server/middleware/index.ts#ratelimit` throttles them and
-`server/services/antispam/index.ts#process` checks them for spam instead.
-Each send's write function calls spend in its own transaction, before its
-insert, and sets its own cost; routes never pass one. Over budget,
-spend throws `SendBudgetExceeded` and nothing is written, and the route shows
-that as a flash. Only the staff welcome PM skips the budget, through the staff
-variant of `server/db/index.ts#ConvoSender`. A new kind of send needs the same
-call, and nothing fails if it is missing. A send takes
+sends. `server/db/post_gap.ts#admitPost` spaces each member's new posts and
+topics instead, and `server/services/antispam/index.ts#process` checks them
+for spam. `server/db/index.ts#createPost` and `#createTopic` call admitPost in
+their own transaction, after lockStanding and before the insert. They are the
+only code that inserts posts, and a test fails on any other
+`INSERT INTO posts`. Each send's write function calls spend in its own
+transaction, before its insert, and sets its own cost; routes never pass one.
+Over budget, spend throws `SendBudgetExceeded` and nothing is written, and the
+route shows that as a flash. Only the staff welcome PM skips the budget,
+through the staff variant of `server/db/index.ts#ConvoSender`. A new kind of
+send needs the same call, and nothing fails if it is missing. A send takes
 `server/db/send_budget.ts#lockSender` before any other lock on its sender, or
 two sends can deadlock.
 

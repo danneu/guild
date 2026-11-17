@@ -205,6 +205,25 @@ VALUES
 ,(4, 4, 1, 'First IC post', 'First IC post', '1.2.3.4', 'ic', true);
 SELECT setval('posts_id_seq'::regclass, (SELECT MAX(id) FROM posts));
 
+-- 100 more topics in forum 1, each with its opening post, and 100 replies in
+-- topic 1, so lists have pages. They go in here, not through createTopic and
+-- createPost, because those hold a gap between one member's posts
+-- (server/db/post_gap.ts).
+INSERT INTO topics (forum_id, title, user_id, is_roleplay)
+SELECT 1, 'My topic ' || i, 1, false
+FROM generate_series(0, 99) AS i;
+
+INSERT INTO posts (topic_id, user_id, markup, html, ip_address, type, is_roleplay)
+SELECT t.id, 1, 'Post ' || i, 'Post ' || i, '1.2.3.4', 'ooc', false
+FROM generate_series(0, 99) AS i
+JOIN topics t ON t.forum_id = 1 AND t.title = 'My topic ' || i
+ORDER BY i;
+
+INSERT INTO posts (topic_id, user_id, markup, html, ip_address, type, is_roleplay)
+SELECT 1, 1, 'Post ' || i, 'Post ' || i, '1.2.3.4', 'ooc', false
+FROM generate_series(0, 99) AS i
+ORDER BY i;
+
 ---- Topic subscriptions
 INSERT INTO topic_subscriptions (topic_id, user_id)
 VALUES
