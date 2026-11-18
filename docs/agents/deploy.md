@@ -1,4 +1,4 @@
-# Deploy, SQL changes and the Node runtime
+# Deploy, CI pins, SQL changes and the Node runtime
 
 Read this before you add a table or column, edit the Dockerfile or a
 workflow, change the Node version, or run or plan a deploy. `AGENTS.md` links
@@ -10,6 +10,8 @@ Do not deploy unless explicitly asked.
 
 - Production is the Fly app `rpguild`. `pnpm run prod:deploy` bumps the patch
   version and pushes tags; CI deploys on the `[deploy]` tagged commit.
+- To roll back, dispatch `.github/workflows/rollback.yml` from master and
+  give it the old tag. Its header says why.
 - Logs: `pnpm run prod:logs`. SSH: `pnpm run prod:ssh`.
 - `fly.staging.toml` and the `staging:*` scripts describe a staging app
   (`rpguild-staging`). Do not assume it is running.
@@ -26,6 +28,34 @@ Do not deploy unless explicitly asked.
 - Make the same change in `sql/1-schema.sql`, which
   `pnpm run reset-db` loads for a fresh local database.
 - Say in the commit body that the file is applied by hand.
+
+## CI pins
+
+- CI tools pin by content. Every `uses:` under `.github/` names a full
+  commit SHA, with its version in a comment. Dependabot
+  (`.github/dependabot.yml`) moves them in one weekly PR.
+- Only `.github/workflows/fly-deploy.yml` installs flyctl or holds
+  `FLY_API_TOKEN`; `deploy.yml` and `rollback.yml` call it. It downloads one
+  flyctl release and checks it against a sha256 committed beside the
+  version. Dependabot cannot move those two; the file's header says how.
+- The runtime base tracks its LTS tag. The Dockerfile base stage (see
+  [the Node major](#the-node-major)) keeps its tag because the tag moves
+  with Node and Alpine fixes. A digest would hold those fixes back until
+  someone merged a refresh. Any other external image needs a digest.
+- `server/ci_pins.test.ts` fails `pnpm test` on a movable ref, on flyctl or
+  the token anywhere but that one step and the calls that hand the token to
+  it, on a flyctl that runs without passing its hash check, and on an
+  external image other than the base stage with no digest.
+- Accepted exceptions: `claude-code-review.yml` runs
+  anthropics/claude-code-action, which installs Claude Code through
+  claude.ai/install.sh and Bun through oven-sh/setup-bun. Each comes at a
+  version the action's own code names, with no hash committed here.
+  Anthropic, whose service the API key reaches, serves both: it has owned
+  Bun since December 2025.
+- The repository setting Settings > Actions > General > "Require actions to
+  be pinned to a full-length commit SHA" also covers the refs inside an
+  action, which the test cannot see. It lives outside git, so this note
+  records that it should be on.
 
 ## After a deploy
 

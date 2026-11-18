@@ -1,0 +1,12 @@
+# Moves the commit-SHA pins in .github/workflows, and the version comment
+# beside each, in one weekly PR. It cannot see flyctl's version and sha256 in
+# fly-deploy.yml; that file says how to move them.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]

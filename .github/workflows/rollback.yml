@@ -1,4 +1,10 @@
 name: Rollback Deployment
+
+# Dispatch this from master, and name the old tag in the version input. A
+# same-repo reusable workflow loads from the caller's commit, so a run
+# dispatched from master deploys through today's fly-deploy.yml, with
+# today's pinned flyctl, and checks out the old tag only to build it. A run
+# dispatched from the old tag would use that tag's copy of these files.
 on:
   workflow_dispatch:
     inputs:
@@ -9,16 +15,9 @@ on:
 
 jobs:
   rollback:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.version }} # Checkout specific tag
-
-      - name: Setup Fly.io
-        uses: superfly/flyctl-actions/setup-flyctl@master
-
-      - name: Deploy specific version
-        run: flyctl deploy --remote-only --env APP_VERSION=${{ github.event.inputs.version }}
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    uses: ./.github/workflows/fly-deploy.yml
+    with:
+      ref: ${{ inputs.version }}
+      app_version: ${{ inputs.version }}
+    secrets:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

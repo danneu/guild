@@ -1,0 +1,53 @@
+# The one workflow that installs flyctl and holds FLY_API_TOKEN. deploy.yml
+# and rollback.yml call it. server/ci_pins.test.ts fails pnpm test if any
+# other workflow or step touches flyctl or the token, and it runs the deploy
+# step to show that a download which fails the sha256 check never runs.
+#
+# To move flyctl, pick a release from github.com/superfly/flyctl/releases.
+# Set FLYCTL_VERSION to it, and copy the Linux_x86_64 line of that release's
+# flyctl_<version>_checksums.txt into FLYCTL_SHA256. Dependabot cannot bump
+# these two. Once Fly refuses this flyctl as too old, deploys fail until
+# someone moves it; running machines keep serving.
+name: Fly deploy
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit or tag to build and deploy
+        required: true
+        type: string
+      app_version:
+        description: APP_VERSION the deployed app reports
+        required: true
+        type: string
+    secrets:
+      FLY_API_TOKEN:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+
+      # One step, so the token and flyctl exist only here. The shell stops at
+      # the first failing command, so a hash mismatch ends the step before
+      # flyctl runs.
+      - name: Install flyctl and deploy
+        shell: bash
+        env:
+          FLYCTL_VERSION: "0.5.12"
+          FLYCTL_SHA256: 41e3194dde966648e0943c13230c7a9c9874a7a235ac507dbf4ad4f575fa54fc
+          APP_VERSION: ${{ inputs.app_version }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          dir="$RUNNER_TEMP/flyctl"
+          mkdir -p "$dir"
+          tarball="$dir/flyctl.tar.gz"
+          curl -fsSL -o "$tarball" "https://github.com/superfly/flyctl/releases/download/v${FLYCTL_VERSION}/flyctl_${FLYCTL_VERSION}_Linux_x86_64.tar.gz"
+          echo "${FLYCTL_SHA256}  ${tarball}" | sha256sum -c -
+          tar -xzf "$tarball" -C "$dir" flyctl
+          "$dir/flyctl" deploy --remote-only --env "APP_VERSION=${APP_VERSION}"
