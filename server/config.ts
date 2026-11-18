@@ -113,7 +113,7 @@ export const IMAGE_QUOTA = {
     perHour: parseInt(process.env.IMAGE_QUOTA_UNTRUSTED_PER_HOUR || "20", 10),
   },
   trusted: {
-    images: parseInt(process.env.IMAGE_QUOTA_TRUSTED_IMAGES || "1000", 10),
+    images: parseInt(process.env.IMAGE_QUOTA_TRUSTED_IMAGES || "5000", 10),
     bytes: parseInt(process.env.IMAGE_QUOTA_TRUSTED_BYTES || "500000000", 10),
     perHour: parseInt(process.env.IMAGE_QUOTA_TRUSTED_PER_HOUR || "60", 10),
   },
