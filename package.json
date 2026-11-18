@@ -55,7 +55,7 @@
     "koa-send": "^5.0.1",
     "koa-static": "^5.0.0",
     "lodash": "^4.17.21",
-    "nodemailer": "^7.0.13",
+    "nodemailer": "^10.1.4",
     "nunjucks": "^3.2.4",
     "pg": "^8.16.0",
     "postgres-array": "3.0.4",
