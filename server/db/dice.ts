@@ -16,6 +16,7 @@ export const getCampaign = async function (campaignId: number) {
     FROM campaigns c
     JOIN users u ON c.user_id = u.id
     WHERE c.id = $1
+      AND u.is_nuked = false
   `,
       [campaignId],
     )
@@ -33,6 +34,7 @@ export const listCampaignsByActivity = async function () {
     FROM campaigns c
     JOIN users ON c.user_id = users.id
     LEFT OUTER JOIN rolls r ON c.last_roll_id = r.id
+    WHERE users.is_nuked = false
     ORDER BY c.last_roll_id DESC NULLS LAST
     LIMIT 100
   `,
@@ -54,6 +56,7 @@ export const getCampaignsForUser = async function (userId: number) {
     JOIN users ON c.user_id = users.id
     LEFT OUTER JOIN rolls r ON c.last_roll_id = r.id
     WHERE c.user_id = $1
+      AND users.is_nuked = false
     ORDER BY c.id DESC
     LIMIT 100
   `,
@@ -73,6 +76,7 @@ export const getCampaignRolls = async function (campaignId: number) {
     FROM rolls r
     JOIN users ON r.user_id = users.id
     WHERE r.campaign_id = $1
+      AND users.is_nuked = false
     ORDER BY r.id DESC
     LIMIT 100
   `,
@@ -181,7 +185,10 @@ export const getRoll = async function (rollId: number) {
     FROM rolls r
     JOIN users u ON r.user_id = u.id
     JOIN campaigns c ON r.campaign_id = c.id
+    JOIN users cu ON c.user_id = cu.id
     WHERE r.id = $1
+      AND u.is_nuked = false
+      AND cu.is_nuked = false
   `,
       [rollId],
     )

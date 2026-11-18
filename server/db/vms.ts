@@ -13,6 +13,8 @@ export class VmParentRefused extends Error {
 
 ////////////////////////////////////////////////////////////
 
+// Loads a VM to delete it or to redirect to it, never to show it, so it keeps
+// a nuked author's VMs and staff can still delete one.
 export async function getVmById(id: number) {
   return pool
     .query<DbVm & { to_user: DbUser; from_user: DbUser }>(

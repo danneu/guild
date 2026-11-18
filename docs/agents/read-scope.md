@@ -1,7 +1,8 @@
 # Who may read what
 
 Read this before you load a topic, forum or post by id, list posts or topics
-across topics, or create or read a notification. `AGENTS.md` links here.
+across topics, create or read a notification, or read text a member wrote
+outside posts and topics. `AGENTS.md` links here.
 
 ## By-id loads
 
@@ -30,3 +31,27 @@ across topics, or create or read a notification. `AGENTS.md` links here.
   subscriptions.
 - Lookups by id and deletes return only pointer columns, so they need no
   gate. Most of them stay in `server/db/index.ts`.
+
+## Nuked authors
+
+- `server/db/index.ts#nukeUser` bans the account and hides its topics and
+  posts. It leaves the rest of what the account wrote in place, such as its
+  visitor messages, PMs, dice campaigns, statuses and album images.
+- So a read that a page shows a member's text from (html, markup, a title, a
+  note or a description) leaves out rows whose author has `users.is_nuked`.
+  Each reader does it in its own SQL, before any limit. Nothing fails when a
+  new reader forgets it.
+- It reads the live flag, so unnuke brings everything back. Hiding a convo or
+  a top-level VM hides the members' replies in it too. Cached counts still
+  count hidden rows.
+- A read that returns only ids, counts or pointer columns stays raw, so hiding
+  a row never drops a row that points at it. The inbox keeps a member's convo
+  whose latest PM came from a nuked participant
+  (`server/db/convos.ts#findConvosInvolvingUserId`).
+- A load that a route only acts on, and never shows, stays raw too, so staff
+  can still delete what a nuke hid (`server/db/vms.ts#getVmById`). Staff take
+  down a nuked account's images with REMOVE_UPLOADS, whose confirm page counts
+  them raw.
+- The notification feed deletes rows from a nuked sender, and rows whose convo
+  or VM a nuked member wrote (`server/db/notifications.ts#listFeed`). Unnuke
+  does not bring those rows back.

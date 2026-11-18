@@ -39,17 +39,39 @@ const loungeForum = { id: 10, title: "Mod Forum", category_id: 4 };
 const publicForum = { id: 3, title: "Free Roleplay", category_id: 2 };
 const forums = [loungeForum, publicForum];
 
-const member = { id: 1, uname: "Member", slug: "member", role: "member" };
-const gm = { id: 50, uname: "Gm", slug: "gm", role: "member" };
-const forumMod = {
+function userFixture(props: {
+  id: number;
+  uname: string;
+  slug: string;
+  role: string;
+  is_nuked?: boolean;
+}) {
+  return { is_nuked: false, ...props };
+}
+
+const member = userFixture({
+  id: 1,
+  uname: "Member",
+  slug: "member",
+  role: "member",
+});
+const gm = userFixture({ id: 50, uname: "Gm", slug: "gm", role: "member" });
+const forumMod = userFixture({
   id: 7,
   uname: "Forum Mod",
   slug: "forum-mod",
   role: "member",
-};
-const mod = { id: 30, uname: "Mod", slug: "mod", role: "mod" };
-const smod = { id: 31, uname: "Smod", slug: "smod", role: "smod" };
-const users = [member, gm, forumMod, mod, smod];
+});
+const mod = userFixture({ id: 30, uname: "Mod", slug: "mod", role: "mod" });
+const smod = userFixture({ id: 31, uname: "Smod", slug: "smod", role: "smod" });
+const spammer = userFixture({
+  id: 66,
+  uname: "Spammer",
+  slug: "spammer",
+  role: "banned",
+  is_nuked: true,
+});
+const users = [member, gm, forumMod, mod, smod, spammer];
 
 const forumMods = [{ forum_id: publicForum.id, user_id: forumMod.id }];
 
@@ -545,6 +567,14 @@ describe("listFeed", () => {
       member,
       () => ({ type: "TOPLEVEL_VM", vm_id: 8 }),
       true,
+    ],
+    // A nuke hides what the account wrote. The row would still show its VM
+    // html, so it goes too.
+    [
+      "a member's visitor message from a nuked spammer",
+      member,
+      () => ({ type: "TOPLEVEL_VM", vm_id: 8, from_user_id: spammer.id }),
+      false,
     ],
     // READ_POST lets a GM read every post in their topic, even a mod-hidden one
     [

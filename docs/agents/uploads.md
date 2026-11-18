@@ -40,4 +40,7 @@ store, remove or link an album image or avatar. `AGENTS.md` links here.
 ## Takedown
 
 Staff take down an account's uploads with REMOVE_UPLOADS. It stays apart from
-nuke, because unnuke cannot bring back a deleted object.
+nuke, because unnuke cannot bring back a deleted object. A nuke only hides the
+account's albums and images from the pages that list them (see
+[read-scope.md](read-scope.md#nuked-authors)), so their objects stay up until
+staff remove them.

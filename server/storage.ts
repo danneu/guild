@@ -382,15 +382,10 @@ export async function removeAvatar(userId: number): Promise<void> {
 ////////////////////////////////////////////////////////////
 // Takedown
 
-/**
- * Takes down every live album image the account holds and empties its avatar
- * slot: the staff action for a spam account's uploads. It is apart from nuke,
- * because unnuke cannot bring a deleted object back.
- */
-export async function removeUploads(
-  userId: number,
-): Promise<{ images: number }> {
-  const ids = await pool
+// Every live album image the account holds. It reads the rows of a nuked
+// account too, which the album pages hide, since a nuke leaves the objects up.
+async function liveImageIds(userId: number): Promise<string[]> {
+  return pool
     .query<{ id: string }>(
       `
       SELECT id
@@ -401,6 +396,22 @@ export async function removeUploads(
       [userId],
     )
     .then((res) => res.rows.map((row) => row.id));
+}
+
+/** How many album images removeUploads would take down, for its confirm page. */
+export async function countLiveImages(userId: number): Promise<number> {
+  return (await liveImageIds(userId)).length;
+}
+
+/**
+ * Takes down every live album image the account holds and empties its avatar
+ * slot: the staff action for a spam account's uploads. It is apart from nuke,
+ * because unnuke cannot bring a deleted object back.
+ */
+export async function removeUploads(
+  userId: number,
+): Promise<{ images: number }> {
+  const ids = await liveImageIds(userId);
   const images = await removeImages(userId, ids);
   await removeAvatar(userId);
   return { images };

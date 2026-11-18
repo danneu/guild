@@ -32,6 +32,7 @@ export const getConvos = async (ids: number[]) => {
     JOIN users u1 ON c.user_id = u1.id
     JOIN users u2 ON cp.user_id = u2.id
     WHERE c.id = ANY ($1::int[])
+      AND u1.is_nuked = false
     GROUP BY c.id, u1.id
   `,
       [ids],
@@ -168,6 +169,9 @@ export async function findConvosInvolvingUserId(
   const offset = config.CONVOS_PER_PAGE * (page - 1);
   const limit = config.CONVOS_PER_PAGE;
 
+  // A nuked member's convo drops out. The latest PM gives only its id, its
+  // date and its author's name, so its join stays raw: a PM from a nuked
+  // participant never drops a member's convo.
   const rows = await pool
     .query(
       `
@@ -198,6 +202,7 @@ WHERE c.id IN (
     FROM convos_participants cp
   )
   AND (cp2.folder = $1 AND cp2.user_id = $2)
+  AND u1.is_nuked = false
 GROUP BY c.id, u1.id, pms.id, u3.id, cp2.folder
 ORDER BY c.latest_pm_id DESC
 OFFSET $3

@@ -252,12 +252,11 @@ router.get(
   loadUser,
   async (ctx: Context) => {
     ctx.assertAuthorized(ctx.currUser, "REMOVE_UPLOADS", ctx.state.user);
-    const images = await db.images.getUserImages(ctx.state.user.id);
     // template: views/confirm_remove_uploads.html
     await ctx.render("confirm_remove_uploads", {
       ctx,
       user: ctx.state.user,
-      imageCount: images.length,
+      imageCount: await storage.countLiveImages(ctx.state.user.id),
       confirm: REMOVE_UPLOADS_CONFIRM,
       title: `Remove ${ctx.state.user.uname}'s uploads`,
     });

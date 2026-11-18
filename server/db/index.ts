@@ -880,7 +880,11 @@ SELECT
   to_json(c.*) "convo"
 FROM pms
 JOIN convos c ON pms.convo_id = c.id
+JOIN users pu ON pms.user_id = pu.id
+JOIN users cu ON c.user_id = cu.id
 WHERE pms.id = $1
+  AND pu.is_nuked = false
+  AND cu.is_nuked = false
   `,
       [id],
     )
@@ -968,6 +972,7 @@ SELECT
 FROM pms
 JOIN users u ON pms.user_id = u.id
 WHERE pms.convo_id = $1 AND pms.idx >= $2 AND pms.idx < $3
+  AND u.is_nuked = false
 GROUP BY pms.id, u.id
 ORDER BY pms.id
   `,
@@ -1044,7 +1049,7 @@ export const findPostsByTopicId = async function (topic, postType, page) {
       ) "user",
 
       CASE
-        WHEN u.current_status_id IS NOT NULL THEN
+        WHEN s.id IS NOT NULL THEN
           json_build_object(
             'html', s.html,
             'created_at', s.created_at
@@ -1055,7 +1060,8 @@ export const findPostsByTopicId = async function (topic, postType, page) {
     FROM posts p
     JOIN users u ON p.user_id = u.id
     LEFT OUTER JOIN ratings r ON p.id = r.post_id
-    LEFT OUTER JOIN statuses s ON u.current_status_id = s.id
+    LEFT OUTER JOIN statuses s
+      ON u.current_status_id = s.id AND u.is_nuked = false
     WHERE p.topic_id = $1
       AND p.type = $2
       AND p.idx >= $3
@@ -1098,9 +1104,13 @@ SELECT
   to_json(array_agg(u.*)) "participants"
 FROM pms
 JOIN convos c ON pms.convo_id = c.id
+JOIN users pu ON pms.user_id = pu.id
+JOIN users cu ON c.user_id = cu.id
 JOIN convos_participants cp ON cp.convo_id = pms.convo_id
 JOIN users u ON cp.user_id = u.id
 WHERE pms.id = $1
+  AND pu.is_nuked = false
+  AND cu.is_nuked = false
 GROUP BY pms.id, c.id
   `,
       [pmId],
@@ -2927,10 +2937,12 @@ export async function findLatestStatusesForUserId(user_id: number) {
   return pool
     .query(
       `
-    SELECT *
-    FROM statuses
-    WHERE user_id = $1
-    ORDER BY created_at DESC
+    SELECT s.*
+    FROM statuses s
+    JOIN users u ON s.user_id = u.id
+    WHERE s.user_id = $1
+      AND u.is_nuked = false
+    ORDER BY s.created_at DESC
     LIMIT 5
   `,
       [user_id],
@@ -2940,6 +2952,8 @@ export async function findLatestStatusesForUserId(user_id: number) {
 
 ////////////////////////////////////////////////////////////
 
+// Loads a status to like or delete it, never to show it, so it keeps a nuked
+// author's statuses and staff can still delete one.
 export const findStatusById = async function (id: number) {
   return pool
     .query(
@@ -3606,11 +3620,13 @@ SELECT
       FROM vms vms2
       JOIN users u2 ON vms2.from_user_id = u2.id
       WHERE vms2.parent_vm_id = vms.id
+        AND u2.is_nuked = false
     ) sub
   ) child_vms
 FROM vms
 JOIN users u ON vms.from_user_id = u.id
 WHERE vms.to_user_id = $1 AND parent_vm_id IS NULL
+  AND u.is_nuked = false
 ORDER BY vms.id DESC
 LIMIT 30
   `,

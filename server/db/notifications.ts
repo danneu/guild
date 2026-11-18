@@ -10,6 +10,10 @@
 // that fail. A deny deletes for good, so a row the gate cannot judge throws
 // before anything is deleted.
 //
+// The feed also drops what a nuke hides: a row from a nuked sender, and a row
+// whose convo or VM a nuked member wrote. Unnuke does not bring those rows
+// back (docs/agents/read-scope.md#nuked-authors).
+//
 // Lookups by id and deletes return only pointer columns, never post html or a
 // topic title, so they need no gate. Most of them stay in server/db/index.ts,
 // with the convo and VM notifications, which point at neither.
@@ -151,8 +155,9 @@ export async function listFeed(viewer: any): Promise<{
     assertRowTarget(row, target);
     return { row, target };
   });
-  const [kept, denied] = _.partition(loaded, ({ target }) =>
-    mayView(viewer, target),
+  const [kept, denied] = _.partition(
+    loaded,
+    ({ row, target }) => !isHiddenByNuke(row) && mayView(viewer, target),
   );
   const prunedTypes = await prune(
     viewer.id,
@@ -325,6 +330,17 @@ function mayView(viewer: Viewer, target: Target): boolean {
   return true;
 }
 
+// Keys on the sender and the row's pointers, not its type, like mayView, so a
+// new type is covered too. A row from a nuked sender fails. queryFeed leaves
+// out a convo or VM that a nuked member wrote, so a row that points at one but
+// has none fails too, such as a member's PM in a spammer's convo.
+function isHiddenByNuke(n: any): boolean {
+  if (n.from_user.is_nuked) return true;
+  if (n.convo_id !== null && !n.convo) return true;
+  if (n.vm_id !== null && !n.vm) return true;
+  return false;
+}
+
 // A missing viewer would read as a guest and be denied.
 function assertViewer(viewer: any): asserts viewer is Viewer {
   assert(viewer, "viewer is missing");
@@ -370,6 +386,19 @@ function assertPost(post: any) {
 // reads. The pointer columns' foreign keys cascade and a post never changes
 // topic, so a failure means a query drifted from what cancan reads.
 function assertRowTarget(n: any, target: Target) {
+  // What isHiddenByNuke reads
+  assert(
+    typeof n.from_user?.is_nuked === "boolean",
+    `notification ${n.id}: from_user.is_nuked must be a boolean`,
+  );
+  assert(
+    n.convo_id === null || Number.isInteger(n.convo_id),
+    `notification ${n.id}: convo_id must be an integer or null`,
+  );
+  assert(
+    n.vm_id === null || Number.isInteger(n.vm_id),
+    `notification ${n.id}: vm_id must be an integer or null`,
+  );
   assert(
     n.post_id === null || Number.isInteger(n.post_id),
     `notification ${n.id}: post_id must be an integer or null`,
@@ -597,7 +626,8 @@ RETURNING *
 ////////////////////////////////////////////////////////////
 // Reads
 
-// The newest 50, with each row's target
+// The newest 50, with each row's target. The convo and the VM are NULL when
+// there is none or a nuked member wrote it; isHiddenByNuke reads that.
 function queryFeed(toUserId: number) {
   assert(Number.isInteger(toUserId));
   return pool
@@ -607,26 +637,30 @@ SELECT
   n.*,
   to_json(u.*) "from_user",
   CASE
-    WHEN n.convo_id IS NOT NULL
+    WHEN c.id IS NOT NULL
     THEN
       json_build_object (
-        'id', n.convo_id,
+        'id', c.id,
         'title', c.title
       )
   END "convo",
   CASE
-    WHEN n.vm_id IS NOT NULL
+    WHEN vms.id IS NOT NULL
     THEN
       json_build_object (
-        'id', n.vm_id,
+        'id', vms.id,
         'html', vms.html
       )
   END "vm",
   ${TARGET_COLUMNS}
 FROM notifications n
 JOIN users u ON n.from_user_id = u.id
-LEFT OUTER JOIN convos c ON n.convo_id = c.id
-LEFT OUTER JOIN vms ON n.vm_id = vms.id
+LEFT OUTER JOIN (
+  convos c JOIN users cu ON c.user_id = cu.id AND cu.is_nuked = false
+) ON n.convo_id = c.id
+LEFT OUTER JOIN (
+  vms JOIN users vu ON vms.from_user_id = vu.id AND vu.is_nuked = false
+) ON n.vm_id = vms.id
 LEFT OUTER JOIN posts p ON n.post_id = p.id
 LEFT OUTER JOIN topics t ON t.id = COALESCE(p.topic_id, n.topic_id)
 LEFT OUTER JOIN forums f ON t.forum_id = f.id

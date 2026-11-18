@@ -26,6 +26,7 @@ export async function getImage(uuid: string) {
     JOIN users ON images.user_id = users.id
     WHERE images.id = $1
       AND deleted_at IS NULL
+      AND users.is_nuked = false
   `,
       [uuid],
     )
@@ -52,6 +53,7 @@ export async function getUserImage(ownerId: number, uuid: string) {
     WHERE images.id = $1
       AND images.user_id = $2
       AND images.deleted_at IS NULL
+      AND users.is_nuked = false
   `,
       [uuid, ownerId],
     )
@@ -72,6 +74,7 @@ export async function getLatestImages(limit = 10) {
     FROM images
     JOIN users ON images.user_id = users.id
     WHERE images.deleted_at IS NULL
+      AND users.is_nuked = false
     ORDER BY images.created_at DESC
     LIMIT $1
   `,
@@ -94,6 +97,7 @@ export async function getUserAlbums(userId: number) {
     FROM albums
     JOIN users ON albums.user_id = users.id
     WHERE albums.user_id = $1
+      AND users.is_nuked = false
     ORDER BY albums.created_at DESC
   `,
       [userId],
@@ -116,6 +120,7 @@ export async function getUserImages(userId: number) {
     JOIN users ON images.user_id = users.id
     WHERE images.user_id = $1
       AND images.deleted_at IS NULL
+      AND users.is_nuked = false
     ORDER BY images.created_at DESC
   `,
       [userId],
@@ -138,6 +143,7 @@ export async function getAlbumImages(albumId: number) {
     JOIN users ON images.user_id = users.id
     WHERE images.album_id = $1
       AND images.deleted_at IS NULL
+      AND users.is_nuked = false
     ORDER BY images.created_at DESC
   `,
       [albumId],
@@ -180,6 +186,7 @@ export async function getAlbum(albumId: number) {
     FROM albums a
     JOIN users u ON a.user_id = u.id
     WHERE a.id = $1
+      AND u.is_nuked = false
   `,
       [albumId],
     )
@@ -188,7 +195,8 @@ export async function getAlbum(albumId: number) {
 
 // The album only if ownerId owns it. A route that authorized a user and then
 // acts on one of their albums loads it here, not with getAlbum, so the album
-// it acts on belongs to the user it authorized.
+// it acts on belongs to the user it authorized. Routes only act on it, never
+// show it, so it keeps a nuked owner's albums.
 export async function getUserAlbum(ownerId: number, albumId: number) {
   assert(Number.isInteger(ownerId));
   assert(Number.isInteger(albumId));
