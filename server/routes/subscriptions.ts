@@ -6,6 +6,7 @@ import _ from "lodash";
 // 1st
 import * as db from "../db";
 import * as belt from "../belt";
+import { staysOnHost } from "../request_host";
 import { Context } from "koa";
 
 ////////////////////////////////////////////////////////////
@@ -23,6 +24,16 @@ function lowerSubNotificationCounts(ctx: Context, prunedSubCount: number) {
     0,
     ctx.currUser.notifications_count - prunedSubCount,
   );
+}
+
+// The page a subscribe or unsubscribe returns to: the form's redirectTo when
+// it stays on this host, else the list. Never a refusal, since the write has
+// already gone through.
+function returnTarget(ctx: Context): string {
+  const target = ctx.query.redirectTo;
+  return staysOnHost(target, ctx.req.headers.host)
+    ? target
+    : "/me/subscriptions";
 }
 
 ////////////////////////////////////////////////////////////
@@ -95,8 +106,7 @@ router.post("/me/subscriptions", async (ctx: Context) => {
   if (ctx.request.body["return-to-topic"]) {
     return ctx.response.redirect(topic.url);
   }
-  const redirectTo = ctx.query.redirectTo || "/me/subscriptions";
-  ctx.response.redirect(redirectTo as string);
+  ctx.response.redirect(returnTarget(ctx));
 });
 
 //
@@ -115,8 +125,7 @@ router.delete("/me/subscriptions/:topicSlug", async (ctx: Context) => {
     return ctx.response.redirect(`/topics/${topicId}`);
   }
   ctx.flash = { message: ["success", "Successfully unsubscribed"] };
-  const redirectTo = ctx.query.redirectTo || "/me/subscriptions";
-  ctx.response.redirect(redirectTo as string);
+  ctx.response.redirect(returnTarget(ctx));
 });
 
 ////////////////////////////////////////////////////////////

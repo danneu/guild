@@ -2,8 +2,8 @@
 
 Read this before you add a write route, read a request body, return JSON or
 HTML outside a view, set a cookie, compare a URL with the request's host,
-load a script or stylesheet in a view, or call another service. `AGENTS.md`
-links here.
+redirect to a target that is not a fixed path, load a script or stylesheet
+in a view, or call another service. `AGENTS.md` links here.
 
 ## Cross-site writes
 
@@ -42,6 +42,25 @@ links here.
   `ScreeningBudgetExceeded` leave it off for that reason.
 - A route whose form must keep a value that goes back by URL, such as the
   reset token, catches its refusal and redirects itself.
+
+## Redirects
+
+- `server/middleware/response-edge.ts` checks the final Location of every
+  response, however it was set: `ctx.redirect`, `ctx.back`, `ctx.set`, or
+  middleware. One that a browser on http or https could follow to another
+  host answers 500, unless it is an https URL on the edge's `OUTSIDE_HOSTS`
+  list.
+- The edge judges the host against the raw Host header, never `HOST`, which
+  names production on staging. `OUTSIDE_HOSTS` is for a redirect the server
+  builds to another service. Add a host there for a new one.
+- A target the request supplies, such as a `redirectTo` query param, passes
+  `server/request_host.ts#staysOnHost` with the raw Host header. When it
+  fails, redirect to the route's own default page rather than refuse: the
+  write has already gone through. `staysOnHost` never allows the outside
+  list, so a form cannot name those hosts either.
+- Judge the target as sent. `new URL(value, base).pathname` is no check: it
+  turns `/.//evil.example/x`, a path on this host, into `//evil.example/x`,
+  another host.
 
 ## HTML and JSON output
 

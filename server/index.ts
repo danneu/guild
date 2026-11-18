@@ -50,8 +50,9 @@ import {
 import { responseEdge, trustRendered } from "./middleware/response-edge.js";
 import { sendJson } from "./api_json.js";
 
-// JSON leaves only through sendJson and HTML only through ctx.render. The
-// first app.use, so it sees every response's final body.
+// Checks what every response may carry: its Location, JSON and HTML. The
+// rules live in server/middleware/response-edge.ts. The first app.use, so it
+// sees every response's final headers and body.
 app.use(responseEdge());
 
 // Resolve the trusted client IP. cf-connecting-ip is honored only when the TCP
@@ -931,8 +932,7 @@ router.del("/me/notifications", async (ctx: Context) => {
   await db.clearNotifications(ctx.currUser.id, ctx.vals.ids);
 
   ctx.flash = { message: ["success", "Notifications cleared"] };
-  var redirectTo = ctx.request.body["redirect-to"] || "/me/notifications";
-  ctx.response.redirect(redirectTo);
+  ctx.response.redirect("/me/notifications");
 });
 
 // Delete only convo notifications

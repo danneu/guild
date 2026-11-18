@@ -27,3 +27,22 @@ export function namesRequestHost(
   if (!URL.canParse(base)) return false;
   return new URL(base).host === url.host;
 }
+
+// True when a browser that sent this request would follow `value`, as a
+// Location, to the host in `hostHeader`, the raw Host header. The value is
+// resolved under both schemes, since TLS ends before Node and the browser may
+// have used either: "http:evil.example" stays here from an http page but
+// leaves from an https one. The URL parser is the browser's own, so
+// backslashes, tabs and dot segments need no rule here. Routes ask this of a
+// return target the request supplies; an empty one names no target.
+export function staysOnHost(
+  value: unknown,
+  hostHeader: string | undefined,
+): value is string {
+  if (typeof value !== "string" || value === "") return false;
+  return ["http:", "https:"].every((scheme) => {
+    const base = `${scheme}//${hostHeader}`;
+    if (!URL.canParse(value, base)) return false;
+    return namesRequestHost(new URL(value, base), hostHeader);
+  });
+}

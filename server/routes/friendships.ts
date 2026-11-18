@@ -5,6 +5,7 @@ import * as db from "../db";
 import { TooManyFriends } from "../db/refusals";
 import * as pre from "../presenters";
 import * as belt from "../belt";
+import { staysOnHost } from "../request_host";
 import { Context } from "koa";
 
 const router = new Router();
@@ -16,7 +17,8 @@ const router = new Router();
 // - to_user_id Int
 // - commit: Required 'add' | 'remove'
 //
-// Optionally pass a redirect-to (URI encoded)
+// Optionally pass a redirect-to query param, a page on this host to return to.
+// Any other value returns to the other user's profile instead.
 router.post("/me/friendships", async (ctx: Context) => {
   // ensure user logged in
   ctx.assert(ctx.currUser, 404);
@@ -25,20 +27,10 @@ router.post("/me/friendships", async (ctx: Context) => {
   ctx.validateBody("commit").isIn(["add", "remove"]);
   ctx.validateBody("to_user_id").toInt();
 
-  // nodeUrl already imported at top
-
-  let redirectTo;
-  if (typeof ctx.query["redirect-to"] === "string") {
-    try {
-      const decodedUrl = decodeURIComponent(ctx.query["redirect-to"]);
-      // Handle relative URLs by providing a base URL
-      const parsed = new URL(decodedUrl, `http://localhost`);
-      redirectTo = parsed.pathname;
-    } catch (err) {
-      // If URL parsing fails, ignore the redirect parameter
-      console.warn("Failed to parse redirect URL:", err);
-    }
-  }
+  const target = ctx.query["redirect-to"];
+  const redirectTo = staysOnHost(target, ctx.req.headers.host)
+    ? target
+    : "/users/" + ctx.vals.to_user_id;
 
   // update db
   if (ctx.vals.commit === "add") {
@@ -49,7 +41,7 @@ router.post("/me/friendships", async (ctx: Context) => {
         ctx.flash = {
           message: ["danger", "Cannot have more than 100 friends"],
         };
-        ctx.redirect(redirectTo || "/users/" + ctx.vals.to_user_id);
+        ctx.redirect(redirectTo);
         return;
       }
       throw err;
@@ -61,7 +53,7 @@ router.post("/me/friendships", async (ctx: Context) => {
   }
 
   // redirect
-  ctx.redirect(redirectTo || "/users/" + ctx.vals.to_user_id);
+  ctx.redirect(redirectTo);
 });
 
 ////////////////////////////////////////////////////////////
