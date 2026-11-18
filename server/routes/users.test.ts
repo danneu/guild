@@ -25,9 +25,10 @@ vi.mock("../cache3", () => ({
   default: { get: vi.fn(() => new Set()), set: vi.fn() },
 }));
 vi.mock("../bbcode", () => ({ default: vi.fn() }));
-// Signup's human test is passed; Turnstile has no test double here.
-vi.mock("../middleware/cloudflare-turnstile", () => ({
-  default: (_ctx: Context, next: Next) => next(),
+// Signup's gate admits. It reads the registration switch and asks
+// Cloudflare, which have no test double here.
+vi.mock("../signup_gate", () => ({
+  admitSignup: vi.fn(async () => ({ type: "ADMITTED", permit: {} })),
 }));
 vi.mock("../db/util", () => ({ pool: {}, withPgPoolTransaction: vi.fn() }));
 vi.mock("../emailer", () => ({}));
@@ -43,7 +44,6 @@ vi.mock("../avatar", () => ({
 vi.mock("../storage", () => ({ removeAvatar: vi.fn(async () => {}) }));
 
 vi.mock("../db", () => ({
-  keyvals: { getValueByKey: vi.fn() },
   findUserByUname: vi.fn(),
   findUserByEmail: vi.fn(),
   createUserWithSession: vi.fn(),
@@ -183,7 +183,6 @@ describe("POST /users", () => {
   // Scenario: a visitor registers a retired name, which createUserWithSession
   // refuses.
   it("sends a taken name back to the form with a flash", async () => {
-    vi.mocked(db.keyvals.getValueByKey).mockResolvedValue(true);
     vi.mocked(db.createUserWithSession).mockResolvedValue({
       type: "UNAME_TAKEN",
     });

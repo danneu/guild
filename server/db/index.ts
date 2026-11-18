@@ -14,6 +14,7 @@ import { hashPassword } from "../auth";
 import * as pre from "../presenters";
 import { can, MOD_CATEGORY_ID, type Role } from "../cancan";
 import { fetchReadable } from "../readable";
+import type { SignupPermit } from "../signup_gate";
 import {
   pool,
   maybeOneRow,
@@ -1431,13 +1432,21 @@ function refuseIfTaken(err: unknown): never {
 
 // Creates a user and a session (logs them in). A name in the unames history
 // stays taken unless an admin let it be recycled.
-export async function createUserWithSession(props: {
-  uname: string;
-  ipAddress: string;
-  password: string;
-  email: string;
-}): Promise<SignupResult> {
+//
+// The permit is proof that the request passed
+// server/signup_gate.ts#admitSignup, so no caller can make an account without
+// the registration switch and the human test.
+export async function createUserWithSession(
+  permit: SignupPermit,
+  props: {
+    uname: string;
+    ipAddress: string;
+    password: string;
+    email: string;
+  },
+): Promise<SignupResult> {
   debug("[createUserWithSession] props: ", props);
+  assert(permit, "createUserWithSession needs a SignupPermit");
   assert(_.isString(props.uname));
   assert(_.isString(props.ipAddress));
   assert(_.isString(props.password));

@@ -1,7 +1,7 @@
 # Auth, roles and bans
 
-Read this before you touch login, sessions, passwords, roles, bans, the email
-gate, or a `can()` check. `AGENTS.md` links here.
+Read this before you touch login, signup, sessions, passwords, roles, bans,
+the email gate, or a `can()` check. `AGENTS.md` links here.
 
 ## Permissions
 
@@ -26,6 +26,28 @@ Auth is session-based. `server/cancan.ts` holds the role-based rules; roles
   rule about their live roles before it writes.
 - `db.nukeUser` is checked only at its route, because the automatic nukes
   have no staff actor.
+
+## Signup
+
+- Make an account only through `server/db/index.ts#createUserWithSession`.
+  It requires a `SignupPermit`, and only
+  `server/signup_gate.ts#admitSignup` makes one. So a new account path, such
+  as an OAuth signup or an admin tool, fails `pnpm run check` unless it
+  passes the gate.
+- The permit guards only callers of that function. Code that inserts a users
+  row itself skips the gate, so do not write one.
+- A permit proves that the gate ran, not that each account had its own
+  solve: code that holds one can pass it again. Use it in the request that
+  made it, and never keep it.
+- `admitSignup` reads the `REGISTRATION_ENABLED` keyval before it asks
+  Cloudflare, so a closed signup costs no call. With Turnstile unconfigured
+  it admits, as local dev needs.
+- Call the gate before any lookup by name or email. A route that looks up an
+  email first lets a bot ask which emails have accounts without a solve.
+- `server/turnstile.ts#verifyTurnstileToken` is the only call to Cloudflare.
+  It returns false only when the token is not solved, and throws when it
+  could not check. Signup answers a throw with "try again"; login
+  (`server/auth.ts#isChallengeSolved`) counts it as unsolved. Neither admits.
 
 ## Login and passwords
 

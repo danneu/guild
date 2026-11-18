@@ -1,6 +1,5 @@
 "use strict";
 
-import checkCloudflareTurnstile from "../middleware/cloudflare-turnstile";
 import { FlashParams } from "../middleware/flash";
 
 // Node
@@ -37,6 +36,7 @@ import { sendJson } from "../api_json";
 import { catchRefusal, SendBudgetExceeded } from "../db/send_budget";
 import { VmParentRefused } from "../db/vms";
 import { AlreadyNuked } from "../db/refusals";
+import { admitSignup } from "../signup_gate";
 
 const router = new Router();
 
@@ -235,10 +235,34 @@ router.post("/users/:slug/unames", async (ctx: Context) => {
 // - email
 // - cf-turnstile-response
 //
+// The gate runs first, so a request it refuses never reaches the name and
+// email lookups below. Otherwise a bot could ask which emails have accounts
+// without solving the human test.
+//
 // @koa2
-router.post("/users", checkCloudflareTurnstile, async (ctx: Context) => {
-  if (!(await db.keyvals.getValueByKey("REGISTRATION_ENABLED"))) {
-    return ctx.redirect("/register");
+router.post("/users", async (ctx: Context) => {
+  // The IP-resolution middleware runs first, so ctx.request.ip is the trusted
+  // value rather than the raw, spoofable cf-connecting-ip header.
+  const gate = await admitSignup(
+    ctx.request.body["cf-turnstile-response"],
+    ctx.request.ip,
+  );
+  switch (gate.type) {
+    case "ADMITTED":
+      break;
+    case "CLOSED":
+      ctx.redirect("/register");
+      return;
+    case "UNSOLVED":
+      refuseSignup(ctx, "You failed the human test");
+      return;
+    case "UNCHECKED":
+      refuseSignup(ctx, "Could not check the human test. Try again.");
+      return;
+    default: {
+      const exhaustive: never = gate;
+      throw exhaustive;
+    }
   }
 
   // Validation
@@ -275,7 +299,7 @@ router.post("/users", checkCloudflareTurnstile, async (ctx: Context) => {
 
   // User params validated, so create a user and log them in. Each refusal
   // returns; only CREATED goes on past the switch.
-  const result = await db.createUserWithSession({
+  const result = await db.createUserWithSession(gate.permit, {
     uname: ctx.vals.uname,
     email: ctx.vals.email,
     password: ctx.vals.password1,

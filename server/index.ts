@@ -215,7 +215,7 @@ import makeAgo from "./ago";
 import protectCsrf from "./middleware/protect-csrf";
 import { trailingSlash } from "./middleware/trailing-slash";
 import { FlashParams, FORM_REFILL_FIELDS } from "./middleware/flash";
-import { verifyTurnstileToken } from "./middleware/cloudflare-turnstile";
+import { verifyTurnstileToken } from "./turnstile";
 import {
   isEmailGateSatisfied,
   needsEmailConfirmation,
