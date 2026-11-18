@@ -12,9 +12,33 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 const { query } = vi.hoisted(() => ({ query: vi.fn() }));
 
 vi.mock("../db/util.js", () => ({ pool: { query } }));
-vi.mock("../cache3", () => ({
-  default: { get: (key: string) => (key === "categories" ? [] : {}) },
-}));
+// A public category and the staff one, shaped as cache3 holds them
+// (server/db/index.ts#findCategoriesWithForums).
+vi.mock("../cache3", async () => {
+  const { MOD_CATEGORY_ID } = await import("../cancan");
+  const categories = [
+    {
+      id: 1,
+      title: "Roleplay",
+      forums: [{ id: 2, title: "Open Roleplay", category_id: 1, pos: 0 }],
+    },
+    {
+      id: MOD_CATEGORY_ID,
+      title: "Staff",
+      forums: [
+        {
+          id: 9,
+          title: "Moderation Queue",
+          category_id: MOD_CATEGORY_ID,
+          pos: 0,
+        },
+      ],
+    },
+  ];
+  return {
+    default: { get: (key: string) => (key === "categories" ? categories : {}) },
+  };
+});
 
 import searchRoutes from "./search";
 
@@ -116,5 +140,20 @@ describe("GET /search", () => {
     expect(body).not.toContain("<img");
     expect(body).toContain("&lt;img src=x onerror=alert(1)&gt;");
     expect(body).toContain("hello <b>dragon</b>, &lt;img");
+  });
+
+  // Intent: the filter panel's forum list carries the forums a member may
+  // read and no staff forum.
+  // Why it exists: the page prints that list for client/search_filter.tsx. If
+  // the route or the view passed cache3's full categories, every member would
+  // see the staff forums' titles (finding 261117-0852-061).
+  // Scenario: cache3 holds a public category and the staff one.
+  it("offers a member no staff forum in the filter", async () => {
+    const res = await fetch(`${baseUrl}/search`);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("Open Roleplay");
+    expect(body).not.toContain("Moderation Queue");
   });
 });

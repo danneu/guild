@@ -217,9 +217,11 @@
 
 
 {% block scripts %}
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/1.5.10/clipboard.min.js"></script>
   <script>
-   new Clipboard('button.copy-link');
+   $(document).on('click', 'button.copy-link', function () {
+     navigator.clipboard.writeText($(this).attr('data-clipboard-text'))
+       .catch(function (err) { console.error('Copy failed', err); });
+   });
   </script>
   <script>
    $('button.copy-link').tooltip({

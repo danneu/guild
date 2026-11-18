@@ -19,7 +19,6 @@ export const currUser = function () {
 
     const user = await db.findUserBySessionId(sessionId);
     ctx.currUser = pre.presentUser(user);
-    ctx.state.session_id = sessionId;
     return next();
   };
 };

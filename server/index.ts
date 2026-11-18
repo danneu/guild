@@ -102,8 +102,9 @@ app.use((ctx: Context, next: Next) => {
 // them.
 //
 // Example value of `dist`:
-// { css: 'all-ab42cf1.css', js: 'all-d181a21.js' }'
-const dist: { css: string; js: string } | undefined = (() => {
+// { css: 'all-ab42cf1.css', js: 'all-d181a21.js',
+//   search: 'search_filter-0c5e1f2.js' }
+const dist: { css: string; js: string; search: string } | undefined = (() => {
   const manifestPath = "./dist/rev-manifest.json";
   let body: string;
   try {
@@ -119,10 +120,12 @@ const dist: { css: string; js: string } | undefined = (() => {
   const manifest = JSON.parse(body) as {
     "all.css": string;
     "all.js": string;
+    "search_filter.js": string;
   };
   const dist = {
     css: manifest["all.css"],
     js: manifest["all.js"],
+    search: manifest["search_filter.js"],
   };
   console.log("dist set", dist);
   return dist;
@@ -143,26 +146,22 @@ app.use(
 // Handle blue/green deployment issue where browser requests asset file
 // that doesn't exist anymore. We'll just serve them the current file.
 if (dist) {
-  const ASSET_FILE_REGEX = /\/all-[0-9a-f]+\.(css|js)$/;
+  const ASSET_FILE_REGEX = /\/(all|search_filter)-[0-9a-f]+\.(css|js)$/;
+  // The current file for each name in dist/rev-manifest.json
+  const current: Record<string, string> = {
+    "all.css": dist.css,
+    "all.js": dist.js,
+    "search_filter.js": dist.search,
+  };
 
   const distPath = join(__dirname, "..", "dist");
 
   app.use(async (ctx: Context, next: Next) => {
     await next();
-    if (
-      ctx.response.status === 404 &&
-      ASSET_FILE_REGEX.test(ctx.request.path)
-    ) {
-      const options = {
-        root: distPath,
-      };
-      // serve current css file
-      if (ctx.request.path.endsWith(".css")) {
-        return koaSend(ctx, dist.css, options);
-      } else if (ctx.request.path.endsWith(".js")) {
-        return koaSend(ctx, dist.js, options);
-      } else {
-      }
+    const match = ASSET_FILE_REGEX.exec(ctx.request.path);
+    const file = match ? current[`${match[1]}.${match[2]}`] : undefined;
+    if (ctx.response.status === 404 && file) {
+      return koaSend(ctx, file, { root: distPath });
     }
   });
 }
@@ -1834,16 +1833,6 @@ router.post("/current-feedback-topic/replies", async (ctx: Context) => {
 
   ctx.flash = { message: ["success", "Thanks for the feedback <3"] };
   ctx.redirect("/");
-});
-
-router.get("/chat", async (ctx: Context) => {
-  await ctx.render("chat", {
-    ctx,
-    session_id: ctx.state.session_id,
-    chat_server_url: config.CHAT_SERVER_URL,
-    //
-    title: "Chat",
-  });
 });
 
 /// /////////////////////////////////////////////////////////

@@ -11,6 +11,7 @@ yarn-error.log*
 # Build artifacts (will be rebuilt)
 build
 dist
+public/bundle
 
 # Documentation
 *.md

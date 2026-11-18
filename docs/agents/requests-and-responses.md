@@ -1,8 +1,8 @@
 # Requests and responses
 
 Read this before you add a write route, read a request body, return JSON or
-HTML outside a view, set a cookie, or compare a URL with the request's host.
-`AGENTS.md` links here.
+HTML outside a view, set a cookie, compare a URL with the request's host, or
+load a script or stylesheet in a view. `AGENTS.md` links here.
 
 ## Cross-site writes
 
@@ -48,6 +48,28 @@ HTML outside a view, set a cookie, or compare a URL with the request's host.
   JSON-encode, such as a db row, answers 500 at
   `server/middleware/response-edge.ts`. `pnpm test` fails on a handler that
   stringifies a body or sets a JSON type itself. Add a view instead.
+
+## Browser code
+
+- Every script and stylesheet a view loads comes from the forum itself.
+  Code from another site runs with the member's session, so whoever controls
+  that site, or a redirect on the way, can act as the member.
+- `server/offsite_script_sweep.test.ts` fails on a tag in `views/` whose URL
+  does not resolve to the page's own origin. A template expression, or a
+  live service the forum cannot serve itself (such as Turnstile), needs an
+  exact reviewed entry there.
+- To use a library, add it to `package.json`. Copy its built file into
+  `public/vendor/` with `gulpfile.ts#copyVendorDeps`, or import it from
+  browser code in `client/`, which `gulpfile.ts#bundleSearch` bundles with
+  esbuild into `public/bundle/`. `client/` has its own `tsconfig.json`, which
+  `pnpm run check` also runs.
+- Git does not hold the bundle. `pnpm run dev` and `pnpm start` build it
+  before the server starts, so rerun `pnpm exec gulp bundleSearch` after an
+  edit to `client/`. `pnpm run build` revs a copy into `dist/` like
+  `all.js`, since `server/index.ts` serves `public/` with a one-year max-age.
+- The sweep reads static tags only. It misses a script that inline code adds
+  at runtime, and it does not read SVG files, which can carry script of their
+  own.
 
 ## Cookies and TLS
 

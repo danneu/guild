@@ -1681,9 +1681,8 @@ var autolinkerOpts = {
   twitter: false,
   hashtag: false,
   newWindow: false,
-  // Marks every link the way tags.url does, for the editor preview and
-  // public/js/chat.js. Stored html gets its rel and target from
-  // server/user_html.ts.
+  // Marks every link the way tags.url does, for the editor preview. Stored
+  // html gets its rel and target from server/user_html.ts.
   replaceFn: function (match) {
     return match
       .buildTag()
@@ -1698,11 +1697,6 @@ function renderOrRefuse(markup) {
   var ret = XBBCODE.render(markup);
   if (ret.tooDeep) throw new MarkupRejected(tooDeepMessage);
   return ret.html;
-}
-
-// Allow public/js/chat.js to access it
-if (isBrowser) {
-  window.autolinkerOpts = autolinkerOpts;
 }
 
 if (typeof window === "undefined") {

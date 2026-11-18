@@ -76,7 +76,10 @@ three tabs are ordinary posts.
   into `public/`. Edit the `server/` source, then run
   `pnpm exec gulp copyServerFiles` and commit the copies with it. Gulp also
   copies browser vendor libs from `node_modules` into `public/vendor/`
-  (`copyVendorDeps`); do not hand-vendor them.
+  (`copyVendorDeps`); do not hand-vendor them. It bundles `client/` into
+  `public/bundle/` (`bundleSearch`), which git does not hold. Views load
+  code only from the forum; see
+  [requests and responses](docs/agents/requests-and-responses.md#browser-code).
 - **Behind Fly, TLS ends before Node.** `ctx.secure` and `ctx.protocol` say
   http. Never decide anything on them.
 

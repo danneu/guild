@@ -221,9 +221,6 @@ export const CLOAKED_SLUGS = (process.env.CLOAKED_SLUGS || "")
 
 export const ENABLE_ADS = !!process.env.ENABLE_ADS;
 
-export const CHAT_SERVER_URL =
-  process.env.CHAT_SERVER_URL || "http://localhost:3001";
-
 // 512-bit (64byte) secret used to generate email verification token
 // Unused since plan/2026-08-11-1613 replaced the deterministic
 // HMAC-SHA512(SECRET, email) verification link with single-use uuid tokens.

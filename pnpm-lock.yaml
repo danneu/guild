@@ -180,6 +180,9 @@ importers:
       discord-api-types:
         specifier: ^0.38.12
         version: 0.38.12
+      esbuild:
+        specifier: ^0.25.5
+        version: 0.25.5
       gulp:
         specifier: ^5.0.1
         version: 5.0.1

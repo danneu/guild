@@ -8,7 +8,7 @@ const debug = createDebug("app:search");
 // 1st
 import cache3 from "../cache3";
 import * as pre from "../presenters";
-import { MOD_CATEGORY_ID } from "../cancan";
+import { can, MOD_CATEGORY_ID, type Actor } from "../cancan";
 import { fetchReadable } from "../readable";
 import { searchHeadlineSql, splitSearchHeadline } from "../search_headline";
 import { Context } from "koa";
@@ -16,6 +16,27 @@ import { Context } from "koa";
 ////////////////////////////////////////////////////////////
 
 const router = new Router();
+
+////////////////////////////////////////////////////////////
+
+// The forums the filter panel offers (client/search_filter.tsx): the public
+// categories, each forum kept only when the viewer may read it, with only the
+// fields the panel shows. The page prints this, so it must not carry a staff
+// forum's title to a member.
+function forumChoices(viewer: Actor) {
+  // TODO: Stop hard-coding lexus lounge authorization
+  // Ignore lexus-lounge and test categories
+  return cache3
+    .get("categories")
+    .filter((c) => c.id !== MOD_CATEGORY_ID && c.id !== 5)
+    .map((c) => ({
+      id: c.id,
+      title: c.title,
+      forums: c.forums
+        .filter((f) => can(viewer, "READ_FORUM", f))
+        .map((f) => ({ id: f.id, title: f.title })),
+    }));
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -40,12 +61,6 @@ router.get("/search", async (ctx: Context) => {
 
   ctx.set("X-Robots-Tag", "noindex");
 
-  // TODO: Stop hard-coding lexus lounge authorization
-  // Ignore lexus-lounge and test categories
-  const publicCategories = cache3.get("categories").filter((c) => {
-    return c.id !== MOD_CATEGORY_ID && c.id !== 5;
-  });
-
   const perPage = 50;
 
   const page = ctx
@@ -63,10 +78,7 @@ router.get("/search", async (ctx: Context) => {
       posts: [],
       className: "search",
       searchParams: {},
-      reactData: {
-        searchParams: {},
-        categories: publicCategories,
-      },
+      forumChoices: forumChoices(ctx.currUser),
     });
     return;
   }
@@ -205,10 +217,7 @@ router.get("/search", async (ctx: Context) => {
     perPage,
     className: "search",
     searchParams: params,
-    reactData: {
-      searchParams: params,
-      categories: publicCategories,
-    },
+    forumChoices: forumChoices(ctx.currUser),
   });
 });
 

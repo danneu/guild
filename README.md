@@ -50,8 +50,11 @@ dist
 ├── all-06d6e3ed22.js
 ├── all-7dd8853d5f.css
 ├── fonts
-└── rev-manifest.json
+├── rev-manifest.json
+└── search_filter-5b1d0e7a3c.js
 ```
+
+The search page's filter panel is React code in `./client/`, which gulp bundles with esbuild into `./public/bundle/`. `pnpm start` and `pnpm run dev` build that bundle before the server starts.
 
 You can run the task with:
 

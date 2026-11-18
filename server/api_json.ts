@@ -43,7 +43,7 @@ const views = {
   // when db.ratePost finds a duplicate rating.
   rating: (rating: { post_id: number; type: string } | null | undefined) =>
     rating ? { post_id: rating.post_id, type: rating.type } : null,
-  // The uname typeaheads in views/edit_topic.html and views/search_results.html
+  // The uname typeaheads in views/edit_topic.html and client/search_filter.tsx
   unames: (unames: Iterable<string>) => Array.from(unames),
   // The TOO_SOON alerts in views/show_topic.html and views/homepage.html, and
   // the resend script in views/macros/verify_email.html

@@ -6,6 +6,7 @@ import minifyCss from "gulp-cssnano";
 import uglifyJs from "gulp-uglify";
 import { deleteAsync } from "del";
 import vinylPaths from "vinyl-paths";
+import esbuild from "esbuild";
 
 // Important: Keep in sync with views/layouts/master.html
 
@@ -33,6 +34,30 @@ function copyVendorDeps() {
 async function copyServerFiles() {
   await src("server/bbcode.js").pipe(dest("public/vendor/xbbcode/xbbcode/"));
   await src("server/ago.js").pipe(dest("public/js/"));
+}
+
+// Bundles the search page's filter panel, React included, into one file that
+// views/search_results.html loads from the forum. Git does not hold the
+// bundle: pnpm run dev and pnpm start run this task before the server. The
+// default task also revs a copy into dist, since server/index.ts serves
+// public/ with a one-year max-age, so a fixed name would keep old code in
+// members' browsers.
+async function bundleSearch() {
+  await esbuild.build({
+    entryPoints: ["client/search_filter.tsx"],
+    outfile: "public/bundle/search_filter.js",
+    bundle: true,
+    minify: true,
+    format: "iife",
+    target: "es2020",
+    jsx: "automatic",
+    define: { "process.env.NODE_ENV": '"production"' },
+    logLevel: "warning",
+  });
+}
+
+function copySearchBundle() {
+  return src("public/bundle/search_filter.js").pipe(dest("dist"));
 }
 
 function buildCss() {
@@ -78,13 +103,13 @@ function buildJs() {
 
 const buildAssets = series(
   clean,
-  parallel(copyVendorDeps, copyServerFiles),
-  parallel(copyFonts, buildCss, buildJs),
+  parallel(copyVendorDeps, copyServerFiles, bundleSearch),
+  parallel(copyFonts, buildCss, buildJs, copySearchBundle),
   manifest,
 );
 
 function manifest() {
-  return src(["dist/all.css", "dist/all.js"])
+  return src(["dist/all.css", "dist/all.js", "dist/search_filter.js"])
     .pipe(vinylPaths(deleteAsync))
     .pipe(rev())
     .pipe(dest("dist"))
@@ -92,5 +117,13 @@ function manifest() {
     .pipe(dest("dist"));
 }
 
-export { clean, copyFonts, copyVendorDeps, copyServerFiles, buildCss, buildJs };
+export {
+  clean,
+  copyFonts,
+  copyVendorDeps,
+  copyServerFiles,
+  bundleSearch,
+  buildCss,
+  buildJs,
+};
 export default buildAssets;
