@@ -9,7 +9,8 @@ here. Uploads have their own caps; see [uploads.md](uploads.md).
 ## Standing
 
 A member is new until they are trusted. Trusted members skip the spam
-check and get the larger budgets, caps and the short post gap.
+check, get the larger budgets, caps and the short post gap, and may hold a
+slot in the homepage status panel (`server/db/index.ts#findLatestStatuses`).
 
 - `server/trust.ts` alone holds the rule, as one SQL text over the member's
   live posts. Its header states the rule. Hiding a post or its topic lowers

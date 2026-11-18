@@ -1,10 +1,11 @@
 // Member standing: the one rule for when a member stops counting as new. A
-// trusted member skips the spam check and gets the larger budgets, caps and
-// the short post gap. Every reader asks this module: a write reads standing
-// once through server/db/send_budget.ts#lockStanding, a query that lists
-// members embeds trustedSql, and server/standing_sweep.test.ts fails on server
-// code elsewhere that compares posts_count or reads approved_at
-// (docs/agents/budgets.md#standing).
+// trusted member skips the spam check, gets the larger budgets, caps and the
+// short post gap, and may hold a slot in the homepage status panel
+// (server/db/index.ts#findLatestStatuses). Every reader asks this module: a
+// write reads standing once through server/db/send_budget.ts#lockStanding, a
+// query that lists members embeds trustedSql, and
+// server/standing_sweep.test.ts fails on server code elsewhere that compares
+// posts_count or reads approved_at (docs/agents/budgets.md#standing).
 //
 // The rule reads live rows, not the users.posts_count counter. A member is
 // trusted once staff approve them, or once more than TRUSTED_AFTER_POSTS of

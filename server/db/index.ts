@@ -15,6 +15,7 @@ import * as pre from "../presenters";
 import { can, MOD_CATEGORY_ID, type Role } from "../cancan";
 import { fetchReadable } from "../readable";
 import type { SignupPermit } from "../signup_gate";
+import { trustedSql } from "../trust";
 import {
   pool,
   maybeOneRow,
@@ -2984,17 +2985,42 @@ export const deleteStatusById = async function (id) {
 
 ////////////////////////////////////////////////////////////
 
+// How many of the newest statuses, by members who are not nuked, the homepage
+// panel reads. It bounds the panel's work on each cache3 refresh. A flood of
+// more statuses than this pushes older trusted statuses out until staff nuke
+// the flood's accounts.
+export const STATUS_PANEL_WINDOW = 1000;
+
+// The homepage status panel, which every visitor sees, guests included. It
+// shows each trusted member's current status (users.current_status_id), newest
+// first. So one account holds at most one slot, and an account holds none
+// until server/trust.ts trusts it. A status its author clears or deletes
+// leaves, and no older one comes back. /statuses and profiles list every
+// status.
+//
+// The trust rule runs only on the window's rows. Postgres pushes no filter
+// into a subquery with a LIMIT. As one plain join, the planner ran the rule
+// on every member.
 export async function findLatestStatuses() {
   return pool
     .query(
       `
     SELECT
-      us.*,
+      recent.*,
       to_json(u.*) "user"
-    FROM statuses us
-    JOIN users u ON us.user_id = u.id
-    WHERE u.is_nuked = false
-    ORDER BY created_at DESC
+    FROM (
+      SELECT us.*
+      FROM statuses us
+      JOIN users author ON author.id = us.user_id
+      WHERE author.is_nuked = false
+      ORDER BY us.created_at DESC
+      LIMIT ${STATUS_PANEL_WINDOW}
+    ) recent
+    JOIN users u
+      ON u.id = recent.user_id
+      AND u.current_status_id = recent.id
+    WHERE ${trustedSql("u")}
+    ORDER BY recent.created_at DESC
     LIMIT 8
   `,
     )
