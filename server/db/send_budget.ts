@@ -10,7 +10,7 @@ import assert from "assert";
 // 1st
 import * as belt from "../belt";
 import * as config from "../config";
-import { isTrustedMember } from "../trust";
+import { readTrust, type Trust } from "../trust";
 import { exactlyOneRow, type PgClientInTransaction } from "./util";
 
 // The budgets in server/config.ts are per this trailing window.
@@ -48,45 +48,39 @@ export async function lockSender(
 
 // The actor as one write's gates see it. A write reads it once, through
 // lockStanding, and hands it to each gate, so the gates cannot disagree about
-// who is trusted.
+// who is trusted. trusted and demoted come from server/trust.ts.
 export type Standing = {
   id: number;
   uname: string;
   // Before this write: a write's own post is not counted yet
   posts_count: number;
-  // server/trust.ts#isTrustedMember
-  trusted: boolean;
-};
+} & Trust;
 
 // Takes lockSender, then reads the actor's standing. Read under the lock, it
-// counts every locked write the actor finished before this one, such as the
-// post that made them trusted, and none of them can change it until this
-// write ends.
+// counts every locked write the actor finished before this one, and none of
+// them can change it until this write ends.
 export async function lockStanding(
   pgClient: PgClientInTransaction,
   userId: number,
 ): Promise<Standing> {
   await lockSender(pgClient, userId);
   const row = await pgClient
-    .query<{
-      id: number;
-      uname: string;
-      approved_at: Date | null;
-      posts_count: number;
-    }>(
+    .query<{ id: number; uname: string; posts_count: number }>(
       `
-      SELECT id, uname, approved_at, posts_count
+      SELECT id, uname, posts_count
       FROM users
       WHERE id = $1
     `,
       [userId],
     )
     .then(exactlyOneRow);
+  const { trusted, demoted } = await readTrust(pgClient, userId);
   return {
     id: row.id,
     uname: row.uname,
     posts_count: row.posts_count,
-    trusted: isTrustedMember(row),
+    trusted,
+    demoted,
   };
 }
 
@@ -100,7 +94,9 @@ export class SendBudgetExceeded extends Error {
   constructor(retryAt: Date, trusted: boolean) {
     super(
       `You have reached your sending limit for the past hour. Try again in ${belt.waitLength(retryAt)}.` +
-        (trusted ? "" : " The limit goes up after your first few posts."),
+        (trusted
+          ? ""
+          : " The limit goes up once your first few posts are a few days old."),
     );
     this.name = "SendBudgetExceeded";
     this.retryAt = retryAt;

@@ -71,17 +71,17 @@ const member = {
   uname: "Newbie",
   slug: "newbie",
   role: "member",
-  approved_at: null,
   posts_count: 1,
+  trusted: false,
 };
-// An approved member, so the classifier skips their edits
+// A trusted member, so the classifier skips their edits
 const gm = {
   id: 8,
   uname: "Gm",
   slug: "gm",
   role: "member",
-  approved_at: new Date("2026-01-01T00:00:00Z"),
   posts_count: 50,
+  trusted: true,
 };
 // A new member the GM made co-GM. UPDATE_POST lets a co-GM edit the GM's 0th
 // posts.
@@ -90,8 +90,8 @@ const coGm = {
   uname: "CoGm",
   slug: "cogm",
   role: "member",
-  approved_at: null,
   posts_count: 1,
+  trusted: false,
 };
 const users = [member, gm, coGm];
 
@@ -208,12 +208,13 @@ function makeDatabase() {
         db.nuked.add(userId);
         return [];
       }
-      // The actor's standing, read under their lock
+      // The actor's standing, read under their lock: the users row, then
+      // what server/trust.ts#readTrust reads
       if (/pg_advisory_xact_lock/.test(sql)) return [];
       if (/FROM users/.test(sql)) {
         const user = users.find((u) => u.id === params[0])!;
-        const { id, uname, approved_at, posts_count } = user;
-        return [{ id, uname, approved_at, posts_count }];
+        const { id, uname, posts_count, trusted } = user;
+        return [{ id, uname, posts_count, trusted, demoted: false }];
       }
       if (/clock_timestamp\(\)/.test(sql)) return [{ now: NOW }];
       if (/DELETE FROM screen_spends/.test(sql)) {

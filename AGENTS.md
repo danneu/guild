@@ -35,7 +35,7 @@ its row, not after a test fails.
 | [requests and responses](docs/agents/requests-and-responses.md) | adds a write route, reads a request body, returns JSON or HTML outside a view, sets a cookie, compares a URL with the request's host, or calls another service |
 | [user html](docs/agents/user-html.md) | renders BBCode, stores html a member wrote, edits `server/bbcode.js`, or adds `\|safe` to a template |
 | [read scope](docs/agents/read-scope.md) | loads a topic, forum or post by id, lists posts or topics across topics, or creates or reads a notification |
-| [budgets](docs/agents/budgets.md) | adds or changes a write a member can repeat: a post or an edit of one, a topic or its title, a PM or other send, or a spam classifier call |
+| [budgets](docs/agents/budgets.md) | adds or changes a write a member can repeat: a post or an edit of one, a topic or its title, a PM or other send, or a spam classifier call; or treats new members differently |
 | [uploads](docs/agents/uploads.md) | parses a file upload, decodes an image with sharp, or stores or removes anything in S3 |
 | [discord](docs/agents/discord.md) | adds or changes a member of the Discord server, or touches the OAuth join |
 | [deploy](docs/agents/deploy.md) | adds a table or column, edits the Dockerfile or a workflow, changes the Node version, or plans a deploy |

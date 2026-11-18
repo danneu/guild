@@ -9,7 +9,13 @@ import claude from "./claude";
 // Every public field of a charge, built by hand
 const handBuilt = {
   cost: 9,
-  standing: { id: 1, uname: "newbie", posts_count: 0, trusted: false },
+  standing: {
+    id: 1,
+    uname: "newbie",
+    posts_count: 0,
+    trusted: false,
+    demoted: false,
+  },
   body: "hi",
   take: () => "{}",
 };

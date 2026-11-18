@@ -31,14 +31,20 @@ const UNTRUSTED = config.SEND_BUDGET_PER_HOUR_UNTRUSTED;
 // A pg client stub that answers each query the way Postgres would for a send.
 // server/db/time_windows.test.ts runs spend's SQL on real rows.
 
-type Sender = { approved_at: Date | null; posts_count: number };
+// The sender's users row, with the standing server/trust.ts#readTrust would
+// read for them. server/trust.test.ts runs that rule on real rows.
+type Sender = { posts_count: number; trusted: boolean; demoted: boolean };
 // A vms row as a reply's parent lookup reads it.
 type Vm = { id: number; to_user_id: number; parent_vm_id: number | null };
 
 function makePgClient(
   opts: { sender?: Sender; spent?: number; vms?: Vm[] } = {},
 ) {
-  const sender = opts.sender ?? { approved_at: null, posts_count: 0 };
+  const sender = opts.sender ?? {
+    posts_count: 0,
+    trusted: false,
+    demoted: false,
+  };
   const spent = opts.spent ?? 0;
   const vms = opts.vms ?? [];
   const query = vi.fn(async (sql: string, params?: unknown[]) => {
@@ -105,29 +111,19 @@ describe("whenItFits", () => {
 });
 
 describe("lockStanding", () => {
-  // The send budget and the spam screen both take trust from here.
-  it.each([
-    ["an approved member", { approved_at: new Date(), posts_count: 0 }, true],
-    ["a member with 6 posts", { approved_at: null, posts_count: 6 }, true],
-    ["a member with 5 posts", { approved_at: null, posts_count: 5 }, false],
-  ])("decides whether to trust %s", async (_label, sender, trusted) => {
-    const standing = await lockStanding(makePgClient({ sender }), 1);
-
-    expect(standing).toEqual({
-      id: 1,
-      uname: "alice",
-      posts_count: sender.posts_count,
-      trusted,
-    });
-  });
-
+  // The rule's reads come after the lock, so a write the actor finished
+  // before this one is counted.
   it("locks the actor before reading them", async () => {
     const pgClient = makePgClient();
 
     await lockStanding(pgClient, 1);
 
-    expect(sqlOf(pgClient)[0]).toMatch(/pg_advisory_xact_lock/);
-    expect(sqlOf(pgClient)[1]).toMatch(/FROM users/);
+    const reads = sqlOf(pgClient);
+    expect(reads[0]).toMatch(/pg_advisory_xact_lock/);
+    expect(reads.slice(1)).toEqual([
+      expect.stringMatching(/FROM users/),
+      expect.stringMatching(/AS trusted/),
+    ]);
   });
 });
 
@@ -143,20 +139,14 @@ describe("spend", () => {
   });
 
   it("gives trusted senders the larger budget", async () => {
-    const approved = makePgClient({
-      sender: { approved_at: new Date(), posts_count: 0 },
-      spent: UNTRUSTED,
-    });
-    const posted = makePgClient({
-      sender: { approved_at: null, posts_count: 6 },
+    const pgClient = makePgClient({
+      sender: { posts_count: 6, trusted: true, demoted: false },
       spent: UNTRUSTED,
     });
 
-    await spend(approved, 1, 1);
-    await spend(posted, 1, 1);
+    await spend(pgClient, 1, 1);
 
-    expect(spendInserts(approved)).toEqual([[1, 1]]);
-    expect(spendInserts(posted)).toEqual([[1, 1]]);
+    expect(spendInserts(pgClient)).toEqual([[1, 1]]);
   });
 
   // Two sends by one sender at once must not both read the old total.

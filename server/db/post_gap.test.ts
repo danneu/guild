@@ -33,10 +33,12 @@ function at(ms: number): Date {
 // Postgres itself serializes them; that needs a real database. The SQL is
 // reviewed, not tested.
 
-type User = { approved_at: Date | null; posts_count: number };
+// The author's users row, with the standing server/trust.ts#readTrust would
+// read for them
+type User = { posts_count: number; trusted: boolean; demoted: boolean };
 type Stamp = { user_id: number; ip_address: string; created_at: Date };
 
-const newbie: User = { approved_at: null, posts_count: 0 };
+const newbie: User = { posts_count: 0, trusted: false, demoted: false };
 
 function fakeDb(opts: { user?: User; ledger?: Stamp[] } = {}) {
   const user = { id: 7, uname: "newbie", ...(opts.user ?? newbie) };
@@ -163,7 +165,7 @@ describe("the post gap", () => {
   // 1-second floor, not the new-member wait.
   describe.each([
     ["a new member with no posts", newbie, 10],
-    ["an approved member", { approved_at: T0, posts_count: 0 }, 1],
+    ["a trusted member", { posts_count: 0, trusted: true, demoted: false }, 1],
   ])("for %s", (_label, user, gapSeconds) => {
     const gap = gapSeconds * SECOND;
 

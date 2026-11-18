@@ -53,6 +53,7 @@ function charge(
       uname: "spammer",
       posts_count: 0,
       trusted: false,
+      demoted: false,
       ...standing,
     },
     cost: 9,
@@ -161,8 +162,9 @@ describe("antispam.process wiring", () => {
     expect(result).toBeFalsy();
   });
 
-  // A trusted actor's write returns no charge (server/db/send_budget.ts's
-  // lockStanding decides trust), and no charge means no call.
+  // A trusted actor's write returns no charge (server/trust.ts decides trust,
+  // and server/db/send_budget.ts#lockStanding reads it), and no charge means
+  // no call.
   it("no charge: sends nothing to the classifier", async () => {
     const result = await antispam.process(actor(), null, 104);
 

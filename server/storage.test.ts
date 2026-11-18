@@ -197,7 +197,7 @@ describe("storeImage", () => {
   });
 
   it("gives a trusted member the trusted caps", async () => {
-    fake.users.find((u) => u.id === owner)!.approved_at = new Date();
+    fake.users.find((u) => u.id === owner)!.trusted = true;
     for (let i = 0; i < QUOTA.images; i++) addImage({ user_id: owner });
 
     await expect(store()).resolves.toBe(true);

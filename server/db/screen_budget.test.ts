@@ -53,14 +53,17 @@ function spends(...list: [number, Date][]): ScreenSpend[] {
 // A pg client stub that answers each query the way Postgres would for a
 // screened write. The SQL itself is reviewed, not tested.
 
-type User = { approved_at: Date | null; posts_count: number };
+// The actor's users row, with the standing server/trust.ts#readTrust would
+// read for them
+type User = { posts_count: number; trusted: boolean; demoted: boolean };
 
-const newbie: User = { approved_at: null, posts_count: 1 };
+const newbie: User = { posts_count: 1, trusted: false, demoted: false };
 const untrusted: Standing = {
   id: 7,
   uname: "newbie",
   posts_count: 1,
   trusted: false,
+  demoted: false,
 };
 
 function makePgClient(opts: { user?: User; ledger?: ScreenSpend[] } = {}) {
@@ -374,7 +377,7 @@ describe("screened writes", () => {
 
   it("a trusted actor's write pays nothing", async () => {
     const pgClient = makePgClient({
-      user: { approved_at: NOW, posts_count: 1 },
+      user: { posts_count: 1, trusted: true, demoted: false },
     });
 
     const { charge } = await updatePost(7, 10, "Edited", "Edited", undefined);

@@ -15,6 +15,11 @@ Auth is session-based. `server/cancan.ts` holds the role-based rules; roles
   it reads a field its schema leaves out.
 - `server/cancan.test.ts` fails unless every action has exactly one sweep
   row, which lists the actors it allows on each target.
+- `can()` is synchronous, so a rule cannot ask `server/trust.ts` whether a
+  member is new. A rule that needs standing reads it as an actor field:
+  declare the field in the actor schema, and have the route fill it from
+  `server/trust.ts` before it calls `can()`. A route that forgets then fails
+  the schema check, closed. See [budgets.md](budgets.md#standing).
 
 ## Role changes
 

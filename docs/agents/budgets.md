@@ -2,8 +2,25 @@
 
 Read this before you add or change a write a member can repeat: a post or
 an edit of one, a topic or its title, a PM or other send, a call to the
-spam classifier, or any write with a per-account limit. `AGENTS.md` links
+spam classifier, or any write with a per-account limit. Read it too before
+you treat new members differently from trusted ones. `AGENTS.md` links
 here. Uploads have their own caps; see [uploads.md](uploads.md).
+
+## Standing
+
+A member is new until they are trusted. Trusted members skip the spam
+check and get the larger budgets, caps and the short post gap.
+
+- `server/trust.ts` alone holds the rule, as one SQL text over the member's
+  live posts. Its header states the rule. Hiding a post or its topic lowers
+  standing at once; `users.posts_count` never decides it.
+- A write reads standing once, through
+  `server/db/send_budget.ts#lockStanding`, and hands it to each gate. A query
+  that lists members embeds `server/trust.ts#trustedSql`.
+- Never compare `posts_count` or read `approved_at` elsewhere.
+  `server/standing_sweep.test.ts` fails, apart from its reviewed list.
+- A `can()` rule cannot ask `server/trust.ts`; see
+  [auth.md](auth.md#permissions).
 
 ## Lock order
 

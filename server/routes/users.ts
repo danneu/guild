@@ -36,6 +36,7 @@ import { catchRefusal, SendBudgetExceeded } from "../db/send_budget";
 import { VmParentRefused } from "../db/vms";
 import { AlreadyNuked } from "../db/refusals";
 import { admitSignup } from "../signup_gate";
+import { isTrustedMember } from "../trust";
 
 const router = new Router();
 
@@ -568,13 +569,15 @@ router.put("/api/users/:id/bio", async (ctx: Context) => {
 
   sendJson(ctx, "bio", updatedUser);
 
-  // Broadcast to Discord if they are setting their bio (not just making an edit)
-  // and they only have a couple posts
+  // Broadcast to Discord if a new member (server/trust.ts) is setting their
+  // bio, not just making an edit
   const bioSet = !user.bio_markup && updatedUser.bio_markup;
-  if (user.posts_count <= 2 && bioSet) {
-    broadcastBioUpdate(user, updatedUser.bio_markup).catch((err) =>
-      console.error("broadcastBioUpdate error", err),
-    );
+  if (bioSet) {
+    isTrustedMember(pool, user.id)
+      .then((trusted) =>
+        trusted ? undefined : broadcastBioUpdate(user, updatedUser.bio_markup),
+      )
+      .catch((err) => console.error("broadcastBioUpdate error", err));
   }
 });
 

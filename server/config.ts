@@ -130,6 +130,19 @@ for (const [standing, quota] of Object.entries(IMAGE_QUOTA)) {
   }
 }
 
+// How old a post must be before it counts toward a member's standing
+// (server/trust.ts). Until then the member is new, however many posts they
+// make. server/trust.ts writes it into its SQL text, so it must be an integer.
+export const TRUST_MIN_POST_AGE_SECONDS = parseInt(
+  process.env.TRUST_MIN_POST_AGE_SECONDS || String(3 * 24 * 60 * 60),
+  10,
+);
+assert(
+  Number.isInteger(TRUST_MIN_POST_AGE_SECONDS) &&
+    TRUST_MIN_POST_AGE_SECONDS >= 0,
+  "TRUST_MIN_POST_AGE_SECONDS must be a non-negative integer",
+);
+
 export const MAX_CONVO_PARTICIPANTS = parseInt(
   process.env.MAX_CONVO_PARTICIPANTS || "10",
   10,

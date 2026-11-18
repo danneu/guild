@@ -23,8 +23,9 @@ export type FakeImage = {
 export type FakeUser = {
   id: number;
   uname: string;
-  approved_at: Date | null;
   posts_count: number;
+  // What server/trust.ts#readTrust reads for them
+  trusted: boolean;
   avatar_url: string;
   legacy_avatar_url: string | null;
 };
@@ -73,8 +74,8 @@ export function resetFakes(): void {
 export function addUser(props: Partial<FakeUser> & { id: number }): FakeUser {
   const user: FakeUser = {
     uname: `user${props.id}`,
-    approved_at: null,
     posts_count: 0,
+    trusted: false,
     avatar_url: "",
     legacy_avatar_url: null,
     ...props,
@@ -145,9 +146,16 @@ async function query(sql: string, params: any[] = []): Promise<Result> {
   fake.statements.push({ sql, params });
   if (/pg_advisory_xact_lock/.test(sql)) return result([]);
 
-  // lockStanding
-  if (/SELECT id, uname, approved_at, posts_count\s+FROM users/.test(sql)) {
+  // lockStanding: the users row, then what server/trust.ts#readTrust reads
+  if (/SELECT id, uname, posts_count\s+FROM users/.test(sql)) {
     return result(fake.users.filter((u) => u.id === params[0]));
+  }
+  if (/AS trusted/.test(sql)) {
+    return result(
+      fake.users
+        .filter((u) => u.id === params[0])
+        .map((u) => ({ trusted: u.trusted, demoted: false })),
+    );
   }
 
   if (/UPDATE users\s+SET avatar_url/.test(sql)) {

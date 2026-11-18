@@ -48,7 +48,7 @@ async function process(
   );
 
   const result = await claude.analyze(charge);
-  const action = decideAction(result);
+  const action = decideAction(result, charge.standing);
 
   console.log("antispam process:", { action, result });
 

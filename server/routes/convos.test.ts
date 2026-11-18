@@ -50,7 +50,6 @@ const alice = {
   slug: "alice",
   role: "member",
   posts_count: 1,
-  approved_at: null,
 };
 
 // Recipients who confirmed their address and kept new-convo mail on, so a
@@ -79,10 +78,12 @@ function answer(sql: string) {
     if (/^\s*(BEGIN|COMMIT|ROLLBACK)\s*$/.test(sql)) return [];
     if (/lower\(u\.uname\) = ANY/.test(sql)) return [{ ...bob }, { ...carol }];
     if (/pg_advisory_xact_lock/.test(sql)) return [{}];
-    if (/SELECT id, uname, approved_at, posts_count\s+FROM users/.test(sql)) {
-      const { id, uname, approved_at, posts_count } = alice;
-      return [{ id, uname, approved_at, posts_count }];
+    if (/SELECT id, uname, posts_count\s+FROM users/.test(sql)) {
+      const { id, uname, posts_count } = alice;
+      return [{ id, uname, posts_count }];
     }
+    // Alice's standing (server/trust.ts#readTrust): new
+    if (/AS trusted/.test(sql)) return [{ trusted: false, demoted: false }];
     if (/DELETE FROM send_spends/.test(sql)) return [];
     if (/SELECT cost, created_at\s+FROM send_spends/.test(sql)) {
       return spent > 0 ? [{ cost: spent, created_at: new Date() }] : [];
