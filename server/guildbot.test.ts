@@ -160,6 +160,31 @@ describe("guildbot", () => {
     expect(unhandled).not.toHaveBeenCalled();
   });
 
+  // Intent: a roll's reply fits Discord's 2000-character cap, and still ends
+  // with the total.
+  // Why it exists: the reply echoed the roll's text in full, and leading zeros
+  // make a valid roll as long as a message, so Discord refused the reply
+  // (hunt 261117-0852-026).
+  // Scenario: '!roll 1d' plus 1990 zeros plus '6', a 1999-character message.
+  it("fits a zero-padded roll's reply under Discord's cap", async () => {
+    await startBot();
+    const replies: string[] = [];
+    const msg = {
+      content: `!roll 1d${"0".repeat(1990)}6`,
+      reply(text: string) {
+        replies.push(text);
+        return Promise.resolve();
+      },
+    };
+
+    fake.bots[0]!.emit("messageCreate", msg);
+    await settle();
+
+    expect(replies).toHaveLength(1);
+    expect(replies[0]!.length).toBeLessThanOrEqual(2000);
+    expect(replies[0]).toMatch(/`[1-6]`$/);
+  });
+
   it("survives a login that fails", async () => {
     fake.login = () =>
       Promise.reject(new Error("An invalid token was provided."));

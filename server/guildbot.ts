@@ -11,9 +11,11 @@ import {
   type Message,
 } from "discord.js";
 // 1st
+import * as belt from "./belt";
 import * as config from "./config";
 import * as dice from "./dice";
 import { getClient } from "./db/util";
+import { fitContent } from "./discord/content";
 
 // One-key advisory lock held by the machine that runs the bot.
 const BOT_LOCK = 1337;
@@ -120,39 +122,48 @@ function createBot(fail: (err: unknown) => void): DiscordClient {
 
 async function handleMessage(msg: Message): Promise<void> {
   console.log("GuildBot sees message:", msg.content);
-  if (msg.content === "!ping") {
-    await reply(msg, "pong");
-    return;
-  }
-
-  if (msg.content.startsWith("!roll ")) {
-    const [_, syntax] = msg.content.split(/\s+/);
-    if (!syntax) return;
-
-    const output = dice.roll(syntax);
-    if (output.type === "INVALID") {
-      await reply(msg, `Error: ${output.message}`);
-      return;
-    }
-
-    const rollValues = output.rolls.flatMap((r) => r.values);
-
-    if (rollValues.length > 1 && rollValues.length <= 10) {
-      await reply(
-        msg,
-        `:game_die: ${syntax} → ${JSON.stringify(
-          rollValues,
-        )} → \`${output.total}\``,
-      );
-    } else {
-      await reply(msg, `:game_die: ${syntax} → \`${output.total}\``);
-    }
+  const text = answer(msg.content);
+  if (text !== null) {
+    await reply(msg, text);
   }
 }
 
-// The one way the bot answers a message.
+// The most characters of a roll's text that its reply echoes. Leading zeros
+// make a valid roll as long as a message, and the total must stay visible.
+const MAX_ECHOED_SYNTAX = 100;
+
+// The bot's answer to a message's text, or null when it has none. Every
+// command lives here, apart from Discord, so its one send stays in reply.
+export function answer(content: string): string | null {
+  if (content === "!ping") {
+    return "pong";
+  }
+  if (!content.startsWith("!roll ")) {
+    return null;
+  }
+  const [_, syntax] = content.split(/\s+/);
+  if (!syntax) return null;
+
+  const output = dice.roll(syntax);
+  if (output.type === "INVALID") {
+    return `Error: ${output.message}`;
+  }
+
+  const rollValues = output.rolls.flatMap((r) => r.values);
+  const shown = belt.truncate(output.syntax, MAX_ECHOED_SYNTAX);
+
+  if (rollValues.length > 1 && rollValues.length <= 10) {
+    return `:game_die: ${shown} → ${JSON.stringify(
+      rollValues,
+    )} → \`${output.total}\``;
+  }
+  return `:game_die: ${shown} → \`${output.total}\``;
+}
+
+// The one way the bot answers a message. fitContent keeps the reply within
+// Discord's length cap.
 async function reply(msg: Message, text: string): Promise<void> {
-  await msg.reply(text);
+  await msg.reply(fitContent(text));
 }
 
 export default { start };

@@ -2,6 +2,7 @@
 import assert from "assert";
 // 1st
 import Client, { type CreateMessageAllowedMentions } from "../discord/client";
+import { fitContent } from "../discord/content";
 import * as config from "../config";
 import * as pre from "../presenters";
 import * as belt from "../belt";
@@ -22,15 +23,20 @@ function makeClient(): Client | null {
 
 type BroadcastOpts = {
   allowedMentions?: CreateMessageAllowedMentions;
+  // Data shown under the head as JSON in a sealed code block, and cut first
+  // when the message runs long. See docs/agents/discord.md#messages.
+  detail?: unknown;
 };
 
 const EVERYONE_ALLOWED_MENTIONS = {
   parse: ["everyone"],
 } satisfies CreateMessageAllowedMentions;
 
+// The only caller of client.createMessage. fitContent turns the head and the
+// detail into content Discord accepts.
 async function postToChannel(
   channelName: string,
-  content: string,
+  head: string,
   opts: BroadcastOpts = {},
 ): Promise<void> {
   if (!config.DISCORD_BOT_TOKEN || !config.DISCORD_GUILD_ID) {
@@ -55,7 +61,7 @@ async function postToChannel(
   }
 
   await client.createMessage(channel.id, {
-    content,
+    content: fitContent(head, opts.detail),
     allowed_mentions: opts.allowedMentions ?? { parse: [] },
   });
 }
@@ -105,19 +111,15 @@ export const broadcastAutoNuke = async (user, postId, info) => {
   // Need url
   pre.presentUser(user);
 
-  const content = `@here :robot: User ${config.HOST}${
+  const head = `@here :robot: User ${config.HOST}${
     user.url
   } was auto-nuked for this post: ${config.HOST}/posts/${
     postId
-  }/raw :radioactive:
+  }/raw :radioactive:`;
 
-\`\`\`
-${JSON.stringify(info, null, 2)}
-\`\`\`
-  `.trim();
-
-  await postToChannel("forum-activity", content, {
+  await postToChannel("forum-activity", head, {
     allowedMentions: EVERYONE_ALLOWED_MENTIONS,
+    detail: info,
   });
 };
 
@@ -133,16 +135,11 @@ export const broadcastSpamReview = async (user, postId, verdict) => {
   // Need url
   pre.presentUser(user);
 
-  const content = `:mag: Possible spam (conf ${verdict.confidence}) by ${
+  const head = `:mag: Possible spam (conf ${verdict.confidence}) by ${
     config.HOST
-  }${user.url} -- please review ${config.HOST}/posts/${postId}/raw
+  }${user.url} -- please review ${config.HOST}/posts/${postId}/raw`;
 
-\`\`\`
-${JSON.stringify(verdict, null, 2)}
-\`\`\`
-  `.trim();
-
-  await postToChannel("forum-activity", content);
+  await postToChannel("forum-activity", head, { detail: verdict });
 };
 
 ////////////////////////////////////////////////////////////
