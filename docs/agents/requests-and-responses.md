@@ -31,6 +31,10 @@ load a script or stylesheet in a view. `AGENTS.md` links here.
 - `server/middleware/refusals.ts` answers every one in one branch: a 400 with
   the message on `/api/`, otherwise the message as a flash and a redirect
   back by the Referer.
+- Koa's `ctx.back` follows the Referer only when its host is the request's
+  Host, and otherwise goes to the fallback it is given, so a link from
+  another site never bounces back there. `server/middleware/refusals.test.ts`
+  pins it.
 - The flash fills the form in again only when the refusal sets `echoForm`.
   The flash cookie holds a few kilobytes, so long markup can overflow it, and
   then the member sees no reason at all. `MarkupRejected` and

@@ -158,7 +158,9 @@ shapes.get("/buffer", (ctx: Context) => {
 shapes.get("/stream", (ctx: Context) => {
   ctx.body = Readable.from(["streamed"]);
 });
-// Not a Stream, but it passes koa's lib/is-stream.js, so Koa pipes it.
+// Not a Stream, but it passes koa's lib/is-stream.js, so Koa hands it to
+// stream.pipeline instead of JSON.stringify. pipeline cannot read it, so Koa
+// itself answers 500.
 shapes.get("/stream-like", (ctx: Context) => {
   const inner = Readable.from(["streamed"]);
   ctx.body = {
@@ -235,11 +237,19 @@ describe("the response edge", () => {
     ["a string", "/string", 200, "plain"],
     ["a Buffer", "/buffer", 200, "bytes"],
     ["a stream", "/stream", 200, "streamed"],
-    ["a stream-like object", "/stream-like", 200, "streamed"],
   ])("lets %s through unchanged", async (_l, path, status, text) => {
     const res = await fetch(origin + path);
     expect(res.status).toBe(status);
     expect(await res.text()).toBe(text);
+  });
+
+  // Koa never JSON-encodes this body, so the edge must not refuse it.
+  it("does not refuse a stream-like object", async () => {
+    errors.length = 0;
+    await (await fetch(origin + "/stream-like")).text();
+    expect(errors).not.toContainEqual(
+      expect.stringContaining("sendJson did not build"),
+    );
   });
 });
 
