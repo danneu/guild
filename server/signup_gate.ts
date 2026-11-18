@@ -1,6 +1,6 @@
 // The gate in front of account creation. admitSignup is the only maker of a
-// SignupPermit, and server/db/index.ts#createUserWithSession requires one. So
-// a new account path that skips this gate fails `pnpm run check`. See
+// SignupPermit, and server/db/accounts.ts#createUserWithSession requires one.
+// So a new account path that skips this gate fails `pnpm run check`. See
 // docs/agents/auth.md#signup.
 
 import * as config from "./config";

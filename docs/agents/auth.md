@@ -34,13 +34,13 @@ Auth is session-based. `server/cancan.ts` holds the role-based rules; roles
 
 ## Signup
 
-- Make an account only through `server/db/index.ts#createUserWithSession`.
+- Make an account only through `server/db/accounts.ts#createUserWithSession`.
   It requires a `SignupPermit`, and only
   `server/signup_gate.ts#admitSignup` makes one. So a new account path, such
   as an OAuth signup or an admin tool, fails `pnpm run check` unless it
   passes the gate.
-- The permit guards only callers of that function. Code that inserts a users
-  row itself skips the gate, so do not write one.
+- `server/write_census.test.ts` fails on any other code that inserts a users
+  row, so no account skips the permit or the network cap.
 - A permit proves that the gate ran, not that each account had its own
   solve: code that holds one can pass it again. Use it in the request that
   made it, and never keep it.
@@ -54,6 +54,15 @@ Auth is session-based. `server/cancan.ts` holds the role-based rules; roles
   could not check, including when Cloudflare does not answer before its
   deadline. Signup answers a throw with "try again"; login
   (`server/auth.ts#isChallengeSolved`) counts it as unsolved. Neither admits.
+- `createUserWithSession` caps how many accounts one network opens in a
+  trailing window. The network is the client's `ip_root`, and the limit and
+  window are in `server/config.ts`. Set them from production with
+  `scripts/signup-network-calibration.sql`. A refusal logs
+  `[signup] refused network` with the network.
+- Rotating networks is an accepted bypass. The cap raises the price of an
+  account for a bot on one network. It does not bound how many accounts
+  exist. Every per-account limit, such as the send budget, is only as strong
+  as that price.
 
 ## Login and passwords
 

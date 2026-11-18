@@ -6,24 +6,28 @@ import { describe, expect, it } from "vitest";
 // its listed columns. For posts and topics that file is
 // server/db/forum_text_writes.ts, which only server/forum_text.ts calls, so
 // every post text and topic title written goes through the gates in those
-// writes and on to the spam classifier.
+// writes and on to the spam classifier. For users it is
+// server/db/accounts.ts, so every account needs the signup gate's permit and
+// passes the signup network cap.
 // Why it exists: four of the seven routes that wrote post text or a topic
-// title never handed it to the classifier (hunt 261117-0852-027), and the
-// post gap holds only while no other code inserts a post (hunt
-// 261117-0852-049). Writing those columns is just SQL, so code with a pg
-// client could go around the owner without importing it.
+// title never handed it to the classifier (hunt 261117-0852-027), the post
+// gap holds only while no other code inserts a post (hunt 261117-0852-049),
+// and the signup cap only while no other code inserts a user (hunt
+// 261117-0852-006). Writing those rows is just SQL, so code with a pg client
+// could go around the owner without importing it.
 // Scenario: a new function in server/db/index.ts runs UPDATE posts SET
-// markup, or a route inserts a topic with knex.
+// markup, or a route inserts a topic or a user with knex.
 
 // Each guarded table: the one file that may insert its rows or set `columns`.
 // An UPDATE that sets only other columns, such as is_hidden or user_id, is
-// legal anywhere.
+// legal anywhere, and so is any update of a table with no listed columns.
 const CENSUS: Record<string, { owner: string; columns: string[] }> = {
   posts: {
     owner: "server/db/forum_text_writes.ts",
     columns: ["markup", "html"],
   },
   topics: { owner: "server/db/forum_text_writes.ts", columns: ["title"] },
+  users: { owner: "server/db/accounts.ts", columns: [] },
 };
 
 const repoRoot = path.resolve(__dirname, "..");
@@ -124,12 +128,14 @@ function writesIn(text: string): Write[] {
   return writes;
 }
 
-// Whether a write needs its table's owner: every insert, every knex update,
-// and an SQL UPDATE that sets a listed column.
+// Whether a write needs its table's owner: every insert, every knex update of
+// a table with listed columns, and an SQL UPDATE that sets a listed column.
 function isGuarded(write: Write): boolean {
   const entry = CENSUS[write.table];
   if (!entry) return false;
-  if (write.kind === "insert" || !write.columns) return true;
+  if (write.kind === "insert") return true;
+  // A knex update's columns are unknown, so it may set a listed one.
+  if (!write.columns) return entry.columns.length > 0;
   return write.columns.some((column) => entry.columns.includes(column));
 }
 
@@ -168,6 +174,7 @@ describe("write census", () => {
     expect([...found].sort()).toEqual([
       "insert posts",
       "insert topics",
+      "insert users",
       "update posts",
       "update topics",
     ]);
@@ -181,10 +188,13 @@ describe("write census", () => {
       [`UPDATE posts SET n = (SELECT 1 FROM x WHERE y), html = $1`, true],
       [`INSERT INTO public.topics (title) VALUES ($1)`, true],
       [`knex("posts as p").where({ id }).update(fields);`, true],
+      [`knex("users").insert({ uname, email });`, true],
       [`UPDATE posts SET is_hidden = true WHERE markup = $1`, false],
       [`UPDATE topics t SET user_id = $1 FROM users u`, false],
       [`INSERT INTO post_revs (markup) VALUES ($1)`, false],
       [`knex("posts as p").select("markup").where({ id });`, false],
+      [`UPDATE users SET email = $1 WHERE id = $2`, false],
+      [`knex("users").where({ id }).update(fields);`, false],
     ];
     for (const [sql, guarded] of cases) {
       expect(writesIn(sql).some(isGuarded), sql).toBe(guarded);

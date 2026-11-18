@@ -190,6 +190,32 @@ export const SCREEN_CALLS_PER_MINUTE = parseInt(
   10,
 );
 
+// The signup network cap, checked by
+// server/db/accounts.ts#createUserWithSession: one network may open
+// SIGNUP_NETWORK_LIMIT accounts in any trailing SIGNUP_NETWORK_WINDOW_SECONDS.
+// Set them from production with scripts/signup-network-calibration.sql, so
+// the limit sits above the busiest network of real members.
+// PROVISIONAL: the defaults are a guess that no production data has checked
+// yet (hunt 261117-0852-006). To tune them, set both in fly.toml's [env] or
+// as Fly secrets; a refusal logs "[signup] refused network" in prod:logs.
+export const SIGNUP_NETWORK_LIMIT = parseInt(
+  process.env.SIGNUP_NETWORK_LIMIT || "10",
+  10,
+);
+export const SIGNUP_NETWORK_WINDOW_SECONDS = parseInt(
+  process.env.SIGNUP_NETWORK_WINDOW_SECONDS || "86400",
+  10,
+);
+for (const [name, value] of Object.entries({
+  SIGNUP_NETWORK_LIMIT,
+  SIGNUP_NETWORK_WINDOW_SECONDS,
+})) {
+  assert(
+    Number.isInteger(value) && value > 0,
+    `${name} must be a positive integer`,
+  );
+}
+
 // The max amount of co-GMs per topic
 export const MAX_CO_GM_COUNT = process.env.MAX_CO_GM_COUNT || 2;
 

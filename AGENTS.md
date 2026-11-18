@@ -31,7 +31,7 @@ its row, not after a test fails.
 
 | Read | When your task... |
 | --- | --- |
-| [auth](docs/agents/auth.md) | touches login, signup or its human test, sessions, passwords, roles, bans, the email gate, or a `can()` check |
+| [auth](docs/agents/auth.md) | touches login, signup or its human test or network cap, sessions, passwords, roles, bans, the email gate, or a `can()` check |
 | [requests and responses](docs/agents/requests-and-responses.md) | adds a write route, reads a request body, returns JSON or HTML outside a view, sets a cookie, compares a URL with the request's host, or calls another service |
 | [user html](docs/agents/user-html.md) | renders BBCode, stores html a member wrote, edits `server/bbcode.js`, or adds `\|safe` to a template |
 | [read scope](docs/agents/read-scope.md) | loads a topic, forum or post by id, lists posts or topics across topics, or creates or reads a notification |

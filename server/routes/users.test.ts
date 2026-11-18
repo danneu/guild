@@ -148,7 +148,12 @@ async function send(req: Req) {
       redirect: "manual",
       body: req.form,
     });
-    return { status: res.status, location: res.headers.get("location"), flash };
+    return {
+      status: res.status,
+      location: res.headers.get("location"),
+      cookie: res.headers.get("set-cookie"),
+      flash,
+    };
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
@@ -197,6 +202,38 @@ describe("POST /users", () => {
     expect(res.flash).toMatchObject({
       message: ["danger", "Username is taken"],
     });
+  });
+
+  // Intent: signup answers a network past the signup cap with the form and a
+  // flash, and logs nobody in.
+  // Why it exists: one network could open accounts without limit, and each
+  // per-account limit, such as the send budget, multiplies by the accounts a
+  // bot makes (hunt 261117-0852-006).
+  // Scenario: a bot's next signup comes from a network that already opened
+  // the limit's worth of accounts in the window.
+  it("sends a signup from a full network back to the form with a flash", async () => {
+    vi.mocked(db.createUserWithSession).mockResolvedValue({
+      type: "NETWORK_LIMIT",
+    });
+
+    const res = await send({
+      method: "POST",
+      path: "/users",
+      currUser: null,
+      body: {
+        uname: "Newcomer",
+        email: "new@example.com",
+        password1: "secret1",
+        password2: "secret1",
+      },
+    });
+
+    expect(res.status).toBe(302);
+    expect(res.location).toBe("/register");
+    expect(res.flash).toMatchObject({
+      message: ["danger", expect.stringMatching(/your network/)],
+    });
+    expect(res.cookie).toBeNull();
   });
 });
 

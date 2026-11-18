@@ -10,11 +10,9 @@ import { v7 as uuidv7 } from "uuid";
 // 1st party
 import * as config from "../config";
 import * as belt from "../belt";
-import { hashPassword } from "../auth";
 import * as pre from "../presenters";
 import { can, MOD_CATEGORY_ID, type Role } from "../cancan";
 import { fetchReadable } from "../readable";
-import type { SignupPermit } from "../signup_gate";
 import { trustedSql } from "../trust";
 import { unwrapUserHtml, type UserHtml } from "../user_html";
 import {
@@ -29,7 +27,8 @@ import { deleteEmailVerificationTokenByUserId } from "./email_verification";
 import { lockSender, spend } from "./send_budget";
 import { VmParentRefused } from "./vms";
 import { AlreadyNuked, TooManyFriends } from "./refusals";
-import { takenBy, violatedUniqueIndex } from "./unique_violations";
+import { violatedUniqueIndex } from "./unique_violations";
+import { createSession } from "./sessions";
 import { Context } from "koa";
 import {
   DbConvo,
@@ -676,36 +675,6 @@ export const findUserBySessionId = async function (sessionId) {
 
   return user;
 };
-
-////////////////////////////////////////////////////////////
-
-export async function createSession(
-  pgClient: PgQueryExecutor,
-  props: {
-    userId: number;
-    ipAddress: string;
-    interval: string;
-  },
-) {
-  debug("[createSession] props: ", props);
-  assert(typeof props.userId === "number");
-  assert(typeof props.ipAddress === "string");
-  assert(typeof props.interval === "string");
-
-  const uuid = uuidv7();
-
-  return pgClient
-    .query<DbSession>(
-      `
-    INSERT INTO sessions (user_id, id, ip_address, expired_at)
-    VALUES ($1, $2, $3::inet,
-      NOW() + $4::interval)
-    RETURNING *
-  `,
-      [props.userId, uuid, props.ipAddress, props.interval],
-    )
-    .then(exactlyOneRow);
-}
 
 ////////////////////////////////////////////////////////////
 
@@ -1431,125 +1400,6 @@ ORDER BY c.pos
 
   return categories;
 };
-
-////////////////////////////////////////////////////////////
-
-// What createUserWithSession did. Only CREATED carries the account and its
-// session, so a caller cannot read either after a refusal, and an exhaustive
-// switch on type makes it answer each refusal.
-export type SignupResult =
-  | { type: "CREATED"; user: DbUser; session: DbSession }
-  | SignupRefusal;
-
-export type SignupRefusal = { type: "UNAME_TAKEN" } | { type: "EMAIL_TAKEN" };
-
-// Thrown inside createUserWithSession's transaction so that it rolls back.
-// The refusal is returned only after the rollback: a value returned from the
-// transaction would COMMIT, and a later edit could then commit half an
-// account.
-class SignupRefused extends Error {
-  override name = "SignupRefused";
-  constructor(readonly refusal: SignupRefusal) {
-    super(refusal.type);
-  }
-}
-
-// A unique violation on a member's name or address refuses the signup.
-// Every other error passes through.
-function refuseIfTaken(err: unknown): never {
-  const taken = takenBy(err);
-  if (taken) throw new SignupRefused({ type: taken });
-  throw err;
-}
-
-// Creates a user and a session (logs them in). A name in the unames history
-// stays taken unless an admin let it be recycled.
-//
-// The permit is proof that the request passed
-// server/signup_gate.ts#admitSignup, so no caller can make an account without
-// the registration switch and the human test.
-export async function createUserWithSession(
-  permit: SignupPermit,
-  props: {
-    uname: string;
-    ipAddress: string;
-    password: string;
-    email: string;
-  },
-): Promise<SignupResult> {
-  debug("[createUserWithSession] props: ", props);
-  assert(permit, "createUserWithSession needs a SignupPermit");
-  assert(_.isString(props.uname));
-  assert(_.isString(props.ipAddress));
-  assert(_.isString(props.password));
-  assert(_.isString(props.email));
-
-  const digest = await hashPassword(props.password);
-  const slug = belt.slugifyUname(props.uname);
-
-  try {
-    return await pool.withTransaction(async (client) => {
-      const history = await client
-        .query(
-          `
-        SELECT 1
-        FROM unames
-        WHERE slug = $1
-          AND recycle = false
-      `,
-          [slug],
-        )
-        .then(maybeOneRow);
-
-      if (history) {
-        throw new SignupRefused({ type: "UNAME_TAKEN" });
-      }
-
-      const user = await client
-        .query<DbUser>(
-          `
-        INSERT INTO users (uname, digest, email, slug, hide_sigs, registration_ip, email_gate_exempt_at)
-        VALUES ($1, $2, $3, $4, true, $5, $6)
-        RETURNING *
-      `,
-          [
-            props.uname,
-            digest,
-            props.email,
-            slug,
-            props.ipAddress,
-            // Fail-open when we cannot mail a confirmation link at all: without
-            // this, local dev and any misconfigured deploy would wall every new
-            // account with no way to unwall it (plan/2026-08-11-1613).
-            config.IS_EMAIL_CONFIGURED ? null : new Date(),
-          ],
-        )
-        .then(exactlyOneRow)
-        .catch(refuseIfTaken);
-
-      await client
-        .query(
-          `
-        INSERT INTO unames (user_id, uname, slug)
-        VALUES ($1, $2, $3)
-      `,
-          [user.id, user.uname, user.slug],
-        )
-        .catch(refuseIfTaken);
-
-      const session = await createSession(client, {
-        userId: user.id,
-        ipAddress: props.ipAddress,
-        interval: "1 year", // TODO: Decide how long to log user in upon registration
-      });
-
-      return { type: "CREATED", user, session } as const;
-    });
-  } catch (err) {
-    if (err instanceof SignupRefused) return err.refusal;
-    throw err;
-  }
-}
 
 ////////////////////////////////////////////////////////////
 
@@ -4075,6 +3925,13 @@ export * as dice from "./dice";
 export * as profileViews from "./profile-views";
 // The only by-id topic and forum loaders; see server/db/readable.ts
 export { loadTopicFor, loadForumFor } from "./readable";
+// The one place an account is made; see server/db/accounts.ts
+export {
+  createUserWithSession,
+  type SignupResult,
+  type SignupRefusal,
+} from "./accounts";
+export { createSession } from "./sessions";
 // Function aliases
 export const findUser = findUserById;
 export const getUserBySlug = findUserBySlug;

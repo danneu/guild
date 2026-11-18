@@ -316,6 +316,12 @@ router.post("/users", async (ctx: Context) => {
     case "EMAIL_TAKEN":
       refuseSignup(ctx, "Email is taken");
       return;
+    case "NETWORK_LIMIT":
+      refuseSignup(
+        ctx,
+        "Too many accounts were made from your network recently. Try again later.",
+      );
+      return;
     default: {
       const exhaustive: never = result;
       throw exhaustive;
