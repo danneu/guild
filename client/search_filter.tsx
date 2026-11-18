@@ -203,22 +203,27 @@ function NewUname({ onAdd }: { onAdd: (uname: string) => void }) {
     $(input.current!).typeahead("close");
   }
 
+  // The row is a flex row because public/css/general.css makes the typeahead's
+  // wrapper a block: without it the button drops to the line below the input,
+  // where the suggestions open over it.
   return (
     <li>
-      <input
-        type="text"
-        className="form-control new-uname-input"
-        style={{ display: "inline-block", width: "200px" }}
-        ref={input}
-        onKeyDown={onKeyDown}
-      />
-      <button
-        type="button"
-        className="btn btn-default new-uname-btn"
-        onClick={add}
-      >
-        Add
-      </button>
+      <div style={{ display: "flex", gap: "6px", alignItems: "flex-start" }}>
+        <input
+          type="text"
+          className="form-control new-uname-input"
+          style={{ display: "inline-block", width: "200px" }}
+          ref={input}
+          onKeyDown={onKeyDown}
+        />
+        <button
+          type="button"
+          className="btn btn-default new-uname-btn"
+          onClick={add}
+        >
+          Add
+        </button>
+      </div>
     </li>
   );
 }
