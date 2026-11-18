@@ -365,8 +365,3 @@ export const IS_CF_TURNSTILE_CONFIGURED = !!(
   CF_TURNSTILE_SITEKEY && CF_TURNSTILE_SECRET
 );
 console.log("Turnstile is configured:", IS_CF_TURNSTILE_CONFIGURED);
-
-if (NODE_ENV === "development") {
-  console.log("Config vars:");
-  console.log(JSON.stringify(process.env, null, "  "));
-}
