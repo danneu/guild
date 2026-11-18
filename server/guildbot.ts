@@ -127,20 +127,15 @@ async function handleMessage(msg: Message): Promise<void> {
 
   if (msg.content.startsWith("!roll ")) {
     const [_, syntax] = msg.content.split(/\s+/);
-    if (syntax!.length === 0) return;
+    if (!syntax) return;
 
-    let output;
-    try {
-      output = dice.roll(syntax);
-    } catch (err) {
-      await reply(msg, `Error: ${err}`);
+    const output = dice.roll(syntax);
+    if (output.type === "INVALID") {
+      await reply(msg, `Error: ${output.message}`);
       return;
     }
 
-    const rollValues = [].concat.apply(
-      [],
-      output.rolls.map((r) => r.values),
-    );
+    const rollValues = output.rolls.flatMap((r) => r.values);
 
     if (rollValues.length > 1 && rollValues.length <= 10) {
       await reply(

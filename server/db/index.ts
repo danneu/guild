@@ -25,6 +25,8 @@ import { BANNED_IDS_JSON, forumModsColumn } from "./readable";
 import { deleteEmailVerificationTokenByUserId } from "./email_verification";
 import { lockSender, spend } from "./send_budget";
 import { VmParentRefused } from "./vms";
+import { AlreadyNuked, TooManyFriends } from "./refusals";
+import { takenBy, violatedUniqueIndex } from "./unique_violations";
 import { Context } from "koa";
 import {
   DbConvo,
@@ -1399,17 +1401,42 @@ ORDER BY c.pos
 
 ////////////////////////////////////////////////////////////
 
-// Creates a user and a session (logs them in).
-// - Returns {:user <User>, :session <Session>}
-// - Use `createUser` if you only want to create a user.
-//
-// Throws: 'UNAME_TAKEN', 'EMAIL_TAKEN'
+// What createUserWithSession did. Only CREATED carries the account and its
+// session, so a caller cannot read either after a refusal, and an exhaustive
+// switch on type makes it answer each refusal.
+export type SignupResult =
+  | { type: "CREATED"; user: DbUser; session: DbSession }
+  | SignupRefusal;
+
+export type SignupRefusal = { type: "UNAME_TAKEN" } | { type: "EMAIL_TAKEN" };
+
+// Thrown inside createUserWithSession's transaction so that it rolls back.
+// The refusal is returned only after the rollback: a value returned from the
+// transaction would COMMIT, and a later edit could then commit half an
+// account.
+class SignupRefused extends Error {
+  override name = "SignupRefused";
+  constructor(readonly refusal: SignupRefusal) {
+    super(refusal.type);
+  }
+}
+
+// A unique violation on a member's name or address refuses the signup.
+// Every other error passes through.
+function refuseIfTaken(err: unknown): never {
+  const taken = takenBy(err);
+  if (taken) throw new SignupRefused({ type: taken });
+  throw err;
+}
+
+// Creates a user and a session (logs them in). A name in the unames history
+// stays taken unless an admin let it be recycled.
 export async function createUserWithSession(props: {
   uname: string;
   ipAddress: string;
   password: string;
   email: string;
-}): Promise<{ user: DbUser; session: DbSession }> {
+}): Promise<SignupResult> {
   debug("[createUserWithSession] props: ", props);
   assert(_.isString(props.uname));
   assert(_.isString(props.ipAddress));
@@ -1419,28 +1446,25 @@ export async function createUserWithSession(props: {
   const digest = await hashPassword(props.password);
   const slug = belt.slugifyUname(props.uname);
 
-  return pool.withTransaction(async (client) => {
-    // Ensure uname doesn't exist in history
-    const history = await client
-      .query(
-        `
-      SELECT 1
-      FROM unames
-      WHERE slug = $1
-        AND recycle = false
-    `,
-        [slug],
-      )
-      .then(maybeOneRow);
+  try {
+    return await pool.withTransaction(async (client) => {
+      const history = await client
+        .query(
+          `
+        SELECT 1
+        FROM unames
+        WHERE slug = $1
+          AND recycle = false
+      `,
+          [slug],
+        )
+        .then(maybeOneRow);
 
-    if (history) {
-      throw "UNAME_TAKEN";
-    }
+      if (history) {
+        throw new SignupRefused({ type: "UNAME_TAKEN" });
+      }
 
-    let user;
-
-    try {
-      user = await client
+      const user = await client
         .query<DbUser>(
           `
         INSERT INTO users (uname, digest, email, slug, hide_sigs, registration_ip, email_gate_exempt_at)
@@ -1459,40 +1483,31 @@ export async function createUserWithSession(props: {
             config.IS_EMAIL_CONFIGURED ? null : new Date(),
           ],
         )
-        .then(exactlyOneRow);
-    } catch (err) {
-      if (err instanceof Error && "code" in err && err.code === "23505") {
-        if (/unique_username/.test(err.toString())) throw "UNAME_TAKEN";
-        else if (/unique_slug/.test(err.toString())) throw "UNAME_TAKEN";
-        else if (/unique_email/.test(err.toString())) throw "EMAIL_TAKEN";
-      }
-      throw err;
-    }
+        .then(exactlyOneRow)
+        .catch(refuseIfTaken);
 
-    try {
-      await client.query(
-        `
+      await client
+        .query(
+          `
         INSERT INTO unames (user_id, uname, slug)
         VALUES ($1, $2, $3)
       `,
-        [user.id, user.uname, user.slug],
-      );
-    } catch (err) {
-      if (err instanceof Error && "code" in err && err.code === "23505") {
-        if (/unique_unrecyclable_slug/.test(err.toString()))
-          throw "UNAME_TAKEN";
-      }
-      throw err;
-    }
+          [user.id, user.uname, user.slug],
+        )
+        .catch(refuseIfTaken);
 
-    const session = await createSession(client, {
-      userId: user.id,
-      ipAddress: props.ipAddress,
-      interval: "1 year", // TODO: Decide how long to log user in upon registration
+      const session = await createSession(client, {
+        userId: user.id,
+        ipAddress: props.ipAddress,
+        interval: "1 year", // TODO: Decide how long to log user in upon registration
+      });
+
+      return { type: "CREATED", user, session } as const;
     });
-
-    return { user, session };
-  });
+  } catch (err) {
+    if (err instanceof SignupRefused) return err.refusal;
+    throw err;
+  }
 }
 
 ////////////////////////////////////////////////////////////
@@ -3408,7 +3423,7 @@ export const findFriendshipBetween = async function (from_id, to_id) {
 // The most friends a member may add
 const MAX_FRIENDS = 100;
 
-// Adds a friendship, or throws "TOO_MANY_FRIENDS" when the member already has
+// Adds a friendship, or throws TooManyFriends when the member already has
 // MAX_FRIENDS. The count and the insert share one transaction behind
 // lockSender, so a burst of adds cannot all pass the cap.
 export async function createFriendship(
@@ -3432,7 +3447,7 @@ export async function createFriendship(
       )
       .then(exactlyOneRow);
     if (count >= MAX_FRIENDS) {
-      throw "TOO_MANY_FRIENDS";
+      throw new TooManyFriends();
     }
 
     // A double click on the add-friend button adds nothing more
@@ -3763,7 +3778,8 @@ export async function unnukeUser({
   });
 }
 
-// In one fell motion, bans a user, hides all their stuff.
+// In one fell motion, bans a user, hides all their stuff. Throws AlreadyNuked
+// when the account was nuked already.
 //
 // Takes an object to prevent mistakes.
 // { spambot: UserId, nuker: UserId  }
@@ -3844,8 +3860,10 @@ export async function nukeUser({
       // await client.query(sqls.updateTopics);
     })
     .catch((err) => {
-      if (err instanceof Error && "code" in err && err.code === "23505") {
-        throw "ALREADY_NUKED";
+      // Only the one-nuke-per-account index means a finished nuke. Any other
+      // violation is a different failure, and rethrows.
+      if (violatedUniqueIndex(err) === "nuked_user_id") {
+        throw new AlreadyNuked();
       }
       throw err;
     });

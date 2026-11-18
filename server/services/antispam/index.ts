@@ -11,6 +11,7 @@ import {
   broadcastSpamReview,
 } from "../discord";
 import * as db from "../../db";
+import { AlreadyNuked } from "../../db/refusals";
 import type { ScreeningCharge } from "../../db/screen_budget";
 import type { SpamVerdict } from "./claude";
 
@@ -95,7 +96,7 @@ async function process(
 // sit in a row the actor does not own, which nukeUser does not hide, and the
 // moderators still hear about it.
 function ignoreAlreadyNuked(err: unknown): void {
-  if (err === "ALREADY_NUKED") return;
+  if (err instanceof AlreadyNuked) return;
   throw err;
 }
 

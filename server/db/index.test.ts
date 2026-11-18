@@ -11,6 +11,7 @@ import {
   updateUserActiveTrophyId,
   updateUserRole,
 } from "./index";
+import { TooManyFriends } from "./refusals";
 
 // The repo has no real-database tests, so these pin the SQL text and the
 // bound params each write sends.
@@ -302,7 +303,9 @@ describe("per-account limits", () => {
     it("refuses a 101st friend", async () => {
       const client = friendships(100);
 
-      await expect(createFriendship(7, 8)).rejects.toBe("TOO_MANY_FRIENDS");
+      await expect(createFriendship(7, 8)).rejects.toBeInstanceOf(
+        TooManyFriends,
+      );
       expect(inserts(client, "friendships")).toEqual([]);
     });
   });

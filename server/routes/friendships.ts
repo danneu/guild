@@ -2,6 +2,7 @@
 import Router from "@koa/router";
 // 1st
 import * as db from "../db";
+import { TooManyFriends } from "../db/refusals";
 import * as pre from "../presenters";
 import * as belt from "../belt";
 import { Context } from "koa";
@@ -44,7 +45,7 @@ router.post("/me/friendships", async (ctx: Context) => {
     try {
       await db.createFriendship(ctx.currUser.id, ctx.vals.to_user_id);
     } catch (err) {
-      if (err === "TOO_MANY_FRIENDS") {
+      if (err instanceof TooManyFriends) {
         ctx.flash = {
           message: ["danger", "Cannot have more than 100 friends"],
         };

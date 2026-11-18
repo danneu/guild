@@ -3,7 +3,7 @@
 // const debug = createDebug('app:db:dice')
 import assert from "assert";
 // 1st
-import * as dice from "../dice";
+import type { Rolled } from "../dice";
 import { pool, maybeOneRow } from "./util";
 
 export const getCampaign = async function (campaignId: number) {
@@ -125,18 +125,16 @@ export const insertCampaign = async function (
     .then(maybeOneRow);
 };
 
-// note is optional
+// Stores a roll that server/dice.ts#roll made, so a roll it refused has
+// nothing to store. note is optional.
 export const insertRoll = async function (
   userId: number,
   campaignId: number,
-  syntax: string,
+  output: Rolled,
   note?: string,
 ) {
   assert(Number.isInteger(userId));
   assert(Number.isInteger(campaignId));
-  assert(typeof syntax === "string");
-  // throws if syntax is invalid. err.message for parser error message.
-  const output = dice.roll(syntax);
   return pool.withTransaction(async (client) => {
     const roll = await client
       .query(
@@ -148,7 +146,7 @@ export const insertRoll = async function (
         [
           userId,
           campaignId,
-          syntax,
+          output.syntax,
           JSON.stringify(output.rolls),
           output.total,
           note,

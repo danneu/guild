@@ -23,6 +23,7 @@ function uniqueEmailViolation() {
     'duplicate key value violates unique constraint "unique_email"',
   );
   err.code = "23505";
+  err.constraint = "unique_email";
   return err;
 }
 

@@ -3,6 +3,7 @@
 import Router from "@koa/router";
 // 1st
 import * as db from "../db";
+import * as dice from "../dice";
 import * as pre from "../presenters";
 import { renderMarkup } from "../markup";
 import { Context, Next } from "koa";
@@ -107,22 +108,20 @@ router.post(
     // VALIDATE
     ctx.validateBody("syntax").isString().isLength(1, 300);
     ctx.validateBody("note").isString().isLength(0, 300);
-    // INSERT
-    try {
-      await db.dice.insertRoll(
-        ctx.currUser.id,
-        ctx.state.campaign.id,
-        ctx.vals.syntax,
-        ctx.vals.note,
-      );
-    } catch (err) {
-      console.log("err:", err);
-      if (typeof err === "string") {
-        ctx.check(false, "Dice error: " + err);
-      } else {
-        throw err;
-      }
+    // ROLL
+    const output = dice.roll(ctx.vals.syntax);
+    if (output.type === "INVALID") {
+      // Throws the validation error the app answers with a flash
+      ctx.check(false, "Dice error: " + output.message);
+      return;
     }
+    // INSERT
+    await db.dice.insertRoll(
+      ctx.currUser.id,
+      ctx.state.campaign.id,
+      output,
+      ctx.vals.note,
+    );
     // RESPOND
     ctx.flash = { message: ["success", "Roll created"] };
     ctx.redirect(ctx.state.campaign.url);

@@ -19,9 +19,16 @@ import router from "./users";
 vi.mock("../upload", { spy: true });
 
 // Importing server/cache3.ts starts its interval cache. server/bbcode.js
-// requires it outside vitest's module graph, so bbcode is stubbed too.
-vi.mock("../cache3", () => ({ default: {} }));
+// requires it outside vitest's module graph, so bbcode is stubbed too. get
+// and set stand in for the uname-set that signup adds to.
+vi.mock("../cache3", () => ({
+  default: { get: vi.fn(() => new Set()), set: vi.fn() },
+}));
 vi.mock("../bbcode", () => ({ default: vi.fn() }));
+// Signup's human test is passed; Turnstile has no test double here.
+vi.mock("../middleware/cloudflare-turnstile", () => ({
+  default: (_ctx: Context, next: Next) => next(),
+}));
 vi.mock("../db/util", () => ({ pool: {}, withPgPoolTransaction: vi.fn() }));
 vi.mock("../emailer", () => ({}));
 vi.mock("../services/discord", () => ({
@@ -36,6 +43,10 @@ vi.mock("../avatar", () => ({
 vi.mock("../storage", () => ({ removeAvatar: vi.fn(async () => {}) }));
 
 vi.mock("../db", () => ({
+  keyvals: { getValueByKey: vi.fn() },
+  findUserByUname: vi.fn(),
+  findUserByEmail: vi.fn(),
+  createUserWithSession: vi.fn(),
   findUserBySlug: vi.fn(),
   updateUser: vi.fn(),
   updateUserCustomTitle: vi.fn(),
@@ -162,6 +173,40 @@ function avatarForm(submit: "save" | "delete", file: Blob, filename: string) {
 }
 
 ////////////////////////////////////////////////////////////
+
+describe("POST /users", () => {
+  // Intent: signup answers a taken name with the form and a flash.
+  // Why it exists: a name some member changed away from stays reserved in
+  // the unames history, which the route's own check does not read. The
+  // route caught createUserWithSession's refusal, then read the user it never
+  // made, and answered 500 (hunt 261117-0852-044).
+  // Scenario: a visitor registers a retired name, which createUserWithSession
+  // refuses.
+  it("sends a taken name back to the form with a flash", async () => {
+    vi.mocked(db.keyvals.getValueByKey).mockResolvedValue(true);
+    vi.mocked(db.createUserWithSession).mockResolvedValue({
+      type: "UNAME_TAKEN",
+    });
+
+    const res = await send({
+      method: "POST",
+      path: "/users",
+      currUser: null,
+      body: {
+        uname: "Retired",
+        email: "new@example.com",
+        password1: "secret1",
+        password2: "secret1",
+      },
+    });
+
+    expect(res.status).toBe(302);
+    expect(res.location).toBe("/register");
+    expect(res.flash).toMatchObject({
+      message: ["danger", "Username is taken"],
+    });
+  });
+});
 
 describe("POST /users/:slug/avatar", () => {
   it("hands the uploaded bytes to the avatar transform", async () => {

@@ -36,6 +36,7 @@ import { pool, withPgPoolTransaction } from "../db/util";
 import { sendJson } from "../api_json";
 import { catchRefusal, SendBudgetExceeded } from "../db/send_budget";
 import { VmParentRefused } from "../db/vms";
+import { AlreadyNuked } from "../db/refusals";
 
 const router = new Router();
 
@@ -272,31 +273,29 @@ router.post("/users", checkCloudflareTurnstile, async (ctx: Context) => {
     .isLength(6, 100, "Password must be at least 6 chars long")
     .eq(ctx.vals.password2, "Password confirmation must match");
 
-  // User params validated, so create a user and log them in
-  let user;
-  let session;
-  let errMessage;
-  try {
-    ({ user, session } = await db.createUserWithSession({
-      uname: ctx.vals.uname,
-      email: ctx.vals.email,
-      password: ctx.vals.password1,
-      ipAddress: ctx.request.ip,
-    }));
-  } catch (ex) {
-    switch (ex) {
-      case "UNAME_TAKEN":
-        errMessage = "Username is taken";
-        break;
-      case "EMAIL_TAKEN":
-        errMessage = "Email is taken";
-        break;
-      default:
-        throw ex;
+  // User params validated, so create a user and log them in. Each refusal
+  // returns; only CREATED goes on past the switch.
+  const result = await db.createUserWithSession({
+    uname: ctx.vals.uname,
+    email: ctx.vals.email,
+    password: ctx.vals.password1,
+    ipAddress: ctx.request.ip,
+  });
+  switch (result.type) {
+    case "CREATED":
+      break;
+    case "UNAME_TAKEN":
+      refuseSignup(ctx, "Username is taken");
+      return;
+    case "EMAIL_TAKEN":
+      refuseSignup(ctx, "Email is taken");
+      return;
+    default: {
+      const exhaustive: never = result;
+      throw exhaustive;
     }
   }
-
-  pre.presentUser(user);
+  const { user, session } = result;
 
   // Update uname-set cache
   cache3.set(
@@ -304,16 +303,8 @@ router.post("/users", checkCloudflareTurnstile, async (ctx: Context) => {
     cache3.get("uname-set").add(user.uname.toLowerCase()),
   );
 
-  if (errMessage) {
-    ctx.flash = {
-      message: ["danger", errMessage],
-      params: FlashParams.pick(ctx.request.body, ["uname", "email"]),
-    };
-    return ctx.response.redirect("/register");
-  }
-
   // Log in the user
-  ctx.cookies.set("sessionId", session.id, {
+  ctx.cookies.set("sessionId", String(session.id), {
     expires: belt.futureDate({ years: 1 }),
   });
 
@@ -405,6 +396,15 @@ router.post("/users", checkCloudflareTurnstile, async (ctx: Context) => {
   ctx.flash = { message: ["success", "Registered successfully"] };
   return ctx.response.redirect("/");
 });
+
+// Sends a refused signup back to the form, with its fields filled in again.
+function refuseSignup(ctx: Context, message: string) {
+  ctx.flash = {
+    message: ["danger", message],
+    params: FlashParams.pick(ctx.request.body, ["uname", "email"]),
+  };
+  ctx.response.redirect("/register");
+}
 
 //// TODO: DRY up all of these individual PUT routes
 //// While I like the simplicity of individual logic per route,
@@ -1295,7 +1295,7 @@ router.post("/users/:slug/nuke", async (ctx: Context) => {
   try {
     await db.nukeUser({ spambot: user.id, nuker: ctx.currUser.id });
   } catch (err) {
-    if (err === "ALREADY_NUKED") {
+    if (err instanceof AlreadyNuked) {
       ctx.flash = { message: ["success", "Nuked the bastard"] };
       ctx.redirect(presentedUser.url);
       return;

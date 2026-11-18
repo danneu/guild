@@ -19,6 +19,7 @@ import {
   withPgPoolTransaction,
   type PgClientInTransaction,
 } from "./util";
+import { takenBy } from "./unique_violations";
 
 export type EmailVerificationToken = {
   user_id: number;
@@ -198,12 +199,7 @@ export async function consumeEmailVerificationTokenTx(
       [consumed.email, consumed.user_id],
     );
   } catch (err) {
-    if (
-      err instanceof Error &&
-      "code" in err &&
-      err.code === "23505" &&
-      /unique_email/.test(err.toString())
-    ) {
+    if (takenBy(err) === "EMAIL_TAKEN") {
       throw new EmailTakenError();
     }
     throw err;

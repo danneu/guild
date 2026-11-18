@@ -198,7 +198,12 @@ function makeDatabase() {
       if (/INSERT INTO nuked_users/.test(sql)) {
         const userId = params[0] as number;
         if (db.nuked.has(userId)) {
-          throw Object.assign(new Error("nuked_users_pkey"), { code: "23505" });
+          throw Object.assign(
+            new Error(
+              'duplicate key value violates unique constraint "nuked_user_id"',
+            ),
+            { code: "23505", constraint: "nuked_user_id" },
+          );
         }
         db.nuked.add(userId);
         return [];
