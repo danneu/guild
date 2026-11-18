@@ -6,6 +6,7 @@ import * as db from "../db";
 import * as dice from "../dice";
 import * as pre from "../presenters";
 import { renderMarkup } from "../markup";
+import antispam from "../services/antispam";
 import { Context, Next } from "koa";
 
 // HELPERS
@@ -66,15 +67,20 @@ router.post("/campaigns", async (ctx: Context) => {
   // VALIDATE
   ctx.validateBody("title").isString().trim().isLength(1, 300);
   ctx.validateBody("markup").isString().trim().isLength(0, 10000);
-  // INSERT
-  const campaign = await db.dice.insertCampaign(
+  // INSERT, within the author's campaign row budget
+  const { campaign, charge } = await db.dice.insertCampaign(
     ctx.currUser.id,
     ctx.vals.title,
     ctx.vals.markup,
     renderMarkup(ctx.vals.markup, ctx.currUser),
   );
-  // RESPOND
   pre.presentCampaign(campaign);
+  // SCREEN a new member's title and markup after the commit
+  antispam.processInBackground(ctx.currUser, charge, {
+    kind: "campaign",
+    url: campaign.url,
+  });
+  // RESPOND
   ctx.flash = { message: ["success", "Dice campaign created"] };
   ctx.redirect(campaign.url);
 });
@@ -115,7 +121,7 @@ router.post(
       ctx.check(false, "Dice error: " + output.message);
       return;
     }
-    // INSERT
+    // INSERT, within the roller's roll row budget
     await db.dice.insertRoll(
       ctx.currUser.id,
       ctx.state.campaign.id,
@@ -147,12 +153,18 @@ router.put("/campaigns/:campaign_id", loadCampaign, async (ctx: Context) => {
   ctx.validateBody("title").isString().trim().isLength(1, 300);
   ctx.validateBody("markup").isString().trim().isLength(0, 10000);
   // SAVE
-  await db.dice.updateCampaign(
+  const charge = await db.dice.updateCampaign(
+    ctx.currUser.id,
     ctx.state.campaign.id,
     ctx.vals.title,
     ctx.vals.markup,
     renderMarkup(ctx.vals.markup, ctx.currUser),
   );
+  // SCREEN a new member's title and markup after the commit
+  antispam.processInBackground(ctx.currUser, charge, {
+    kind: "campaign",
+    url: ctx.state.campaign.url,
+  });
   // RESPOND
   ctx.flash = { message: ["success", "Campaign updated"] };
   ctx.redirect(ctx.state.campaign.url);

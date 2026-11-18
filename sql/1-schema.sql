@@ -970,6 +970,8 @@ CREATE INDEX campaigns__user_id ON campaigns (user_id);
 CREATE INDEX campaigns__last_roll_id ON campaigns (last_roll_id);
 -- Looking up all rows for a campaign
 CREATE INDEX rolls__campaign_id ON rolls (campaign_id);
+-- The roll row budget's read; see sql/19-rolls-user-created-at.sql.
+CREATE INDEX rolls__user_id_created_at ON rolls (user_id, created_at);
 
 ------------------------------------------------------------
 

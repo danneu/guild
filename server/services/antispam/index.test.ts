@@ -62,6 +62,10 @@ function charge(
   } as unknown as ScreeningCharge;
 }
 
+function post(postId: number) {
+  return { kind: "post", postId } as const;
+}
+
 function verdict(over: Partial<SpamVerdict> = {}): AnalyzeResult {
   return {
     ok: true,
@@ -84,7 +88,11 @@ describe("antispam.process wiring", () => {
   it("NUKE: nukes the user, broadcasts the nuke, returns truthy", async () => {
     analyze.mockResolvedValue(verdict({ confidence: 0.95 }));
 
-    const result = await antispam.process(actor(), charge("buy coins"), 100);
+    const result = await antispam.process(
+      actor(),
+      charge("buy coins"),
+      post(100),
+    );
 
     expect(nukeUser).toHaveBeenCalledTimes(1);
     expect(nukeUser).toHaveBeenCalledWith({
@@ -100,20 +108,50 @@ describe("antispam.process wiring", () => {
   it("REVIEW: does not nuke, broadcasts a review note, returns truthy", async () => {
     analyze.mockResolvedValue(verdict({ confidence: 0.8 }));
 
-    const result = await antispam.process(actor(), charge("maybe spam"), 101);
+    const result = await antispam.process(
+      actor(),
+      charge("maybe spam"),
+      post(101),
+    );
 
     expect(nukeUser).not.toHaveBeenCalled();
     expect(spamReview).toHaveBeenCalledTimes(1);
+    expect(spamReview).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 42 }),
+      "/posts/101/raw",
+      expect.objectContaining({ confidence: 0.8 }),
+    );
     expect(autoNuke).not.toHaveBeenCalled();
     expect(firstPost).not.toHaveBeenCalled();
     // Truthy so the intro broadcast is skipped.
     expect(result).toBeTruthy();
   });
 
+  // Intent: a zero-post member's clean campaign, bio or sig is not announced
+  // as a first post.
+  // Why it exists: the first post note links /posts/<id>, and text outside
+  // the forums has no post (hunt 261117-0852-055).
+  it("ALLOW outside a post: relays no first post", async () => {
+    analyze.mockResolvedValue(verdict({ isSpam: false, confidence: 0.99 }));
+
+    const result = await antispam.process(actor(), charge("my campaign"), {
+      kind: "campaign",
+      url: "/campaigns/7",
+    });
+
+    expect(analyze).toHaveBeenCalledTimes(1);
+    expect(firstPost).not.toHaveBeenCalled();
+    expect(result).toBeFalsy();
+  });
+
   it("ALLOW (not spam): broadcasts the clean first post, returns falsey", async () => {
     analyze.mockResolvedValue(verdict({ isSpam: false, confidence: 0.99 }));
 
-    const result = await antispam.process(actor(), charge("hi everyone"), 102);
+    const result = await antispam.process(
+      actor(),
+      charge("hi everyone"),
+      post(102),
+    );
 
     expect(nukeUser).not.toHaveBeenCalled();
     expect(autoNuke).not.toHaveBeenCalled();
@@ -130,7 +168,11 @@ describe("antispam.process wiring", () => {
   it("API timeout: fails open and broadcasts first post review metadata", async () => {
     analyze.mockResolvedValue({ ok: false, error: "API_TIMEOUT" });
 
-    const result = await antispam.process(actor(), charge("anything"), 103);
+    const result = await antispam.process(
+      actor(),
+      charge("anything"),
+      post(103),
+    );
 
     expect(nukeUser).not.toHaveBeenCalled();
     expect(autoNuke).not.toHaveBeenCalled();
@@ -154,7 +196,7 @@ describe("antispam.process wiring", () => {
     const result = await antispam.process(
       actor(),
       charge("hi again", { posts_count: 3 }),
-      106,
+      post(106),
     );
 
     expect(nukeUser).not.toHaveBeenCalled();
@@ -168,7 +210,7 @@ describe("antispam.process wiring", () => {
   // and server/db/send_budget.ts#lockStanding reads it), and no charge means
   // no call.
   it("no charge: sends nothing to the classifier", async () => {
-    const result = await antispam.process(actor(), null, 104);
+    const result = await antispam.process(actor(), null, post(104));
 
     expect(analyze).not.toHaveBeenCalled();
     expect(firstPost).not.toHaveBeenCalled();
@@ -179,7 +221,7 @@ describe("antispam.process wiring", () => {
     const result = await antispam.process(
       actor(),
       charge("anything", { id: 43 }),
-      105,
+      post(105),
     );
 
     expect(analyze).not.toHaveBeenCalled();

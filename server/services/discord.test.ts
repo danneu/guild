@@ -122,7 +122,7 @@ describe("discord broadcasts", () => {
 
     await discord.broadcastSpamReview(
       { id: 3, slug: "maybe-spam", uname: "Maybe Spam" },
-      125,
+      "/posts/125/raw",
       verdict("x".repeat(3000)),
     );
 

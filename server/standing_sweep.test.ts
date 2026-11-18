@@ -27,7 +27,7 @@ const REVIEWED = [
   // and the moderators' note on a first post
   "server/routes/convos.ts: ctx.currUser.posts_count === 0",
   "server/routes/users.ts: ctx.assert(ctx.currUser.posts_count > 0 && ctx.currUser.avatar_url, 403);",
-  "server/services/antispam/index.ts: if (charge.standing.posts_count === 0) {",
+  'server/services/antispam/index.ts: if (subject.kind === "post" && charge.standing.posts_count === 0) {',
 ];
 
 const COMPARISONS = new Set([

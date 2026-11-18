@@ -132,19 +132,24 @@ export const broadcastAutoNuke = async (user, postId, info) => {
 
 ////////////////////////////////////////////////////////////
 
-// When a post is flagged as mid-confidence (possible) spam: post a lightweight
-// "please review" note (no @here, no nuke). verdict is the SpamVerdict object,
-// sent along for the reviewer's context.
-export const broadcastSpamReview = async (user, postId, verdict) => {
+// When the classifier suspects spam that it does not nuke for: post a
+// lightweight "please review" note (no @here, no nuke). reviewPath is the path
+// on this site where a mod reviews the text, such as a post's raw markup.
+// verdict is the SpamVerdict object, sent along for the reviewer's context.
+export const broadcastSpamReview = async (
+  user,
+  reviewPath: string,
+  verdict,
+) => {
   assert(user);
-  assert(Number.isInteger(postId));
+  assert(reviewPath.startsWith("/"));
 
   // Need url
   pre.presentUser(user);
 
   const head = `:mag: Possible spam (conf ${verdict.confidence}) by ${
     config.HOST
-  }${user.url} -- please review ${config.HOST}/posts/${postId}/raw`;
+  }${user.url} -- please review ${config.HOST}${reviewPath}`;
 
   await postToChannel("forum-activity", head, { detail: verdict });
 };

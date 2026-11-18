@@ -28,5 +28,5 @@ export function analyzeHandBuiltCharge() {
 export function processHandBuiltCharge() {
   const actor = { id: 1, uname: "newbie", slug: "newbie" };
   // @ts-expect-error -- only spendScreening makes a ScreeningCharge
-  return antispam.process(actor, handBuilt, 1);
+  return antispam.process(actor, handBuilt, { kind: "post", postId: 1 });
 }

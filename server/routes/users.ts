@@ -38,6 +38,7 @@ import { VmParentRefused } from "../db/vms";
 import { AlreadyNuked } from "../db/refusals";
 import { admitSignup } from "../signup_gate";
 import { isTrustedMember } from "../trust";
+import antispam from "../services/antispam";
 
 const router = new Router();
 
@@ -565,13 +566,20 @@ router.put("/api/users/:id/bio", async (ctx: Context) => {
   }
 
   // Save markup and html
-  const updatedUser = await db.updateUserBio(
+  const { user: updatedUser, charge } = await db.updateUserBio(
+    ctx.currUser.id,
     user.id,
     ctx.request.body.markup,
     html,
   );
 
   sendJson(ctx, "bio", updatedUser);
+
+  // Screen a new member's bio after the commit
+  antispam.processInBackground(ctx.currUser, charge, {
+    kind: "bio",
+    url: pre.presentUser({ ...user })!.url,
+  });
 
   // Relay to Discord if a new member (server/trust.ts) is setting their bio,
   // not just making an edit. relayOnce relays each member once.
@@ -679,18 +687,24 @@ router.put("/users/:slug", async (ctx: Context) => {
   ctx.assert(user, 404);
   ctx.assertAuthorized(ctx.currUser, "UPDATE_USER", user);
 
-  let sig_html: UserHtml | undefined;
-  let sig_markup: string | undefined;
+  let sig: { markup: string; html: UserHtml } | undefined;
   // User is only updating their sig if `sig` is a string.
   // If it's a blank string, then user is trying to clear their sig
   if (_.isString(ctx.request.body.sig))
     if (ctx.request.body.sig.trim().length > 0) {
-      sig_html = renderMarkup(ctx.request.body.sig, ctx.currUser);
-      sig_markup = ctx.request.body.sig.trim();
+      sig = {
+        html: renderMarkup(ctx.request.body.sig, ctx.currUser),
+        markup: ctx.request.body.sig.trim(),
+      };
     } else {
-      sig_html = EMPTY_USER_HTML;
-      sig_markup = "";
+      sig = { html: EMPTY_USER_HTML, markup: "" };
     }
+
+  // The sig goes first: its writer charges a new member's screening budget,
+  // and a refused sig leaves the rest of the form unsaved too.
+  const sigCharge = sig
+    ? await db.updateUserSig(ctx.currUser.id, user.id, sig.markup, sig.html)
+    : null;
 
   // TODO: use db.users.updateUser
 
@@ -700,8 +714,6 @@ router.put("/users/:slug", async (ctx: Context) => {
   // (plan/2026-08-11-1613/I2). A surviving email slot here would be a second
   // writer, able to change the address while email_verified_at stays set.
   await db.updateUser(user.id, {
-    sig: sig_markup,
-    sig_html: sig_html,
     avatar_url: ctx.request.body["avatar-url"],
     hide_sigs: _.isBoolean(ctx.vals["hide-sigs"])
       ? ctx.vals["hide-sigs"]
@@ -722,6 +734,12 @@ router.put("/users/:slug", async (ctx: Context) => {
     eflags: ctx.vals.eflags,
   });
   const presentedUser = pre.presentUser(user)!;
+  // Screen a new member's sig after the commit. It shows only under posts, so
+  // a mod reviews it on the edit page.
+  antispam.processInBackground(ctx.currUser, sigCharge, {
+    kind: "sig",
+    url: presentedUser.url + "/edit",
+  });
   ctx.flash = { message: ["success", "User updated"] };
   ctx.response.redirect(presentedUser.url + "/edit");
 });

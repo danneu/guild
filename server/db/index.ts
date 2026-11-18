@@ -24,7 +24,8 @@ import {
 import { Client, Pool, PoolClient } from "pg";
 import { BANNED_IDS_JSON, forumModsColumn } from "./readable";
 import { deleteEmailVerificationTokenByUserId } from "./email_verification";
-import { lockSender, spend } from "./send_budget";
+import { lockSender, lockStanding, spend } from "./send_budget";
+import { spendScreening, type ScreeningCharge } from "./screen_budget";
 import { VmParentRefused } from "./vms";
 import { AlreadyNuked, TooManyFriends } from "./refusals";
 import { violatedUniqueIndex } from "./unique_violations";
@@ -152,24 +153,40 @@ export async function updateTopicStatus(
 
 ////////////////////////////////////////////////////////////
 
+// Sets userId's bio. The actor, the member or staff, pays the screening charge
+// for a bio that is not empty while new (server/db/screen_budget.ts). The
+// charge comes back with the updated row, for the route to hand to the
+// classifier after the commit.
 export async function updateUserBio(
+  actorId: number,
   userId: number,
   bioMarkup: string,
   bioHtml: UserHtml,
-) {
+): Promise<{ user: DbUser; charge: ScreeningCharge | null }> {
   assert(_.isString(bioMarkup));
 
-  return pool
-    .query(
-      `
-    UPDATE users
-    SET bio_markup = $1, bio_html = $2
-    WHERE id = $3
-    RETURNING *
-  `,
-      [bioMarkup, unwrapUserHtml(bioHtml), userId],
-    )
-    .then(maybeOneRow);
+  return pool.withTransaction(async (client) => {
+    const standing = await lockStanding(client, actorId);
+    const charge =
+      bioMarkup.length > 0
+        ? await spendScreening(client, standing, {
+            title: null,
+            body: bioMarkup,
+          })
+        : null;
+    const user = await client
+      .query<DbUser>(
+        `
+        UPDATE users
+        SET bio_markup = $1, bio_html = $2
+        WHERE id = $3
+        RETURNING *
+      `,
+        [bioMarkup, unwrapUserHtml(bioHtml), userId],
+      )
+      .then(exactlyOneRow);
+    return { user, charge };
+  });
 }
 
 ////////////////////////////////////////////////////////////
@@ -1138,12 +1155,12 @@ export async function createPm(
 // able to change the address while email_verified_at stays set.
 // Nor a custom_title slot: updateUserCustomTitle is that column's sole writer,
 // so only a route that checked UPDATE_USER_CUSTOM_TITLE reaches it.
-// An attr left undefined keeps its column, so a cleared sig is EMPTY_USER_HTML.
+// Nor a sig slot: updateUserSig is that column's sole writer, so a new
+// member's sig goes to the spam classifier.
+// An attr left undefined keeps its column.
 export const updateUser = async (
   userId: number,
   attrs: {
-    sig?: string | undefined;
-    sig_html?: UserHtml | undefined;
     avatar_url?: string | undefined;
     hide_sigs?: boolean | undefined;
     is_ghost?: boolean | undefined;
@@ -1154,32 +1171,26 @@ export const updateUser = async (
   },
 ) => {
   debug("[updateUser] attrs", attrs);
-  const sigHtml =
-    attrs.sig_html === undefined ? undefined : unwrapUserHtml(attrs.sig_html);
 
   return pool
     .query(
       `
     UPDATE users
     SET
-      sig = COALESCE($1, sig),
-      avatar_url = COALESCE($2, avatar_url),
-      hide_sigs = COALESCE($3, hide_sigs),
-      is_ghost = COALESCE($4, is_ghost),
-      sig_html = COALESCE($5, sig_html),
-      is_grayscale = COALESCE($6, is_grayscale),
-      force_device_width = COALESCE($7, force_device_width),
-      hide_avatars = COALESCE($8, hide_avatars),
-      eflags = COALESCE($9, eflags)
-    WHERE id = $10
+      avatar_url = COALESCE($1, avatar_url),
+      hide_sigs = COALESCE($2, hide_sigs),
+      is_ghost = COALESCE($3, is_ghost),
+      is_grayscale = COALESCE($4, is_grayscale),
+      force_device_width = COALESCE($5, force_device_width),
+      hide_avatars = COALESCE($6, hide_avatars),
+      eflags = COALESCE($7, eflags)
+    WHERE id = $8
     RETURNING *
   `,
       [
-        attrs.sig,
         attrs.avatar_url,
         attrs.hide_sigs,
         attrs.is_ghost,
-        sigHtml,
         attrs.is_grayscale,
         attrs.force_device_width,
         attrs.hide_avatars,
@@ -1189,6 +1200,37 @@ export const updateUser = async (
     )
     .then(maybeOneRow);
 };
+
+// The sole writer of users.sig and users.sig_html. The actor, the member or
+// staff, pays the screening charge for a sig that is not empty while new
+// (server/db/screen_budget.ts). The charge comes back for the route to hand
+// to the classifier after the commit. A cleared sig is "" and
+// EMPTY_USER_HTML.
+export async function updateUserSig(
+  actorId: number,
+  userId: number,
+  sig: string,
+  sigHtml: UserHtml,
+): Promise<ScreeningCharge | null> {
+  assert(_.isString(sig));
+
+  return pool.withTransaction(async (client) => {
+    const standing = await lockStanding(client, actorId);
+    const charge =
+      sig.length > 0
+        ? await spendScreening(client, standing, { title: null, body: sig })
+        : null;
+    await client.query(
+      `
+      UPDATE users
+      SET sig = $1, sig_html = $2
+      WHERE id = $3
+    `,
+      [sig, unwrapUserHtml(sigHtml), userId],
+    );
+    return charge;
+  });
+}
 
 // The sole writer of users.custom_title. Its guard is UPDATE_USER_CUSTOM_TITLE.
 export async function updateUserCustomTitle(userId: number, title: string) {

@@ -15,8 +15,8 @@ function spam(confidence: number, isSpam = true): AnalyzeResult {
   };
 }
 
-const newcomer = { demoted: false };
-const demoted = { demoted: true };
+const newcomer = { demoted: false, subject: "post" } as const;
+const demoted = { demoted: true, subject: "post" } as const;
 
 describe("decideAction", () => {
   it("nukes high-confidence spam (>= 0.9)", () => {
@@ -34,6 +34,16 @@ describe("decideAction", () => {
     expect(decideAction(spam(NUKE_CONFIDENCE), demoted)).toBe("REVIEW");
     expect(decideAction(spam(1), demoted)).toBe("REVIEW");
   });
+
+  // Intent: spam outside a post is only flagged for a mod.
+  // Why it exists: campaigns, bios and sigs reach the classifier too, and
+  // the rule for them is review, never nuke (hunt 261117-0852-055).
+  it.each(["campaign", "bio", "sig"] as const)(
+    "only reviews high-confidence spam in a %s",
+    (subject) => {
+      expect(decideAction(spam(1), { demoted: false, subject })).toBe("REVIEW");
+    },
+  );
 
   it("reviews mid-confidence spam (0.7 - 0.9)", () => {
     expect(decideAction(spam(REVIEW_CONFIDENCE), newcomer)).toBe("REVIEW");

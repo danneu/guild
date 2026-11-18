@@ -344,6 +344,7 @@ router.post("/users/:user_slug/albums", loadUser, async (ctx: Context) => {
   ctx
     .validateBody("markup")
     .isLength(0, 10000, "Description cannot be more than 10k chars");
+  // Within the owner's album row budget
   const album = await db.images.insertAlbum({
     userId: ctx.state.user.id,
     title: ctx.vals.title,

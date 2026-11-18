@@ -154,10 +154,13 @@ describe("JSON edit endpoints", () => {
   it("send a mod only the bio fields of the member they edited", async () => {
     vi.mocked(db.findUserById).mockResolvedValue({ ...memberRow } as any);
     vi.mocked(db.updateUserBio).mockResolvedValue({
-      ...memberRow,
-      bio_markup: "New bio",
-      bio_html: "<p>saved</p>",
-    } as any);
+      user: {
+        ...memberRow,
+        bio_markup: "New bio",
+        bio_html: "<p>saved</p>",
+      } as any,
+      charge: null,
+    });
 
     const res = await put(`/api/users/${memberRow.id}/bio`, mod, {
       markup: "New bio",

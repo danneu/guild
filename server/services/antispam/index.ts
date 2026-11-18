@@ -2,7 +2,7 @@
 import assert from "assert";
 // 1st
 import claude from "./claude";
-import { decideAction } from "./policy";
+import { decideAction, type SubjectKind } from "./policy";
 import * as config from "../../config";
 import {
   broadcastAutoNuke,
@@ -22,10 +22,24 @@ export type SpamActor = { id: number; uname: string; slug: string };
 // text is suspected spam.
 export type SpamFinding = { action: "NUKE" | "REVIEW"; verdict: SpamVerdict };
 
+// What the screened write stored, for the verdict's rules and the moderators'
+// notes. A post is known by its id. Any other subject carries the path of the
+// page where a mod reviews it.
+export type SpamSubject =
+  | { kind: "post"; postId: number }
+  | { kind: Exclude<SubjectKind, "post">; url: string };
+
+// Where a mod reviews the subject: a post's raw markup, or the subject's page
+function reviewPath(subject: SpamSubject): string {
+  return subject.kind === "post" ? `/posts/${subject.postId}/raw` : subject.url;
+}
+
 // Screens the text a write stored, and acts on the verdict. Returns null when
 // the text passes or the classifier fails open, and the finding for NUKE and
 // REVIEW, so the caller can skip the intro relay for a suspected spammer, and
-// on a NUKE hide what the write changed outside the actor's own rows.
+// on a NUKE hide what the write changed outside the actor's own rows. Only a
+// post can be nuked or relayed as a first post
+// (server/services/antispam/policy.ts#decideAction).
 //
 // `charge` is what the write that stored the text returned
 // (server/db/screen_budget.ts#spendScreening). It decides whether the text is
@@ -33,10 +47,15 @@ export type SpamFinding = { action: "NUKE" | "REVIEW"; verdict: SpamVerdict };
 async function process(
   actor: SpamActor,
   charge: ScreeningCharge | null,
-  postId: number,
+  subject: SpamSubject,
 ): Promise<SpamFinding | null> {
   assert(Number.isInteger(actor.id));
-  assert(Number.isInteger(postId));
+  assert(
+    subject.kind === "post"
+      ? Number.isInteger(subject.postId)
+      : subject.url.startsWith("/"),
+    "A subject names a post or a path on this site",
+  );
 
   if (!charge) {
     return null;
@@ -47,17 +66,20 @@ async function process(
   );
 
   const result = await claude.analyze(charge);
-  const action = decideAction(result, charge.standing);
+  const action = decideAction(result, {
+    demoted: charge.standing.demoted,
+    subject: subject.kind,
+  });
 
-  console.log("antispam process:", { action, result });
+  console.log("antispam process:", { action, subject, result });
 
   if (action === "ALLOW") {
-    if (charge.standing.posts_count === 0) {
+    if (subject.kind === "post" && charge.standing.posts_count === 0) {
       const antispam = result.ok
         ? ({ ran: true } as const)
         : ({ ran: false, error: result.error } as const);
       relayOnce("first_post", actor, {
-        postId,
+        postId: subject.postId,
         antispam,
         markup: charge.body,
       }).catch((err) => console.error("first_post relay failed", err));
@@ -70,6 +92,7 @@ async function process(
   const { verdict } = result;
 
   if (action === "NUKE") {
+    assert(subject.kind === "post", "Only a verdict on a post nukes");
     // It's high-confidence spam, so nuke user and post in Discord.
     await db
       .nukeUser({
@@ -78,13 +101,12 @@ async function process(
       })
       .catch(ignoreAlreadyNuked);
 
-    broadcastAutoNuke(actor, postId, verdict).catch((err) => {
+    broadcastAutoNuke(actor, subject.postId, verdict).catch((err) => {
       console.error("broadcastAutoNuke failed", err);
     });
   } else {
-    // REVIEW: mid-confidence spam. Alert Discord for a human to review, but do
-    // not nuke.
-    broadcastSpamReview(actor, postId, verdict).catch((err) => {
+    // REVIEW: alert Discord for a human to review, but do not nuke.
+    broadcastSpamReview(actor, reviewPath(subject), verdict).catch((err) => {
       console.error("broadcastSpamReview failed", err);
     });
   }
@@ -152,15 +174,30 @@ function logError(err: unknown): null {
   return null;
 }
 
+// Never rejects: an error is logged, and the text passes.
+function processLogged(
+  actor: SpamActor,
+  charge: ScreeningCharge | null,
+  subject: SpamSubject,
+): Promise<SpamFinding | null> {
+  return process(actor, charge, subject).then(logFinding).catch(logError);
+}
+
+// For a route that does not wait for the verdict: hands the charge its write
+// returned to process after the commit, and returns nothing, so the route has
+// no promise to drop. Text outside the forums is screened this way
+// (docs/agents/budgets.md#other-member-text).
+function processInBackground(
+  actor: SpamActor,
+  charge: ScreeningCharge | null,
+  subject: SpamSubject,
+): void {
+  processLogged(actor, charge, subject).catch(logError);
+}
+
 export default {
   checkClassifier,
   startClassifierProbe,
-  // Never rejects: an error is logged, and the text passes.
-  process: async (
-    actor: SpamActor,
-    charge: ScreeningCharge | null,
-    postId: number,
-  ): Promise<SpamFinding | null> => {
-    return process(actor, charge, postId).then(logFinding).catch(logError);
-  },
+  process: processLogged,
+  processInBackground,
 };

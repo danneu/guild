@@ -169,6 +169,36 @@ for (const budget of [
   );
 }
 
+// How many rows of each kind one account may create per trailing hour,
+// checked by server/db/row_budget.ts#admitRow. Trust is server/trust.ts. Each
+// kind has its own budget, so a burst of one never blocks another. Size the
+// roll budgets far above a busy dice session, so only a loop reaches them.
+// PROVISIONAL: the defaults are a guess that no production data has checked
+// yet (hunt 261117-0852-055). To tune one, set it in fly.toml's [env] or as a
+// Fly secret; a refusal logs "[row_budget] refused" in prod:logs.
+export const ROW_BUDGET_PER_HOUR = {
+  campaign: {
+    untrusted: parseInt(process.env.ROW_BUDGET_CAMPAIGNS_UNTRUSTED || "5", 10),
+    trusted: parseInt(process.env.ROW_BUDGET_CAMPAIGNS_TRUSTED || "30", 10),
+  },
+  roll: {
+    untrusted: parseInt(process.env.ROW_BUDGET_ROLLS_UNTRUSTED || "300", 10),
+    trusted: parseInt(process.env.ROW_BUDGET_ROLLS_TRUSTED || "1200", 10),
+  },
+  album: {
+    untrusted: parseInt(process.env.ROW_BUDGET_ALBUMS_UNTRUSTED || "10", 10),
+    trusted: parseInt(process.env.ROW_BUDGET_ALBUMS_TRUSTED || "60", 10),
+  },
+};
+for (const [kind, budgets] of Object.entries(ROW_BUDGET_PER_HOUR)) {
+  for (const [standing, value] of Object.entries(budgets)) {
+    assert(
+      Number.isInteger(value) && value > 0,
+      `ROW_BUDGET_PER_HOUR.${kind}.${standing} must be a positive integer`,
+    );
+  }
+}
+
 // The screening budget: what one account may spend on spam classifier calls,
 // in the units server/db/screen_budget.ts#spendScreening prices from each
 // call's payload. The hour and day budgets bound what one account sends; the

@@ -29,8 +29,8 @@ const UNITS_PER_CALL = 8;
 // Size is charged per this many UTF-8 bytes of payload, rounded up.
 const BYTES_PER_UNIT = 1024;
 
-// The text a write sends to the classifier. A title goes only with a topic's
-// text: a new topic, or a retitle with its opening post.
+// The text a write sends to the classifier. A title goes with a topic's text
+// (a new topic, or a retitle with its opening post) and a dice campaign's.
 export type ScreeningText = { title: string | null; body: string };
 
 // The JSON the classifier sends. Built only here, so the price and the request
@@ -52,10 +52,10 @@ function priceOf(payload: string): number {
   );
 }
 
-// The costliest payload a write can send: the longest uname, title and post
-// the validators allow, with every character escaped to six bytes (\u0000),
-// the most JSON spends on one UTF-16 code unit. A unit budget below its price
-// would refuse that write forever.
+// The costliest payload a write can send: a new topic's, with the longest
+// uname, title and post the validators allow, with every character escaped to
+// six bytes (\u0000), the most JSON spends on one UTF-16 code unit. A unit
+// budget below its price would refuse that write forever.
 const LARGEST_PRICE = priceOf(
   buildPayload("\u0000".repeat(config.MAX_UNAME_LENGTH), {
     title: "\u0000".repeat(config.MAX_TOPIC_TITLE_LENGTH),

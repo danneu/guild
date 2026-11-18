@@ -6,7 +6,9 @@ import Knex from "knex";
 const knex = Knex({ client: "pg" });
 import _ from "lodash";
 // 1st
-import { pool, maybeOneRow } from "./util.js";
+import { pool, maybeOneRow, exactlyOneRow } from "./util.js";
+import { admitRow } from "./row_budget.js";
+import { lockStanding } from "./send_budget.js";
 import { DbAlbum, DbImage, DbUser } from "../dbtypes.js";
 
 ////////////////////////////////////////////////////////////
@@ -151,7 +153,8 @@ export async function getAlbumImages(albumId: number) {
     .then((res) => res.rows);
 }
 
-// markup is optional
+// Creates an album for userId, whose album row budget pays for it
+// (server/db/row_budget.ts). markup is optional.
 export async function insertAlbum({
   userId,
   title,
@@ -163,16 +166,20 @@ export async function insertAlbum({
 }) {
   assert(Number.isInteger(userId));
   assert(typeof title === "string");
-  return pool
-    .query(
-      `
-    INSERT INTO albums (user_id, title, markup)
-    VALUES ($1, $2, $3)
-    RETURNING *
-  `,
-      [userId, title, markup],
-    )
-    .then(maybeOneRow);
+  return pool.withTransaction(async (client) => {
+    const standing = await lockStanding(client, userId);
+    const now = await admitRow(client, standing, "album");
+    return client
+      .query(
+        `
+        INSERT INTO albums (user_id, title, markup, created_at)
+        VALUES ($1, $2, $3, $4)
+        RETURNING *
+      `,
+        [userId, title, markup, now],
+      )
+      .then(exactlyOneRow);
+  });
 }
 
 export async function getAlbum(albumId: number) {

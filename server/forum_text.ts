@@ -47,7 +47,7 @@ function screenInBackground(
   hideForeign: (() => Promise<boolean>) | null,
 ): void {
   antispam
-    .process(writer, charge, postId)
+    .process(writer, charge, { kind: "post", postId })
     .then(async (finding) => {
       if (finding?.action === "NUKE" && hideForeign) await hideForeign();
     })
@@ -84,7 +84,10 @@ export async function createTopic(
     ...input,
     html,
   });
-  const finding = await antispam.process(writer, charge, topic.post.id);
+  const finding = await antispam.process(writer, charge, {
+    kind: "post",
+    postId: topic.post.id,
+  });
   return { topic, flagged: finding !== null };
 }
 

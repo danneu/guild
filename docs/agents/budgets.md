@@ -1,10 +1,11 @@
 # Budgets on what a member can repeat
 
 Read this before you add or change a write a member can repeat: a post or
-an edit of one, a topic or its title, a PM or other send, a call to the
-spam classifier, or any write with a per-account limit. Read it too before
-you treat new members differently from trusted ones. `AGENTS.md` links
-here. Uploads have their own caps; see [uploads.md](uploads.md).
+an edit of one, a topic or its title, a PM or other send, a dice campaign,
+roll or album, a bio or sig, a call to the spam classifier, or any write
+with a per-account limit. Read it too before you treat new members
+differently from trusted ones. `AGENTS.md` links here. Uploads have their
+own caps; see [uploads.md](uploads.md).
 
 ## Standing
 
@@ -92,16 +93,48 @@ Topics and posts are not sends.
 - A write that stores text to screen reads its actor once through
   lockStanding. It charges in its own transaction, before its insert, and
   returns the charge with its row.
-- After the commit, `server/forum_text.ts` hands that charge to
-  `server/services/antispam/index.ts#process`. A null charge means a trusted
-  actor, and no call.
+- After the commit, the write's caller hands that charge to
+  `server/services/antispam/index.ts#process` with the subject it stored:
+  `server/forum_text.ts` for post text and titles, and the route for other
+  text (see [other member text](#other-member-text)). A null charge means a
+  trusted actor, and no call.
 - Over budget, spendScreening throws `ScreeningBudgetExceeded` and nothing is
   written. It is a `MemberRefusal`, so `server/middleware/refusals.ts`
   answers it (see
   [requests-and-responses.md](requests-and-responses.md#refusals)).
+- Only a verdict on a post can NUKE or relay a first post
+  (`server/services/antispam/policy.ts#decideAction`). On any other subject
+  a spam verdict asks a mod to review the subject's page.
 - A NUKE verdict hides the actor's own rows (`nukeUser`). For a post or title
   the actor changed but does not own, the owner hides that row only while it
   still holds the judged text, and never puts back an older one.
+
+## Other member text
+
+Posts and sends are not all a member can repeat, or all the text others see.
+
+- Each kind of row a member can create over and over outside posts and sends
+  pays an hourly row budget per account, through
+  `server/db/row_budget.ts#admitRow`. Its kinds (`RowKind`) are the full set.
+  Each kind has its own budget, so a burst of one never blocks another.
+- The kind's writer calls admitRow in its own transaction, after
+  lockStanding and before its insert, and stamps the row with the time it
+  returns. admitRow counts the member's own rows of that kind in the
+  trailing hour: the table is the ledger.
+- Over budget, admitRow throws `RowBudgetExceeded`, a `MemberRefusal`, and
+  nothing is written.
+- A write that overwrites one value, such as a bio, a sig or an edit of a
+  campaign, pays no row budget: it does not add to what the member shows.
+- Member text outside the forums that other members see and that can carry
+  links goes to the classifier when a new member writes it. Its db writer
+  charges the screening budget and returns the charge, and the route hands
+  it to `antispam.processInBackground` after the commit, with the subject's
+  kind (`server/services/antispam/policy.ts#SubjectKind`) and the page where
+  a mod reviews it. The callers of spendScreening outside
+  `server/db/forum_text_writes.ts` are the full set.
+- A new kind of row needs its own admitRow kind, and new member text that
+  can carry links needs the screening hand-off. Nothing fails if either is
+  missing.
 
 ## The classifier
 
