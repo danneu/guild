@@ -176,14 +176,10 @@ export async function listSubscribedTopics(
 ): Promise<{ topics: any[]; prunedSubCount: number }> {
   assertViewer(viewer);
   assert(typeof isArchived === "boolean");
-  const [topics, subNotes] = await Promise.all([
-    findSubscribedTopics(viewer.id, isArchived),
+  const [{ readable, unreadable }, subNotes] = await Promise.all([
+    gateSubscribedTopics(pool, viewer, isArchived),
     findSubNotifications(viewer.id),
   ]);
-  topics.forEach(assertTopic);
-  const [readable, unreadable] = _.partition(topics, (topic) =>
-    mayView(viewer, { post: null, topic }),
-  );
   const unreadableIds = new Set(unreadable.map((t) => t.id));
   const prunedTypes = await prune(
     viewer.id,
@@ -199,6 +195,20 @@ export async function listSubscribedTopics(
     topics: readable.map(pre.presentTopic),
     prunedSubCount: prunedTypes.length,
   };
+}
+
+// How many of the viewer's unarchived subscriptions pass READ_TOPIC, so the
+// subscription cap never hints that hidden or lounge subscriptions exist. It
+// reads through pgClient, so server/db/subscriptions.ts#subscribeToTopic can
+// count under its own lock, and it deletes nothing.
+export async function countReadableSubscriptions(
+  pgClient: PgClientInTransaction,
+  viewer: any,
+): Promise<number> {
+  assert(pgClient._inTransaction, "pgClient must be in a transaction");
+  assertViewer(viewer);
+  const { readable } = await gateSubscribedTopics(pgClient, viewer, false);
+  return readable.length;
 }
 
 export async function deleteRatingNotification(
@@ -653,12 +663,30 @@ function findSubNotifications(toUserId: number) {
     .then((res) => res.rows);
 }
 
+// The viewer's subscribed topics, split by READ_TOPIC
+async function gateSubscribedTopics(
+  db: typeof pool | PgClientInTransaction,
+  viewer: Viewer,
+  isArchived: boolean,
+): Promise<{ readable: any[]; unreadable: any[] }> {
+  const topics = await findSubscribedTopics(db, viewer.id, isArchived);
+  topics.forEach(assertTopic);
+  const [readable, unreadable] = _.partition(topics, (topic) =>
+    mayView(viewer, { post: null, topic }),
+  );
+  return { readable, unreadable };
+}
+
 // Sort them by latest_posts first
-function findSubscribedTopics(userId: number, isArchived: boolean) {
+function findSubscribedTopics(
+  db: typeof pool | PgClientInTransaction,
+  userId: number,
+  isArchived: boolean,
+) {
   assert(Number.isInteger(userId));
   assert(typeof isArchived === "boolean");
 
-  return pool
+  return db
     .query(
       `
 SELECT

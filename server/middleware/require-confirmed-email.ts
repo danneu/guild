@@ -57,7 +57,8 @@ const EXEMPT_ROUTES = new Set([
   // Registering while holding a stale unverified cookie. Turnstile-protected.
   "POST /users",
   // Lockout fix: "I forgot which password I typed" lands here while gated.
-  // Already rate-limited by the active-reset-token check.
+  // It mails one link per token lifetime: server/db/index.ts#issueResetToken
+  // issues no token while the last is active.
   "POST /forgot",
   // Lockout fix: this creates a session, so blocking it is a hard stop.
   "POST /reset-password",

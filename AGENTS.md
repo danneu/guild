@@ -63,7 +63,8 @@ three tabs are ordinary posts.
 ## Rules that apply everywhere
 
 - **Nothing fails if you miss these.** A new kind of member send must call
-  `server/db/send_budget.ts#spend`. A GET that writes must check the ban and
+  `server/db/send_budget.ts#spend`. Check a per-account limit inside the write
+  it limits, behind `lockSender`. A GET that writes must check the ban and
   email gates itself. See [budgets](docs/agents/budgets.md) and
   [auth](docs/agents/auth.md).
 - **Never drop a promise in server code.** Node exits on an unhandled

@@ -5,25 +5,42 @@ import assert from "assert";
 // 1st
 import { pool } from "./util";
 import * as db from ".";
+import { countReadableSubscriptions } from "./notifications";
+import { lockSender } from "./send_budget";
 
 ////////////////////////////////////////////////////////////
 
-// Do nothing if subscription already exists
-export const subscribeToTopic = async function (
-  userId: number,
+// The most unarchived subscriptions a member may keep
+export const MAX_SUBSCRIPTIONS = 200;
+
+export type SubscribeResult = { type: "SUBSCRIBED" } | { type: "TOO_MANY" };
+
+// Subscribes the viewer to the topic, unless they already keep
+// MAX_SUBSCRIPTIONS they can read. The count and the insert share one
+// transaction behind lockSender, so a burst of subscribes cannot all pass the
+// cap. A topic the viewer already follows adds nothing.
+export async function subscribeToTopic(
+  viewer: { id: number; role: string },
   topicId: number,
-) {
-  assert(userId);
-  assert(topicId);
-  return pool.query(
-    `
-    INSERT INTO topic_subscriptions (user_id, topic_id)
-    VALUES ($1, $2)
-    ON CONFLICT (user_id, topic_id) DO NOTHING
-  `,
-    [userId, topicId],
-  );
-};
+): Promise<SubscribeResult> {
+  assert(Number.isInteger(topicId));
+
+  return pool.withTransaction(async (client) => {
+    await lockSender(client, viewer.id);
+    const count = await countReadableSubscriptions(client, viewer);
+    if (count >= MAX_SUBSCRIPTIONS) return { type: "TOO_MANY" };
+
+    await client.query(
+      `
+      INSERT INTO topic_subscriptions (user_id, topic_id)
+      VALUES ($1, $2)
+      ON CONFLICT (user_id, topic_id) DO NOTHING
+    `,
+      [viewer.id, topicId],
+    );
+    return { type: "SUBSCRIBED" };
+  });
+}
 
 ////////////////////////////////////////////////////////////
 

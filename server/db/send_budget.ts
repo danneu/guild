@@ -16,18 +16,21 @@ import { exactlyOneRow, type PgClientInTransaction } from "./util";
 // The budgets in server/config.ts are per this trailing window.
 const WINDOW_SECONDS = 60 * 60;
 
-// First key of the advisory lock that serializes one sender's sends ("SEND").
+// First key of lockSender's advisory lock ("SEND").
 // Two-key advisory locks never collide with one-key ones such as
 // server/guildbot.ts's.
 export const LOCK_SPACE = 0x53454e44;
 
-// Serializes one sender's sends until the transaction ends. It is not a users
-// row lock: the send triggers write other members' users rows (pms and
-// notification counts), so locking the sender's row up front would deadlock
-// two members who send to each other at once.
+// The per-account lock. It serializes one account's sends until the
+// transaction ends, and every other per-account limit too: a write that checks
+// a gap, a window or a cap on an account takes it first, so writes at once
+// cannot all pass the check (docs/agents/budgets.md#per-account-limits). It is
+// not a users row lock: the send triggers write other members' users rows (pms
+// and notification counts), so locking the sender's row up front would
+// deadlock two members who send to each other at once.
 //
-// A send must take this before any other lock on its sender, or it can
-// deadlock against the sender's other sends. spend takes it, and so does
+// A write must take this before any other lock on its account, or it can
+// deadlock against the account's other writes. spend takes it, and so does
 // anything that locks the sender earlier in a send's transaction, such as
 // server/db/convos.ts#isFirstStartedConvo. Postgres lets a transaction take an
 // advisory lock it already holds, so taking it twice is fine.

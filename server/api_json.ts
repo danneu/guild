@@ -39,8 +39,8 @@ const views = {
   }),
   // The PM editor in views/show_convo.html
   pmEdit: (pm: { id: number; html: string }) => ({ id: pm.id, html: pm.html }),
-  // The rating buttons in views/show_topic.html. db.ratePost returns no row
-  // for a duplicate rating.
+  // The rating buttons in views/show_topic.html. The rating route sends null
+  // when db.ratePost finds a duplicate rating.
   rating: (rating: { post_id: number; type: string } | null | undefined) =>
     rating ? { post_id: rating.post_id, type: rating.type } : null,
   // The uname typeaheads in views/edit_topic.html and views/search_results.html

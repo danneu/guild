@@ -41,6 +41,7 @@ import topicsRoutes from "./routes/topics.js";
 import forumsRoutes from "./routes/forums.js";
 import adminRoutes from "./routes/admin.js";
 import verifyEmailRoutes from "./routes/verify-email.js";
+import { sendResetMail } from "./routes/reset-mail.js";
 import guildbot from "./guildbot.js";
 import {
   resolveClientIp,
@@ -200,7 +201,6 @@ import * as db from "./db";
 import * as pre from "./presenters";
 import * as middleware from "./middleware";
 import * as cancan from "./cancan";
-import * as emailer from "./emailer";
 import * as belt from "./belt";
 import { authenticate, hashPassword } from "./auth";
 import { MarkupRejected, renderMarkup } from "./markup";
@@ -610,21 +610,7 @@ router.post("/posts/:postId/rate", async (ctx: Context) => {
   // Ensure currUser is authorized to rep (403)
   ctx.assert(cancan.can(ctx.currUser, "RATE_POST", post), 403);
 
-  // Ensure user has waited a certain duration since giving latest rating.
-  // (To prevent rating spamming)
-  var prevRating = await db.findLatestRatingForUserId(ctx.currUser.id);
-  if (prevRating) {
-    var threeSecondsAgo = new Date(Date.now() - 3000);
-    // If this user's previous rating is newer than 3 seconds ago, fail.
-    if (prevRating.created_at > threeSecondsAgo) {
-      sendJson(ctx, "error", { error: "TOO_SOON" });
-      ctx.status = 400;
-      return;
-    }
-  }
-
-  // Create rep
-  const rating = await db.ratePost({
+  const result = await db.ratePost({
     post_id: post.id,
     from_user_id: ctx.currUser.id,
     from_user_uname: ctx.currUser.uname,
@@ -632,20 +618,31 @@ router.post("/posts/:postId/rate", async (ctx: Context) => {
     type: ctx.vals.type,
   });
 
-  // If rating is falsey, rating is a dupe (user probably dbl-clicked)
-  // so do not create notification
-  if (rating) {
-    // Send receiver a RATING notification in the background
-    db.notifications
-      .notifyRating({
-        fromUserId: ctx.currUser.id,
-        postId: post.id,
-        ratingType: rating.type,
-      })
-      .catch(console.error);
+  switch (result.type) {
+    case "RATED":
+      // Send receiver a RATING notification in the background
+      db.notifications
+        .notifyRating({
+          fromUserId: ctx.currUser.id,
+          postId: post.id,
+          ratingType: result.rating.type,
+        })
+        .catch(console.error);
+      sendJson(ctx, "rating", result.rating);
+      return;
+    case "DUPLICATE":
+      // The user probably double-clicked, so no notification
+      sendJson(ctx, "rating", null);
+      return;
+    case "TOO_SOON":
+      sendJson(ctx, "error", { error: "TOO_SOON" });
+      ctx.status = 400;
+      return;
+    default: {
+      const exhaustive: never = result;
+      throw exhaustive;
+    }
   }
-
-  sendJson(ctx, "rating", rating);
 });
 
 //
@@ -915,33 +912,31 @@ router.post("/forgot", async (ctx: Context) => {
     return;
   }
 
-  // Don't send another email until previous reset token has expired
-  if (await db.findLatestActiveResetToken(user.id)) {
-    // ctx.log.info('User already has an active reset token');
-    ctx.flash = { message: ["success", successMessage] };
-    ctx.response.redirect("/");
-    return;
+  const result = await sendResetMail(user);
+  switch (result) {
+    case "ACTIVE":
+      // No new mail until the last token expires
+      ctx.flash = { message: ["success", successMessage] };
+      ctx.response.redirect("/");
+      return;
+    case "SEND_FAILED":
+      ctx.flash = {
+        message: [
+          "danger",
+          "For some reason, the email failed to be sent. Email me at <mahz@roleplayerguild.com> to let me know.",
+        ],
+      };
+      ctx.back("/");
+      return;
+    case "SENT":
+      ctx.flash = { message: ["success", successMessage] };
+      ctx.back("/");
+      return;
+    default: {
+      const exhaustive: never = result;
+      throw exhaustive;
+    }
   }
-
-  var resetToken = await db.createResetToken(user.id);
-  // ctx.log.info({ resetToken: resetToken }, 'Created reset token');
-  // Send email in background
-  // ctx.log.info('Sending email to %s', user.email);
-  try {
-    await emailer.sendResetTokenEmail(user.uname, user.email, resetToken.token);
-  } catch (err) {
-    ctx.flash = {
-      message: [
-        "danger",
-        "For some reason, the email failed to be sent. Email me at <mahz@roleplayerguild.com> to let me know.",
-      ],
-    };
-    ctx.back("/");
-    return;
-  }
-
-  ctx.flash = { message: ["success", successMessage] };
-  ctx.back("/");
 });
 
 // Password reset form

@@ -77,25 +77,21 @@ router.get("/me/subscriptions/archive", async (ctx: Context) => {
 router.post("/me/subscriptions", async (ctx: Context) => {
   ctx.assert(ctx.currUser, 404);
 
-  // Ensure user doesn't have 200 subscriptions. Counts only the ones they can
-  // see, so the cap never hints that hidden or lounge subscriptions exist.
-  const { topics: subs } = await db.notifications.listSubscribedTopics(
-    ctx.currUser,
-    false,
-  );
-  if (subs.length >= 200) {
-    ctx.body = "You cannot have more than 200 topic subscriptions";
-    return;
-  }
-
   const topicId = belt.extractId(ctx.request.body["topic-id"]);
   ctx.assert(topicId, 404);
   const loaded = await db.loadTopicFor(ctx.currUser, topicId, "plain");
   ctx.assert(loaded.kind === "readable", 404);
   const { topic } = loaded;
   ctx.assertAuthorized(ctx.currUser, "SUBSCRIBE_TOPIC", topic);
+  const result = await db.subscriptions.subscribeToTopic(
+    ctx.currUser,
+    topic.id,
+  );
+  if (result.type === "TOO_MANY") {
+    ctx.body = `You cannot have more than ${db.subscriptions.MAX_SUBSCRIPTIONS} topic subscriptions`;
+    return;
+  }
   // TODO: flash
-  await db.subscriptions.subscribeToTopic(ctx.currUser.id, topic.id);
   if (ctx.request.body["return-to-topic"]) {
     return ctx.response.redirect(topic.url);
   }

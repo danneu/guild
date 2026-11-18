@@ -2,6 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { pool } from "./util";
 import {
+  createFriendship,
+  issueResetToken,
+  likeStatus,
+  ratePost,
   replacePasswordTx,
   unnukeUser,
   updateUserActiveTrophyId,
@@ -124,6 +128,183 @@ describe("replacePasswordTx", () => {
         insertAt,
       );
     }
+  });
+});
+
+////////////////////////////////////////////////////////////
+// Per-account limits
+//
+// Intent: each limit is read and enforced inside the write it limits, in that
+// write's transaction, against the database clock.
+// Why it exists: hunt finding 261117-0852-031. POST /forgot read the active
+// reset token and then inserted one in separate pool queries, so requests at
+// once for one address each mailed a link. The rating gap, the status-like
+// gap and the friend cap had the same shape. The races rest on lockSender,
+// which a stub cannot run; these pin each limit on both sides of its
+// boundary.
+
+// The database clock
+const T0 = new Date("2026-11-17T12:00:00Z");
+
+function at(ms: number): Date {
+  return new Date(T0.getTime() + ms);
+}
+
+// A client in a transaction. pool.withTransaction runs on it, and it answers
+// each statement but the lock with answer(sql, params).
+function txClient(answer: (sql: string, params: unknown[]) => unknown[]) {
+  const client = {
+    _inTransaction: true,
+    query: vi.fn(async (sql: string, params: unknown[] = []) => {
+      const rows = /pg_advisory_xact_lock/.test(sql)
+        ? [{}]
+        : answer(sql, params);
+      return { rows, rowCount: rows.length };
+    }),
+  } as any;
+  vi.mocked(pool.withTransaction).mockImplementation(async (fn: any) =>
+    fn(client),
+  );
+  return client;
+}
+
+// The params of each INSERT INTO table the client ran
+function inserts(client: any, table: string): unknown[][] {
+  return client.query.mock.calls
+    .filter(([sql]: [string]) =>
+      new RegExp(`INSERT INTO ${table}\\b`).test(sql),
+    )
+    .map(([, params]: [string, unknown[]]) => params);
+}
+
+describe("per-account limits", () => {
+  beforeEach(() => {
+    // A statement on the pool would run outside the write's transaction.
+    query.mockRejectedValue(new Error("query outside the write's transaction"));
+  });
+
+  describe("issueResetToken", () => {
+    const userId = 42;
+    const issued = { user_id: userId, token: "a-new-token", created_at: T0 };
+
+    function resetTokens(lastExpiredAt: Date | null) {
+      return txClient((sql) => {
+        if (/INSERT INTO reset_tokens/.test(sql)) return [issued];
+        if (/FROM reset_tokens/.test(sql)) {
+          return [{ now: T0, last_expired_at: lastExpiredAt }];
+        }
+        throw new Error(`unexpected query: ${sql}`);
+      });
+    }
+
+    it("issues no token while the last one is still active", async () => {
+      const client = resetTokens(T0);
+
+      await expect(issueResetToken(userId)).resolves.toBeNull();
+      expect(inserts(client, "reset_tokens")).toEqual([]);
+    });
+
+    it("issues a token once the last one has expired", async () => {
+      const client = resetTokens(at(-1));
+
+      await expect(issueResetToken(userId)).resolves.toEqual(issued);
+      expect(inserts(client, "reset_tokens")).toEqual([
+        [userId, expect.any(String), T0],
+      ]);
+    });
+  });
+
+  describe("ratePost", () => {
+    const props = {
+      post_id: 100,
+      from_user_id: 7,
+      from_user_uname: "Rater",
+      to_user_id: 8,
+      type: "like" as const,
+    };
+    const rating = { post_id: props.post_id, type: props.type };
+
+    function ratings(lastAt: Date | null) {
+      return txClient((sql) => {
+        if (/INSERT INTO ratings/.test(sql)) return [rating];
+        if (/FROM ratings/.test(sql)) return [{ now: T0, last_at: lastAt }];
+        throw new Error(`unexpected query: ${sql}`);
+      });
+    }
+
+    it("refuses a rating 3 s after the last, less 1 ms", async () => {
+      const client = ratings(at(1 - 3000));
+
+      await expect(ratePost(props)).resolves.toEqual({ type: "TOO_SOON" });
+      expect(inserts(client, "ratings")).toEqual([]);
+    });
+
+    it("rates a post 3 s after the last, stamped with the database clock", async () => {
+      const client = ratings(at(-3000));
+
+      await expect(ratePost(props)).resolves.toEqual({
+        type: "RATED",
+        rating,
+      });
+      expect(inserts(client, "ratings")).toEqual([
+        [7, "Rater", 100, "like", 8, T0],
+      ]);
+    });
+  });
+
+  describe("likeStatus", () => {
+    const like = { user_id: 7, status_id: 30 };
+
+    function statusLikes(lastAt: Date | null) {
+      return txClient((sql) => {
+        if (/INSERT INTO status_likes/.test(sql)) return [{}];
+        if (/UPDATE statuses/.test(sql)) return [];
+        if (/FROM status_likes/.test(sql))
+          return [{ now: T0, last_at: lastAt }];
+        throw new Error(`unexpected query: ${sql}`);
+      });
+    }
+
+    it("refuses a like 3 s after the last, less 1 ms", async () => {
+      const client = statusLikes(at(1 - 3000));
+
+      await expect(likeStatus(like)).resolves.toEqual({ type: "TOO_SOON" });
+      expect(inserts(client, "status_likes")).toEqual([]);
+    });
+
+    it("likes a status 3 s after the last, stamped with the database clock", async () => {
+      const client = statusLikes(at(-3000));
+
+      await expect(likeStatus(like)).resolves.toEqual({ type: "LIKED" });
+      expect(inserts(client, "status_likes")).toEqual([
+        [like.status_id, like.user_id, T0],
+      ]);
+    });
+  });
+
+  describe("createFriendship", () => {
+    function friendships(count: number) {
+      return txClient((sql) => {
+        if (/INSERT INTO friendships/.test(sql)) return [];
+        if (/FROM friendships/.test(sql)) return [{ count }];
+        throw new Error(`unexpected query: ${sql}`);
+      });
+    }
+
+    it("adds a 100th friend", async () => {
+      const client = friendships(99);
+
+      await createFriendship(7, 8);
+
+      expect(inserts(client, "friendships")).toEqual([[7, 8]]);
+    });
+
+    it("refuses a 101st friend", async () => {
+      const client = friendships(100);
+
+      await expect(createFriendship(7, 8)).rejects.toBe("TOO_MANY_FRIENDS");
+      expect(inserts(client, "friendships")).toEqual([]);
+    });
   });
 });
 

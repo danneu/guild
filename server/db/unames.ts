@@ -4,7 +4,8 @@ import assert from "assert";
 import createDebug from "debug";
 const debug = createDebug("app:db:unames");
 // 1st
-import { pool, maybeOneRow } from "./util";
+import { pool, maybeOneRow, exactlyOneRow } from "./util";
+import { lockSender } from "./send_budget";
 import * as belt from "../belt";
 import { DbUser } from "../dbtypes";
 
@@ -102,6 +103,22 @@ export const latestUnameChanges = async function (limit: number = 10) {
 
 ////////////////////////////////////////////////////////////
 
+// How long a member waits between name changes
+const UNAME_GAP_MONTHS = 3;
+
+// Whether a change at `now`, the database clock, falls inside the gap after
+// the member's last change at lastChangeAt.
+function isInsideUnameGap(lastChangeAt: Date | null, now: Date): boolean {
+  if (lastChangeAt === null) return false;
+  const retryAt = new Date(lastChangeAt);
+  retryAt.setUTCMonth(retryAt.getUTCMonth() + UNAME_GAP_MONTHS);
+  return now < retryAt;
+}
+
+// Renames the account, unless it changed its name inside the gap or the new
+// name is taken. The gap check and the writes share one transaction behind
+// lockSender, so a burst of renames cannot all pass the gap and reserve
+// several names.
 export async function changeUname({
   userId,
   changedById,
@@ -128,33 +145,33 @@ export async function changeUname({
   assert(typeof recycle === "boolean");
 
   return pool.withTransaction(async (client) => {
+    // Two changes at once cannot both pass the limit below.
+    await lockSender(client, userId);
+
     const newSlug = belt.slugifyUname(newUname);
     const oldSlug = belt.slugifyUname(oldUname);
 
     // TODO: Let staff bypass this rate limit
 
-    // Check if user changed username within the last month
-    const lastChange = await client
-      .query<{ updated_at: Date }>(
+    // clock_timestamp, not now(): now() is when the transaction began, which
+    // is stale after a wait on the lock. The change is stamped with this value.
+    const { now, last_change_at } = await client
+      .query<{ now: Date; last_change_at: Date | null }>(
         `
-        SELECT updated_at
-        FROM unames
-        WHERE user_id = $1
-          AND changed_by_id IS NOT NULL
-        ORDER BY updated_at DESC
-        LIMIT 1
+        SELECT
+          clock_timestamp() AS now,
+          (
+            SELECT max(updated_at)
+            FROM unames
+            WHERE user_id = $1
+              AND changed_by_id IS NOT NULL
+          ) AS last_change_at
         `,
         [userId],
       )
-      .then(maybeOneRow);
-
-    if (lastChange) {
-      const threeMonthsAgo = new Date();
-      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-
-      if (lastChange.updated_at > threeMonthsAgo) {
-        return { type: "RATE_LIMITED" };
-      }
+      .then(exactlyOneRow);
+    if (isInsideUnameGap(last_change_at, now)) {
+      return { type: "RATE_LIMITED" };
     }
 
     // Check if someone else has this username and it's not recyclable
@@ -197,19 +214,20 @@ export async function changeUname({
         UPDATE unames
         SET recycle = false,
             changed_by_id = $2,
-            updated_at = NOW()
+            updated_at = $3
         WHERE id = $1
         `,
-        [ownPreviousEntry.id, changedById],
+        [ownPreviousEntry.id, changedById, now],
       );
     } else {
       // This is a new username for us - insert a new record
       await client.query(
         `
-        INSERT INTO unames (user_id, changed_by_id, uname, slug)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO unames
+          (user_id, changed_by_id, uname, slug, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $5)
         `,
-        [userId, changedById, newUname, newSlug],
+        [userId, changedById, newUname, newSlug, now],
       );
     }
 
@@ -219,12 +237,12 @@ export async function changeUname({
         `
         UPDATE unames
         SET recycle = true,
-            updated_at = NOW()
+            updated_at = $3
         WHERE user_id = $1
           AND slug = $2
           AND recycle = false
         `,
-        [userId, oldSlug],
+        [userId, oldSlug, now],
       );
     }
 

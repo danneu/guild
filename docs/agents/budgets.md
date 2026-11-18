@@ -1,15 +1,39 @@
 # Budgets on what a member can repeat
 
 Read this before you add or change a write a member can repeat: a post or
-an edit of one, a topic or its title, a PM or other send, or a call to the
-spam classifier. `AGENTS.md` links here. Uploads have their own caps; see [uploads.md](uploads.md).
+an edit of one, a topic or its title, a PM or other send, a call to the
+spam classifier, or any write with a per-account limit. `AGENTS.md` links
+here. Uploads have their own caps; see [uploads.md](uploads.md).
 
 ## Lock order
 
-A write that budgets its actor takes `server/db/send_budget.ts#lockSender`
-before any other lock on that account, or two writes can deadlock.
-`server/db/send_budget.ts#lockStanding` takes lockSender first and reads the
-actor once.
+A write that budgets or limits an account takes
+`server/db/send_budget.ts#lockSender` before any other lock on that account,
+or two writes can deadlock. `server/db/send_budget.ts#lockStanding` takes
+lockSender first and reads the actor once.
+
+## Per-account limits
+
+A per-account limit is a gap between an account's writes, one live item per
+window, or a cap on a count, such as the rating gap or the friend cap.
+
+- The write it limits checks it. In one transaction, the write takes
+  lockSender on the limited account first, reads what the limit counts, and
+  writes only if the limit allows. Writes at once then queue on the lock, and
+  each sees the ones before it.
+- A route never reads a limit and then calls a separate write. Requests at
+  once would all read the same old state and all pass.
+- A limit on time compares with the database clock, never the app's. Read
+  `clock_timestamp()` after the lock, not `now()`: `now()` is when the
+  transaction began, which is stale after a wait on the lock. Stamp the new
+  row with that same time.
+- A refusal writes nothing. The write returns it as a result the route
+  switches on, or throws an error the route catches.
+- A limit on mail holds only if the mail goes out for what the write
+  returned. POST /forgot mails a reset link only for a token
+  `server/db/index.ts#issueResetToken` returned
+  (`server/routes/reset-mail.ts`).
+- Nothing fails if a new limit skips this.
 
 ## Sends
 

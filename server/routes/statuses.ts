@@ -92,20 +92,17 @@ router.post(
     const status = ctx.state.status;
     // Authorize user
     ctx.assertAuthorized(ctx.currUser, "LIKE_STATUS", status);
-    // Ensure it's been 3 seconds since user's last like
-    const latestLikeAt = await db.latestStatusLikeAt(ctx.currUser.id);
-    if (latestLikeAt && belt.isNewerThan(latestLikeAt, { seconds: 3 })) {
+    const result = await db.likeStatus({
+      status_id: status.id,
+      user_id: ctx.currUser.id,
+    });
+    if (result.type === "TOO_SOON") {
       ctx.check(
         false,
         "Can only like a status once every 3 seconds. Don't wear 'em out!",
       );
       return;
     }
-    // Create like
-    await db.likeStatus({
-      status_id: status.id,
-      user_id: ctx.currUser.id,
-    });
     // Redirect
     ctx.flash = {
       message: [
@@ -124,17 +121,15 @@ router.post("/statuses/:status_id/like", loadStatus(), async (ctx: Context) => {
   const status = ctx.state.status;
   // Authorize user
   ctx.assertAuthorized(ctx.currUser, "LIKE_STATUS", status);
-  // Ensure it's been 3 seconds since user's last like
-  const latestLikeAt = await db.latestStatusLikeAt(ctx.currUser.id);
-  if (latestLikeAt && belt.isNewerThan(latestLikeAt, { seconds: 3 })) {
+  const result = await db.likeStatus({
+    status_id: status.id,
+    user_id: ctx.currUser.id,
+  });
+  if (result.type === "TOO_SOON") {
     ctx.status = 400;
     sendJson(ctx, "error", { error: "TOO_SOON" });
     return;
   }
-  await db.likeStatus({
-    status_id: status.id,
-    user_id: ctx.currUser.id,
-  });
   ctx.status = 200;
 });
 

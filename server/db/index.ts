@@ -23,13 +23,14 @@ import {
 import { Client, Pool, PoolClient } from "pg";
 import { BANNED_IDS_JSON, forumModsColumn } from "./readable";
 import { deleteEmailVerificationTokenByUserId } from "./email_verification";
-import { spend } from "./send_budget";
+import { lockSender, spend } from "./send_budget";
 import { VmParentRefused } from "./vms";
 import { Context } from "koa";
 import {
   DbConvo,
   DbNotification,
   DbPm,
+  DbRating,
   DbRatingType,
   DbSession,
   DbTag,
@@ -169,41 +170,55 @@ export async function updateUserBio(
 
 ////////////////////////////////////////////////////////////
 
-export const findLatestActiveResetToken = async function (userId: number) {
-  assert(_.isNumber(userId));
-
-  return pool
-    .query(
-      `
-    SELECT *
-    FROM active_reset_tokens
-    WHERE user_id = $1
-    ORDER BY created_at DESC
-    LIMIT 1
-  `,
-      [userId],
-    )
-    .then(maybeOneRow);
+export type ResetToken = {
+  user_id: number;
+  token: string;
+  created_at: Date;
+  expired_at: Date;
 };
 
-////////////////////////////////////////////////////////////
+// Issues a password reset token, or returns null while the account's last
+// token is still active. The check and the insert share one transaction behind
+// lockSender, so requests at once cannot each find no active token. POST
+// /forgot mails only a token this returns (server/routes/reset-mail.ts), so
+// one token lifetime sends one mail.
+export async function issueResetToken(
+  userId: number,
+): Promise<ResetToken | null> {
+  assert(Number.isInteger(userId));
 
-export const createResetToken = async function (userId: number) {
-  debug("[createResetToken] userId: " + userId);
+  return pool.withTransaction(async (client) => {
+    await lockSender(client, userId);
 
-  const uuid = uuidv7();
+    // clock_timestamp, not now(): now() is when the transaction began, which
+    // is stale after a wait on the lock. The token is stamped with this value.
+    const { now, last_expired_at } = await client
+      .query<{ now: Date; last_expired_at: Date | null }>(
+        `
+        SELECT
+          clock_timestamp() AS now,
+          (SELECT max(expired_at) FROM reset_tokens WHERE user_id = $1)
+            AS last_expired_at
+      `,
+        [userId],
+      )
+      .then(exactlyOneRow);
 
-  return pool
-    .query(
-      `
-    INSERT INTO reset_tokens (user_id, token)
-    VALUES ($1, $2)
-    RETURNING *
-  `,
-      [userId, uuid],
-    )
-    .then(maybeOneRow);
-};
+    // Active through its expired_at, as the active_reset_tokens view counts it
+    if (last_expired_at && last_expired_at >= now) return null;
+
+    return client
+      .query<ResetToken>(
+        `
+        INSERT INTO reset_tokens (user_id, token, created_at, expired_at)
+        VALUES ($1, $2, $3, $3::timestamptz + INTERVAL '15 minutes')
+        RETURNING *
+      `,
+        [userId, uuidv7(), now],
+      )
+      .then(exactlyOneRow);
+  });
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -2285,69 +2300,80 @@ export async function moveTopic(
 
 ////////////////////////////////////////////////////////////
 
-// Required props:
-// - post_id: Int
-// - from_user_id: Int
-// - from_user_uname: String
-// - to_user_id: Int
-// - type: like | laugh | thank
-//
-// If returns falsey, then rating already exists.
+// The gap a member leaves between ratings, and between status likes, so a
+// burst cannot flood other members with notifications.
+const RATING_GAP_SECONDS = 3;
+
+// Whether a rating or like at `now`, the database clock, falls inside the gap
+// after the member's last one at lastAt.
+function isInsideRatingGap(lastAt: Date | null, now: Date): boolean {
+  return (
+    lastAt !== null &&
+    now.getTime() < lastAt.getTime() + RATING_GAP_SECONDS * 1000
+  );
+}
+
+export type RatePostResult =
+  | { type: "RATED"; rating: DbRating }
+  // The rater already rated this post
+  | { type: "DUPLICATE" }
+  | { type: "TOO_SOON" };
+
+// Rates a post, unless the rater rated it before or rated anything inside the
+// gap. The gap check and the insert share one transaction behind lockSender,
+// so a burst of ratings cannot all pass the gap.
 export async function ratePost(props: {
   post_id: number;
   from_user_id: number;
   from_user_uname: string;
   to_user_id: number;
   type: DbRatingType;
-}) {
+}): Promise<RatePostResult> {
   assert(props.post_id);
-  assert(props.from_user_id);
+  assert(Number.isInteger(props.from_user_id));
   assert(props.from_user_uname);
   assert(props.to_user_id);
   assert(props.type);
 
-  return pool
-    .query(
-      `
-    INSERT INTO ratings (from_user_id, from_user_uname, post_id, type, to_user_id)
-    VALUES (
-      $1,
-      $2,
-      $3,
-      $4,
-      $5
-    )
-    ON CONFLICT (from_user_id, post_id) DO NOTHING
-    RETURNING *
-  `,
-      [
-        props.from_user_id,
-        props.from_user_uname,
-        props.post_id,
-        props.type,
-        props.to_user_id,
-      ],
-    )
-    .then(maybeOneRow);
-}
+  return pool.withTransaction(async (client) => {
+    await lockSender(client, props.from_user_id);
 
-////////////////////////////////////////////////////////////
+    // clock_timestamp, not now(): now() is when the transaction began, which
+    // is stale after a wait on the lock. The rating is stamped with this value.
+    const { now, last_at } = await client
+      .query<{ now: Date; last_at: Date | null }>(
+        `
+        SELECT
+          clock_timestamp() AS now,
+          (SELECT max(created_at) FROM ratings WHERE from_user_id = $1)
+            AS last_at
+      `,
+        [props.from_user_id],
+      )
+      .then(exactlyOneRow);
+    if (isInsideRatingGap(last_at, now)) return { type: "TOO_SOON" };
 
-export async function findLatestRatingForUserId(userId: number) {
-  assert(userId);
-
-  return pool
-    .query(
-      `
-    SELECT *
-    FROM ratings
-    WHERE from_user_id = $1
-    ORDER BY created_at DESC
-    LIMIT 1
-  `,
-      [userId],
-    )
-    .then(maybeOneRow);
+    const rating = await client
+      .query<DbRating>(
+        `
+        INSERT INTO ratings
+          (from_user_id, from_user_uname, post_id, type, to_user_id, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (from_user_id, post_id) DO NOTHING
+        RETURNING *
+      `,
+        [
+          props.from_user_id,
+          props.from_user_uname,
+          props.post_id,
+          props.type,
+          props.to_user_id,
+          now,
+        ],
+      )
+      .then(maybeOneRow);
+    return rating ? { type: "RATED", rating } : { type: "DUPLICATE" };
+  });
 }
 
 ////////////////////////////////////////////////////////////
@@ -3008,60 +3034,64 @@ ORDER BY s.created_at DESC
   return statuses;
 };
 
-export const likeStatus = async function ({ user_id, status_id }) {
+export type LikeStatusResult =
+  | { type: "LIKED" }
+  // The member already liked this status
+  | { type: "DUPLICATE" }
+  | { type: "TOO_SOON" };
+
+// Likes a status, unless the member liked it before or liked anything inside
+// the rating gap. The gap check and the insert share one transaction behind
+// lockSender, so a burst of likes cannot all pass the gap.
+export async function likeStatus({
+  user_id,
+  status_id,
+}: {
+  user_id: number;
+  status_id: number;
+}): Promise<LikeStatusResult> {
   assert(Number.isInteger(user_id));
   assert(Number.isInteger(status_id));
 
-  return pool
-    .withTransaction(async (client) => {
-      // 1. Create status_likes row
+  return pool.withTransaction(async (client) => {
+    await lockSender(client, user_id);
 
-      await client.query(
+    // clock_timestamp, not now(): now() is when the transaction began, which
+    // is stale after a wait on the lock. The like is stamped with this value.
+    const { now, last_at } = await client
+      .query<{ now: Date; last_at: Date | null }>(
         `
-      INSERT INTO status_likes (status_id, user_id)
-      VALUES ($1, $2)
+        SELECT
+          clock_timestamp() AS now,
+          (SELECT max(created_at) FROM status_likes WHERE user_id = $1)
+            AS last_at
+      `,
+        [user_id],
+      )
+      .then(exactlyOneRow);
+    if (isInsideRatingGap(last_at, now)) return { type: "TOO_SOON" };
+
+    const inserted = await client.query(
+      `
+      INSERT INTO status_likes (status_id, user_id, created_at)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (status_id, user_id) DO NOTHING
     `,
-        [status_id, user_id],
-      );
+      [status_id, user_id, now],
+    );
+    if (!inserted.rowCount) return { type: "DUPLICATE" };
 
-      // 2. Update status
-
-      return client.query(
-        `
+    await client.query(
+      `
       UPDATE statuses
       SET liked_user_ids = array_append(liked_user_ids, $1)
       WHERE id = $2
     `,
-        [user_id, status_id],
-      );
-    })
-    .catch((err) => {
-      if (err instanceof Error && "code" in err && err.code === "23505") {
-        return;
-      }
-      throw err;
-    });
-};
-
-////////////////////////////////////////////////////////////
-
-// Returns created_at Date OR null for user_id
-export const latestStatusLikeAt = async function (user_id) {
-  assert(user_id);
-
-  const row = await pool
-    .query(
-      `
-    SELECT MAX(created_at) created_at
-    FROM status_likes
-    WHERE user_id = $1
-  `,
-      [user_id],
-    )
-    .then(maybeOneRow);
-
-  return row && row.created_at;
-};
+      [user_id, status_id],
+    );
+    return { type: "LIKED" };
+  });
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -3375,43 +3405,46 @@ export const findFriendshipBetween = async function (from_id, to_id) {
 
 ////////////////////////////////////////////////////////////
 
-export async function createFriendship(from_id: number, to_id: number) {
+// The most friends a member may add
+const MAX_FRIENDS = 100;
+
+// Adds a friendship, or throws "TOO_MANY_FRIENDS" when the member already has
+// MAX_FRIENDS. The count and the insert share one transaction behind
+// lockSender, so a burst of adds cannot all pass the cap.
+export async function createFriendship(
+  from_id: number,
+  to_id: number,
+): Promise<void> {
   assert(_.isNumber(from_id));
   assert(_.isNumber(to_id));
 
-  // Note: race condition
-  const count = await pool
-    .query<{ count: number }>(
-      `
-    SELECT COUNT(*) "count"
-    FROM friendships
-    WHERE from_user_id = $1
-  `,
-      [from_id],
-    )
-    .then(maybeOneRow)
-    .then((row) => row!.count);
+  await pool.withTransaction(async (client) => {
+    await lockSender(client, from_id);
 
-  if (count >= 100) {
-    throw "TOO_MANY_FRIENDS";
-  }
+    const { count } = await client
+      .query<{ count: number }>(
+        `
+        SELECT COUNT(*)::int AS count
+        FROM friendships
+        WHERE from_user_id = $1
+      `,
+        [from_id],
+      )
+      .then(exactlyOneRow);
+    if (count >= MAX_FRIENDS) {
+      throw "TOO_MANY_FRIENDS";
+    }
 
-  return pool
-    .query(
+    // A double click on the add-friend button adds nothing more
+    await client.query(
       `
-    INSERT INTO friendships (from_user_id, to_user_id)
-    VALUES ($1, $2)
-  `,
+      INSERT INTO friendships (from_user_id, to_user_id)
+      VALUES ($1, $2)
+      ON CONFLICT (from_user_id, to_user_id) DO NOTHING
+    `,
       [from_id, to_id],
-    )
-    .catch((err) => {
-      // Ignore unique violation, like if user double-clicks
-      // the add-friend button
-      if (err instanceof Error && "code" in err && err.code === "23505") {
-        return;
-      }
-      throw err;
-    });
+    );
+  });
 }
 
 export const deleteFriendship = async function (from_id, to_id) {
