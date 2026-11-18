@@ -12,6 +12,7 @@
 import assert from "assert";
 // 1st
 import * as belt from "../belt";
+import { MemberRefusal } from "../member_refusal";
 import type { Standing } from "./send_budget";
 import { exactlyOneRow, type PgClientInTransaction } from "./util";
 
@@ -21,9 +22,10 @@ const UNTRUSTED_GAP_SECONDS = 10;
 const TRUSTED_GAP_SECONDS = 1;
 
 // A post or topic refused because its author posted too recently. Nothing was
-// written. The error handler in server/index.ts answers it like a validation
-// error.
-export class PostTooSoon extends Error {
+// written. server/middleware/refusals.ts answers it and fills the form in
+// again, so the member can post it once the gap ends.
+export class PostTooSoon extends MemberRefusal {
+  override readonly echoForm = true;
   readonly retryAt: Date;
 
   constructor(retryAt: Date) {

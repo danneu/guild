@@ -24,9 +24,9 @@ export class FlashParams {
   }
 }
 
-// The fields the app-wide error handlers in server/index.ts echo. They catch
-// a validation error from any route, so they cannot know its form. This is
-// every non-secret field a view fills in from ctx.flash.params.
+// The fields the app-wide error handler in server/middleware/refusals.ts
+// echoes. It catches a refusal from any route, so it cannot know its form.
+// This is every non-secret field a view fills in from ctx.flash.params.
 export const FORM_REFILL_FIELDS: readonly string[] = [
   "uname-or-email",
   "uname",

@@ -11,6 +11,7 @@ import { withPgPoolTransaction } from "../db/util";
 import * as storage from "../storage";
 import { VmParentRefused } from "../db/vms";
 import { UnsupportedImage } from "../imaging";
+import { answerRefusals } from "../middleware/refusals";
 import { withUpload } from "../upload";
 import "../validation";
 import router from "./users";
@@ -101,10 +102,10 @@ beforeEach(() => {
 //
 // A bare Koa app with only what these routes read from ctx. server/index.ts
 // cannot be imported here: loading it starts cache3 and app.listen. The authz
-// shim and the ValidationError handler mirror the ones in server/index.ts, so
-// a denied check is a 404 and a bad field a redirect back with a danger
-// flash. The flash setter records what the handler set, since there is no
-// flash middleware.
+// shim mirrors the one in server/index.ts, so a denied check is a 404. The
+// error handler is the app's own (server/middleware/refusals.ts), so a bad
+// field is a redirect back with a danger flash. The flash setter records what
+// the handler set, since there is no flash middleware.
 
 type Req = {
   method: "POST" | "PUT" | "DELETE";
@@ -135,15 +136,7 @@ async function send(req: Req) {
     return next();
   });
   app.use(bouncer.middleware());
-  app.use(async (ctx: Context, next: Next) => {
-    try {
-      await next();
-    } catch (ex) {
-      if (!(ex instanceof bouncer.ValidationError)) throw ex;
-      ctx.flash = { message: ["danger", ex.message] };
-      ctx.back("/");
-    }
-  });
+  app.use(answerRefusals());
   app.use(router.routes());
 
   const server = http.createServer(app.callback());

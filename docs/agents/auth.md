@@ -53,6 +53,11 @@ Auth is session-based. `server/cancan.ts` holds the role-based rules; roles
 
 - `server/auth.ts` is the only module that hashes or checks a password. A
   test fails if any other file imports bcrypt.
+- `server/auth.ts#hashPassword` owns the rule for a new password. It makes
+  every digest the app stores, and throws `PasswordRejected` for a password
+  the rule refuses, before any bcrypt work. A route that sets a password
+  checks only that the two fields match; it never measures the password
+  itself. Login does not check the rule, so older passwords still work.
 - Log in through `server/auth.ts#authenticate`, which never shows whether an
   account exists.
 - It charges every login to an attempt budget per typed identifier and per

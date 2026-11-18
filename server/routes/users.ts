@@ -291,10 +291,11 @@ router.post("/users", async (ctx: Context) => {
     .isEmail("Email must be valid")
     .checkNot(await db.findUserByEmail(ctx.vals.email), "Email taken");
   ctx.validateBody("password2").isString("Password confirmation required");
+  // The password rule lives in server/auth.ts#hashPassword, which
+  // createUserWithSession calls. Its PasswordRejected comes back to the form.
   ctx
     .validateBody("password1")
     .isString("Password required")
-    .isLength(6, 100, "Password must be at least 6 chars long")
     .eq(ctx.vals.password2, "Password confirmation must match");
 
   // User params validated, so create a user and log them in. Each refusal

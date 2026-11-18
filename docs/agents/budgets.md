@@ -32,7 +32,7 @@ window, or a cap on a count, such as the rating gap or the friend cap.
 - A limit on mail holds only if the mail goes out for what the write
   returned. POST /forgot mails a reset link only for a token
   `server/db/index.ts#issueResetToken` returned
-  (`server/routes/reset-mail.ts`).
+  (`server/routes/password-reset.ts#sendResetMail`).
 - Nothing fails if a new limit skips this.
 
 ## Sends
@@ -78,8 +78,9 @@ Topics and posts are not sends.
   `server/services/antispam/index.ts#process`. A null charge means a trusted
   actor, and no call.
 - Over budget, spendScreening throws `ScreeningBudgetExceeded` and nothing is
-  written. The error handler in `server/index.ts` answers it as it answers
-  `MarkupRejected`.
+  written. It is a `MemberRefusal`, so `server/middleware/refusals.ts`
+  answers it (see
+  [requests-and-responses.md](requests-and-responses.md#refusals)).
 - A NUKE verdict hides the actor's own rows (`nukeUser`). For a post or title
   the actor changed but does not own, the owner hides that row only while it
   still holds the judged text, and never puts back an older one.

@@ -1,8 +1,10 @@
-// The error for markup the server refuses to render or scan. Its message is
-// written for the member. The error handler in server/index.ts sends it to an
-// /api/ request as the text of a 400, and to a form post as a flash. It has
-// its own module because both server/markup.ts and server/bbcode.js throw it,
-// and markup.ts imports bbcode.js.
-export class MarkupRejected extends Error {
+// The error for markup the server refuses to render or scan. It has its own
+// module because both server/markup.ts and server/bbcode.js throw it, and
+// markup.ts imports bbcode.js. server/middleware/refusals.ts answers it. The
+// form is not echoed, since its markup is often the reason and too big for
+// the flash cookie.
+import { MemberRefusal } from "./member_refusal";
+
+export class MarkupRejected extends MemberRefusal {
   override name = "MarkupRejected";
 }

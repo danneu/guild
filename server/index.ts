@@ -1,6 +1,5 @@
 import "dotenv/config";
 import * as config from "./config";
-import { z } from "zod";
 
 // Node
 import fs from "fs";
@@ -41,7 +40,7 @@ import topicsRoutes from "./routes/topics.js";
 import forumsRoutes from "./routes/forums.js";
 import adminRoutes from "./routes/admin.js";
 import verifyEmailRoutes from "./routes/verify-email.js";
-import { sendResetMail } from "./routes/reset-mail.js";
+import passwordResetRoutes from "./routes/password-reset.js";
 import guildbot from "./guildbot.js";
 import {
   resolveClientIp,
@@ -202,11 +201,9 @@ import * as pre from "./presenters";
 import * as middleware from "./middleware";
 import * as cancan from "./cancan";
 import * as belt from "./belt";
-import { authenticate, hashPassword } from "./auth";
-import { MarkupRejected, renderMarkup } from "./markup";
+import { authenticate } from "./auth";
+import { renderMarkup } from "./markup";
 import * as forumText from "./forum_text";
-import { ScreeningBudgetExceeded } from "./db/screen_budget";
-import { PostTooSoon } from "./db/post_gap";
 import bouncer from "koa-bouncer";
 import "./validation"; // Load after koa-bouncer
 import services from "./services";
@@ -214,7 +211,8 @@ import cache3 from "./cache3";
 import makeAgo from "./ago";
 import protectCsrf from "./middleware/protect-csrf";
 import { trailingSlash } from "./middleware/trailing-slash";
-import { FlashParams, FORM_REFILL_FIELDS } from "./middleware/flash";
+import { FlashParams } from "./middleware/flash";
+import { answerRefusals } from "./middleware/refusals";
 import { verifyTurnstileToken } from "./turnstile";
 import {
   isEmailGateSatisfied,
@@ -417,53 +415,7 @@ app.use(trustRendered(nunjucksRender("views", nunjucksOptions)));
 
 app.use(bouncer.middleware());
 
-app.use(async (ctx: Context, next: Next) => {
-  try {
-    await next();
-  } catch (ex: any) {
-    // Catch any ZodErrors that bubble up and return a flash message
-    if (ex instanceof z.ZodError) {
-      // Adding the path is nice if I forget to set a message: `Required (username)`
-      // FIXME: But if I do add a custom message, then it's weird: `You must set a tag (tag)`
-      const message = ex.issues[0]
-        ? `${ex.issues[0].message} (${ex.issues[0].path.join(".")})`
-        : ex.message;
-      ctx.flash = {
-        message: ["danger", message],
-        // FIXME: This breaks if body is bigger than ~4kb cookie size limit
-        // i.e. large posts, large bodies of text
-        params: FlashParams.pick(ctx.request.body, FORM_REFILL_FIELDS),
-      };
-      ctx.back("/");
-      return;
-    }
-    // A validation error, or a post refused by the post gap
-    // (server/db/post_gap.ts). Both echo the form back.
-    if (ex instanceof bouncer.ValidationError || ex instanceof PostTooSoon) {
-      ctx.flash = {
-        message: ["danger", ex.message || "Validation error"],
-        // FIXME: This breaks if body is bigger than ~4kb cookie size limit
-        // i.e. large posts, large bodies of text
-        params: FlashParams.pick(ctx.request.body, FORM_REFILL_FIELDS),
-      };
-      ctx.back("/");
-      return;
-    }
-    // server/markup.ts refused the markup work, or the screening budget
-    // (server/db/screen_budget.ts) refused the write. An XHR has no redirect
-    // to follow, so it gets a 400 with the reason, as the ban gate in
-    // server/middleware/require-not-banned.ts answers one. A form post gets
-    // a flash. The body is often too big for the flash cookie, so it is not
-    // echoed back.
-    if (ex instanceof MarkupRejected || ex instanceof ScreeningBudgetExceeded) {
-      if (ctx.path.startsWith("/api/")) ctx.throw(400, ex.message);
-      ctx.flash = { message: ["danger", ex.message] };
-      ctx.back("/");
-      return;
-    }
-    throw ex;
-  }
-});
+app.use(answerRefusals());
 
 //app.use(require('./middleware/track')())
 
@@ -501,6 +453,7 @@ app.use(topicsRoutes.routes());
 app.use(forumsRoutes.routes());
 app.use(adminRoutes.routes());
 app.use(verifyEmailRoutes.routes());
+app.use(passwordResetRoutes.routes());
 
 // Useful to redirect users to their own profiles since canonical edit-user
 // url is /users/:slug/edit
@@ -866,157 +819,6 @@ router.get("/", async (ctx: Context) => {
     latestStatuses: cache3.get("latest-statuses").map(pre.presentStatus),
     currentContest: cache3.get("current-sidebar-contest"),
   });
-});
-
-//
-// Forgot password page
-//
-router.get("/forgot", async (ctx: Context) => {
-  if (!config.IS_EMAIL_CONFIGURED) {
-    ctx.body = "This feature is currently disabled";
-    return;
-  }
-  await ctx.render("forgot", {
-    ctx,
-    title: "Forgot Password",
-  });
-});
-
-//
-//
-// - Required param: email
-router.post("/forgot", async (ctx: Context) => {
-  if (!config.IS_EMAIL_CONFIGURED) {
-    ctx.body = "This feature is currently disabled";
-    return;
-  }
-
-  var email = ctx.request.body.email;
-  if (!email) {
-    ctx.flash = { message: ["danger", "You must provide an email"] };
-    ctx.response.redirect("/forgot");
-    return;
-  }
-  // Check if it belongs to a user
-  var user = await db.findUserByEmail(email);
-
-  // Always send the same message on success and failure.
-  var successMessage = "Check your email";
-
-  // Don't let the user know if the email belongs to anyone.
-  // Always look like a success
-  if (!user) {
-    // ctx.log.info('User not found with email: %s', email);
-    ctx.flash = { message: ["success", successMessage] };
-    ctx.response.redirect("/");
-    return;
-  }
-
-  const result = await sendResetMail(user);
-  switch (result) {
-    case "ACTIVE":
-      // No new mail until the last token expires
-      ctx.flash = { message: ["success", successMessage] };
-      ctx.response.redirect("/");
-      return;
-    case "SEND_FAILED":
-      ctx.flash = {
-        message: [
-          "danger",
-          "For some reason, the email failed to be sent. Email me at <mahz@roleplayerguild.com> to let me know.",
-        ],
-      };
-      ctx.back("/");
-      return;
-    case "SENT":
-      ctx.flash = { message: ["success", successMessage] };
-      ctx.back("/");
-      return;
-    default: {
-      const exhaustive: never = result;
-      throw exhaustive;
-    }
-  }
-});
-
-// Password reset form
-// - This form allows a user to enter a reset token and new password
-// - The email from /forgot will link the user here
-router.get("/reset-password", async (ctx: Context) => {
-  if (!config.IS_EMAIL_CONFIGURED) {
-    ctx.body = "This feature is currently disabled";
-    return;
-  }
-  var resetToken = ctx.request.query.token;
-  await ctx.render("reset_password", {
-    ctx,
-    resetToken: resetToken,
-    title: "Reset Password with Token",
-  });
-});
-
-// Params
-// - token
-// - password1
-// - password2
-router.post("/reset-password", async (ctx: Context) => {
-  if (!config.IS_EMAIL_CONFIGURED) {
-    ctx.body = "This feature is currently disabled";
-    return;
-  }
-  var token = ctx.request.body.token;
-  var password1 = ctx.request.body.password1;
-  var password2 = ctx.request.body.password2;
-  ctx.validateBody("remember-me").toBoolean();
-  var rememberMe = ctx.vals["remember-me"];
-
-  // Check passwords
-  if (password1 !== password2) {
-    ctx.flash = {
-      message: [
-        "danger",
-        "Your new password and the new password confirmation must match",
-      ],
-      params: FlashParams.pick({ token }, ["token"]),
-    };
-    return ctx.response.redirect("/reset-password?token=" + token);
-  }
-
-  // Check reset token
-  var user = await db.findUserByResetToken(token);
-
-  if (!user) {
-    ctx.flash = {
-      message: [
-        "danger",
-        "Invalid reset token. Either you typed the token in wrong or the token expired.",
-      ],
-    };
-    return ctx.response.redirect("/reset-password?token=" + token);
-  }
-
-  // Reset token and passwords were valid. Hash before the transaction takes a
-  // pooled client, so bcrypt never holds one.
-  const digest = await hashPassword(password1);
-
-  // Swap the password, end every grant the old one left alive (other
-  // sessions included), and log the user in, all or nothing.
-  const interval = rememberMe ? "1 year" : "1 day";
-  const session = await withPgPoolTransaction(pool, (pgClient) =>
-    db.replacePasswordTx(pgClient, user.id, digest, {
-      ipAddress: ctx.request.ip,
-      interval,
-    }),
-  );
-  ctx.cookies.set("sessionId", String(session.id), {
-    expires: belt.futureDate(
-      new Date(),
-      rememberMe ? { years: 1 } : { days: 1 },
-    ),
-  });
-
-  ctx.flash = { message: ["success", "Your password was updated"] };
-  return ctx.response.redirect("/");
 });
 
 //

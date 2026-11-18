@@ -15,6 +15,7 @@ import assert from "assert";
 // 1st
 import * as belt from "../belt";
 import * as config from "../config";
+import { MemberRefusal } from "../member_refusal";
 import { whenItFits, type Standing } from "./send_budget";
 import type { PgClientInTransaction } from "./util";
 
@@ -106,8 +107,9 @@ class ScreeningCharge {
 export type { ScreeningCharge };
 
 // A write refused because its actor's screening budget cannot pay for it.
-// Nothing was written. The error handler in server/index.ts answers it.
-export class ScreeningBudgetExceeded extends Error {
+// Nothing was written. server/middleware/refusals.ts answers it. The form is
+// not echoed, since it may hold long markup.
+export class ScreeningBudgetExceeded extends MemberRefusal {
   readonly retryAt: Date;
 
   constructor(retryAt: Date) {

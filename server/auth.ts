@@ -3,11 +3,17 @@
 // server/auth.test.ts fails if any other module imports bcrypt. It also owns
 // the login attempt budget, so no password check can skip it.
 //
+// It owns the rule for a new password too. hashPassword makes every digest the
+// app stores, and refuses a password the rule refuses, so signup, reset and
+// any later path that sets a password all get the rule. Login does not check
+// it, so a member whose password predates the rule still signs in.
+//
 // It imports nothing from server/db: db imports hashPassword from here, so
 // authenticate takes its account lookup and its attempt store as arguments.
 
 import bcrypt from "bcryptjs";
 import { slugifyUname } from "./belt";
+import { MemberRefusal } from "./member_refusal";
 
 // Work factor for every new digest. Remake DUMMY_DIGEST when it changes;
 // server/auth.test.ts fails until the two match.
@@ -24,7 +30,30 @@ const DUMMY_DIGEST =
 // identifier, so refusing one early shows nothing about any account.
 const MAX_IDENTIFIER_LENGTH = 254;
 
-export function hashPassword(password: string): Promise<string> {
+// The length a new password must have, in UTF-16 code units (string length).
+const MIN_PASSWORD_LENGTH = 6;
+const MAX_PASSWORD_LENGTH = 100;
+
+// A new password the rule refuses. Nothing was hashed or written. The form
+// is safe to fill in again: FORM_REFILL_FIELDS names no password field.
+export class PasswordRejected extends MemberRefusal {
+  override name = "PasswordRejected";
+  override readonly echoForm = true;
+}
+
+// Hashes a new password, or throws PasswordRejected before any bcrypt work.
+// It takes unknown because request bodies are typed any, so a missing or
+// non-string field is refused here rather than thrown by bcrypt.
+export async function hashPassword(password: unknown): Promise<string> {
+  if (
+    typeof password !== "string" ||
+    password.length < MIN_PASSWORD_LENGTH ||
+    password.length > MAX_PASSWORD_LENGTH
+  ) {
+    throw new PasswordRejected(
+      `Password must be ${MIN_PASSWORD_LENGTH}-${MAX_PASSWORD_LENGTH} characters`,
+    );
+  }
   return bcrypt.hash(password, BCRYPT_COST);
 }
 

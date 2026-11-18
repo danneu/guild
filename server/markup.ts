@@ -9,9 +9,9 @@
 //   a regex in the middle of its search;
 // - work that runs past the budget, or runs out of stack, puts its actor in a
 //   cooldown, and this module refuses that actor's markup work until it ends.
-// Each refusal throws MarkupRejected. The error handler in server/index.ts
-// answers an /api/ request with a 400 and the reason as text, and gives a
-// form post the reason as a flash. The renderer's known slow paths are
+// Each refusal throws MarkupRejected. server/middleware/refusals.ts answers
+// an /api/ request with a 400 and the reason as text, and gives a form post
+// the reason as a flash. The renderer's known slow paths are
 // linear, so the budget is a backstop for shapes nobody has found yet. The
 // cooldowns live in this process and clear on restart.
 

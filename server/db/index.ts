@@ -183,8 +183,9 @@ export type ResetToken = {
 // Issues a password reset token, or returns null while the account's last
 // token is still active. The check and the insert share one transaction behind
 // lockSender, so requests at once cannot each find no active token. POST
-// /forgot mails only a token this returns (server/routes/reset-mail.ts), so
-// one token lifetime sends one mail.
+// /forgot mails only a token this returns
+// (server/routes/password-reset.ts#sendResetMail), so one token lifetime sends
+// one mail.
 export async function issueResetToken(
   userId: number,
 ): Promise<ResetToken | null> {

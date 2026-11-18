@@ -23,6 +23,21 @@ HTML outside a view, set a cookie, or compare a URL with the request's host.
   read.
 - File uploads have their own parser; see [uploads.md](uploads.md).
 
+## Refusals
+
+- A refusal written for the member, decided before anything is written,
+  extends `server/member_refusal.ts#MemberRefusal`. A route that lets one
+  escape needs no handler of its own.
+- `server/middleware/refusals.ts` answers every one in one branch: a 400 with
+  the message on `/api/`, otherwise the message as a flash and a redirect
+  back by the Referer.
+- The flash fills the form in again only when the refusal sets `echoForm`.
+  The flash cookie holds a few kilobytes, so long markup can overflow it, and
+  then the member sees no reason at all. `MarkupRejected` and
+  `ScreeningBudgetExceeded` leave it off for that reason.
+- A route whose form must keep a value that goes back by URL, such as the
+  reset token, catches its refusal and redirects itself.
+
 ## HTML and JSON output
 
 - Only `ctx.render` output goes out as HTML. Any other string or Buffer body

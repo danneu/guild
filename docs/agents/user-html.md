@@ -13,9 +13,10 @@ such as `|safe`. `AGENTS.md` links here.
 - The owner refuses markup longer than `MAX_POST_LENGTH` and cuts off work
   that runs past `MARKUP_BUDGET_MS`. It then refuses that user's markup work
   for `MARKUP_COOLDOWN_MS`.
-- Each refusal throws `MarkupRejected`. The error handler in
-  `server/index.ts` answers an `/api/` request with a 400 and the reason as
-  text, and gives a form post the reason as a flash.
+- Each refusal throws `MarkupRejected`, a `MemberRefusal`.
+  `server/middleware/refusals.ts` answers an `/api/` request with a 400 and
+  the reason as text, and gives a form post the reason as a flash (see
+  [requests-and-responses.md](requests-and-responses.md#refusals)).
 
 ## Sanitizing
 
