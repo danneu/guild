@@ -10,6 +10,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as config from "../config";
 import { closeTestDatabase, emptyTables } from "../testing/db";
+import { sanitizeUserHtml } from "../user_html";
 import {
   clearCurrentStatusForUserId,
   createStatus,
@@ -54,7 +55,11 @@ async function createMember(
 // current status to it.
 async function postStatus(userId: number, text: string): Promise<number> {
   const status = await withPgPoolTransaction(pool, (client) =>
-    createStatus(client, { user_id: userId, text, html: text }),
+    createStatus(client, {
+      user_id: userId,
+      text,
+      html: sanitizeUserHtml(text),
+    }),
   );
   return status.id;
 }

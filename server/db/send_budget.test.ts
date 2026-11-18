@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as config from "../config";
+import { sanitizeUserHtml } from "../user_html";
 import { createConvo, createPm, createStatus, createVm } from "./index";
 import {
   lockStanding,
@@ -163,7 +164,7 @@ describe("spend", () => {
 ////////////////////////////////////////////////////////////
 
 describe("send writes", () => {
-  const text = { markup: "hi", html: "hi" };
+  const text = { markup: "hi", html: sanitizeUserHtml("hi") };
   const sends = [
     {
       name: "createConvo",
@@ -201,7 +202,12 @@ describe("send writes", () => {
     {
       name: "createStatus",
       insert: /INSERT INTO statuses/,
-      run: (c: any) => createStatus(c, { user_id: 1, text: "hi", html: "hi" }),
+      run: (c: any) =>
+        createStatus(c, {
+          user_id: 1,
+          text: "hi",
+          html: sanitizeUserHtml("hi"),
+        }),
       cost: 1,
     },
   ];
@@ -294,7 +300,7 @@ describe("createVm replies", () => {
       to_user_id: 2,
       parent_vm_id: parentVmId,
       markup: "hi",
-      html: "hi",
+      html: sanitizeUserHtml("hi"),
     });
   }
 

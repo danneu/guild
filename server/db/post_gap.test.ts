@@ -15,6 +15,7 @@ vi.mock("./util", async (importOriginal) => ({
 // TypeScript under vitest.
 vi.mock("../bbcode", () => ({ default: (markup: string) => markup }));
 
+import { sanitizeUserHtml } from "../user_html";
 import { createPost, createTopic } from "./forum_text_writes";
 import { lockSender } from "./send_budget";
 
@@ -145,7 +146,7 @@ const reply = {
   ipAddress: "1.2.3.4",
   topicId: 10,
   markup: "Hi",
-  html: "Hi",
+  html: sanitizeUserHtml("Hi"),
   type: "ooc",
   isRoleplay: false,
 };
@@ -227,7 +228,7 @@ describe("the post gap", () => {
       ipAddress: "1.2.3.4",
       title: "Hello",
       markup: "Hi",
-      html: "Hi",
+      html: sanitizeUserHtml("Hi"),
       postType: "ooc",
       isRoleplay: false,
     });
@@ -251,7 +252,7 @@ describe("the post gap", () => {
         ipAddress: "1.2.3.4",
         title: "Hello",
         markup: "Hi",
-        html: "Hi",
+        html: sanitizeUserHtml("Hi"),
         postType: "ooc",
         isRoleplay: false,
       }),

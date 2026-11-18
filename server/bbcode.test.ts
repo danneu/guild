@@ -33,10 +33,14 @@ moduleInternals._load = function (request, parent, ...rest) {
   }
   return originalLoad.call(this, request, parent, ...rest);
 };
-const { default: bbcode } = await import("./bbcode").finally(() => {
+const { default: serverExport } = await import("./bbcode").finally(() => {
   moduleInternals._load = originalLoad;
 });
-const { renderUnsanitized, tagNames, MAX_TAG_DEPTH } = bbcode;
+const { renderUnsanitized, tagNames, MAX_TAG_DEPTH } = serverExport;
+// The text of the UserHtml the server export returns
+function bbcode(markup: string): string {
+  return userHtml.unwrapUserHtml(serverExport(markup));
+}
 // Loaded after bbcode.js, so its import of ./bbcode reuses the module above.
 const { createMarkupOwner } = await import("./markup");
 const { MarkupRejected } = markupRejected;
@@ -156,8 +160,10 @@ describe("bbcode", () => {
 
   it("strips attributes the renderer never writes from stored html", () => {
     expect(
-      userHtml.sanitizeUserHtml(
-        '<abbr class="bb-abbr" title="x" onmouseover="alert(1)">hi</abbr>',
+      userHtml.unwrapUserHtml(
+        userHtml.sanitizeUserHtml(
+          '<abbr class="bb-abbr" title="x" onmouseover="alert(1)">hi</abbr>',
+        ),
       ),
     ).toBe('<abbr class="bb-abbr" title="x">hi</abbr>');
   });
@@ -439,7 +445,7 @@ describe("stored link rel", () => {
     "http://exa mple.com/",
   ])("the sanitizer marks href %s nofollow", (href) => {
     const html = userHtml.sanitizeUserHtml(`<a href="${href}">x</a>`);
-    expect(linkAttribs(html)).toEqual([outside]);
+    expect(linkAttribs(userHtml.unwrapUserHtml(html))).toEqual([outside]);
   });
 
   it("marks a status's outside link nofollow and opens its own in place", () => {
@@ -450,7 +456,7 @@ describe("stored link rel", () => {
         ),
       ),
     );
-    expect(linkAttribs(html)).toEqual([outside, own]);
+    expect(linkAttribs(userHtml.unwrapUserHtml(html))).toEqual([outside, own]);
   });
 });
 
@@ -526,7 +532,7 @@ describe("bbcode render cost sweep", () => {
       maxLength,
       budgetMs,
       cooldownMs: 0,
-      render: bbcode,
+      render: serverExport,
       now: Date.now,
     });
   }
@@ -565,7 +571,9 @@ describe("bbcode render cost sweep", () => {
 
   it.each(linkRuns)("%s writes one link per unit", (_name, unit) => {
     const html = unbounded.renderMarkup(fill(unit), author);
-    const links = parseElements(html).filter((el) => el.name === "a");
+    const links = parseElements(userHtml.unwrapUserHtml(html)).filter(
+      (el) => el.name === "a",
+    );
     expect(links).toHaveLength(Math.floor(maxLength / unit.length));
   });
 

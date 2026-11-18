@@ -26,8 +26,11 @@ vi.mock("./db/util", async (importOriginal) =>
 
 // server/bbcode.js loads ./cache3 with a plain require, which cannot load
 // TypeScript under vitest, and importing cache3 starts its refresh loop.
-// Nothing here reads rendered html.
-vi.mock("./bbcode", () => ({ default: (markup: string) => markup }));
+// Nothing here reads rendered html, but the writers take only sanitized html.
+vi.mock("./bbcode", async () => {
+  const { sanitizeUserHtml } = await import("./user_html");
+  return { default: (markup: string) => sanitizeUserHtml(markup) };
+});
 vi.mock("./cache3", () => ({ default: { requestUpdate: vi.fn() } }));
 vi.mock("./services/antispam/claude", () => ({
   default: { analyze: vi.fn(), probe: vi.fn() },

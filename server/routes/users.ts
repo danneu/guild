@@ -24,6 +24,7 @@ import { withUpload } from "../upload";
 import * as emailer from "../emailer";
 import cache3 from "../cache3";
 import { renderMarkup } from "../markup";
+import { EMPTY_USER_HTML, type UserHtml } from "../user_html";
 import {
   broadcastManualNuke,
   broadcastManualUnnuke,
@@ -555,7 +556,7 @@ router.put("/api/users/:id/bio", async (ctx: Context) => {
 
   // Validation succeeded
   // Render markup to html
-  var html = "";
+  let html = EMPTY_USER_HTML;
   if (ctx.request.body.markup.length > 0) {
     html = renderMarkup(ctx.request.body.markup, ctx.currUser);
   }
@@ -673,7 +674,8 @@ router.put("/users/:slug", async (ctx: Context) => {
   ctx.assert(user, 404);
   ctx.assertAuthorized(ctx.currUser, "UPDATE_USER", user);
 
-  var sig_html, sig_markup;
+  let sig_html: UserHtml | undefined;
+  let sig_markup: string | undefined;
   // User is only updating their sig if `sig` is a string.
   // If it's a blank string, then user is trying to clear their sig
   if (_.isString(ctx.request.body.sig))
@@ -681,7 +683,7 @@ router.put("/users/:slug", async (ctx: Context) => {
       sig_html = renderMarkup(ctx.request.body.sig, ctx.currUser);
       sig_markup = ctx.request.body.sig.trim();
     } else {
-      sig_html = "";
+      sig_html = EMPTY_USER_HTML;
       sig_markup = "";
     }
 

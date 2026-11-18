@@ -22,6 +22,7 @@ import vm from "node:vm";
 import bbcode from "./bbcode";
 import * as config from "./config";
 import { MarkupRejected } from "./markup_rejected";
+import type { UserHtml } from "./user_html";
 
 export { MarkupRejected };
 
@@ -34,7 +35,7 @@ export type MarkupAuthor = { id: number; uname: string };
 
 export type MarkupOwner = {
   // Returns the sanitized html to store for markup.
-  renderMarkup(markup: string, actor: MarkupActor): string;
+  renderMarkup(markup: string, actor: MarkupActor): UserHtml;
   // Returns the unique lowercase unames that markup mentions with [@uname]
   // outside any quote, at most MENTIONS_PER_POST of them.
   extractMentions(markup: string, author: MarkupAuthor): string[];
@@ -47,7 +48,7 @@ export type MarkupOwnerOptions = {
   maxLength: number;
   budgetMs: number;
   cooldownMs: number;
-  render: (markup: string) => string;
+  render: (markup: string) => UserHtml;
   now: () => number;
 };
 

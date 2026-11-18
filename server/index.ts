@@ -203,6 +203,7 @@ import * as cancan from "./cancan";
 import * as belt from "./belt";
 import { authenticate } from "./auth";
 import { renderMarkup } from "./markup";
+import type { UserHtml } from "./user_html";
 import * as forumText from "./forum_text";
 import bouncer from "koa-bouncer";
 import "./validation"; // Load after koa-bouncer
@@ -1560,7 +1561,7 @@ router.post("/trophy-groups", async (ctx: Context) => {
       .isLength(3, 3000, "Description must be 3-3000 chars");
   }
 
-  var description_html;
+  let description_html: UserHtml | null = null;
   if (ctx.vals["description-markup"]) {
     description_html = renderMarkup(
       ctx.vals["description-markup"],
@@ -1603,7 +1604,7 @@ router.put("/trophy-groups/:id", async (ctx: Context) => {
       .isLength(3, 3000, "Description must be 3-3000 chars");
   }
 
-  var description_html;
+  let description_html: UserHtml | null = null;
   if (ctx.vals["description-markup"]) {
     description_html = renderMarkup(
       ctx.vals["description-markup"],
@@ -1669,7 +1670,7 @@ router.put("/trophies-users/:id", async (ctx: Context) => {
       .isLength(3, 500, "Message must be 3-500 chars");
   }
 
-  var message_html;
+  let message_html: UserHtml | null = null;
   if (ctx.vals["message-markup"]) {
     message_html = renderMarkup(ctx.vals["message-markup"], ctx.currUser);
   }
@@ -1723,7 +1724,7 @@ router.put("/trophies/:id", async (ctx: Context) => {
       .isLength(3, 3000, "Description must be 3-3000 chars");
   }
 
-  var description_html;
+  let description_html: UserHtml | null = null;
   if (ctx.vals["description-markup"]) {
     description_html = renderMarkup(
       ctx.vals["description-markup"],

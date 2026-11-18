@@ -1,10 +1,10 @@
-// The one gate for user html that pages print unescaped. Every writer of a
-// stored html column passes its html through sanitizeUserHtml, so stored html
-// can hold only what the BBCode renderer (server/bbcode.js) and status
-// autolinking emit. It also sets every stored link's rel and target, so no
-// writer decides which links are the site's own. This module does not import
-// bbcode.js, so code that only needs to clean html gets nothing from the
-// renderer.
+// The one gate for user html that pages print unescaped. sanitizeUserHtml is
+// the only maker of a UserHtml, and every writer of a stored html column takes
+// a UserHtml, so stored html can hold only what the BBCode renderer
+// (server/bbcode.js) and status autolinking emit. The sanitizer also sets
+// every stored link's rel and target, so no writer decides which links are
+// the site's own. This module does not import bbcode.js, so code that only
+// needs to clean html gets nothing from the renderer.
 import sanitizeHtml from "sanitize-html";
 
 // The status names tags.cell and tags.row in server/bbcode.js accept, each
@@ -141,8 +141,61 @@ const reference: sanitizeHtml.IOptions = {
   allowVulnerableTags: true,
 };
 
-export function sanitizeUserHtml(html: string): string {
-  return sanitizeHtml(html, allowlist);
+// Html that passed sanitizeUserHtml. The class is not exported and its field
+// is private, so no other module can make or forge one, and tsc refuses a
+// string where one is due. Its text comes out only through unwrapUserHtml,
+// which db writers call to bind it. Binding it any other way throws, so a
+// writer that forgets to unwrap stores nothing.
+class UserHtml {
+  readonly #html: string;
+
+  constructor(html: string) {
+    this.#html = html;
+  }
+
+  // Checks at runtime what the type checks at compile time, for values typed
+  // any, such as ctx.vals, a request body or an untyped row.
+  static unwrap(value: unknown): string {
+    if (typeof value !== "object" || value === null || !(#html in value)) {
+      throw new TypeError(
+        "unwrapUserHtml takes only html from sanitizeUserHtml, " +
+          `not ${value === null ? "null" : typeof value}`,
+      );
+    }
+    return value.#html;
+  }
+
+  // pg binds an object through its toPostgres.
+  toPostgres(): never {
+    throw new TypeError("Bind a UserHtml with unwrapUserHtml(html)");
+  }
+
+  toString(): never {
+    throw new TypeError("Read a UserHtml with unwrapUserHtml(html)");
+  }
+
+  toJSON(): never {
+    throw new TypeError("Read a UserHtml with unwrapUserHtml(html)");
+  }
+}
+
+export type { UserHtml };
+
+export function sanitizeUserHtml(html: string): UserHtml {
+  return new UserHtml(sanitizeHtml(html, allowlist));
+}
+
+// The html a writer stores when a member clears a field, such as a bio or a
+// signature.
+export const EMPTY_USER_HTML = sanitizeUserHtml("");
+
+// The text of html that passed sanitizeUserHtml, for a db writer to bind.
+// Throws on anything else, a plain string included. Of the server's modules,
+// only those in server/db call it (server/user_html.test.ts), so no route can
+// turn a UserHtml back into a string for a writer that takes one. Tests and
+// scripts/ may call it to compare renders.
+export function unwrapUserHtml(html: UserHtml): string {
+  return UserHtml.unwrap(html);
 }
 
 // True when the allowlist removes something from html. The renderer's own

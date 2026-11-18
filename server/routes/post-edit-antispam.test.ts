@@ -53,8 +53,12 @@ vi.mock("../services/discord", () => ({
 }));
 
 // server/bbcode.js loads cache3 with a CommonJS require that vitest cannot
-// resolve to a .ts file, and no test here reads the rendered HTML.
-vi.mock("../bbcode", () => ({ default: (markup: string) => markup }));
+// resolve to a .ts file, and no test here reads the rendered HTML. The
+// writers take only sanitized html.
+vi.mock("../bbcode", async () => {
+  const { sanitizeUserHtml } = await import("../user_html");
+  return { default: (markup: string) => sanitizeUserHtml(markup) };
+});
 
 import * as cancan from "../cancan";
 import claude, { type AnalyzeResult } from "../services/antispam/claude";

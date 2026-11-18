@@ -18,8 +18,11 @@ vi.mock("../config", async (importOriginal) => ({
 }));
 
 // server/bbcode.js loads ./cache3 with a plain require, which cannot load
-// TypeScript under vitest.
-vi.mock("../bbcode", () => ({ default: (markup: string) => markup }));
+// TypeScript under vitest. The writers take only sanitized html.
+vi.mock("../bbcode", async () => {
+  const { sanitizeUserHtml } = await import("../user_html");
+  return { default: (markup: string) => sanitizeUserHtml(markup) };
+});
 
 vi.mock("../emailer", () => ({
   sendNewConvoEmails: vi.fn(async () => {}),

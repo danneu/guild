@@ -4,6 +4,7 @@
 import assert from "assert";
 // 1st
 import type { Rolled } from "../dice";
+import { unwrapUserHtml, type UserHtml } from "../user_html";
 import { pool, maybeOneRow } from "./util";
 
 export const getCampaign = async function (campaignId: number) {
@@ -90,7 +91,7 @@ export const updateCampaign = async function (
   campaignId: number,
   title: string,
   markup: string,
-  html: string,
+  html: UserHtml,
 ) {
   assert(Number.isInteger(campaignId));
   assert(typeof title === "string");
@@ -103,7 +104,7 @@ export const updateCampaign = async function (
       , html = $3
     WHERE id = $4
   `,
-      [title, markup, html, campaignId],
+      [title, markup, unwrapUserHtml(html), campaignId],
     )
     .then(maybeOneRow);
 };
@@ -113,7 +114,7 @@ export const insertCampaign = async function (
   userId: number,
   title: string,
   markup: string,
-  html: string,
+  html: UserHtml,
 ) {
   assert(Number.isInteger(userId));
   assert(typeof title === "string");
@@ -124,7 +125,7 @@ export const insertCampaign = async function (
     VALUES ($1, $2, $3, $4)
     RETURNING *
   `,
-      [userId, title, markup, html],
+      [userId, title, markup, unwrapUserHtml(html)],
     )
     .then(maybeOneRow);
 };

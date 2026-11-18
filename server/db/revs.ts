@@ -1,6 +1,7 @@
 // 3rd
 import assert from "assert";
 // 1st
+import { unwrapUserHtml, type UserHtml } from "../user_html";
 import { pool, maybeOneRow, PgClientInTransaction } from "./util";
 
 ////////////////////////////////////////////////////////////
@@ -11,13 +12,13 @@ export async function insertPostRev(
   userId: number,
   postId: number,
   markup: string,
-  html: string,
+  html: UserHtml,
   reason?: string,
 ) {
   assert(Number.isInteger(userId));
   assert(Number.isInteger(postId));
   assert(typeof markup === "string");
-  assert(typeof html === "string");
+  const htmlText = unwrapUserHtml(html);
   assert(!reason || typeof reason === "string");
 
   return pgClient.query(
@@ -32,7 +33,7 @@ export async function insertPostRev(
       $6
     )
   `,
-    [userId, postId, markup, html, Buffer.byteLength(markup), reason],
+    [userId, postId, markup, htmlText, Buffer.byteLength(markup), reason],
   );
 }
 

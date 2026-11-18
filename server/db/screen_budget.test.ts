@@ -15,6 +15,7 @@ vi.mock("./util", async (importOriginal) => ({
 vi.mock("../bbcode", () => ({ default: (markup: string) => markup }));
 
 import * as config from "../config";
+import { sanitizeUserHtml } from "../user_html";
 import {
   createPost,
   createTopic,
@@ -285,7 +286,11 @@ describe("spendScreening", () => {
 ////////////////////////////////////////////////////////////
 
 describe("screened writes", () => {
-  const post = { ipAddress: "1.2.3.4", markup: "Hi", html: "Hi" };
+  const post = {
+    ipAddress: "1.2.3.4",
+    markup: "Hi",
+    html: sanitizeUserHtml("Hi"),
+  };
   const writes = [
     {
       name: "createPost",
@@ -328,7 +333,8 @@ describe("screened writes", () => {
     {
       name: "updatePost",
       insert: /UPDATE posts/,
-      run: () => updatePost(7, 10, "Edited", "Edited", undefined),
+      run: () =>
+        updatePost(7, 10, "Edited", sanitizeUserHtml("Edited"), undefined),
     },
     {
       name: "updateTopicTitle",
@@ -380,7 +386,13 @@ describe("screened writes", () => {
       user: { posts_count: 1, trusted: true, demoted: false },
     });
 
-    const { charge } = await updatePost(7, 10, "Edited", "Edited", undefined);
+    const { charge } = await updatePost(
+      7,
+      10,
+      "Edited",
+      sanitizeUserHtml("Edited"),
+      undefined,
+    );
 
     expect(charge).toBeNull();
     expect(indexOfSql(pgClient, /screen_spends/)).toBe(-1);

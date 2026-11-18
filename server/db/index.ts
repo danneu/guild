@@ -16,6 +16,7 @@ import { can, MOD_CATEGORY_ID, type Role } from "../cancan";
 import { fetchReadable } from "../readable";
 import type { SignupPermit } from "../signup_gate";
 import { trustedSql } from "../trust";
+import { unwrapUserHtml, type UserHtml } from "../user_html";
 import {
   pool,
   maybeOneRow,
@@ -155,7 +156,7 @@ export async function updateTopicStatus(
 export async function updateUserBio(
   userId: number,
   bioMarkup: string,
-  bioHtml: string,
+  bioHtml: UserHtml,
 ) {
   assert(_.isString(bioMarkup));
 
@@ -167,7 +168,7 @@ export async function updateUserBio(
     WHERE id = $3
     RETURNING *
   `,
-      [bioMarkup, bioHtml, userId],
+      [bioMarkup, unwrapUserHtml(bioHtml), userId],
     )
     .then(maybeOneRow);
 }
@@ -548,7 +549,7 @@ export async function createConvo(
     toUserIds: number[];
     title: string;
     markup: string;
-    html: string;
+    html: UserHtml;
     ipAddress: string;
   },
 ) {
@@ -557,7 +558,7 @@ export async function createConvo(
   assert(Array.isArray(args.toUserIds));
   assert(typeof args.title === "string");
   assert(typeof args.markup === "string");
-  assert(typeof args.html === "string");
+  const html = unwrapUserHtml(args.html);
 
   // config parses an unset STAFF_REPRESENTATIVE_ID to NaN.
   const userId =
@@ -608,7 +609,7 @@ export async function createConvo(
         )
         RETURNING *
       `,
-      [convo.id, userId, args.ipAddress, args.markup, args.html],
+      [convo.id, userId, args.ipAddress, args.markup, html],
     )
     .then(exactlyOneRow);
 
@@ -831,9 +832,12 @@ export async function replacePasswordTx(
 ////////////////////////////////////////////////////////////
 
 // Keep server/db/forum_text_writes.ts#updatePost and updatePm in sync
-export const updatePm = async function (id, markup, html) {
+export const updatePm = async function (
+  id: number | string,
+  markup: string,
+  html: UserHtml,
+) {
   assert(_.isString(markup));
-  assert(_.isString(html));
 
   return pool
     .query(
@@ -843,7 +847,7 @@ SET markup = $1, html = $2, updated_at = NOW()
 WHERE id = $3
 RETURNING *
   `,
-      [markup, html, id],
+      [markup, unwrapUserHtml(html), id],
     )
     .then(maybeOneRow);
 };
@@ -1129,14 +1133,14 @@ export async function createPm(
     ipAddress: string;
     convoId: number;
     markup: string;
-    html: string;
+    html: UserHtml;
   },
 ) {
   assert(pgClient._inTransaction, "pgClient must be in a transaction");
   assert(_.isNumber(props.userId));
   assert(props.convoId);
   assert(_.isString(props.markup));
-  assert(_.isString(props.html));
+  const html = unwrapUserHtml(props.html);
 
   // A flat 1: a reply reaches only members the convo already reached, and it
   // sends no mail.
@@ -1150,7 +1154,7 @@ export async function createPm(
       $4, $5)
     RETURNING *
   `,
-      [props.userId, props.ipAddress, props.convoId, props.markup, props.html],
+      [props.userId, props.ipAddress, props.convoId, props.markup, html],
     )
     .then(exactlyOneRow);
 }
@@ -1165,8 +1169,24 @@ export async function createPm(
 // able to change the address while email_verified_at stays set.
 // Nor a custom_title slot: updateUserCustomTitle is that column's sole writer,
 // so only a route that checked UPDATE_USER_CUSTOM_TITLE reaches it.
-export const updateUser = async (userId, attrs) => {
+// An attr left undefined keeps its column, so a cleared sig is EMPTY_USER_HTML.
+export const updateUser = async (
+  userId: number,
+  attrs: {
+    sig?: string | undefined;
+    sig_html?: UserHtml | undefined;
+    avatar_url?: string | undefined;
+    hide_sigs?: boolean | undefined;
+    is_ghost?: boolean | undefined;
+    is_grayscale?: boolean | undefined;
+    force_device_width?: boolean | undefined;
+    hide_avatars?: boolean | undefined;
+    eflags?: number | undefined;
+  },
+) => {
   debug("[updateUser] attrs", attrs);
+  const sigHtml =
+    attrs.sig_html === undefined ? undefined : unwrapUserHtml(attrs.sig_html);
 
   return pool
     .query(
@@ -1190,7 +1210,7 @@ export const updateUser = async (userId, attrs) => {
         attrs.avatar_url,
         attrs.hide_sigs,
         attrs.is_ghost,
-        attrs.sig_html,
+        sigHtml,
         attrs.is_grayscale,
         attrs.force_device_width,
         attrs.hide_avatars,
@@ -2703,12 +2723,12 @@ export async function findTrophyGroupById(group_id: number) {
 
 // title Required
 // description_markup Optional
-// description_html Optional
+// description_html null stores NULL
 export async function updateTrophyGroup(
   id: number,
   title: string,
   desc_markup: string,
-  desc_html: string,
+  desc_html: UserHtml | null,
 ) {
   return pool
     .query(
@@ -2721,7 +2741,12 @@ export async function updateTrophyGroup(
     WHERE id = $4
     RETURNING *
   `,
-      [title, desc_markup, desc_html, id],
+      [
+        title,
+        desc_markup,
+        desc_html === null ? null : unwrapUserHtml(desc_html),
+        id,
+      ],
     )
     .then(maybeOneRow);
 }
@@ -2732,12 +2757,12 @@ export async function updateTrophyGroup(
 //
 // title Required
 // description_markup Optional
-// description_html Optional
+// description_html null stores NULL
 export async function updateTrophy(
   id: number,
   title: string,
   desc_markup: string,
-  desc_html: string,
+  desc_html: UserHtml | null,
 ) {
   assert(Number.isInteger(id));
 
@@ -2752,7 +2777,12 @@ SET
 WHERE id = $4
 RETURNING *
   `,
-      [title, desc_markup, desc_html, id],
+      [
+        title,
+        desc_markup,
+        desc_html === null ? null : unwrapUserHtml(desc_html),
+        id,
+      ],
     )
     .then(maybeOneRow);
 }
@@ -2762,11 +2792,11 @@ RETURNING *
 // Update trophy<->user bridge record
 //
 // message_markup Optional
-// message_html Optional
+// message_html null stores NULL
 export async function updateTrophyUserBridge(
   id: number,
   message_markup: string,
-  message_html: string,
+  message_html: UserHtml | null,
 ) {
   assert(Number.isInteger(id));
 
@@ -2780,7 +2810,11 @@ export async function updateTrophyUserBridge(
     WHERE id = $3
     RETURNING *
   `,
-      [message_markup, message_html, id],
+      [
+        message_markup,
+        message_html === null ? null : unwrapUserHtml(message_html),
+        id,
+      ],
     )
     .then(maybeOneRow);
 }
@@ -2882,17 +2916,16 @@ export const findWinnersForTrophyId = async function (trophy_id) {
 
 ////////////////////////////////////////////////////////////
 
-// description_markup and _html are optional
+// description_markup is optional, and a null description_html stores NULL
 //
 // Returns created trophy group
 export const createTrophyGroup = async function (
-  title,
-  description_markup,
-  description_html,
+  title: string,
+  description_markup: string | undefined,
+  description_html: UserHtml | null,
 ) {
   assert(_.isString(title));
   assert(_.isUndefined(description_markup) || _.isString(description_markup));
-  assert(_.isUndefined(description_html) || _.isString(description_html));
 
   return pool
     .query(
@@ -2901,7 +2934,11 @@ INSERT INTO trophy_groups (title, description_markup, description_html)
 VALUES ($1, $2, $3)
 RETURNING *
   `,
-      [title, description_markup, description_html],
+      [
+        title,
+        description_markup,
+        description_html === null ? null : unwrapUserHtml(description_html),
+      ],
     )
     .then(maybeOneRow);
 };
@@ -2910,12 +2947,12 @@ RETURNING *
 
 export async function createStatus(
   pgClient: PgClientInTransaction,
-  { user_id, html, text }: { user_id: number; html: string; text: string },
+  { user_id, html, text }: { user_id: number; html: UserHtml; text: string },
 ) {
   assert(pgClient._inTransaction, "pgClient must be in a transaction");
   assert(Number.isInteger(user_id));
   assert(typeof text === "string");
-  assert(typeof html === "string");
+  const htmlText = unwrapUserHtml(html);
 
   await spend(pgClient, user_id, 1);
 
@@ -2926,7 +2963,7 @@ export async function createStatus(
     VALUES ($1, $2, $3)
     RETURNING *
   `,
-      [user_id, text, html],
+      [user_id, text, htmlText],
     )
     .then(maybeOneRow);
 }
@@ -3557,7 +3594,7 @@ export async function createVm(
     from_user_id: number;
     to_user_id: number;
     markup: string;
-    html: string;
+    html: UserHtml;
     parent_vm_id: number | null;
   },
 ) {
@@ -3566,7 +3603,7 @@ export async function createVm(
   assert(Number.isInteger(data.to_user_id));
   assert(data.parent_vm_id === null || Number.isInteger(data.parent_vm_id));
   assert(_.isString(data.markup));
-  assert(_.isString(data.html));
+  const html = unwrapUserHtml(data.html);
 
   // A reply goes under a thread on its own wall: a top-level VM with the same
   // to_user_id. The wall lists a thread's replies by parent alone, and
@@ -3609,7 +3646,7 @@ RETURNING *
         data.from_user_id,
         data.to_user_id,
         data.markup,
-        data.html,
+        html,
         data.parent_vm_id,
       ],
     )

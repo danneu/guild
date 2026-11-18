@@ -20,9 +20,19 @@ such as `|safe`. `AGENTS.md` links here.
 
 ## Sanitizing
 
-- The render ends in `server/user_html.ts#sanitizeUserHtml`. Any other code
-  that stores user html calls `sanitizeUserHtml` itself, and none copies
-  stored html from another row.
+- `server/user_html.ts#sanitizeUserHtml` is the only maker of a `UserHtml`,
+  and the render ends in it. Every db writer of a stored html column takes
+  its html as a `UserHtml`, so tsc refuses a string there. Give a new html
+  param that type too: a param typed `string` gets none of these checks.
+- A writer binds that html only through `unwrapUserHtml`. It refuses at
+  runtime anything the sanitizer did not make, such as an any-typed
+  `ctx.vals` string, and binding a `UserHtml` any other way throws.
+  `server/user_html.test.ts` fails if a server module outside `server/db`
+  calls it. Tests and `scripts/` may call it to compare renders.
+- A route that clears a field, such as a bio or a signature, passes
+  `EMPTY_USER_HTML`.
+- No db function writes an html column from another row in SQL. A type
+  cannot see SQL, so only review holds this rule.
 - The sanitizer sets the rel and target of every stored link from the host
   the URL parser reads in its href. Only a link to a host in
   `server/user_html.ts#ownLinkHosts` stays followed and opens in place. Every

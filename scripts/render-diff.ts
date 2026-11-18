@@ -27,6 +27,8 @@ import path from "node:path";
 import { parseArgs } from "node:util";
 import vm from "node:vm";
 
+import { unwrapUserHtml, type UserHtml } from "../server/user_html";
+
 const ROOT = path.join(__dirname, "..");
 const SERVER = path.join(ROOT, "server");
 
@@ -67,7 +69,10 @@ const { values: args } = parseArgs({
 
 // Compiles a bbcode.js source as if it sat in server/, so its requires
 // resolve as the real file's do. cache3 would start interval queries, so
-// the renderer gets a fixed uname set in its place.
+// the renderer gets a fixed uname set in its place. The renderer loads the
+// working tree's server/user_html.ts, so it returns a UserHtml, unless the
+// ref predates the sanitizer and returns a string. Either way the caller
+// gets the html text.
 function loadRenderer(
   source: string,
   name: string,
@@ -95,7 +100,11 @@ function loadRenderer(
   } finally {
     internals._load = originalLoad;
   }
-  return mod.exports as (markup: string) => string;
+  const render = mod.exports as (markup: string) => UserHtml | string;
+  return (markup) => {
+    const html = render(markup);
+    return typeof html === "string" ? html : unwrapUserHtml(html);
+  };
 }
 
 function renderWithin(

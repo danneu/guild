@@ -15,6 +15,7 @@ import assert from "assert";
 import _ from "lodash";
 import createDebug from "debug";
 // 1st
+import { unwrapUserHtml, type UserHtml } from "../user_html";
 import * as revs from "./revs";
 import { admitPost } from "./post_gap";
 import { lockStanding } from "./send_budget";
@@ -28,27 +29,31 @@ import {
 
 const debug = createDebug("app:db:forum_text_writes");
 
-// Args:
-// - userId      Required Number/String
-// - ipAddress   Optional String
-// - markup      Required String
-// - topicId     Required Number/String
-// - type        Required String, ic | ooc | char
-// - isRoleplay  Required Boolean
-// - idx         Undefined or -1 if it's the tab's wiki post
+type PostType = "ic" | "ooc" | "char";
+
+// idx is -1 for a roleplay tab's 0th post, and left out for any other post.
 //
 // The author must have left the post gap since their last post
 // (server/db/post_gap.ts), and pays the screening charge for the markup
 // (server/db/screen_budget.ts), which comes back with the post.
 export async function createPost(
   pgClient: PgClientInTransaction,
-  args,
+  args: {
+    userId: number;
+    ipAddress: string;
+    topicId: number;
+    markup: string;
+    html: UserHtml;
+    type: PostType;
+    isRoleplay: boolean;
+    idx?: -1;
+  },
 ): Promise<{ post: any; charge: ScreeningCharge | null }> {
   debug(`[createPost] args:`, args);
   assert(_.isNumber(args.userId));
   assert(_.isString(args.ipAddress));
   assert(_.isString(args.markup));
-  assert(_.isString(args.html));
+  const html = unwrapUserHtml(args.html);
   assert(args.topicId);
   assert(_.isBoolean(args.isRoleplay));
   assert(["ic", "ooc", "char"].includes(args.type));
@@ -84,7 +89,7 @@ export async function createPost(
         args.ipAddress,
         args.topicId,
         args.markup,
-        args.html,
+        html,
         args.type,
         args.isRoleplay,
         args.idx,
@@ -105,30 +110,30 @@ export async function createPost(
 
 ////////////////////////////////////////////////////////////
 
-// Args:
-// - userId     Required Number/String
-// - forumId    Required Number/String
-// - ipAddress  Optional String
-// - title      Required String
-// - markup     Required String
-// - postType   Required String, ic | ooc | char
-// - isRoleplay Required Boolean
-// - tagIds     Optional [Int]
-// - joinStatus Optional String (Required if roleplay)
+// joinStatus is required for a roleplay and left out otherwise.
 //
 // The author must have left the post gap since their last post
 // (server/db/post_gap.ts), and pays the screening charge for the title and
 // markup (server/db/screen_budget.ts), which comes back with the topic.
-export async function createTopic(
-  props,
-): Promise<{ topic: any; charge: ScreeningCharge | null }> {
+export async function createTopic(props: {
+  userId: number;
+  forumId: number;
+  ipAddress: string;
+  title: string;
+  markup: string;
+  html: UserHtml;
+  postType: PostType;
+  isRoleplay: boolean;
+  tagIds?: number[] | undefined;
+  joinStatus?: string | undefined;
+}): Promise<{ topic: any; charge: ScreeningCharge | null }> {
   debug("[createTopic]", props);
   assert(_.isNumber(props.userId));
   assert(props.forumId);
   assert(_.isString(props.ipAddress));
   assert(_.isString(props.title));
   assert(_.isString(props.markup));
-  assert(_.isString(props.html));
+  const html = unwrapUserHtml(props.html);
   assert(_.isBoolean(props.isRoleplay));
   assert(["ic", "ooc", "char"].includes(props.postType));
   assert(_.isArray(props.tagIds) || _.isUndefined(props.tagIds));
@@ -179,7 +184,7 @@ export async function createTopic(
           props.userId,
           props.ipAddress,
           props.markup,
-          props.html,
+          html,
           props.postType,
           props.isRoleplay,
         ],
@@ -227,13 +232,13 @@ export async function updatePost(
   userId: number,
   postId: number,
   markup: string,
-  html: string,
+  html: UserHtml,
   reason: string | undefined,
 ): Promise<{ post: any; charge: ScreeningCharge | null }> {
   assert(Number.isInteger(userId));
   assert(Number.isInteger(postId));
   assert(typeof markup === "string");
-  assert(typeof html === "string");
+  const htmlText = unwrapUserHtml(html);
   assert(!reason || typeof reason === "string");
 
   return pool.withTransaction(async (client) => {
@@ -265,7 +270,7 @@ export async function updatePost(
           userId,
           postId,
           markup,
-          html,
+          htmlText,
           Buffer.byteLength(markup),
           reason,
           postId,
