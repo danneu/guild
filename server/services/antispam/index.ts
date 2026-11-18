@@ -12,29 +12,38 @@ import {
 } from "../discord";
 import * as db from "../../db";
 import type { ScreeningCharge } from "../../db/screen_budget";
-import { Context } from "koa";
+import type { SpamVerdict } from "./claude";
 
-// Returns falsey if they are not a spammer (or if we fail open). Returns the
-// verdict (truthy) for both NUKE and REVIEW so the caller suppresses the
-// intro-topic broadcast for a suspected spammer.
+// The member whose write is screened. The Discord notes link their profile.
+export type SpamActor = { id: number; uname: string; slug: string };
+
+// A spam verdict and what process did about it. NUKE and REVIEW both mean the
+// text is suspected spam.
+export type SpamFinding = { action: "NUKE" | "REVIEW"; verdict: SpamVerdict };
+
+// Screens the text a write stored, and acts on the verdict. Returns null when
+// the text passes or the classifier fails open, and the finding for NUKE and
+// REVIEW, so the caller can skip the intro-topic broadcast for a suspected
+// spammer, and on a NUKE hide what the write changed outside the actor's own
+// rows.
 //
 // `charge` is what the write that stored the text returned
 // (server/db/screen_budget.ts#spendScreening). It decides whether the text is
 // screened: null means the actor is trusted, and nothing is sent.
 async function process(
-  ctx: Context,
+  actor: SpamActor,
   charge: ScreeningCharge | null,
   postId: number,
-) {
-  assert(ctx.currUser);
+): Promise<SpamFinding | null> {
+  assert(Number.isInteger(actor.id));
   assert(Number.isInteger(postId));
 
   if (!charge) {
-    return;
+    return null;
   }
   assert(
-    charge.standing.id === ctx.currUser.id,
-    "A screening charge must belong to the request's user",
+    charge.standing.id === actor.id,
+    "A screening charge must belong to the actor",
   );
 
   const result = await claude.analyze(charge);
@@ -47,11 +56,11 @@ async function process(
       const antispam = result.ok
         ? ({ ran: true } as const)
         : ({ ran: false, error: result.error } as const);
-      broadcastFirstPost(ctx.currUser, postId, antispam, charge.body).catch(
-        (err) => console.error("broadcastFirstPost failed", err),
+      broadcastFirstPost(actor, postId, antispam, charge.body).catch((err) =>
+        console.error("broadcastFirstPost failed", err),
       );
     }
-    return;
+    return null;
   }
 
   // NUKE and REVIEW both imply a successful, spam verdict.
@@ -60,23 +69,34 @@ async function process(
 
   if (action === "NUKE") {
     // It's high-confidence spam, so nuke user and post in Discord.
-    await db.nukeUser({
-      spambot: ctx.currUser.id,
-      nuker: config.STAFF_REPRESENTATIVE_ID || 1,
-    });
+    await db
+      .nukeUser({
+        spambot: actor.id,
+        nuker: config.STAFF_REPRESENTATIVE_ID || 1,
+      })
+      .catch(ignoreAlreadyNuked);
 
-    broadcastAutoNuke(ctx.currUser, postId, verdict).catch((err) => {
+    broadcastAutoNuke(actor, postId, verdict).catch((err) => {
       console.error("broadcastAutoNuke failed", err);
     });
   } else {
     // REVIEW: mid-confidence spam. Alert Discord for a human to review, but do
     // not nuke.
-    broadcastSpamReview(ctx.currUser, postId, verdict).catch((err) => {
+    broadcastSpamReview(actor, postId, verdict).catch((err) => {
       console.error("broadcastSpamReview failed", err);
     });
   }
 
-  return verdict;
+  return { action, verdict };
+}
+
+// Two writes screened at once can both come back NUKE, and the second finds
+// the account nuked already. That NUKE still stands: the text it judged may
+// sit in a row the actor does not own, which nukeUser does not hide, and the
+// moderators still hear about it.
+function ignoreAlreadyNuked(err: unknown): void {
+  if (err === "ALREADY_NUKED") return;
+  throw err;
 }
 
 // How often each machine checks that the classifier answers. A revoked key or
@@ -118,36 +138,27 @@ function startClassifierProbe(): void {
   setInterval(check, PROBE_INTERVAL_MS).unref();
 }
 
-function logVerdict<T>(result: T): T {
-  if (result) {
-    console.log("antispam process detected a spammer:", result);
+function logFinding(finding: SpamFinding | null): SpamFinding | null {
+  if (finding) {
+    console.log("antispam process detected a spammer:", finding);
   }
-  return result;
+  return finding;
 }
 
-function logError(err: unknown): void {
+function logError(err: unknown): null {
   console.error("antispam process error", err);
+  return null;
 }
 
 export default {
   checkClassifier,
   startClassifierProbe,
-  // For a caller that waits for the verdict. Never rejects: an error is
-  // logged and the text passes.
+  // Never rejects: an error is logged, and the text passes.
   process: async (
-    ctx: Context,
+    actor: SpamActor,
     charge: ScreeningCharge | null,
     postId: number,
-  ) => {
-    return process(ctx, charge, postId).then(logVerdict).catch(logError);
-  },
-  // The one entry point for screening after the response is sent. It returns
-  // nothing, so a route has no promise to drop.
-  processInBackground(
-    ctx: Context,
-    charge: ScreeningCharge | null,
-    postId: number,
-  ): void {
-    process(ctx, charge, postId).then(logVerdict).catch(logError);
+  ): Promise<SpamFinding | null> => {
+    return process(actor, charge, postId).then(logFinding).catch(logError);
   },
 };

@@ -3,7 +3,6 @@
 // while each @ts-expect-error below still marks a type error: the classifier
 // refuses anything but a charge that spendScreening made.
 
-import type { Context } from "koa";
 import antispam from "./index";
 import claude from "./claude";
 
@@ -20,7 +19,8 @@ export function analyzeHandBuiltCharge() {
   return claude.analyze(handBuilt);
 }
 
-export function processHandBuiltCharge(ctx: Context) {
+export function processHandBuiltCharge() {
+  const actor = { id: 1, uname: "newbie", slug: "newbie" };
   // @ts-expect-error -- only spendScreening makes a ScreeningCharge
-  return antispam.process(ctx, handBuilt, 1);
+  return antispam.process(actor, handBuilt, 1);
 }

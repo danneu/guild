@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // createTopic opens its own transaction on the pool; the fake database below
@@ -17,7 +15,7 @@ vi.mock("./util", async (importOriginal) => ({
 // TypeScript under vitest.
 vi.mock("../bbcode", () => ({ default: (markup: string) => markup }));
 
-import { createPost, createTopic } from "./index";
+import { createPost, createTopic } from "./forum_text_writes";
 import { lockSender } from "./send_budget";
 
 const SECOND = 1000;
@@ -323,52 +321,5 @@ describe("the post gap", () => {
 
     expect(db.posts).toBe(1);
     expect(db.ledger).toEqual([last]);
-  });
-});
-
-////////////////////////////////////////////////////////////
-
-// Intent: createPost and createTopic are the only code that inserts posts.
-// Why it exists: the gap is checked inside those two writes, so it holds only
-// while no other code inserts a post.
-// Scenario: a route or a script writes INSERT INTO posts itself.
-describe("post inserts", () => {
-  const repoRoot = path.resolve(__dirname, "../..");
-
-  function sourceFiles(): string[] {
-    return fs
-      .readdirSync(path.join(repoRoot, "server"), {
-        recursive: true,
-        encoding: "utf8",
-      })
-      .filter((file) => /\.(ts|js)$/.test(file) && !/\.test\.ts$/.test(file))
-      .map((file) => path.join("server", file).split(path.sep).join("/"))
-      .sort();
-  }
-
-  // Each INSERT INTO posts, named by the top-level declaration it sits in.
-  function postInserts(): string[] {
-    const found: string[] = [];
-    for (const file of sourceFiles()) {
-      const text = fs.readFileSync(path.join(repoRoot, file), "utf8");
-      for (const insert of text.matchAll(/INSERT\s+INTO\s+posts\b/gi)) {
-        const before = text.slice(0, insert.index);
-        const decls = [
-          ...before.matchAll(
-            /^(?:export\s+)?(?:async\s+)?(?:function\s+(\w+)|const\s+(\w+)\s*=)/gm,
-          ),
-        ];
-        const decl = decls.at(-1);
-        found.push(`${file}#${decl?.[1] ?? decl?.[2] ?? "?"}`);
-      }
-    }
-    return found;
-  }
-
-  it("happen only in createPost and createTopic", () => {
-    expect(postInserts()).toEqual([
-      "server/db/index.ts#createPost",
-      "server/db/index.ts#createTopic",
-    ]);
   });
 });

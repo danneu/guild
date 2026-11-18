@@ -1,8 +1,8 @@
 # Budgets on what a member can repeat
 
-Read this before you add or change a write a member can repeat: a post, a
-topic, a PM or other send, or a call to the spam classifier. `AGENTS.md`
-links here. Uploads have their own caps; see [uploads.md](uploads.md).
+Read this before you add or change a write a member can repeat: a post or
+an edit of one, a topic or its title, a PM or other send, or a call to the
+spam classifier. `AGENTS.md` links here. Uploads have their own caps; see [uploads.md](uploads.md).
 
 ## Lock order
 
@@ -29,12 +29,17 @@ Topics and posts are not sends.
 
 ## Posts and topics
 
+- `server/forum_text.ts` is the only way to write post text or a topic
+  title: a new topic, a reply, a 0th post, an edit, a revert and a retitle.
+  Its header says how each write is gated and screened.
+- Only it imports the raw writes in `server/db/forum_text_writes.ts`.
+  `server/write_census.test.ts` fails on any other code that inserts a post
+  or topic or sets `posts.markup`, `posts.html` or `topics.title`. A new
+  write of post text goes through the owner, never into `server/db/index.ts`.
 - `server/db/post_gap.ts#admitPost` spaces each member's new posts and
-  topics.
-- `server/db/index.ts#createPost` and `#createTopic` call admitPost in their
-  own transaction, after lockStanding and before the insert.
-- They are the only code that inserts posts. A test fails on any other
-  `INSERT INTO posts`.
+  topics. The raw `createPost` and `createTopic` call it in their own
+  transaction, after lockStanding and before the insert. A 0th post skips
+  it.
 
 ## Spam screening
 
@@ -45,15 +50,15 @@ Topics and posts are not sends.
 - A write that stores text to screen reads its actor once through
   lockStanding. It charges in its own transaction, before its insert, and
   returns the charge with its row.
-- The route hands that charge to
+- After the commit, `server/forum_text.ts` hands that charge to
   `server/services/antispam/index.ts#process`. A null charge means a trusted
   actor, and no call.
 - Over budget, spendScreening throws `ScreeningBudgetExceeded` and nothing is
   written. The error handler in `server/index.ts` answers it as it answers
   `MarkupRejected`.
-- The post and topic writes in `server/db/index.ts` all charge, but not every
-  route that calls them hands the charge on yet. So a paid charge does not
-  mean the text was screened.
+- A NUKE verdict hides the actor's own rows (`nukeUser`). For a post or title
+  the actor changed but does not own, the owner hides that row only while it
+  still holds the judged text, and never puts back an older one.
 
 ## The classifier
 

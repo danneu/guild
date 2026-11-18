@@ -12,11 +12,9 @@ import * as config from "../config";
 import * as belt from "../belt";
 import * as cancan from "../cancan";
 import { FlashParams } from "../middleware/flash";
-import { renderMarkup } from "../markup";
+import * as forumText from "../forum_text";
 import cache3 from "../cache3";
-import services from "../services";
 import { Context } from "koa";
-import { pool, withPgPoolTransaction } from "../db/util";
 import { sendJson } from "../api_json";
 import z from "zod";
 
@@ -60,29 +58,23 @@ router.post("/topics/:topicId/:postType/0th", async (ctx: Context) => {
 
   const redirectTo = `${topic.url}/${params.postType}`;
 
-  await withPgPoolTransaction(pool, async (pgClient) => {
-    await db
-      .createPost(pgClient, {
-        userId: ctx.currUser.id,
-        ipAddress: ctx.ip,
-        markup: body.markup,
-        html: renderMarkup(body.markup, ctx.currUser),
-        topicId: topic.id,
-        isRoleplay: true,
-        type: params.postType,
-        idx: -1,
-      })
-      .catch((err) => {
-        if (err instanceof Error && "code" in err && err.code === "23505") {
-          ctx.flash = {
-            message: ["danger", `0th post for this tab already exists.`],
-          };
-          ctx.redirect(redirectTo);
-          return;
-        }
-        throw err;
-      });
-  });
+  try {
+    await forumText.createZerothPost(ctx.currUser, {
+      topicId: topic.id,
+      type: params.postType,
+      ipAddress: ctx.ip,
+      markup: body.markup,
+    });
+  } catch (err) {
+    if (err instanceof Error && "code" in err && err.code === "23505") {
+      ctx.flash = {
+        message: ["danger", `0th post for this tab already exists.`],
+      };
+      ctx.redirect(redirectTo);
+      return;
+    }
+    throw err;
+  }
 
   ctx.flash = {
     message: ["success", `Created 0th post for ${params.postType} tab`],
@@ -130,53 +122,28 @@ router.post("/topics/:topicSlug/posts", async (ctx: Context) => {
     ctx.assert(postType === "ooc", 400);
   }
 
-  // Render the bbcode
-  const html = renderMarkup(ctx.vals.markup, ctx.currUser);
-
-  const { post, charge, mentionNotificationsCount, quoteNotificationsCount } =
-    await withPgPoolTransaction(pool, async (pgClient) => {
-      const created = await db.createPost(pgClient, {
-        userId: ctx.currUser.id,
-        ipAddress: ctx.request.ip,
-        topicId: topic.id,
-        markup: ctx.vals.markup,
-        html: html,
-        type: postType,
-        isRoleplay: topic.forum.is_roleplay,
-      });
-      const post = pre.presentPost(created.post);
-
-      // Send MENTION, QUOTE and TOPIC_SUB notifications
-      const { mentionsCount, quotesCount } =
-        await db.notifications.notifyNewPost(pgClient, {
-          author: ctx.currUser,
-          postId: post.id,
-          markup: ctx.vals.markup,
-        });
-
-      return {
-        post,
-        charge: created.charge,
-        mentionNotificationsCount: mentionsCount,
-        quoteNotificationsCount: quotesCount,
-      };
-    });
+  // Sends MENTION, QUOTE and TOPIC_SUB notifications too
+  const created = await forumText.createReply(ctx.currUser, {
+    topicId: topic.id,
+    isRoleplay: topic.forum.is_roleplay,
+    type: postType,
+    ipAddress: ctx.request.ip,
+    markup: ctx.vals.markup,
+  });
+  const post = pre.presentPost(created.post);
 
   ctx.flash = {
     message: [
       "success",
       util.format(
         "Post created. Mentions sent: %s, Quotes sent: %s",
-        mentionNotificationsCount,
-        quoteNotificationsCount,
+        created.mentionsCount,
+        created.quotesCount,
       ),
     ],
   };
 
   ctx.response.redirect(post.url + "?created=true");
-
-  // Check if post is spam in the background
-  services.antispam.processInBackground(ctx, charge, post.id);
 });
 
 ////////////////////////////////////////////////////////////
@@ -264,10 +231,12 @@ router.put("/topics/:slug/edit", async (ctx: Context) => {
   }
 
   // Validation succeeded, so update topic
-  await db.updateTopic(ctx.currUser.id, topic.id, {
-    title: ctx.vals.title,
-    join_status: ctx.vals["join-status"],
-  });
+  if (ctx.vals.title !== undefined) {
+    await forumText.retitleTopic(ctx.currUser, topic, ctx.vals.title);
+  }
+  if (ctx.vals["join-status"] !== undefined) {
+    await db.updateTopicJoinStatus(topic.id, ctx.vals["join-status"]);
+  }
 
   ctx.flash = { message: ["success", "Topic updated"] };
   ctx.response.redirect(topic.url + "/edit");
@@ -555,37 +524,12 @@ router.put("/posts/:id", async (ctx: Context) => {
 
   // Succeeded
 
-  // Short-circuit if nothing changed
-  if (post.markup.trim() === ctx.vals.markup.trim()) {
-    ctx.redirect(post.url);
-    return;
-  }
+  await forumText.editPost(ctx.currUser, post, {
+    markup: ctx.vals.markup,
+    reason: ctx.vals.reason,
+  });
 
-  // Render BBCode to html
-  const html = renderMarkup(ctx.vals.markup, ctx.currUser);
-
-  const updated = await db.updatePost(
-    ctx.currUser.id,
-    post.id,
-    ctx.vals.markup,
-    html,
-    ctx.vals.reason,
-  );
-  const updatedPost = pre.presentPost(updated.post);
-
-  ctx.response.redirect(updatedPost.url);
-
-  // If it's the FAQ post, refresh cache
-  if (post.id === config.FAQ_POST_ID) {
-    cache3.requestUpdate("faq-post");
-  }
-
-  if (post.id === config.WELCOME_POST_ID) {
-    cache3.requestUpdate("welcome-post");
-  }
-
-  // Check if post is spam after response is sent
-  services.antispam.processInBackground(ctx, updated.charge, post.id);
+  ctx.response.redirect(post.url);
 });
 
 //
@@ -611,38 +555,12 @@ router.put("/api/posts/:id", async (ctx: Context) => {
 
   // Succeeded
 
-  // Short-circuit if nothing changed
-  if (post.markup.trim() === ctx.request.body.markup.trim()) {
-    sendJson(ctx, "postEdit", post);
-    return;
-  }
+  const saved = await forumText.editPost(ctx.currUser, post, {
+    markup: ctx.vals.markup,
+    reason: ctx.vals.reason,
+  });
 
-  // Render BBCode to html
-  var html = renderMarkup(ctx.request.body.markup, ctx.currUser);
-
-  var updatedPost = await db
-    .updatePost(
-      ctx.currUser.id,
-      post.id,
-      ctx.vals.markup,
-      html,
-      ctx.vals.reason,
-    )
-    .then(({ post }) => pre.presentPost(post));
-
-  sendJson(ctx, "postEdit", updatedPost);
-
-  // If it's the FAQ post, refresh cache
-  if (post.id === config.FAQ_POST_ID) {
-    cache3.requestUpdate("faq-post");
-  }
-
-  if (post.id === config.WELCOME_POST_ID) {
-    cache3.requestUpdate("welcome-post");
-  }
-
-  // TODO: Submit to spam service like PUT /posts/:id. The edit already paid
-  // its screening charge, which is dropped here.
+  sendJson(ctx, "postEdit", saved);
 });
 
 ////////////////////////////////////////////////////////////

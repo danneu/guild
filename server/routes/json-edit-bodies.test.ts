@@ -18,10 +18,11 @@ vi.mock("../db", () => ({
   findUserById: vi.fn(),
   updateUserBio: vi.fn(),
   findPost: vi.fn(),
-  updatePost: vi.fn(),
   findPmWithConvo: vi.fn(),
   updatePm: vi.fn(),
 }));
+// The post edit's raw write, under server/forum_text.ts
+vi.mock("../db/forum_text_writes", () => ({ updatePost: vi.fn() }));
 // Imported by the route modules; stubbed so no pool or refresh loop is built.
 vi.mock("../db/util", () => ({ pool: {}, withPgPoolTransaction: vi.fn() }));
 vi.mock("../cache3", () => ({ default: { requestUpdate: vi.fn() } }));
@@ -34,6 +35,7 @@ vi.mock("../config", async (importOriginal) => ({
 }));
 
 import * as db from "../db";
+import * as forumTextWrites from "../db/forum_text_writes";
 import * as cancan from "../cancan";
 import "../validation";
 import { responseEdge } from "../middleware/response-edge";
@@ -177,7 +179,7 @@ describe("JSON edit endpoints", () => {
     async (_label, markup, html) => {
       vi.mocked(db.findPost).mockResolvedValue(zerothPostRow());
       const { topic: _topic, forum: _forum, ...columns } = zerothPostRow();
-      vi.mocked(db.updatePost).mockResolvedValue({
+      vi.mocked(forumTextWrites.updatePost).mockResolvedValue({
         post: { ...columns, markup, html: "<p>saved</p>" },
         charge: null,
       });

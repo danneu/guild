@@ -1,9 +1,9 @@
 // The gap a member leaves between new posts and topics. createPost and
-// createTopic in server/db/index.ts call admitPost in their own transaction,
-// under lockStanding, before the insert. So the check, the stamp and the post
-// commit together or not at all: two posts at once cannot both pass, and a
-// refused or failed post leaves no stamp. Those two writes are the only code
-// that inserts posts (server/db/post_gap.test.ts holds that), so no post
+// createTopic in server/db/forum_text_writes.ts call admitPost in their own
+// transaction, under lockStanding, before the insert. So the check, the stamp
+// and the post commit together or not at all: two posts at once cannot both
+// pass, and a refused or failed post leaves no stamp. That module is the only
+// code that inserts posts (server/write_census.test.ts holds that), so no post
 // route can skip the gap.
 //
 // The ledger is the ratelimits table (sql/1-schema.sql), one row per account:

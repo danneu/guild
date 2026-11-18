@@ -11,7 +11,7 @@ import nodeUrl from "url";
 import * as config from "../config";
 import * as cancan from "../cancan";
 import * as db from "../db";
-import { renderMarkup } from "../markup";
+import * as forumText from "../forum_text";
 import cache3 from "../cache3";
 import * as pre from "../presenters";
 import { forumModsColumn } from "../db/readable";
@@ -463,19 +463,8 @@ router.post("/posts/:postId/revisions/:revId/revert", async (ctx: Context) => {
   ctx.assert(post, 404);
   ctx.assertAuthorized(ctx.currUser, "UPDATE_POST", post);
 
-  const markup = await db.revs.getPostRevMarkup(post.id, revId);
-  ctx.assert(typeof markup === "string", 404);
-
-  // Render the revision's markup and save it like any edit. Copying the
-  // revision's stored html would let html from an older renderer, which never
-  // passed the sanitizer, back into the post.
-  await db.updatePost(
-    ctx.currUser.id,
-    post.id,
-    markup,
-    renderMarkup(markup, ctx.currUser),
-    `Reverted to revision ${revId}`,
-  );
+  const reverted = await forumText.revertPost(ctx.currUser, post, revId);
+  ctx.assert(reverted, 404);
 
   ctx.flash = { message: ["success", `Reverted post to revision ${revId}`] };
   ctx.redirect(post.url + "/revisions");

@@ -204,6 +204,7 @@ import * as emailer from "./emailer";
 import * as belt from "./belt";
 import { authenticate, hashPassword } from "./auth";
 import { MarkupRejected, renderMarkup } from "./markup";
+import * as forumText from "./forum_text";
 import { ScreeningBudgetExceeded } from "./db/screen_budget";
 import { PostTooSoon } from "./db/post_gap";
 import bouncer from "koa-bouncer";
@@ -1268,9 +1269,6 @@ router.post("/forums/:slug/topics", async (ctx: Context) => {
 
   // Validation succeeded
 
-  // Render BBCode to html
-  var html = renderMarkup(ctx.vals.markup, ctx.currUser);
-
   // post-type is always ooc for non-RPs
   var postType = forum.is_roleplay ? ctx.vals["post-type"] : "ooc";
 
@@ -1279,14 +1277,13 @@ router.post("/forums/:slug/topics", async (ctx: Context) => {
     .uniq()
     .value();
 
-  // Create topic
-  const created = await db.createTopic({
-    userId: ctx.currUser.id,
+  // Create topic. It waits for the spam verdict, so a suspected spammer's
+  // topic is flagged.
+  const created = await forumText.createTopic(ctx.currUser, {
     forumId: forumId,
     ipAddress: ctx.request.ip,
     title: ctx.vals.title,
     markup: ctx.vals.markup,
-    html: html,
     postType: postType,
     isRoleplay: forum.is_roleplay,
     tagIds: tagIds,
@@ -1296,19 +1293,8 @@ router.post("/forums/:slug/topics", async (ctx: Context) => {
 
   ctx.response.redirect(topic.url);
 
-  // Check if post is spam. Only a write that paid a screening charge is
-  // sent to the classifier (server/db/screen_budget.ts); a trusted member's
-  // charge is null. A high-confidence spam verdict auto-nukes them. Awaited
-  // so we can skip the Discord intro broadcast for anyone who tripped the
-  // spam detector.
-  const result = await services.antispam.process(
-    ctx,
-    created.charge,
-    topic.post.id,
-  );
-
   // Don't broadcast to discord if they tripped the spam detector
-  if (!result && topic.forum_id === 2) {
+  if (!created.flagged && topic.forum_id === 2) {
     services.discord
       .broadcastIntroTopic(ctx.currUser, topic)
       .catch((err) => console.error("broadcastIntroTopic failed", err));

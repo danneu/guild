@@ -5,17 +5,19 @@ import { describe, expect, it } from "vitest";
 // Intent: each parser of client bytes has one owner. Only
 // server/middleware/body.ts mounts koa-body, only server/upload.ts runs
 // formidable, and only server/imaging.ts decodes images with sharp. What
-// members store has one owner too: only server/s3.ts calls the S3 SDK, and
-// only server/storage.ts calls server/s3.ts.
+// members store has one owner too: only server/s3.ts calls the S3 SDK, only
+// server/storage.ts calls server/s3.ts, and only server/forum_text.ts calls
+// the writes of post text and topic titles in server/db/forum_text_writes.ts.
 // Why it exists: koa-body once parsed multipart for the whole app, so any
 // client could make formidable write temp files that nothing deleted. sharp
 // once decoded member uploads with every libvips loader and no pixel cap.
 // Routes once wrote to S3 with no per-account cap and built their own keys
-// (hunt 261117-0852-013). Another importer of any of these could quietly
-// bring that back.
+// (hunt 261117-0852-013). Routes once saved post edits that the spam
+// classifier never saw (hunt 261117-0852-027). Another importer of any of
+// these could quietly bring that back.
 // Scenario: a route mounts koaBody({ multipart: true }) for itself, as an old
-// TODO in server/routes/users.ts suggested, calls sharp(file.buffer), or puts
-// an object in S3 itself.
+// TODO in server/routes/users.ts suggested, calls sharp(file.buffer), puts
+// an object in S3 itself, or saves a post edit with the raw write.
 
 const repoRoot = path.resolve(__dirname, "..");
 
@@ -80,5 +82,11 @@ describe("parser owners", () => {
 
   it("only server/storage.ts imports server/s3.ts", () => {
     expect(importersOfModule("server/s3")).toEqual(["server/storage.ts"]);
+  });
+
+  it("only server/forum_text.ts imports server/db/forum_text_writes.ts", () => {
+    expect(importersOfModule("server/db/forum_text_writes")).toEqual([
+      "server/forum_text.ts",
+    ]);
   });
 });

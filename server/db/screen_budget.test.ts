@@ -15,7 +15,12 @@ vi.mock("./util", async (importOriginal) => ({
 vi.mock("../bbcode", () => ({ default: (markup: string) => markup }));
 
 import * as config from "../config";
-import { createPost, createTopic, updatePost, updateTopic } from "./index";
+import {
+  createPost,
+  createTopic,
+  updatePost,
+  updateTopicTitle,
+} from "./forum_text_writes";
 import {
   decideScreening,
   ScreeningBudgetExceeded,
@@ -73,7 +78,13 @@ function makePgClient(opts: { user?: User; ledger?: ScreenSpend[] } = {}) {
       if (/(INSERT INTO|DELETE FROM) screen_spends/.test(sql)) return [];
       if (/FROM screen_spends/.test(sql)) return opts.ledger ?? [];
       if (/FROM topics t/.test(sql)) {
-        return [{ title: "Old title", opening_markup: "Opening post" }];
+        return [
+          {
+            title: "Old title",
+            opening_post_id: 10,
+            opening_markup: "Opening post",
+          },
+        ];
       }
       if (/INSERT INTO (topics|posts)|UPDATE (topics|posts)/.test(sql)) {
         return [{ id: 10 }];
@@ -318,9 +329,9 @@ describe("screened writes", () => {
       run: () => updatePost(7, 10, "Edited", "Edited", undefined),
     },
     {
-      name: "updateTopic (new title)",
+      name: "updateTopicTitle",
       insert: /UPDATE topics/,
-      run: () => updateTopic(7, 9, { title: "New title" }),
+      run: () => updateTopicTitle(7, 9, "New title"),
     },
   ];
 
@@ -353,7 +364,7 @@ describe("screened writes", () => {
   it("a retitle pays for the new title with the opening post", async () => {
     makePgClient();
 
-    const { charge } = await updateTopic(7, 9, { title: "New title" });
+    const { charge } = await updateTopicTitle(7, 9, "New title");
 
     expect(JSON.parse(charge!.take())).toEqual({
       username: "newbie",
@@ -373,13 +384,11 @@ describe("screened writes", () => {
     expect(indexOfSql(pgClient, /screen_spends/)).toBe(-1);
   });
 
-  it("a join-status change or an unchanged title pays nothing", async () => {
+  it("an unchanged title pays nothing", async () => {
     const pgClient = makePgClient();
 
-    const joinStatus = await updateTopic(7, 9, { join_status: "full" });
-    const sameTitle = await updateTopic(7, 9, { title: "Old title" });
+    const sameTitle = await updateTopicTitle(7, 9, "Old title");
 
-    expect(joinStatus.charge).toBeNull();
     expect(sameTitle.charge).toBeNull();
     expect(indexOfSql(pgClient, /screen_spends/)).toBe(-1);
   });

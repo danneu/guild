@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as cancan from "../cancan";
 import * as db from "../db";
+import * as forumTextWrites from "../db/forum_text_writes";
 import { pool } from "../db/util";
 import "../validation";
 import indexRouter from "./index";
@@ -25,15 +26,15 @@ vi.mock("../db", async (importOriginal) => {
   const real = await importOriginal<typeof import("../db")>();
   return {
     ...real,
-    createPost: vi.fn(),
-    updatePost: vi.fn(),
     notifications: { ...real.notifications, notifyNewPost: vi.fn() },
     revs: { ...real.revs, getPostRevMarkup: vi.fn() },
   };
 });
 
-vi.mock("../services", () => ({
-  default: { antispam: { processInBackground: vi.fn() } },
+// The post writes under server/forum_text.ts
+vi.mock("../db/forum_text_writes", () => ({
+  createPost: vi.fn(),
+  updatePost: vi.fn(),
 }));
 
 // server/bbcode.js loads cache3 with a CommonJS require that vitest cannot
@@ -134,7 +135,7 @@ async function fakeQuery(sql: string, params: unknown[] = []) {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(pool.query).mockImplementation(fakeQuery as any);
-  vi.mocked(db.createPost).mockImplementation(
+  vi.mocked(forumTextWrites.createPost).mockImplementation(
     async (_client: any, props: any) => ({
       post: {
         id: 200,
@@ -142,6 +143,12 @@ beforeEach(() => {
         user_id: props.userId,
         markup: props.markup,
       },
+      charge: null,
+    }),
+  );
+  vi.mocked(forumTextWrites.updatePost).mockImplementation(
+    async (userId, postId, markup) => ({
+      post: { id: postId, user_id: userId, markup },
       charge: null,
     }),
   );
@@ -215,7 +222,7 @@ describe("POST /topics/:topicSlug/posts", () => {
       body,
     });
 
-    expect(db.createPost).toHaveBeenCalled();
+    expect(forumTextWrites.createPost).toHaveBeenCalled();
     expect(res.status).toBe(302);
     expect(pool.query).toHaveBeenCalled();
   });
@@ -228,7 +235,7 @@ describe("POST /topics/:topicSlug/posts", () => {
       body,
     });
 
-    expect(db.createPost).not.toHaveBeenCalled();
+    expect(forumTextWrites.createPost).not.toHaveBeenCalled();
     expect(res.status).toBe(404);
   });
 });
@@ -244,7 +251,7 @@ describe("POST /posts/:postId/revisions/:revId/revert", () => {
     });
 
     expect(db.revs.getPostRevMarkup).toHaveBeenCalledWith(playerPost.id, revId);
-    expect(db.updatePost).toHaveBeenCalledWith(
+    expect(forumTextWrites.updatePost).toHaveBeenCalledWith(
       player.id,
       playerPost.id,
       revMarkup,
@@ -262,7 +269,7 @@ describe("POST /posts/:postId/revisions/:revId/revert", () => {
       currUser: banned,
     });
 
-    expect(db.updatePost).not.toHaveBeenCalled();
+    expect(forumTextWrites.updatePost).not.toHaveBeenCalled();
     expect(res.status).toBe(404);
   });
 });
