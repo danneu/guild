@@ -2,14 +2,16 @@
 # installs the major it names (scripts/node-major.sh), and @types/node must
 # match it. node-eol is that major's end-of-life date in Node's release
 # schedule, and pnpm test fails after it (scripts/node-runtime.mts).
-# node-eol: 2028-04-30
-FROM node:24-alpine AS base
+# node-eol: 2029-04-30
+FROM node:26-alpine AS base
 
 FROM base AS build
-RUN corepack enable
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# Node no longer ships corepack, so npm installs the pnpm that package.json's
+# packageManager field names.
+RUN npm install -g "$(node -p "require('./package.json').packageManager")"
 RUN pnpm install --frozen-lockfile
 
 COPY . .
