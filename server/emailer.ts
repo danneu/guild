@@ -11,17 +11,41 @@ import * as config from "./config";
 
 const FROM = "Mahz <mahz@roleplayerguild.com>";
 
+// How long one email's send to SES gets, retries included. Signup
+// (POST /users) and POST /forgot wait on it.
+const SEND_TIMEOUT_MS = 10_000;
+
+// This is the only file that imports nodemailer or the SES SDK
+// (server/parser-owners.test.ts holds that), so every email goes through the
+// client built here.
 function getTransporter() {
   assert(config.AWS_KEY, "AWS_KEY must be set to send emails");
   assert(config.AWS_SECRET, "AWS_SECRET must be set to send emails");
 
-  const sesClient = new SESv2Client({
+  const client = new SESv2Client({
     region: "us-east-1",
     credentials: {
       accessKeyId: config.AWS_KEY,
       secretAccessKey: config.AWS_SECRET,
     },
+    // A backstop only. These limit each attempt, and requestTimeout only
+    // while the socket is idle, so they are no deadline for the send.
+    requestHandler: {
+      connectionTimeout: 5_000,
+      requestTimeout: SEND_TIMEOUT_MS,
+    },
   });
+
+  // nodemailer's SES transport calls sesClient.send(command) with no options
+  // and reads sesClient.config for the region. So the client it gets adds the
+  // abort itself, which ends the send at the deadline, retries included.
+  const sesClient = {
+    config: client.config,
+    send: (command: SendEmailCommand) =>
+      client.send(command, {
+        abortSignal: AbortSignal.timeout(SEND_TIMEOUT_MS),
+      }),
+  };
 
   const transporter = nodemailer.createTransport({
     SES: { sesClient, SendEmailCommand },

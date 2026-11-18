@@ -96,27 +96,6 @@ export const broadcastManualUnnuke = async ({ nuker, spambot }) => {
 
 ////////////////////////////////////////////////////////////
 
-// When a user is auto-nuked because of their IP address
-export const broadcastIpAddressAutoNuke = async (user, ipAddress) => {
-  assert(user);
-  assert(typeof ipAddress === "string");
-
-  // Need url
-  pre.presentUser(user);
-
-  const content = `@here :spy: User ${config.HOST}${
-    user.url
-  } was auto-nuked (vpn/proxy/bad: https://ipinfo.io/${
-    ipAddress
-  }) :radioactive:`;
-
-  await postToChannel("forum-activity", content, {
-    allowedMentions: EVERYONE_ALLOWED_MENTIONS,
-  });
-};
-
-////////////////////////////////////////////////////////////
-
 // Info is an object of arbitrary data about the analysis
 // to be sent along with the broadcast for debugging purposes.
 export const broadcastAutoNuke = async (user, postId, info) => {

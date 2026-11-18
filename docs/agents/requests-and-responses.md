@@ -1,8 +1,9 @@
 # Requests and responses
 
 Read this before you add a write route, read a request body, return JSON or
-HTML outside a view, set a cookie, compare a URL with the request's host, or
-load a script or stylesheet in a view. `AGENTS.md` links here.
+HTML outside a view, set a cookie, compare a URL with the request's host,
+load a script or stylesheet in a view, or call another service. `AGENTS.md`
+links here.
 
 ## Cross-site writes
 
@@ -74,6 +75,26 @@ load a script or stylesheet in a view. `AGENTS.md` links here.
 - The sweep reads static tags only. It misses a script that inline code adds
   at runtime, and it does not read SVG files, which can carry script of their
   own.
+
+## Calls to other services
+
+- Every call to another service has a deadline that covers the whole call,
+  retries and the body included. Without one, Node's fetch waits minutes for
+  a server that stalls, and the SDKs can wait longer, so a request that
+  awaits the call stays open that long.
+- Call fetch only through `server/outbound.ts#fetchWithin`, which takes the
+  deadline as an argument.
+- A client with its own HTTP stack, such as an AWS SDK, has one owner module.
+  The owner builds the client and sets the deadline on each send: an
+  `abortSignal` for an AWS SDK, the client's timeout option otherwise.
+- `server/parser-owners.test.ts` fails on fetch used outside
+  `server/outbound.ts`, and on an SDK imported outside its owner. To add a
+  client library, give it one owner and add its row there. The test cannot
+  see a library it has no row for, nor a send inside an owner that leaves
+  out the deadline.
+- Pick each budget per service, with headroom, as a named constant in the
+  owner. A call that times out may still have taken effect on the other
+  side, so treat it as unclear, as `server/storage.ts` does.
 
 ## Cookies and TLS
 

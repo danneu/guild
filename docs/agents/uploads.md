@@ -26,6 +26,9 @@ store, remove or link an album image or avatar. `AGENTS.md` links here.
   of `server/storage.ts`. It is the only file that imports `server/s3.ts`,
   which is the only file that imports the S3 SDK. A test fails on any other
   importer.
+- Each S3 send in `server/s3.ts` aborts at a deadline. A call that failed or
+  timed out may still have taken effect, so `server/storage.ts` treats it as
+  unclear.
 - Every key is built from this deployment's `S3_IMAGE_PREFIX` or
   `S3_AVATAR_PREFIX` and a row id or user id, never read from a stored URL.
 - An album image's row is the record of its object. `storeImage` takes

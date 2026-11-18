@@ -1,7 +1,7 @@
 // Trusted client-IP resolution + Cloudflare range classification.
 //
-// Zero app dependencies (imports only Node's `net`) so it stays pure, and
-// any module can import it without a cycle.
+// Its only app dependency is server/outbound.ts, which imports nothing, so
+// any module can import this one without a cycle.
 //
 // Matching is done with sorted, merged integer intervals + binary search
 // rather than net.BlockList: the egress geofeed is ~138k mostly-/32 CIDRs
@@ -14,6 +14,7 @@
 // cross-match. Uniform BigInt keeps the interval-subtraction helper simple.
 
 import net from "net";
+import { fetchWithin } from "./outbound";
 
 // Source: https://www.cloudflare.com/ips-v4 + /ips-v6 (2026-07-09).
 // Boot values; replaced at runtime by the refresh job (section 2). Exported
@@ -435,13 +436,13 @@ const GEOFEED_URL = "https://api.cloudflare.com/local-ip-ranges.csv";
 // step logs and keeps the current set. Never throws to the caller. fetchImpl
 // exists purely for tests.
 export async function refreshCloudflareIpRanges(
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: typeof fetchWithin = fetchWithin,
 ): Promise<void> {
   // Step 1: proxy ranges.
   try {
     const [v4Res, v6Res] = await Promise.all([
-      fetchImpl(PROXY_V4_URL, { signal: AbortSignal.timeout(10_000) }),
-      fetchImpl(PROXY_V6_URL, { signal: AbortSignal.timeout(10_000) }),
+      fetchImpl(PROXY_V4_URL, {}, 10_000),
+      fetchImpl(PROXY_V6_URL, {}, 10_000),
     ]);
     if (!v4Res.ok) throw new Error(`ips-v4 fetch failed: ${v4Res.status}`);
     if (!v6Res.ok) throw new Error(`ips-v6 fetch failed: ${v6Res.status}`);
@@ -465,9 +466,7 @@ export async function refreshCloudflareIpRanges(
 
   // Step 2: egress geofeed (~12MB).
   try {
-    const res = await fetchImpl(GEOFEED_URL, {
-      signal: AbortSignal.timeout(60_000),
-    });
+    const res = await fetchImpl(GEOFEED_URL, {}, 60_000);
     if (!res.ok) throw new Error(`geofeed fetch failed: ${res.status}`);
     const cidrs = parseGeofeedCidrs(await res.text());
     setEgressRanges(cidrs);

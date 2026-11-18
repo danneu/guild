@@ -2,13 +2,24 @@
 // key. This is the only file that imports the S3 SDK, and server/storage.ts,
 // which decides every key, is the only file that imports this one
 // (server/parser-owners.test.ts holds both).
+//
+// Every send passes within(), which aborts the request at CALL_TIMEOUT_MS,
+// retries included. An upload or a removal waits on S3, so a stalled S3 fails
+// it instead of holding it open. A call that failed, timed out included, may
+// still have taken effect, and server/storage.ts treats it that way.
 
-import { DeleteObjectsCommand, S3Client } from "@aws-sdk/client-s3";
-import { Upload } from "@aws-sdk/lib-storage";
+import {
+  DeleteObjectsCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import * as config from "./config";
 
 // The most keys one DeleteObjects request takes.
 const MAX_KEYS_PER_DELETE = 1000;
+
+// How long one S3 request gets, retries included
+const CALL_TIMEOUT_MS = 30_000;
 
 let client: S3Client | undefined;
 
@@ -22,8 +33,21 @@ function s3(): S3Client {
       accessKeyId: config.AWS_KEY,
       secretAccessKey: config.AWS_SECRET,
     },
+    // A backstop for a send that leaves out within(). These limit each
+    // attempt, and requestTimeout only while the socket is idle, so they
+    // are no deadline for the call.
+    requestHandler: {
+      connectionTimeout: 5_000,
+      requestTimeout: CALL_TIMEOUT_MS,
+    },
   });
   return client;
+}
+
+// The options for one send: an abort at the deadline, which the SDK does not
+// retry.
+function within(): { abortSignal: AbortSignal } {
+  return { abortSignal: AbortSignal.timeout(CALL_TIMEOUT_MS) };
 }
 
 /** Stores body at key, public and cached for a year, replacing any object. */
@@ -33,16 +57,16 @@ export async function putObject(
   body: Buffer,
   contentType: string,
 ): Promise<void> {
-  await new Upload({
-    client: s3(),
-    params: {
+  await s3().send(
+    new PutObjectCommand({
       Bucket: bucket,
       Key: key,
       Body: body,
       ContentType: contentType,
       CacheControl: "max-age=31536000", // 1 year
-    },
-  }).done();
+    }),
+    within(),
+  );
 }
 
 /**
@@ -61,6 +85,7 @@ export async function deleteObjects(
         Bucket: bucket,
         Delete: { Objects: batch.map((Key) => ({ Key })), Quiet: true },
       }),
+      within(),
     );
     const failed = result.Errors ?? [];
     if (failed.length > 0) {

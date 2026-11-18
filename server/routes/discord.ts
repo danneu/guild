@@ -16,6 +16,9 @@ import { Context, Next } from "koa";
 
 ////////////////////////////////////////////////////////////
 
+// How long the OAuth token exchange with Discord gets
+const TOKEN_EXCHANGE_TIMEOUT_MS = 10_000;
+
 // What a refused join tells the user, and where it sends them
 const REFUSALS: Record<
   JoinRefusal,
@@ -82,7 +85,8 @@ function createRouter() {
 
   ////////////////////////////////////////////////////////////
 
-  // Create OAuth2 client using the new syntax
+  // Create OAuth2 client using the new syntax. This is the only file that
+  // imports simple-oauth2 (server/parser-owners.test.ts holds that).
   const oauth2Config = {
     client: {
       id: config.DISCORD_APP_CLIENTID!,
@@ -93,6 +97,10 @@ function createRouter() {
       tokenPath: "/api/oauth2/token",
       authorizePath: "/api/oauth2/authorize",
     },
+    // /discord/callback waits on the token exchange. Its http library, Wreck,
+    // applies this timeout once until the headers and again to the body, so
+    // half the budget bounds the whole exchange.
+    http: { timeout: TOKEN_EXCHANGE_TIMEOUT_MS / 2 },
   };
 
   const client = new AuthorizationCode(oauth2Config);

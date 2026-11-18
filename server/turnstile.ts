@@ -5,9 +5,14 @@
 
 import { z } from "zod";
 import * as config from "./config";
+import { fetchWithin } from "./outbound";
 
 const SITEVERIFY_URL =
   "https://challenges.cloudflare.com/turnstile/v0/siteverify";
+
+// How long siteverify gets to answer, body included. A signup, or a login
+// over its soft limit, waits on it.
+const SITEVERIFY_TIMEOUT_MS = 5_000;
 
 // Cloudflare's documented maximum token length.
 const MAX_TOKEN_LENGTH = 2048;
@@ -21,10 +26,11 @@ const SiteverifyAnswer = z.object({ success: z.boolean() });
 // when Cloudflare answers success false, and without a call for a token
 // Cloudflare would never accept.
 //
-// It throws when it could not check: a network fault, a non-2xx status, or a
-// body that does not parse. So a caller can tell "could not check" from "not
-// solved", and decides itself what a throw means. Neither caller admits on
-// one. Callers check IS_CF_TURNSTILE_CONFIGURED first.
+// It throws when it could not check: a network fault, no answer within
+// SITEVERIFY_TIMEOUT_MS, a non-2xx status, or a body that does not parse. So
+// a caller can tell "could not check" from "not solved", and decides itself
+// what a throw means. Neither caller admits on one. Callers check
+// IS_CF_TURNSTILE_CONFIGURED first.
 export async function verifyTurnstileToken(
   token: string,
   ip: string,
@@ -33,18 +39,22 @@ export async function verifyTurnstileToken(
     return false;
   }
 
-  const response = await fetch(SITEVERIFY_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  const response = await fetchWithin(
+    SITEVERIFY_URL,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        secret: config.CF_TURNSTILE_SECRET,
+        response: token,
+        remoteip: ip,
+        idempotency_key: crypto.randomUUID(),
+      }),
     },
-    body: JSON.stringify({
-      secret: config.CF_TURNSTILE_SECRET,
-      response: token,
-      remoteip: ip,
-      idempotency_key: crypto.randomUUID(),
-    }),
-  });
+    SITEVERIFY_TIMEOUT_MS,
+  );
   if (!response.ok) {
     throw new Error(`Turnstile siteverify answered HTTP ${response.status}`);
   }

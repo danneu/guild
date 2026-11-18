@@ -17,6 +17,11 @@ import type {
   RESTPatchAPIGuildRoleJSONBody,
   RESTPatchAPICurrentUserJSONBody,
 } from "discord-api-types/v10";
+import { fetchWithin } from "../outbound";
+
+// How long one Discord API request gets, body included. /discord/callback
+// and /discord/channels/:channelName wait on it.
+const REQUEST_TIMEOUT_MS = 10_000;
 
 export class ResponseNotOkError extends Error {
   status: number;
@@ -96,7 +101,7 @@ export default class Client {
       requestOptions.body = JSON.stringify(body);
     }
 
-    const response = await fetch(url, requestOptions);
+    const response = await fetchWithin(url, requestOptions, REQUEST_TIMEOUT_MS);
 
     const bodyText = await response.text();
 

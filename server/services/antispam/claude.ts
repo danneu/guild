@@ -6,6 +6,7 @@ import * as z from "zod/v4";
 // 1st
 import * as config from "../../config";
 import { buildPayload, type ScreeningCharge } from "../../db/screen_budget";
+import { fetchWithin } from "../../outbound";
 
 const MODEL = "claude-haiku-4-5-20251001";
 // The Messages API rejects requests without max_tokens with a 400, which would
@@ -63,8 +64,10 @@ const client = config.ANTHROPIC_API_KEY
       openTelemetry: false,
       timeout: TIMEOUT_MS,
       maxRetries: 0,
-      // Looks up the global fetch on each call, so tests can stub it.
-      fetch: (input, init) => fetch(input, init),
+      // Sends through server/outbound.ts, the one user of the global fetch.
+      // It looks fetch up on each call, so tests can stub it. classify's own
+      // abort ends the call first; this deadline is only a backstop.
+      fetch: (input, init) => fetchWithin(input, init ?? {}, TIMEOUT_MS),
     })
   : null;
 

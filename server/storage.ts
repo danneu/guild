@@ -221,11 +221,11 @@ export async function storeImage({
   try {
     await putObject(bucket, key, image.buffer, image.contentType);
   } catch (err) {
-    // A failed PUT may still have stored the object, so take it down the way
-    // a delete does. If S3 refuses that too, the row stays live, and its
-    // owner can delete it later. Nothing orders a PUT that failed on the wire
-    // after S3 took all its bytes, so S3 could still commit it after both
-    // deletes.
+    // A failed PUT, one that timed out included, may still have stored the
+    // object, so take it down the way a delete does. If S3 refuses that too,
+    // the row stays live, and its owner can delete it later. Nothing orders a
+    // PUT that failed on the wire after S3 took all its bytes, so S3 could
+    // still commit it after both deletes.
     await removeImages(ownerId, [imageId]).catch((cleanupErr) => {
       console.error(`could not clean up image ${imageId}`, cleanupErr);
     });

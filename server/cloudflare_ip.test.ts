@@ -15,6 +15,7 @@ import {
   setProxyRanges,
   shouldRejectOriginBypass,
 } from "./cloudflare_ip";
+import type { fetchWithin } from "./outbound";
 
 // Realistic ips-v4 / ips-v6 bodies (the live published proxy lists).
 const V4_BODY = [
@@ -69,7 +70,7 @@ function bigGeofeed(rows: number): string {
 
 function stubFetch(
   handlers: Record<string, () => Response | Promise<Response>>,
-): typeof fetch {
+): typeof fetchWithin {
   return (async (input: string | URL | Request) => {
     const url =
       typeof input === "string"
@@ -80,7 +81,7 @@ function stubFetch(
     const handler = handlers[url];
     if (!handler) throw new Error(`unexpected fetch: ${url}`);
     return handler();
-  }) as typeof fetch;
+  }) as typeof fetchWithin;
 }
 
 afterEach(() => {

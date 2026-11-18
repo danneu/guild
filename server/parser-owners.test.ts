@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 // Intent: each parser of client bytes has one owner. Only
@@ -73,11 +74,8 @@ describe("parser owners", () => {
     expect(importersOf("sharp")).toEqual(["server/imaging.ts"]);
   });
 
-  // server/emailer.ts imports @aws-sdk/client-sesv2, which sends no member
-  // bytes to storage.
   it("only server/s3.ts imports the S3 SDK", () => {
     expect(importersOf("@aws-sdk/client-s3")).toEqual(["server/s3.ts"]);
-    expect(importersOf("@aws-sdk/lib-storage")).toEqual(["server/s3.ts"]);
   });
 
   it("only server/storage.ts imports server/s3.ts", () => {
@@ -88,5 +86,111 @@ describe("parser owners", () => {
     expect(importersOfModule("server/db/forum_text_writes")).toEqual([
       "server/forum_text.ts",
     ]);
+  });
+});
+
+// Intent: each client that calls another service has one owner, and the
+// owner's call sets a deadline that covers the whole call. Only
+// server/outbound.ts uses the global fetch, and its fetchWithin takes the
+// deadline as a required argument. Each SDK with its own HTTP stack has one
+// importer, which sets that SDK's deadline.
+// Why it exists: the Turnstile check once called fetch with no deadline, and
+// Node's fetch waits minutes for a stalled server. So a slow Cloudflare held
+// every signup open instead of failing the check (hunt 261117-0852-025).
+// Scenario: a new integration calls fetch(url) on a request path, or a route
+// imports an SDK and sends with no abort signal.
+
+// Names whose fetch property is the global fetch
+const GLOBAL_OBJECTS = new Set(["globalThis", "global", "window", "self"]);
+
+// Whether `node` is a member or key named fetch, such as a cache3 entry's
+// fetch or keyConfig.fetch, rather than a read of the global. A shorthand
+// { fetch } reads the global.
+function isMemberName(node: ts.Identifier): boolean {
+  const parent = node.parent;
+  if (ts.isShorthandPropertyAssignment(parent)) return false;
+  if (ts.isBindingElement(parent)) return parent.propertyName === node;
+  if (ts.isPropertyAccessExpression(parent) && parent.name === node) {
+    return !(
+      ts.isIdentifier(parent.expression) &&
+      GLOBAL_OBJECTS.has(parent.expression.text)
+    );
+  }
+  if (ts.isQualifiedName(parent) && parent.right === node) {
+    return !(
+      ts.isIdentifier(parent.left) && GLOBAL_OBJECTS.has(parent.left.text)
+    );
+  }
+  return (
+    (ts.isObjectLiteralElementLike(parent) ||
+      ts.isClassElement(parent) ||
+      ts.isTypeElement(parent)) &&
+    (parent as { name?: ts.Node }).name === node
+  );
+}
+
+// The line of each read of the global fetch in `text`: a call, a typeof, an
+// assignment, an argument, or globalThis.fetch. It parses the file, so
+// comments and strings never count.
+function globalFetchLines(file: string, text: string): number[] {
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
+  const lines: number[] = [];
+  function visit(node: ts.Node): void {
+    if (ts.isIdentifier(node) && node.text === "fetch" && !isMemberName(node)) {
+      const at = source.getLineAndCharacterOfPosition(node.getStart(source));
+      lines.push(at.line + 1);
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(source);
+  return lines;
+}
+
+describe("network client owners", () => {
+  it("only server/outbound.ts uses the global fetch", () => {
+    const uses = sourceFiles()
+      .filter((file) => file !== "server/outbound.ts")
+      .flatMap((file) =>
+        globalFetchLines(
+          file,
+          fs.readFileSync(path.join(repoRoot, file), "utf8"),
+        ).map((line) => `${file}:${line}`),
+      );
+    expect(uses).toEqual([]);
+  });
+
+  it("the fetch sweep sees each read of the global and no member", () => {
+    const sample = [
+      "fetch(url);",
+      "const f: typeof fetch = fetch;",
+      "globalThis.fetch(url);",
+      "use({ fetch });",
+      "const entry = { fetch: () => load(), async fetch2() {} };",
+      "entry.fetch(); keyConfig.fetch;",
+      "type Entry = { fetch: () => void; fetch2(): void };",
+      "const { fetch: load } = entry;",
+      "// fetch(url) in a comment, and 'fetch(url)' in a string",
+    ].join("\n");
+    expect(globalFetchLines("sample.ts", sample)).toEqual([1, 2, 2, 3, 4]);
+  });
+
+  it("only server/emailer.ts imports the SES SDK and nodemailer", () => {
+    expect(importersOf("@aws-sdk/client-sesv2")).toEqual(["server/emailer.ts"]);
+    expect(importersOf("nodemailer")).toEqual(["server/emailer.ts"]);
+  });
+
+  it("only server/routes/discord.ts imports simple-oauth2", () => {
+    expect(importersOf("simple-oauth2")).toEqual(["server/routes/discord.ts"]);
+  });
+
+  it("only server/services/antispam/claude.ts imports the Anthropic SDK", () => {
+    expect(importersOf("@anthropic-ai/sdk")).toEqual([
+      "server/services/antispam/claude.ts",
+    ]);
+  });
+
+  // The gateway bot, which no request waits on
+  it("only server/guildbot.ts imports discord.js", () => {
+    expect(importersOf("discord.js")).toEqual(["server/guildbot.ts"]);
   });
 });

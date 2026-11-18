@@ -178,7 +178,8 @@ function decideAdmission(
 }
 
 // A provider outage counts as unsolved rather than failing the request, so it
-// blocks only the logins that are over a soft limit.
+// blocks only the logins that are over a soft limit. The verifier sets its own
+// deadline, so a provider that stalls throws too.
 async function isChallengeSolved(
   verify: ChallengeVerifier | null,
   input: { ip: string; challengeToken?: string | undefined },

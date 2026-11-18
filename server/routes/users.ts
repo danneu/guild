@@ -29,7 +29,6 @@ import {
   broadcastManualUnnuke,
   broadcastBioUpdate,
 } from "../services/discord";
-// import ipintel from "../services/ipintel";
 import { Context, Next } from "koa";
 import { pool, withPgPoolTransaction } from "../db/util";
 import { sendJson } from "../api_json";
@@ -374,14 +373,6 @@ router.post("/users", async (ctx: Context) => {
   // services.discord
   //   .broadcastUserJoin(user)
   //   .catch((err) => console.error("broadcastUserJoin failed", err));
-
-  // Cloudflare should already give bots a captcha. I think ipintel will mostly punish humans.
-  //
-  // In background, see if user is using a bad IP address
-  // const ipAddress = config.NODE_ENV === "development" ? ctx.cookies.get("ip-override") || ctx.ip : ctx.ip;
-  // ipintel
-  //   .process(ipAddress, user)
-  //   .catch((err) => console.error("ipintel.process failed", err));
 
   // Send the confirmation link and land on the wall page rather than the
   // homepage (plan/2026-08-11-1613). When email is unconfigured the account was

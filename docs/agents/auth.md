@@ -46,7 +46,8 @@ Auth is session-based. `server/cancan.ts` holds the role-based rules; roles
   email first lets a bot ask which emails have accounts without a solve.
 - `server/turnstile.ts#verifyTurnstileToken` is the only call to Cloudflare.
   It returns false only when the token is not solved, and throws when it
-  could not check. Signup answers a throw with "try again"; login
+  could not check, including when Cloudflare does not answer before its
+  deadline. Signup answers a throw with "try again"; login
   (`server/auth.ts#isChallengeSolved`) counts it as unsolved. Neither admits.
 
 ## Login and passwords
