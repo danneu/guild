@@ -30,7 +30,7 @@ vi.mock("../services", () => ({
 }));
 
 // The real write functions in server/db run against this fake pool, so the
-// test sees which SQL a send issues. vitest cannot run Postgres here.
+// test sees which SQL a send issues.
 vi.mock("../db/util", async (importOriginal) => {
   const util = await importOriginal<typeof import("../db/util")>();
   const query = vi.fn(async (sql: string) => answer(sql));

@@ -17,11 +17,11 @@ import {
 // Scenario: a mod mentions and quotes Member in a lounge thread about Member,
 // which Member was subscribed to before it moved into the lounge.
 
-// The repo has no real-database tests. This stub answers each query from the
-// tables below, by what its SQL selects: a post carries only the keys its
-// json_build_object names, a user only the columns its SELECT names, and a
-// topic its mods only when the SQL reads forum_mods. So a query that drops a
-// column the gate needs returns a short row.
+// This stub answers each query from the tables below, by what its SQL
+// selects: a post carries only the keys its json_build_object names, a user
+// only the columns its SELECT names, and a topic its mods only when the SQL
+// reads forum_mods. So a query that drops a column the gate needs returns a
+// short row.
 vi.mock("./util", () => ({
   pool: { query: vi.fn() },
   maybeOneRow: (res: { rows: unknown[] }) => res.rows[0],

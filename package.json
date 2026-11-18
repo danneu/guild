@@ -71,6 +71,8 @@
     "zod": "^3.25.67"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.14",
+    "@electric-sql/pglite-socket": "0.2.17",
     "@total-typescript/ts-reset": "^0.6.1",
     "@types/debug": "^4.1.12",
     "@types/formidable": "2.0.6",

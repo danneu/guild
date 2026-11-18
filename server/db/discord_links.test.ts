@@ -5,8 +5,8 @@ import { describe, expect, it, vi } from "vitest";
 import { claimDiscordLink } from "./discord_links";
 import { pool } from "./util";
 
-// vitest cannot run Postgres here, so these pin the SQL and the table
-// definition; Postgres enforces the key they rely on.
+// These pin the SQL and the table definition; Postgres enforces the key they
+// rely on.
 vi.mock("./util", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./util")>()),
   pool: { query: vi.fn() },

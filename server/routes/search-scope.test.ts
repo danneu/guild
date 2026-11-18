@@ -9,8 +9,7 @@ import { pool } from "../db/util.js";
 import "../validation";
 import router from "./search";
 
-// The repo has no real-database tests, so these read the SQL that GET /search
-// sends to the pool.
+// These read the SQL that GET /search sends to the pool.
 vi.mock("../db/util.js", () => ({
   pool: { query: vi.fn() },
 }));

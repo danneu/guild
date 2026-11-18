@@ -13,8 +13,7 @@ import {
 } from "./index";
 import { TooManyFriends } from "./refusals";
 
-// The repo has no real-database tests, so these pin the SQL text and the
-// bound params each write sends.
+// These pin the SQL text and the bound params each write sends.
 vi.mock("./util", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./util")>()),
   pool: { query: vi.fn(), withTransaction: vi.fn() },

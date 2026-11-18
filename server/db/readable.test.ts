@@ -9,10 +9,9 @@ import {
   TopicShape,
 } from "./readable";
 
-// The repo has no real-database tests. This stub answers the by-id topic and
-// forum queries like the real ones. It returns a row's mods only when the SQL
-// selects them from forum_mods, so a shape that forgets the mods column fails
-// the forum-mod cases below.
+// This stub answers the by-id topic and forum queries like the real ones. It
+// returns a row's mods only when the SQL selects them from forum_mods, so a
+// shape that forgets the mods column fails the forum-mod cases below.
 vi.mock("./util", () => ({
   pool: { query: vi.fn() },
   maybeOneRow: (res: { rows: unknown[] }) => res.rows[0],

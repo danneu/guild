@@ -15,8 +15,7 @@ import { fetchReadable, ReadAction, scopeAdmits } from "./readable";
 
 const knex = Knex({ client: "pg" });
 
-// The repo has no real-database tests, so these read the SQL the owner sends
-// and feed it rows by hand.
+// These read the SQL the owner sends and feed it rows by hand.
 vi.mock("./db/util", () => ({
   pool: { query: vi.fn() },
 }));

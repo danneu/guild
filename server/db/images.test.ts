@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { pool } from "./util.js";
 import { getUserAlbum, getUserImage, updateAlbum } from "./images";
 
-// The repo has no real-database tests, so these pin the owner filter in the
-// SQL text and the bound params each write sends.
+// These pin the owner filter in the SQL text and the bound params each write
+// sends.
 vi.mock("./util.js", () => ({
   pool: { query: vi.fn() },
   maybeOneRow: (res: { rows: unknown[] }) => res.rows[0],

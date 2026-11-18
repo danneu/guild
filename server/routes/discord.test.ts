@@ -47,7 +47,6 @@ const links = vi.hoisted(() => new Map<number, string>());
 
 // A fake pool for the link claim. It answers the way the table's primary key
 // makes Postgres answer: the first Discord id claimed for an account stays.
-// vitest cannot run Postgres here.
 vi.mock("../db/util", async (importOriginal) => {
   const util = await importOriginal<typeof import("../db/util")>();
   const query = vi.fn(async (sql: string, params: unknown[]) => {

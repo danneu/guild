@@ -51,8 +51,7 @@ function spends(...list: [number, Date][]): ScreenSpend[] {
 
 ////////////////////////////////////////////////////////////
 // A pg client stub that answers each query the way Postgres would for a
-// screened write. vitest cannot run Postgres here, so the SQL itself is
-// reviewed, not tested.
+// screened write. The SQL itself is reviewed, not tested.
 
 type User = { approved_at: Date | null; posts_count: number };
 

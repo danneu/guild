@@ -19,9 +19,9 @@ import topicsRouter from "./topics";
 // Scenario: a guest requests id-only URLs for a staff topic, a hidden topic and
 // a staff forum; a member unsubscribes from a staff topic by id.
 
-// The repo has no real-database tests. This stub answers the by-id topic and
-// forum queries like the real ones, and every other query with no rows. A row
-// carries its forum's mods only when the SQL selects them from forum_mods.
+// This stub answers the by-id topic and forum queries like the real ones, and
+// every other query with no rows. A row carries its forum's mods only when the
+// SQL selects them from forum_mods.
 vi.mock("../db/util", () => ({
   pool: { query: vi.fn() },
   maybeOneRow: (res: { rows: unknown[] }) => res.rows[0],

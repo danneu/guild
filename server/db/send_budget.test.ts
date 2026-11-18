@@ -29,7 +29,7 @@ const UNTRUSTED = config.SEND_BUDGET_PER_HOUR_UNTRUSTED;
 
 ////////////////////////////////////////////////////////////
 // A pg client stub that answers each query the way Postgres would for a send.
-// vitest cannot run Postgres here, so the SQL itself is reviewed, not tested.
+// server/db/time_windows.test.ts runs spend's SQL on real rows.
 
 type Sender = { approved_at: Date | null; posts_count: number };
 // A vms row as a reply's parent lookup reads it.

@@ -15,8 +15,8 @@ vi.mock("../config", async (importOriginal) => ({
 const links = vi.hoisted(() => new Map<number, string>());
 
 // Answers the way the table's primary key makes Postgres answer: the first
-// Discord id claimed for an account stays. vitest cannot run Postgres here;
-// server/db/discord_links.test.ts covers the SQL.
+// Discord id claimed for an account stays. server/db/discord_links.test.ts
+// covers the SQL.
 vi.mock("../db/discord_links", () => ({
   claimDiscordLink: vi.fn(async (userId: number, discordUserId: string) => {
     if (!links.has(userId)) links.set(userId, discordUserId);

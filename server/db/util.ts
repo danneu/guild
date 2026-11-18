@@ -40,18 +40,25 @@ const connectionConfig: pg.ClientConfig = {
 
 // This is the connection pool the rest of our db namespace
 // should import and use
-export const pool = new pg.Pool(connectionConfig);
+export const pool = createPool(connectionConfig);
 
+// Every pg pool, so every one gets the listeners below. The test database
+// (server/testing/db.ts) makes its pool here too.
+//
 // pg emits 'error' on a client whose socket dies, even mid-query, and an
 // 'error' with no listener exits the process. pg-pool listens only while a
 // client sits idle (it takes its listener off at checkout), so each client
 // gets one here for its whole life. server/promise_sweep.test.ts fails any pg
 // connection made outside this file.
-pool.on("connect", (client) => {
-  client.on("error", (err) => console.error("pg pool client error", err));
-});
-// pg-pool re-emits an idle client's error here. The listener above logged it.
-pool.on("error", () => {});
+export function createPool(poolConfig: pg.PoolConfig): pg.Pool {
+  const newPool = new pg.Pool(poolConfig);
+  newPool.on("connect", (client) => {
+    client.on("error", (err) => console.error("pg pool client error", err));
+  });
+  // pg-pool re-emits an idle client's error here. The listener above logged it.
+  newPool.on("error", () => {});
+  return newPool;
+}
 
 // These versions work with both datablan/pg and pg's query results.
 export function maybeOneRow<T extends QueryResultRow>(

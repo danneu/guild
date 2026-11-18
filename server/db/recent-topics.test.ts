@@ -7,8 +7,7 @@ import { findRecentTopicsForUserId } from "./index";
 // bbcode.js loads cache3 with a CommonJS require, which vitest cannot resolve.
 vi.mock("../bbcode", () => ({ default: {} }));
 
-// The repo has no real-database tests, so these read the SQL the finder sends
-// and feed it rows by hand.
+// These read the SQL the finder sends and feed it rows by hand.
 vi.mock("./util", () => ({
   pool: { query: vi.fn() },
 }));
