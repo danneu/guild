@@ -194,7 +194,6 @@ import util from "util";
 import _ from "lodash";
 import createDebug from "debug";
 const debug = createDebug("app:index");
-import assert from "assert";
 // 1st party
 import * as db from "./db";
 import * as pre from "./presenters";
@@ -707,8 +706,6 @@ router.get("/bbcode", async (ctx: Context) => {
 // Registration form
 //
 router.get("/register", async (ctx: Context) => {
-  assert(config.RECAPTCHA_SITEKEY);
-  assert(config.RECAPTCHA_SITESECRET);
   const registration = await db.keyvals.getRowByKey("REGISTRATION_ENABLED");
   await ctx.render("register", {
     ctx,

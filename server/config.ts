@@ -8,9 +8,6 @@ export const DATABASE_URL =
 // 'development' | 'production'
 export const NODE_ENV = process.env.NODE_ENV || "development";
 
-export const RECAPTCHA_SITEKEY = process.env.RECAPTCHA_SITEKEY;
-export const RECAPTCHA_SITESECRET = process.env.RECAPTCHA_SITESECRET;
-
 // aws-sdk listens for these env vars
 // TODO: Remove my own aws env vars (AWS_SECRET, AWS_KEY) and use these
 export const AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
