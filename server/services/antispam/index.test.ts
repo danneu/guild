@@ -13,8 +13,8 @@ vi.mock("../../db", () => ({
 vi.mock("../discord", () => ({
   broadcastAutoNuke: vi.fn(() => Promise.resolve()),
   broadcastClassifierFailing: vi.fn(() => Promise.resolve()),
-  broadcastFirstPost: vi.fn(() => Promise.resolve()),
   broadcastSpamReview: vi.fn(() => Promise.resolve()),
+  relayOnce: vi.fn(() => Promise.resolve()),
 }));
 
 import antispam from "./index";
@@ -24,8 +24,8 @@ import * as config from "../../config";
 import {
   broadcastAutoNuke,
   broadcastClassifierFailing,
-  broadcastFirstPost,
   broadcastSpamReview,
+  relayOnce,
 } from "../discord";
 import type { AnalyzeResult, SpamVerdict } from "./claude";
 import type { ScreeningCharge } from "../../db/screen_budget";
@@ -35,7 +35,7 @@ const probe = vi.mocked(claude.probe);
 const nukeUser = vi.mocked(db.nukeUser);
 const autoNuke = vi.mocked(broadcastAutoNuke);
 const classifierFailing = vi.mocked(broadcastClassifierFailing);
-const firstPost = vi.mocked(broadcastFirstPost);
+const firstPost = vi.mocked(relayOnce);
 const spamReview = vi.mocked(broadcastSpamReview);
 
 function actor() {
@@ -120,10 +120,9 @@ describe("antispam.process wiring", () => {
     expect(spamReview).not.toHaveBeenCalled();
     expect(firstPost).toHaveBeenCalledTimes(1);
     expect(firstPost).toHaveBeenCalledWith(
+      "first_post",
       expect.objectContaining({ id: 42 }),
-      102,
-      { ran: true },
-      "hi everyone",
+      { postId: 102, antispam: { ran: true }, markup: "hi everyone" },
     );
     expect(result).toBeFalsy();
   });
@@ -138,10 +137,13 @@ describe("antispam.process wiring", () => {
     expect(spamReview).not.toHaveBeenCalled();
     expect(firstPost).toHaveBeenCalledTimes(1);
     expect(firstPost).toHaveBeenCalledWith(
+      "first_post",
       expect.objectContaining({ id: 42 }),
-      103,
-      { ran: false, error: "API_TIMEOUT" },
-      "anything",
+      {
+        postId: 103,
+        antispam: { ran: false, error: "API_TIMEOUT" },
+        markup: "anything",
+      },
     );
     expect(result).toBeFalsy();
   });

@@ -190,8 +190,8 @@ router.post("/convos", async (ctx: Context) => {
 
   if (isFirstStartedConvo) {
     services.discord
-      .broadcastFirstConvo(ctx.currUser, users)
-      .catch((err) => console.error("broadcastFirstConvo failed", err));
+      .relayOnce("first_convo", ctx.currUser, { recipients: users })
+      .catch((err) => console.error("first_convo relay failed", err));
   }
 });
 

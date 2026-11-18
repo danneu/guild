@@ -14,6 +14,10 @@ vi.mock("../discord/client", () => ({
   default: clientMocks.Client,
 }));
 
+// The member_relays claim, which runs SQL. A test sets its decision.
+const claimRelay = vi.hoisted(() => vi.fn());
+vi.mock("../db/member_relays", () => ({ claimRelay }));
+
 async function loadDiscord() {
   vi.resetModules();
   vi.stubEnv("DISCORD_BOT_TOKEN", "bot-token");
@@ -25,8 +29,11 @@ async function loadDiscord() {
   clientMocks.listGuildChannels.mockReset();
   clientMocks.createMessage.mockResolvedValue({});
   clientMocks.listGuildChannels.mockResolvedValue([
+    { id: "general-id", name: "general" },
     { id: "forum-activity-id", name: "forum-activity" },
   ]);
+  claimRelay.mockReset();
+  claimRelay.mockResolvedValue("post");
 
   return import("./discord");
 }
@@ -52,14 +59,31 @@ function verdict(reasoning: string) {
 }
 
 describe("discord broadcasts", () => {
-  it("suppresses mentions on first-action broadcasts", async () => {
+  // Intent: every export is a staff alert or relayOnce.
+  // Why it exists: a member relay exported beside relayOnce would skip its
+  // claim, so one account could flood a channel again, as each Introduce
+  // Yourself topic flooded #general (hunt 261117-0852-012).
+  // Scenario: list the module's exports.
+  it("exports only staff alerts and relayOnce", async () => {
     const discord = await loadDiscord();
 
-    await discord.broadcastFirstPost(
+    expect(Object.keys(discord).sort()).toEqual([
+      "broadcastAutoNuke",
+      "broadcastClassifierFailing",
+      "broadcastManualNuke",
+      "broadcastManualUnnuke",
+      "broadcastSpamReview",
+      "relayOnce",
+    ]);
+  });
+
+  it("suppresses mentions on member relays", async () => {
+    const discord = await loadDiscord();
+
+    await discord.relayOnce(
+      "first_post",
       { id: 1, slug: "new-user", uname: "New User" },
-      123,
-      { ran: true },
-      "hello @everyone",
+      { postId: 123, antispam: { ran: true }, markup: "hello @everyone" },
     );
 
     expect(clientMocks.createMessage).toHaveBeenCalledWith(
@@ -128,5 +152,33 @@ describe("discord broadcasts", () => {
     const block = content.slice(content.indexOf("```"));
     expect(block).toContain("buy now");
     expect(block).not.toMatch(/@(?!\u200B)/);
+  });
+
+  // Intent: a relay its kind's ceiling holds posts nothing, and staff hear
+  // that the kind is held only when the claim says the note is due.
+  // Why it exists: a flood of new accounts each relaying once would still
+  // flood the channel, and a note on every held claim would flood
+  // #forum-activity instead (hunt 261117-0852-012).
+  // Scenario: two intros past the ceiling; the second claim says the note is
+  // due.
+  it("posts only the held note for relays over the ceiling", async () => {
+    const discord = await loadDiscord();
+    claimRelay
+      .mockResolvedValueOnce("hold")
+      .mockResolvedValueOnce("hold-and-note");
+
+    for (const id of [4, 5]) {
+      await discord.relayOnce(
+        "intro",
+        { id, slug: `new-${id}`, uname: `New ${id}` },
+        { topicUrl: `/topics/${id}-hello` },
+      );
+    }
+
+    expect(sentContent()).toContain(":pause_button:");
+    expect(clientMocks.createMessage).toHaveBeenCalledWith(
+      "forum-activity-id",
+      expect.anything(),
+    );
   });
 });

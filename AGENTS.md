@@ -37,7 +37,7 @@ its row, not after a test fails.
 | [read scope](docs/agents/read-scope.md) | loads a topic, forum or post by id, lists posts or topics across topics, or creates or reads a notification |
 | [budgets](docs/agents/budgets.md) | adds or changes a write a member can repeat: a post or an edit of one, a topic or its title, a PM or other send, or a spam classifier call; or treats new members differently |
 | [uploads](docs/agents/uploads.md) | parses a file upload, decodes an image with sharp, or stores or removes anything in S3 |
-| [discord](docs/agents/discord.md) | adds or changes a member of the Discord server, or touches the OAuth join |
+| [discord](docs/agents/discord.md) | adds or changes a member of the Discord server, touches the OAuth join, or adds or changes a message sent to Discord |
 | [deploy](docs/agents/deploy.md) | adds a table or column, edits the Dockerfile or a workflow, changes the Node version, or plans a deploy |
 
 ## Layout

@@ -29,7 +29,7 @@ vi.mock("../emailer", () => ({
 }));
 
 vi.mock("../services", () => ({
-  default: { discord: { broadcastFirstConvo: vi.fn(async () => {}) } },
+  default: { discord: { relayOnce: vi.fn(async () => {}) } },
 }));
 
 // The real write functions in server/db run against this fake pool, so the

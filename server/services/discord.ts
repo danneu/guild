@@ -1,11 +1,18 @@
+// The forum's messages to Discord channels. Staff alerts (nukes, spam reviews,
+// a failing classifier) send one message per event. A note about a member's
+// own action is a member relay, and goes only through relayOnce, so each
+// member relays each kind once, under a per-kind hourly ceiling. See
+// docs/agents/discord.md#member-relays.
 // 3rd
 import assert from "assert";
 // 1st
 import Client, { type CreateMessageAllowedMentions } from "../discord/client";
 import { fitContent } from "../discord/content";
 import * as config from "../config";
+import { claimRelay } from "../db/member_relays";
 import * as pre from "../presenters";
 import * as belt from "../belt";
+import type { DbUser } from "../dbtypes";
 
 //
 // TODO: DRY up these functions.
@@ -144,42 +151,6 @@ export const broadcastSpamReview = async (user, postId, verdict) => {
 
 ////////////////////////////////////////////////////////////
 
-export const broadcastUserJoin = async (user) => {
-  // Need url
-  pre.presentUser(user);
-
-  await postToChannel(
-    "forum-activity",
-    `@here :baby: A new user joined: ${config.HOST}${user.url}`,
-  );
-};
-
-////////////////////////////////////////////////////////////
-
-export async function broadcastFirstPost(
-  user,
-  postId: number,
-  antispam: { ran: true } | { ran: false; error: "API_TIMEOUT" | "API_ERROR" },
-  markup: string,
-) {
-  pre.presentUser(user);
-
-  const snippet = belt.truncate(
-    (markup || "").replace(/\s+/g, " ").trim(),
-    280,
-  );
-  const status = antispam.ran
-    ? ":white_check_mark: passed spam check"
-    : `:warning: spam check did NOT run (${antispam.error}) -- manual review recommended`;
-  const content =
-    `:memo: First post by ${config.HOST}${user.url} -- ${status}\n` +
-    `> ${snippet}\n${config.HOST}/posts/${postId}`;
-
-  await postToChannel("forum-activity", content);
-}
-
-////////////////////////////////////////////////////////////
-
 // When the spam classifier's probe gets no verdict. Until it answers again,
 // every post it should screen is allowed unchecked.
 export async function broadcastClassifierFailing(
@@ -192,50 +163,129 @@ export async function broadcastClassifierFailing(
 }
 
 ////////////////////////////////////////////////////////////
+// Member relays
 
-export async function broadcastFirstConvo(sender, recipients) {
-  pre.presentUser(sender);
-  recipients.forEach((recipient) => pre.presentUser(recipient));
+// The member a relay is about, and a recipient a first convo names
+export type RelayMember = { id: number; uname: string; slug: string };
 
-  const to = recipients
-    .map(
-      (recipient) => `**${recipient.uname}** (${config.HOST}${recipient.url})`,
-    )
-    .join(", ");
-  const content =
-    `:love_letter: New user ${config.HOST}${sender.url} started their first ` +
-    `conversation with ${to}`;
-
-  await postToChannel("forum-activity", content);
-}
-
-////////////////////////////////////////////////////////////
-
-export const broadcastIntroTopic = async (user, topic) => {
-  // Need url
-  pre.presentUser(user);
-  pre.presentTopic(topic);
-
-  const content = `Howdy, :wave: **${
-    user.uname
-  }** created an Introduce Yourself thread: ${config.HOST}${
-    topic.url
-  }. Please help us welcome them!`;
-
-  await postToChannel("general", content);
+// What each kind of member relay carries. The keys are the closed set of
+// kinds, so a new member relay is a new key here, with its message in RELAYS.
+type RelayPayloads = {
+  // A topic in forum 2, Introduce Yourself, that the spam check did not flag
+  intro: { topicUrl: string };
+  // A post by a member with no posts, once the spam check allowed it
+  first_post: {
+    postId: number;
+    antispam:
+      | { ran: true }
+      | { ran: false; error: "API_TIMEOUT" | "API_ERROR" };
+    markup: string;
+  };
+  // A member with no posts started their first convo
+  first_convo: { recipients: RelayMember[] };
+  // A new member (server/trust.ts) set a bio where they had none
+  bio: { bioMarkup: string };
 };
 
-////////////////////////////////////////////////////////////
+export type RelayKind = keyof RelayPayloads;
 
-export async function broadcastBioUpdate(user, bioMarkup) {
-  assert(user);
-  assert(typeof bioMarkup === "string");
+type Relay<K extends RelayKind> = {
+  channel: string;
+  // Names the events in the note that says the kind's relays are held
+  label: string;
+  head: (member: RelayMember, payload: RelayPayloads[K]) => string;
+};
 
-  pre.presentUser(user);
+// The full URL of a member's profile page
+function profileUrl(member: RelayMember): string {
+  return config.HOST + pre.presentUser({ ...member } as DbUser)!.url;
+}
 
-  const content = `:eye: ${config.HOST}${user.url} just set their bio. Is it spam?
-Snippet: \`${bioMarkup.slice(0, 140)}\`
-`;
+const RELAYS: { [K in RelayKind]: Relay<K> } = {
+  intro: {
+    channel: "general",
+    label: "Introduce Yourself topics",
+    head: (member, { topicUrl }) =>
+      `Howdy, :wave: **${member.uname}** created an Introduce Yourself thread: ` +
+      `${config.HOST}${topicUrl}. Please help us welcome them!`,
+  },
+  first_post: {
+    channel: "forum-activity",
+    label: "first posts",
+    head: (member, { postId, antispam, markup }) => {
+      const snippet = belt.truncate(
+        (markup || "").replace(/\s+/g, " ").trim(),
+        280,
+      );
+      const status = antispam.ran
+        ? ":white_check_mark: passed spam check"
+        : `:warning: spam check did NOT run (${antispam.error}) -- manual review recommended`;
+      return (
+        `:memo: First post by ${profileUrl(member)} -- ${status}\n` +
+        `> ${snippet}\n${config.HOST}/posts/${postId}`
+      );
+    },
+  },
+  first_convo: {
+    channel: "forum-activity",
+    label: "first convos",
+    head: (member, { recipients }) => {
+      const to = recipients
+        .map((recipient) => `**${recipient.uname}** (${profileUrl(recipient)})`)
+        .join(", ");
+      return (
+        `:love_letter: New user ${profileUrl(member)} started their first ` +
+        `conversation with ${to}`
+      );
+    },
+  },
+  bio: {
+    channel: "forum-activity",
+    label: "newly set bios",
+    head: (member, { bioMarkup }) =>
+      `:eye: ${profileUrl(member)} just set their bio. Is it spam?\n` +
+      `Snippet: \`${bioMarkup.slice(0, 140)}\`\n`,
+  },
+};
 
-  await postToChannel("forum-activity", content);
+/**
+ * The only way a note about a member's own action reaches Discord. The caller
+ * decides that the event happened; claimRelay decides whether it posts: once
+ * per member and kind, and only while the kind is under its hourly ceiling.
+ * Past the ceiling the relay is logged, and staff get one note per cooldown
+ * that the kind is held.
+ */
+export async function relayOnce<K extends RelayKind>(
+  kind: K,
+  member: RelayMember,
+  payload: RelayPayloads[K],
+): Promise<void> {
+  const relay: Relay<K> = RELAYS[kind];
+  const decision = await claimRelay(kind, member.id);
+  switch (decision) {
+    case "repeat":
+      return;
+    case "post":
+      await postToChannel(relay.channel, relay.head(member, payload));
+      return;
+    case "hold":
+    case "hold-and-note": {
+      const ceiling = config.MEMBER_RELAY_CEILING_PER_HOUR;
+      console.warn(
+        `[discord] held the ${kind} relay for user ${member.id}: over ${ceiling} in the past hour`,
+      );
+      if (decision === "hold-and-note") {
+        await postToChannel(
+          "forum-activity",
+          `:pause_button: Over ${ceiling} ${relay.label} in the past hour. ` +
+            `Their relays are held until the count drops; check new members by hand.`,
+        );
+      }
+      return;
+    }
+    default: {
+      const exhaustive: never = decision;
+      throw exhaustive;
+    }
+  }
 }

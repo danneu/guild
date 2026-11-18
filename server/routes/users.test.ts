@@ -36,7 +36,7 @@ vi.mock("../emailer", () => ({}));
 vi.mock("../services/discord", () => ({
   broadcastManualNuke: vi.fn(),
   broadcastManualUnnuke: vi.fn(async () => {}),
-  broadcastBioUpdate: vi.fn(),
+  relayOnce: vi.fn(),
 }));
 
 vi.mock("../avatar", () => ({

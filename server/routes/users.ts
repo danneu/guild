@@ -28,7 +28,7 @@ import { EMPTY_USER_HTML, type UserHtml } from "../user_html";
 import {
   broadcastManualNuke,
   broadcastManualUnnuke,
-  broadcastBioUpdate,
+  relayOnce,
 } from "../services/discord";
 import { Context, Next } from "koa";
 import { pool, withPgPoolTransaction } from "../db/util";
@@ -374,13 +374,10 @@ router.post("/users", async (ctx: Context) => {
     });
   }
 
-  // Registration events are no longer broadcast to Discord: bots now defeat the
-  // CAPTCHA and register en masse, which drowned #forum-activity in spam. Mods
-  // instead get a new user's first actions via broadcastFirstPost and
-  // broadcastFirstConvo.
-  // services.discord
-  //   .broadcastUserJoin(user)
-  //   .catch((err) => console.error("broadcastUserJoin failed", err));
+  // Registration is not relayed to Discord: bots defeat the CAPTCHA and
+  // register en masse, which drowned #forum-activity in spam. Mods instead get
+  // a new member's first post and first convo, each relayed once through
+  // server/services/discord.ts#relayOnce.
 
   // Send the confirmation link and land on the wall page rather than the
   // homepage (plan/2026-08-11-1613). When email is unconfigured the account was
@@ -576,15 +573,17 @@ router.put("/api/users/:id/bio", async (ctx: Context) => {
 
   sendJson(ctx, "bio", updatedUser);
 
-  // Broadcast to Discord if a new member (server/trust.ts) is setting their
-  // bio, not just making an edit
+  // Relay to Discord if a new member (server/trust.ts) is setting their bio,
+  // not just making an edit. relayOnce relays each member once.
   const bioSet = !user.bio_markup && updatedUser.bio_markup;
   if (bioSet) {
     isTrustedMember(pool, user.id)
       .then((trusted) =>
-        trusted ? undefined : broadcastBioUpdate(user, updatedUser.bio_markup),
+        trusted
+          ? undefined
+          : relayOnce("bio", user, { bioMarkup: updatedUser.bio_markup }),
       )
-      .catch((err) => console.error("broadcastBioUpdate error", err));
+      .catch((err) => console.error("bio relay failed", err));
   }
 });
 

@@ -11,8 +11,8 @@ the forum or the bot sends. `AGENTS.md` links here.
 - The bot's per-member endpoints are private there.
   `server/discord/join.test.ts` fails on a per-member path or a discord.js
   member write anywhere else in `server/`.
-- Channel messages about a member's actions are not member writes. They go
-  through `server/services/discord.ts`.
+- Channel messages about a member's actions are not member writes. They are
+  member relays (see [Member relays](#member-relays)).
 
 ## Messages
 
@@ -31,6 +31,31 @@ the forum or the bot sends. `AGENTS.md` links here.
 - A short snippet that a broadcast cuts itself, such as a post or bio
   snippet, may stay in the head when the message grants no mentions, since
   nothing in it can then ping.
+
+## Member relays
+
+A member relay is a note to Discord about a member's own action, such as the
+#general welcome for an Introduce Yourself topic or a staff note about a new
+member's first post.
+
+- `server/services/discord.ts#relayOnce` is the only way a member's action
+  reaches Discord. Its kinds are a closed set, each with its payload type and
+  its message. A new member relay is a new kind there, never a new export.
+  `server/services/discord.test.ts` fails on any other export.
+- The caller decides that the event happened, such as a first post.
+  relayOnce then claims a row in `member_relays`
+  (`server/db/member_relays.ts#claimRelay`) and posts only for a new claim:
+  each member relays each kind once.
+- Each kind also has a ceiling of claims per trailing hour
+  (`server/config.ts#MEMBER_RELAY_CEILING_PER_HOUR`), so a crowd of new
+  accounts cannot flood a channel either. Past it a relay is held and logged,
+  and staff get a note in #forum-activity that the kind is held, at most once
+  per cooldown. claimRelay keeps the time of that note in the table, so it
+  holds across restarts and machines.
+- The claim comes before the post, so a failed post is lost, never repeated.
+  A held relay is lost too.
+- Staff alerts, such as nukes, spam reviews and a failing classifier, are not
+  member relays. Each event sends one, outside the claim and the ceiling.
 
 ## The join
 

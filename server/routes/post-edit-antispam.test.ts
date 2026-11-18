@@ -48,8 +48,8 @@ vi.mock("../services/antispam/claude", () => ({
 }));
 vi.mock("../services/discord", () => ({
   broadcastAutoNuke: vi.fn(() => Promise.resolve()),
-  broadcastFirstPost: vi.fn(() => Promise.resolve()),
   broadcastSpamReview: vi.fn(() => Promise.resolve()),
+  relayOnce: vi.fn(() => Promise.resolve()),
 }));
 
 // server/bbcode.js loads cache3 with a CommonJS require that vitest cannot

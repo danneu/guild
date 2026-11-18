@@ -216,6 +216,23 @@ for (const [name, value] of Object.entries({
   );
 }
 
+// How many member relays of one kind may reach Discord per trailing hour, such
+// as #general welcomes for Introduce Yourself topics. Relays past it are held
+// (server/db/member_relays.ts#claimRelay). Size it above the busiest real
+// hour, so only a flood of new accounts reaches it.
+// PROVISIONAL: the default is a guess that no production data has checked yet
+// (hunt 261117-0852-012). To tune it, set it in fly.toml's [env] or as a Fly
+// secret; a held relay logs "[discord] held the" in prod:logs.
+export const MEMBER_RELAY_CEILING_PER_HOUR = parseInt(
+  process.env.MEMBER_RELAY_CEILING_PER_HOUR || "20",
+  10,
+);
+assert(
+  Number.isInteger(MEMBER_RELAY_CEILING_PER_HOUR) &&
+    MEMBER_RELAY_CEILING_PER_HOUR > 0,
+  "MEMBER_RELAY_CEILING_PER_HOUR must be a positive integer",
+);
+
 // The max amount of co-GMs per topic
 export const MAX_CO_GM_COUNT = process.env.MAX_CO_GM_COUNT || 2;
 

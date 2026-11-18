@@ -886,6 +886,18 @@ CREATE TABLE discord_links (
   created_at       timestamptz  NOT NULL  DEFAULT NOW()
 );
 
+-- Each member relay to Discord, claimed once per member and kind; see
+-- sql/18-member-relays.sql.
+CREATE TABLE member_relays (
+  user_id     int          NOT NULL  REFERENCES users(id) ON DELETE CASCADE,
+  kind        text         NOT NULL,
+  created_at  timestamptz  NOT NULL,
+  PRIMARY KEY (user_id, kind)
+);
+
+CREATE INDEX member_relays__kind_created_at
+  ON member_relays (kind, created_at);
+
 ------------------------------------------------------------
 
 CREATE TABLE images (

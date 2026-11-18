@@ -38,8 +38,8 @@ vi.mock("./services/antispam/claude", () => ({
 vi.mock("./services/discord", () => ({
   broadcastAutoNuke: vi.fn(async () => {}),
   broadcastClassifierFailing: vi.fn(async () => {}),
-  broadcastFirstPost: vi.fn(async () => {}),
   broadcastSpamReview: vi.fn(async () => {}),
+  relayOnce: vi.fn(async () => {}),
 }));
 
 const analyze = vi.mocked(claude.analyze);

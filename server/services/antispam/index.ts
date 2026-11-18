@@ -7,8 +7,8 @@ import * as config from "../../config";
 import {
   broadcastAutoNuke,
   broadcastClassifierFailing,
-  broadcastFirstPost,
   broadcastSpamReview,
+  relayOnce,
 } from "../discord";
 import * as db from "../../db";
 import { AlreadyNuked } from "../../db/refusals";
@@ -24,9 +24,8 @@ export type SpamFinding = { action: "NUKE" | "REVIEW"; verdict: SpamVerdict };
 
 // Screens the text a write stored, and acts on the verdict. Returns null when
 // the text passes or the classifier fails open, and the finding for NUKE and
-// REVIEW, so the caller can skip the intro-topic broadcast for a suspected
-// spammer, and on a NUKE hide what the write changed outside the actor's own
-// rows.
+// REVIEW, so the caller can skip the intro relay for a suspected spammer, and
+// on a NUKE hide what the write changed outside the actor's own rows.
 //
 // `charge` is what the write that stored the text returned
 // (server/db/screen_budget.ts#spendScreening). It decides whether the text is
@@ -57,9 +56,11 @@ async function process(
       const antispam = result.ok
         ? ({ ran: true } as const)
         : ({ ran: false, error: result.error } as const);
-      broadcastFirstPost(actor, postId, antispam, charge.body).catch((err) =>
-        console.error("broadcastFirstPost failed", err),
-      );
+      relayOnce("first_post", actor, {
+        postId,
+        antispam,
+        markup: charge.body,
+      }).catch((err) => console.error("first_post relay failed", err));
     }
     return null;
   }
