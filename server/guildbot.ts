@@ -20,6 +20,9 @@ import { fitContent } from "./discord/content";
 // One-key advisory lock held by the machine that runs the bot.
 const BOT_LOCK = 1337;
 
+// How long a machine without the lock waits before it asks for it again.
+export const LOCK_POLL_MS = 1000 * 15;
+
 // The wait between attempts doubles from FIRST_RETRY_MS up to MAX_RETRY_MS. An
 // attempt that lasted RESET_AFTER_MS starts it over.
 export const FIRST_RETRY_MS = 1000 * 10;
@@ -71,11 +74,7 @@ async function runAttempt(): Promise<unknown> {
   let bot: DiscordClient | null = null;
   try {
     await Promise.race([pgClient.connect(), failure]);
-    // Waits inside Postgres until the holder's session ends.
-    await Promise.race([
-      pgClient.query("SELECT pg_advisory_lock($1)", [BOT_LOCK]),
-      failure,
-    ]);
+    await takeLock(pgClient, failure);
     bot = createBot(fail);
     await Promise.race([bot.login(config.DISCORD_BOT_TOKEN), failure]);
     return await failure;
@@ -91,6 +90,29 @@ async function runAttempt(): Promise<unknown> {
     await pgClient
       .end()
       .catch((err) => console.error("guildbot lock client end failed", err));
+  }
+}
+
+// Returns once this session holds BOT_LOCK, which is when the holder's session
+// has ended. It asks with pg_try_advisory_lock and sleeps between asks, so no
+// statement stays open. One 'SELECT pg_advisory_lock' that waited inside
+// Postgres held its snapshot for as long as another machine ran the bot: a
+// CREATE INDEX CONCURRENTLY never finished, and VACUUM could not remove dead
+// rows.
+async function takeLock(
+  pgClient: ReturnType<typeof getClient>,
+  failure: Promise<never>,
+): Promise<void> {
+  for (;;) {
+    const { rows } = await Promise.race([
+      pgClient.query<{ locked: boolean }>(
+        "SELECT pg_try_advisory_lock($1) AS locked",
+        [BOT_LOCK],
+      ),
+      failure,
+    ]);
+    if (rows[0]?.locked) return;
+    await Promise.race([sleep(LOCK_POLL_MS), failure]);
   }
 }
 

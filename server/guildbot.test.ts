@@ -26,7 +26,8 @@ type Emitter = import("node:events").EventEmitter;
 
 const fake = vi.hoisted(() => ({
   login: (): Promise<string> => Promise.resolve("token"),
-  lock: (): Promise<unknown> => Promise.resolve({ rows: [{}] }),
+  lock: (): Promise<unknown> => Promise.resolve({ rows: [{ locked: true }] }),
+  queries: [] as string[],
   bots: [] as Array<Emitter & { destroyed: number }>,
   clients: [] as Array<Emitter & { ended: number }>,
 }));
@@ -66,7 +67,8 @@ vi.mock("./db/util", async () => {
     connect() {
       return Promise.resolve();
     }
-    query() {
+    query(sql: string) {
+      fake.queries.push(sql);
       return fake.lock();
     }
     end() {
@@ -90,7 +92,11 @@ vi.mock("./config", async (importOriginal) => ({
   DISCORD_BOT_TOKEN: "token",
 }));
 
-import guildbot, { FIRST_RETRY_MS, nextRetryMs } from "./guildbot";
+import guildbot, {
+  FIRST_RETRY_MS,
+  LOCK_POLL_MS,
+  nextRetryMs,
+} from "./guildbot";
 
 // One real macrotask turn: every promise the bot chained on the fakes has
 // settled, and Node has reported any rejection left unhandled.
@@ -131,8 +137,9 @@ let unhandled: Mock;
 beforeEach(() => {
   fake.bots.length = 0;
   fake.clients.length = 0;
+  fake.queries.length = 0;
   fake.login = () => Promise.resolve("token");
-  fake.lock = () => Promise.resolve({ rows: [{}] });
+  fake.lock = () => Promise.resolve({ rows: [{ locked: true }] });
   vi.useFakeTimers({
     toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"],
   });
@@ -197,13 +204,29 @@ describe("guildbot", () => {
     expect(fake.clients[0]!.ended).toBe(1);
   });
 
-  it("builds no bot until it holds the lock", async () => {
-    fake.lock = () => new Promise(() => {});
+  // Intent: a machine that does not hold the lock builds no bot, leaves no
+  // statement open in Postgres, and takes over once the lock is free.
+  // Why it exists: the wait was one 'SELECT pg_advisory_lock' that stayed open
+  // for as long as another machine ran the bot. In production three machines
+  // held a snapshot open for hours, so a CREATE INDEX CONCURRENTLY never
+  // finished and VACUUM could not remove dead rows.
+  // Scenario: the lock is refused twice, then granted on the third ask.
+  it("asks for the lock again until it is free, with no statement left waiting", async () => {
+    let asks = 0;
+    fake.lock = () => Promise.resolve({ rows: [{ locked: ++asks >= 3 }] });
 
     await startBot();
-
-    expect(fake.clients).toHaveLength(1);
     expect(fake.bots).toHaveLength(0);
+    await advance(LOCK_POLL_MS);
+    expect(fake.bots).toHaveLength(0);
+    await advance(LOCK_POLL_MS);
+
+    expect(fake.bots).toHaveLength(1);
+    expect(fake.clients).toHaveLength(1);
+    expect(fake.queries).toHaveLength(3);
+    for (const sql of fake.queries) {
+      expect(sql).toContain("pg_try_advisory_lock");
+    }
   });
 
   it.each([
